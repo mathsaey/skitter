@@ -3,6 +3,32 @@ defmodule Skitter.Component do
   A module to implement and verify Skitter components.
   """
 
+  defmacro defcomponent(name, effects, do: body) do
+    quote do
+      defmodule unquote(name) do
+        @behaviour Skitter.Component
+
+        # Register the effects in the module
+        @effects unquote(effects)
+
+        # Callbacks registered first will run last,
+        # ensure verification happens last.
+        @before_compile {Verification, :required_attributes}
+
+        # Generate callbacks for the various functions which
+        # return attribute values.
+        @before_compile {Generators, :name}
+        @before_compile {Generators, :desc}
+        @before_compile {Generators, :effects}
+        @before_compile {Generators, :in_ports}
+        @before_compile {Generators, :out_ports}
+
+        # Insert the provided body
+        unquote(body)
+      end
+    end
+  end
+
   defmodule DefinitionError do
     @moduledoc """
     This error is raised when a component definition is invalid.
@@ -109,38 +135,6 @@ defmodule Skitter.Component do
     defmacro out_ports(env) do
       quote do
         def out_ports, do: unquote(Module.get_attribute(env.module, :out_ports))
-      end
-    end
-  end
-
-  @doc false
-  defmacro __using__(opts) do
-    quote do
-      @behaviour Skitter.Component
-
-      # Register the effects in the module
-      @effects unquote(Keyword.get(opts, :effects))
-
-      # Callbacks registered first will run last,
-      # ensure verification happens last.
-      @before_compile {Verification, :required_attributes}
-
-      # Generate callbacks for the various functions which
-      # return attribute values.
-      @before_compile {Generators, :name}
-      @before_compile {Generators, :desc}
-      @before_compile {Generators, :effects}
-      @before_compile {Generators, :in_ports}
-      @before_compile {Generators, :out_ports}
-    end
-  end
-
-  # TODO: Document this
-  defmacro defcomponent(name, effects, do: body) do
-    quote do
-      defmodule unquote(name) do
-        use Skitter.Component, effects: unquote(effects)
-        unquote(body)
       end
     end
   end
