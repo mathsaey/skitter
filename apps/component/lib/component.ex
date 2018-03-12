@@ -158,8 +158,15 @@ defmodule Skitter.Component do
     end
 
     defmacro effects(env) do
+      mod = env.module
+      eff = Module.get_attribute(mod, :effects)
+      eff = case eff do
+        :noeffects -> []
+        effects -> effects
+      end
+
       quote do
-        def effects, do: unquote(Module.get_attribute(env.module, :effects))
+        def effects, do: unquote(eff)
       end
     end
 
