@@ -1,8 +1,68 @@
 defmodule Skitter.Component do
   @moduledoc """
-  A module to implement and verify Skitter components.
+  A behaviour module to implement and verify Skitter components.
   """
 
+  @doc """
+  Return the name of the component.
+
+  _This function is automatically generated when using `defcomponent/3`._
+
+  The name of a component is determined as follows:
+  - If an `@name` attribute is present in the component definition, this
+    attribute will define the name.
+  - Otherwise, a name is generated from the name of the macro.
+    This name is generated from the final part of the component name.
+    Uppercase letters in the module name will be prepended by a space.
+    Acronyms are preserved during this transformation.
+
+  ## Examples
+
+  ```
+  defcomponent ACKFooBar, [] do
+    @name Baz
+    ...
+  end
+  ```
+
+  Will have the name "Baz".
+
+  ```
+  defcomponent ACKFooBar, [] do
+    ...
+  end
+  ```
+
+  Will have the name "ACK Foo Bar".
+  """
+  @callback name() :: String.t
+
+  @doc """
+  Return a detailed description of the component and its behaviour.
+
+  _This function is automatically generated when using `defcomponent/3`._
+
+  The description this function returns is obtained from:
+  - The string added to the `@desc` module attribute.
+  - The documentation added to the `@moduledoc` attribute, if no `@desc`
+    attribute is present.
+  - An empty string, if neither is present. Skitter will provide a warning when
+    this is the case.
+  """
+  @callback desc() :: String.t
+
+  @doc """
+  Return a list of the effects of a component.
+
+  Returns a list with all of the components effects.
+  Please look at the `Skitter.Component` documentation for more information
+  about effects.
+  """
+  @callback effects() :: [:internal_state | :external_effects]
+
+  @doc """
+  Define a Skitter component.
+  """
   defmacro defcomponent(name, effects, do: body) do
     quote do
       defmodule unquote(name) do
@@ -69,19 +129,6 @@ defmodule Skitter.Component do
   defmodule Generators do
     @moduledoc false
 
-    @doc """
-    Generate a `name` function for the component module.
-
-    If an @name attribute is provided, it will be used.
-    Otherwise, a name is generated from the macro name.
-    This name is the final part of the component module name, with spaces
-    inserted before every uppercase letter.
-
-    Thus, a component with module name "Foo.HelloWorld" would get the name
-    "Hello World".
-    Acronyms in such a name are kept "whole", a module named "IOPuts" would be
-    named "IO Puts".
-    """
     defmacro name(env) do
       # Yes I wanted to practice my regex skills, why do you ask?
       regex = ~r/([[:upper:]]+(?=[[:upper:]])|[[:upper:]][[:lower:]]*)/
