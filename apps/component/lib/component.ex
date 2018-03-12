@@ -60,35 +60,6 @@ defmodule Skitter.Component do
   """
   @callback effects() :: [:internal_state | :external_effects]
 
-  @doc """
-  Define a Skitter component.
-  """
-  defmacro defcomponent(name, effects, do: body) do
-    quote do
-      defmodule unquote(name) do
-        @behaviour Skitter.Component
-
-        # Register the effects in the module
-        @effects unquote(effects)
-
-        # Callbacks registered first will run last,
-        # ensure verification happens last.
-        @before_compile {Verification, :required_attributes}
-
-        # Generate callbacks for the various functions which
-        # return attribute values.
-        @before_compile {Generators, :name}
-        @before_compile {Generators, :desc}
-        @before_compile {Generators, :effects}
-        @before_compile {Generators, :in_ports}
-        @before_compile {Generators, :out_ports}
-
-        # Insert the provided body
-        unquote(body)
-      end
-    end
-  end
-
   defmodule DefinitionError do
     @moduledoc """
     This error is raised when a component definition is invalid.
@@ -102,7 +73,8 @@ defmodule Skitter.Component do
 
   defmodule Verification do
     @moduledoc false
-    # TODO: Check if effects are valid
+
+    @allowed_effects [:internal_state, :external_effects]
 
     @doc """
     Ensure all the required attributes (effects, in_ports, out_ports)
@@ -122,7 +94,25 @@ defmodule Skitter.Component do
       if Module.get_attribute(mod, :out_ports) == nil do
         raise DefinitionError, "Missing `@out_ports` attribute"
       end
-      nil
+    end
+
+    @doc """
+    Ensure the provided effects are valid.
+    """
+    defmacro effects_correct(env) do
+      mod = env.module
+      eff = Module.get_attribute(mod, :effects)
+
+      lst = case eff do
+        l when is_list(l) -> Enum.reject(l, fn(e) -> e in @allowed_effects end)
+        :noeffects -> []
+        [] -> []
+        _ -> raise DefinitionError, "Invalid effects #{eff}"
+      end
+
+      unless lst == [] do
+        raise DefinitionError, "Invalid effects: #{Enum.join(lst, ", ")}"
+      end
     end
   end
 
@@ -182,6 +172,36 @@ defmodule Skitter.Component do
     defmacro out_ports(env) do
       quote do
         def out_ports, do: unquote(Module.get_attribute(env.module, :out_ports))
+      end
+    end
+  end
+
+  @doc """
+  Define a Skitter component.
+  """
+  defmacro defcomponent(name, effects, do: body) do
+    quote do
+      defmodule unquote(name) do
+        @behaviour Skitter.Component
+
+        # Register the effects in the module
+        @effects unquote(effects)
+
+        # Callbacks registered first will run last,
+        # ensure verification happens last.
+        @before_compile {Verification, :required_attributes}
+        @before_compile {Verification, :effects_correct}
+
+        # Generate callbacks for the various functions which
+        # return attribute values.
+        @before_compile {Generators, :name}
+        @before_compile {Generators, :desc}
+        @before_compile {Generators, :effects}
+        @before_compile {Generators, :in_ports}
+        @before_compile {Generators, :out_ports}
+
+        # Insert the provided body
+        unquote(body)
       end
     end
   end
