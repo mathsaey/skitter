@@ -162,6 +162,7 @@ defmodule Skitter.Component do
       eff = Module.get_attribute(mod, :effects)
       eff = case eff do
         :noeffects -> []
+        [el] when is_atom(el) -> [el]
         effects -> effects
       end
 
