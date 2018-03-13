@@ -180,7 +180,7 @@ defmodule Skitter.Component do
         [] ->
           lst
         errLst ->
-          raise DefinitionError, "Invalid effects #{Enum.join(errLst, ", ")}"
+          raise DefinitionError, "Invalid effects: #{Enum.join(errLst, ", ")}"
       end
     end
 
