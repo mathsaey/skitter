@@ -208,7 +208,7 @@ defmodule Skitter.Component do
   @doc """
   Define a Skitter component.
   """
-  defmacro defcomponent(name, effects, do: body) do
+  defmacro defcomponent(name, effects, _opts \\ [], do: body) do
     quote do
       defmodule unquote(name) do
         @behaviour Skitter.Component
