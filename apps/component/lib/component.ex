@@ -150,7 +150,7 @@ defmodule Skitter.Component do
           mod_name = mod |> Atom.to_string |> String.split(".") |> Enum.at(-1)
           Regex.replace(regex, mod_name, " \\0") |> String.trim
         _ ->
-          Module.get_attribute(__MODULE__, :name)
+          Module.get_attribute(mod, :name)
       end
 
       quote do
