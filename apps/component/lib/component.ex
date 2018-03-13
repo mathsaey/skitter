@@ -54,11 +54,32 @@ defmodule Skitter.Component do
   @doc """
   Return a list of the effects of a component.
 
-  Returns a list with all of the components effects.
+  _This function is automatically generated when using `defcomponent/3`._
+
   Please look at the `Skitter.Component` documentation for more information
   about effects.
   """
   @callback effects() :: [:internal_state | :external_effects]
+
+  @doc """
+  Return a list of the in_ports of a component.
+
+  _This function is automatically generated when using `defcomponent/3`._
+
+  Please look at the `Skitter.Component` documentation for more information
+  about ports.
+  """
+  @callback in_ports() :: [atom(), ...]
+
+  @doc """
+  Return a list of the out_ports of a component.
+
+  _This function is automatically generated when using `defcomponent/3`._
+
+  Please look at the `Skitter.Component` documentation for more information
+  about ports.
+  """
+  @callback out_ports() :: [atom()]
 
   defmodule DefinitionError do
     @moduledoc """
