@@ -1,21 +1,32 @@
 defmodule Skitter.ComponentTest do
   use ExUnit.Case, async: true
+  doctest Skitter.Component
   import Skitter.Component
 
-  doctest Skitter.Component
+  @doc """
+  Autogenerate part of the component definition.
+
+  _Only use this in unit tests!_
+  """
+  defmacrop dummycomponent(
+    name \\ TestComponent, effects \\ :no_effects, opts \\ [], do: body
+  ) do
+    quote do
+      defcomponent unquote(name), unquote(effects), unquote(opts) do
+        @in_ports []
+        @out_ports []
+        @desc ""
+        unquote(body)
+      end
+    end
+  end
 
   test "name generation" do
-    defcomponent FOOBarBaz, :no_effects do
-      @desc ""
-      @in_ports []
-      @out_ports []
+    dummycomponent FOOBarBaz do
     end
 
-    defcomponent NameTest, :no_effects do
+    dummycomponent NameTest do
       @name "name changed"
-      @desc ""
-      @in_ports []
-      @out_ports []
     end
     assert NameTest.name() == "name changed"
   end
