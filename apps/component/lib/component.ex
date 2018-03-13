@@ -3,6 +3,10 @@ defmodule Skitter.Component do
   A behaviour module to implement and verify Skitter components.
   """
 
+  # --------- #
+  # Interface #
+  # --------- #
+
   @doc """
   Return the name of the component.
 
@@ -92,73 +96,58 @@ defmodule Skitter.Component do
     end
   end
 
-  defmodule Verification do
+  # -------------------- #
+  # Component Generation #
+  # -------------------- #
+
+  defmodule Transform do
     @moduledoc false
 
-    @allowed_effects [:internal_state, :external_effects]
+    @doc """
+    Transform the effects of a component.
+
+    :no_effects is transformed into an empty list
+    atoms are wrapped inside a list
+    everything else is left alone.
+    """
+    def effects(:no_effects), do: []
+    def effects(some_atom) when is_atom(some_atom), do: [some_atom]
+    def effects(something_else), do: something_else
 
     @doc """
-    Ensure all the required attributes (in_ports, out_ports)
-    are present.
+    Transform the name of a component.
 
-    Raise an error if something is missing.
+    This is done by modifying the `@name` module attribute.
+
+    If @name is specified, we leave it alone
+    Otherwise, we generate a name as specified in the `Skitter.Component.name/0`
+    callback.
     """
-    defmacro required_attributes(env) do
-      mod = env.module
-
-      if Module.get_attribute(mod, :in_ports) == nil do
-        raise DefinitionError, "Missing `@in_ports` attribute"
-      end
-      if Module.get_attribute(mod, :out_ports) == nil do
-        raise DefinitionError, "Missing `@out_ports` attribute"
-      end
-    end
-
-    @doc """
-    Ensure the provided effects are valid.
-    """
-    defmacro effects_correct(env) do
-      mod = env.module
-      eff = Module.get_attribute(mod, :effects)
-
-      lst = case eff do
-        l when is_list(l) -> Enum.reject(l, fn(e) -> e in @allowed_effects end)
-        :no_effects -> []
-        [] -> []
-        _ -> raise DefinitionError, "Invalid effects #{eff}"
-      end
-
-      unless lst == [] do
-        raise DefinitionError, "Invalid effects: #{Enum.join(lst, ", ")}"
-      end
-    end
-  end
-
-  defmodule Generators do
-    @moduledoc false
-
-    defmacro name(env) do
-      # Yes I wanted to practice my regex skills, why do you ask?
+    def name(env) do
       regex = ~r/([[:upper:]]+(?=[[:upper:]])|[[:upper:]][[:lower:]]*)/
-
-      mod = env.module
-      name = case Module.get_attribute(mod, :name) do
+      module = env.module
+      name = case Module.get_attribute(module, :name) do
         nil ->
-          mod_name = mod |> Atom.to_string |> String.split(".") |> Enum.at(-1)
-          Regex.replace(regex, mod_name, " \\0") |> String.trim
-        _ ->
-          Module.get_attribute(mod, :name)
+          name = module |> Atom.to_string |> String.split(".") |> Enum.at(-1)
+          Regex.replace(regex, name, " \\0") |> String.trim
+        name ->
+          name
       end
-
-      quote do
-        def name, do: unquote(name)
-      end
+      Module.put_attribute(module, :name, name)
     end
 
-    defmacro desc(env) do
-      mod = env.module
-      desc = Module.get_attribute(mod, :desc)
-      docs = Module.get_attribute(mod, :moduledoc)
+    @doc """
+    Transform the description of a component.
+
+    This is done by modifying the `@desc` module attribute.
+
+    If @desc is specified we leave it alone.
+    Otherwise, if @moduledoc is specified, use it as a description.
+    """
+    def desc(env) do
+      module = env.module
+      desc = Module.get_attribute(module, :desc)
+      docs = Module.get_attribute(module, :moduledoc)
 
       res = case {desc, docs} do
         {desc, _} when not is_nil(desc) ->
@@ -166,35 +155,80 @@ defmodule Skitter.Component do
         {nil, docs} when not is_nil(docs) ->
           docs
         _ ->
-          IO.warn "Missing Component documentation"
-          ""
+          nil
       end
+      Module.put_attribute(module, :desc, res)
+    end
+  end
 
-      quote do
-        def desc, do: unquote(res)
+  defmodule Verify do
+    @moduledoc false
+
+    @allowed_effects [:internal_state, :external_effects]
+
+    @doc """
+    Ensure effects are valid.
+
+    Empty lists are valid.
+    Lists with allowed effects are valid
+    Everything else is invlaid.
+    """
+    def effects!([]), do: []
+
+    def effects!(lst) when is_list(lst) do
+      case Enum.reject(lst, fn(e) -> e in @allowed_effects end) do
+        [] ->
+          lst
+        errLst ->
+          raise DefinitionError, "Invalid effects #{Enum.join(errLst, ", ")}"
       end
     end
 
-    defmacro effects(env) do
-      mod = env.module
-      eff = Module.get_attribute(mod, :effects)
-      eff = case eff do
-        :no_effects -> []
-        [el] when is_atom(el) -> [el]
-        effects -> effects
-      end
+    def effects!(other) do
+      raise DefinitionError, "Invalid effect #{inspect(other)}"
+    end
 
-      quote do
-        def effects, do: unquote(eff)
+    @doc """
+    Check if description is present.
+
+    Warn if this is not the case.
+    """
+    defmacro documentation(env) do
+      if Module.get_attribute(env.module, :desc) == nil do
+        IO.warn "Missing component documentation"
       end
     end
 
+    @doc """
+    Verify that required attributes are present.
+    """
+    defmacro required_attributes!(env) do
+      if Module.get_attribute(env.module, :in_ports) == nil do
+        raise DefinitionError, "Missing `@in_ports` attribute"
+      end
+      if Module.get_attribute(env.module, :out_ports) == nil do
+        raise DefinitionError, "Missing `@out_ports` attribute"
+      end
+    end
+  end
+
+  defmodule Generate do
+    @moduledoc false
+    defmacro name(env) do
+      quote do
+        def name, do: unquote(Module.get_attribute(env.module, :name))
+      end
+    end
+    defmacro desc(env) do
+      quote do
+        def desc, do: unquote(Module.get_attribute(env.module, :desc))
+      end
+    end
     defmacro in_ports(env) do
       quote do
         def in_ports, do: unquote(Module.get_attribute(env.module, :in_ports))
       end
     end
-
     defmacro out_ports(env) do
       quote do
         def out_ports, do: unquote(Module.get_attribute(env.module, :out_ports))
@@ -206,25 +240,33 @@ defmodule Skitter.Component do
   Define a Skitter component.
   """
   defmacro defcomponent(name, effects, _opts \\ [], do: body) do
+    effects = effects |> Transform.effects |> Verify.effects!
+
     quote do
       defmodule unquote(name) do
         @behaviour Skitter.Component
 
-        # Register the effects in the module
-        @effects unquote(effects)
+        # The following callbacks:
+        #   - Transform some attributes
+        #   - Verify the necessary attributes are present and correct
+        #   - Generate functions
+        # Since callbacks which are registered first run last, the following
+        # callbacks are executed in the opposite order in which they are listed.
 
-        # Callbacks registered first will run last,
-        # ensure verification happens last.
-        @before_compile {Verification, :required_attributes}
-        @before_compile {Verification, :effects_correct}
+        # Verify module attributes
+        @before_compile {Verify, :required_attributes!}
+        @before_compile {Verify, :documentation}
+        # Generate callbacks
+        @before_compile {Generate, :name}
+        @before_compile {Generate, :desc}
+        @before_compile {Generate, :in_ports}
+        @before_compile {Generate, :out_ports}
+        # Transform attributes
+        @before_compile {Transform, :name}
+        @before_compile {Transform, :desc}
 
-        # Generate callbacks for the various functions which
-        # return attribute values.
-        @before_compile {Generators, :name}
-        @before_compile {Generators, :desc}
-        @before_compile {Generators, :effects}
-        @before_compile {Generators, :in_ports}
-        @before_compile {Generators, :out_ports}
+        # Insert effects function
+        def effects, do: unquote(effects)
 
         # Insert the provided body
         unquote(body)
