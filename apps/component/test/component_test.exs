@@ -5,13 +5,13 @@ defmodule Skitter.ComponentTest do
   doctest Skitter.Component
 
   test "name generation" do
-    defcomponent FOOBarBaz, :noeffects do
+    defcomponent FOOBarBaz, :no_effects do
       @desc ""
       @in_ports []
       @out_ports []
     end
 
-    defcomponent NameTest, :noeffects do
+    defcomponent NameTest, :no_effects do
       @name "name changed"
       @desc ""
       @in_ports []

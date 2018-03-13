@@ -126,7 +126,7 @@ defmodule Skitter.Component do
 
       lst = case eff do
         l when is_list(l) -> Enum.reject(l, fn(e) -> e in @allowed_effects end)
-        :noeffects -> []
+        :no_effects -> []
         [] -> []
         _ -> raise DefinitionError, "Invalid effects #{eff}"
       end
@@ -182,7 +182,7 @@ defmodule Skitter.Component do
       mod = env.module
       eff = Module.get_attribute(mod, :effects)
       eff = case eff do
-        :noeffects -> []
+        :no_effects -> []
         [el] when is_atom(el) -> [el]
         effects -> effects
       end
