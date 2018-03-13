@@ -98,7 +98,7 @@ defmodule Skitter.Component do
     @allowed_effects [:internal_state, :external_effects]
 
     @doc """
-    Ensure all the required attributes (effects, in_ports, out_ports)
+    Ensure all the required attributes (in_ports, out_ports)
     are present.
 
     Raise an error if something is missing.
@@ -106,9 +106,6 @@ defmodule Skitter.Component do
     defmacro required_attributes(env) do
       mod = env.module
 
-      if Module.get_attribute(mod, :effects) == nil do
-        raise DefinitionError, "Missing `@effects` attribute"
-      end
       if Module.get_attribute(mod, :in_ports) == nil do
         raise DefinitionError, "Missing `@in_ports` attribute"
       end
