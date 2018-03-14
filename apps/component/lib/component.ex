@@ -175,6 +175,18 @@ defmodule Skitter.Component do
     end
   end
 
+  defmodule BadCallError do
+    @moduledoc """
+    This error is raised when a function is called on a component that does not
+    support it (due to its effects)
+    """
+    defexception [:message]
+
+    def exception(val) do
+      %BadCallError{message: val}
+    end
+  end
+
   # -------------------- #
   # Component Generation #
   # -------------------- #
@@ -283,6 +295,29 @@ defmodule Skitter.Component do
 
   defmodule Generate do
     @moduledoc false
+
+    @doc """
+    Possibly create "dummy" functions for all internal_state placeholders.
+
+    - If there is an internal_state (true), don't generate any code.
+    - If there is no internal_state, generate dummy functions for the functions
+      that are only required when an internal state is present.
+    """
+    def internal_state_placeholders(true), do: nil
+    def internal_state_placeholders(false) do
+      quote do
+        def checkpoint(_) do
+          raise BadCallError, "Checkpoint not available without internal state"
+        end
+        def restore(_) do
+          raise BadCallError, "Restore not available without internal state"
+        end
+      end
+    end
+
+    def external_effect_placeholders(true), do: nil
+    def external_effect_placeholders(false), do: nil
+
     defmacro name(env) do
       quote do
         def name, do: unquote(Module.get_attribute(env.module, :name))
@@ -310,32 +345,39 @@ defmodule Skitter.Component do
   """
   defmacro defcomponent(name, effects, _opts \\ [], do: body) do
     effects = effects |> Transform.effects |> Verify.effects!
+    name = Macro.expand(name, __CALLER__)
+
+    state_body =
+      Generate.internal_state_placeholders(:internal_state in effects)
+    effect_body =
+      Generate.external_effect_placeholders(:external_effects in effects)
+
 
     quote do
       defmodule unquote(name) do
         @behaviour Skitter.Component
 
-        # The following callbacks:
-        #   - Transform some attributes
-        #   - Verify the necessary attributes are present and correct
-        #   - Generate functions
-        # Since callbacks which are registered first run last, the following
-        # callbacks are executed in the opposite order in which they are listed.
-
-        # Verify module attributes
-        @before_compile {Verify, :required_attributes!}
-        @before_compile {Verify, :documentation}
+        # Transform attributes
+        @before_compile {Transform, :name}
+        @before_compile {Transform, :desc}
         # Generate callbacks
         @before_compile {Generate, :name}
         @before_compile {Generate, :desc}
         @before_compile {Generate, :in_ports}
         @before_compile {Generate, :out_ports}
-        # Transform attributes
-        @before_compile {Transform, :name}
-        @before_compile {Transform, :desc}
+        # Verify module attributes
+        @before_compile {Verify, :required_attributes!}
+        @before_compile {Verify, :documentation}
 
         # Insert effects function
         def effects, do: unquote(effects)
+
+        # Overridable definitions
+        def terminate(_), do: :ok
+        defoverridable terminate: 1
+
+        unquote(state_body)
+        unquote(effect_body)
 
         # Insert the provided body
         unquote(body)
