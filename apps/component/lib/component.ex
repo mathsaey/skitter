@@ -221,22 +221,12 @@ defmodule Skitter.Component do
     This is done by modifying the `@desc` module attribute.
 
     If @desc is specified we leave it alone.
-    Otherwise, if @moduledoc is specified, use it as a description.
+    Otherwise, we return an empty description.
     """
     def desc(env) do
-      module = env.module
-      desc = Module.get_attribute(module, :desc)
-      docs = Module.get_attribute(module, :moduledoc)
-
-      res = case {desc, docs} do
-        {desc, _} when not is_nil(desc) ->
-          desc
-        {nil, docs} when not is_nil(docs) ->
-          docs
-        _ ->
-          nil
+      if Module.get_attribute(env.module, :desc) == nil do
+        Module.put_attribute(env.module, :desc, "")
       end
-      Module.put_attribute(module, :desc, res)
     end
   end
 
@@ -272,8 +262,8 @@ defmodule Skitter.Component do
 
     Warn if this is not the case.
     """
-    defmacro documentation(env) do
-      if Module.get_attribute(env.module, :desc) == nil do
+    def documentation(env) do
+      if Module.get_attribute(env.module, :desc) == "" do
         IO.warn "Missing component documentation"
       end
     end
@@ -281,7 +271,7 @@ defmodule Skitter.Component do
     @doc """
     Verify that required attributes are present.
     """
-    defmacro required_attributes!(env) do
+    def required_attributes!(env) do
       if Module.get_attribute(env.module, :in_ports) == nil do
         raise DefinitionError, "Missing `@in_ports` attribute"
       end
