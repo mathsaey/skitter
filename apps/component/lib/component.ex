@@ -10,7 +10,7 @@ defmodule Skitter.Component do
   @doc """
   Return the name of the component.
 
-  _This function is automatically generated when using `defcomponent/3`._
+  _This function is automatically generated when using `component/4`._
 
   The name of a component is determined as follows:
   - If an `@name` attribute is present in the component definition, this
@@ -23,7 +23,7 @@ defmodule Skitter.Component do
   ## Examples
 
   ```
-  defcomponent ACKFooBar, [] do
+  component ACKFooBar, [] do
     @name Baz
     ...
   end
@@ -32,7 +32,7 @@ defmodule Skitter.Component do
   Will have the name "Baz".
 
   ```
-  defcomponent ACKFooBar, [] do
+  component ACKFooBar, [] do
     ...
   end
   ```
@@ -44,7 +44,7 @@ defmodule Skitter.Component do
   @doc """
   Return a detailed description of the component and its behaviour.
 
-  _This function is automatically generated when using `defcomponent/3`._
+  _This function is automatically generated when using `component/4`._
 
   The description this function returns is obtained from:
   - The string added to the `@desc` module attribute.
@@ -58,7 +58,7 @@ defmodule Skitter.Component do
   @doc """
   Return a list of the effects of a component.
 
-  _This function is automatically generated when using `defcomponent/3`._
+  _This function is automatically generated when using `component/4`._
 
   Please look at the `Skitter.Component` documentation for more information
   about effects.
@@ -68,7 +68,7 @@ defmodule Skitter.Component do
   @doc """
   Return a list of the in_ports of a component.
 
-  _This function is automatically generated when using `defcomponent/3`._
+  _This function is automatically generated when using `component/4`._
 
   Please look at the `Skitter.Component` documentation for more information
   about ports.
@@ -78,7 +78,7 @@ defmodule Skitter.Component do
   @doc """
   Return a list of the out_ports of a component.
 
-  _This function is automatically generated when using `defcomponent/3`._
+  _This function is automatically generated when using `component/4`._
 
   Please look at the `Skitter.Component` documentation for more information
   about ports.
@@ -159,7 +159,7 @@ defmodule Skitter.Component do
   If component termination succeeds, return :ok, otherwise, an error can be
   returned.
 
-  The `defcomponent/4` macro will automatically generate a terminate function
+  The `component/4` macro will automatically generate a terminate function
   which assumes there are no resources to be released.
   """
   @callback terminate(any()) :: :ok | {:error, String.t}
@@ -343,7 +343,7 @@ defmodule Skitter.Component do
   @doc """
   Define a Skitter component.
   """
-  defmacro defcomponent(name, effects, _opts \\ [], do: body) do
+  defmacro component(name, effects, _opts \\ [], do: body) do
     effects = effects |> Transform.effects |> Verify.effects!
     name = Macro.expand(name, __CALLER__)
 

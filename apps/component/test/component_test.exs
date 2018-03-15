@@ -13,7 +13,7 @@ defmodule Skitter.ComponentTest do
   # Generate a dummy component. Only use this for unit tests!
   defmacrop dummycomponent(name, effects \\ [], opts \\ [], do: body) do
     quote do
-        defcomponent unquote(name), unquote(effects), unquote(opts) do
+        component unquote(name), unquote(effects), unquote(opts) do
           @desc "some documentation goes here"
           @in_ports []
           @out_ports []
@@ -35,7 +35,7 @@ defmodule Skitter.ComponentTest do
   defp build_and_eval_effect_string(effects) do
     Code.eval_string """
     import Skitter.Component
-    defcomponent :"#{inspect(effects)}", #{inspect(effects)} do
+    component :"#{inspect(effects)}", #{inspect(effects)} do
       @desc "some documentation goes here"
       @in_ports []
       @out_ports []
@@ -65,7 +65,7 @@ defmodule Skitter.ComponentTest do
 
   test "description generation" do
     io = capture_io :stderr, fn ->
-      defcomponent DescriptionGenerationWarn, :no_effects do
+      component DescriptionGenerationWarn, :no_effects do
         @in_ports []
         @out_ports []
         def init(_), do: {:ok, nil}
@@ -75,7 +75,7 @@ defmodule Skitter.ComponentTest do
     assert io =~ "warning"
     assert DescriptionGenerationWarn.desc == ""
 
-    defcomponent DescriptionGeneration, :no_effects do
+    component DescriptionGeneration, :no_effects do
       @desc "explanation"
       @in_ports []
       @out_ports []
@@ -96,16 +96,16 @@ defmodule Skitter.ComponentTest do
 
   test "missing attribute errors" do
     assert_raise DefinitionError, fn ->
-      defcomponent AttrTest, :no_effects do
+      component AttrTest, :no_effects do
       end
     end
     assert_raise DefinitionError, fn ->
-      defcomponent AttrTest, :no_effects do
+      component AttrTest, :no_effects do
         @in_ports []
       end
     end
     assert_raise DefinitionError, fn ->
-      defcomponent AttrTest, :no_effects do
+      component AttrTest, :no_effects do
         @out_ports []
       end
     end
