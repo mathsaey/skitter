@@ -87,28 +87,11 @@ defmodule Skitter.ComponentTest do
 
   test "attribute generation" do
     dummycomponent AttrGenTest do
-      @in_ports [:in]
+      @in_ports [:lel]
       @out_ports [:top, :kek]
     end
-    assert AttrGenTest.in_ports == [:in]
+    assert AttrGenTest.in_ports == [:lel]
     assert AttrGenTest.out_ports == [:top, :kek]
-  end
-
-  test "missing attribute errors" do
-    assert_raise DefinitionError, fn ->
-      component AttrTest, :no_effects do
-      end
-    end
-    assert_raise DefinitionError, fn ->
-      component AttrTest, :no_effects do
-        @in_ports []
-      end
-    end
-    assert_raise DefinitionError, fn ->
-      component AttrTest, :no_effects do
-        @out_ports []
-      end
-    end
   end
 
   test "incorrect effect errors" do

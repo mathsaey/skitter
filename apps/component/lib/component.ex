@@ -240,6 +240,38 @@ defmodule Skitter.Component do
         Module.put_attribute(env.module, :desc, "")
       end
     end
+
+    @doc """
+    Generate default in ports of a component.
+
+    This is only done if there is no value for `@in_ports`.
+
+    If this value is not provided, we use `[:in]` as value for @in_ports`.
+    """
+    def in_ports(env) do
+      module = env.module
+      ports  = case Module.get_attribute(module, :in_ports) do
+        nil -> [:in]
+        val -> val
+      end
+      Module.put_attribute(module, :in_ports, ports)
+    end
+
+    @doc """
+    Generate default out ports of a component.
+
+    This is only done if there is no value for `@out_ports`.
+
+    If this value is not provided, we use `[:out]` as value for @out_ports`.
+    """
+    def out_ports(env) do
+      module = env.module
+      ports  = case Module.get_attribute(module, :out_ports) do
+        nil -> [:out]
+        val -> val
+      end
+      Module.put_attribute(module, :out_ports, ports)
+    end
   end
 
   defmodule Verify do
@@ -277,18 +309,6 @@ defmodule Skitter.Component do
     def documentation(env) do
       if Module.get_attribute(env.module, :desc) == "" do
         IO.warn "Missing component documentation"
-      end
-    end
-
-    @doc """
-    Verify that required attributes are present.
-    """
-    def required_attributes!(env) do
-      if Module.get_attribute(env.module, :in_ports) == nil do
-        raise DefinitionError, "Missing `@in_ports` attribute"
-      end
-      if Module.get_attribute(env.module, :out_ports) == nil do
-        raise DefinitionError, "Missing `@out_ports` attribute"
       end
     end
   end
@@ -343,7 +363,7 @@ defmodule Skitter.Component do
   @doc """
   Define a Skitter component.
   """
-  defmacro component(name, effects, _opts \\ [], do: body) do
+  defmacro component(name, with: effects, do: body) do
     effects = effects |> Transform.effects |> Verify.effects!
     name = Macro.expand(name, __CALLER__)
 
@@ -360,13 +380,14 @@ defmodule Skitter.Component do
         # Transform attributes
         @before_compile {Transform, :name}
         @before_compile {Transform, :desc}
+        @before_compile {Transform, :in_ports}
+        @before_compile {Transform, :out_ports}
         # Generate callbacks
         @before_compile {Generate, :name}
         @before_compile {Generate, :desc}
         @before_compile {Generate, :in_ports}
         @before_compile {Generate, :out_ports}
         # Verify module attributes
-        @before_compile {Verify, :required_attributes!}
         @before_compile {Verify, :documentation}
 
         # Insert effects function
