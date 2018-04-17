@@ -68,7 +68,7 @@ defmodule Skitter.Component do
     quote do
       defmodule unquote(name) do
         import unquote(__MODULE__).Internal, only: [
-          react: 2
+          react: 2, init: 2
         ]
 
         def __skitter_metadata__ do %{
@@ -94,6 +94,7 @@ defmodule Skitter.Component do
 
   # AST Transformation
   # ------------------
+  # Transformations applied to the body provided to component/3
 
   # Transform all calls to macros in the `@component_callbacks` list to calls
   # where all the arguments (except for the the do block, which is the final
@@ -121,7 +122,38 @@ defmodule Skitter.Component do
     {nil, Keyword.put(acc, effect, properties)}
   end
 
+  # Fallback case, leave AST and accumulator unmodified.
   defp component_postwalk(ast, acc), do: {ast, acc}
+
+  # Utility Functions
+  # -----------------
+  # Functions used when expanding the component/3 macro
+
+  # Generate a readable string (i.e. a string with spaces) based on the name
+  # of a component.
+  defp full_name(name) do
+    regex = ~r/([[:upper:]]+(?=[[:upper:]]|$)|[[:upper:]][[:lower:]]*)/
+    name  = name |> Atom.to_string |> String.split(".") |> Enum.at(-1)
+    Regex.replace(regex, name, " \\0") |> String.trim
+  end
+
+  # Verify the ports keyword list
+  # TODO: expand on this later:
+  #   - Allow a single port instead of a full list
+  #   - Throw errors when the list is in the wrong format
+  defp read_ports([in: in_ports]), do: {in_ports, []}
+  defp read_ports([in: in_ports, out: out_ports]), do: {in_ports, out_ports}
+
+  # Retrieve the description from a component if it is present.
+  # A description is provided when the component body start with a string.
+  # If this is the case, remove the string from the body and use it as the
+  # component description.
+  # If it is not the case, leave the component body untouched.
+  defp extract_description({:__block__, env, [str | r]}) when is_binary(str) do
+    {str, {:__block__, env, r}}
+  end
+  defp extract_description(str) when is_binary(str), do: {str, quote do end}
+  defp extract_description(any), do: {"", any}
 
   # Internal Macros
   # ---------------
@@ -172,34 +204,7 @@ defmodule Skitter.Component do
    end
   end
 
-  # Utility Functions
-  # -----------------
 
-  # Generate a readable string (i.e. a string with spaces) based on the name
-  # of a component.
-  defp full_name(name) do
-    regex = ~r/([[:upper:]]+(?=[[:upper:]]|$)|[[:upper:]][[:lower:]]*)/
-    name  = name |> Atom.to_string |> String.split(".") |> Enum.at(-1)
-    Regex.replace(regex, name, " \\0") |> String.trim
-  end
-
-  # Verify the ports keyword list
-  # TODO: expand on this later:
-  #   - Allow a single port instead of a full list
-  #   - Throw errors when the list is in the wrong format
-  defp read_ports([in: in_ports]), do: {in_ports, []}
-  defp read_ports([in: in_ports, out: out_ports]), do: {in_ports, out_ports}
-
-  # Retrieve the description from a component if it is present.
-  # A description is provided when the component body start with a string.
-  # If this is the case, remove the string from the body and use it as the
-  # component description.
-  # If it is not the case, leave the component body untouched.
-  defp extract_description({:__block__, env, [str | r]}) when is_binary(str) do
-    {str, {:__block__, env, r}}
-  end
-  defp extract_description(str) when is_binary(str), do: {str, quote do end}
-  defp extract_description(any), do: {"", any}
 
   # ----------------- #
   # Auxiliary Modules #
