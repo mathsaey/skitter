@@ -50,4 +50,12 @@ defmodule Skitter.ComponentTest do
     assert EffectTest |> effects() |> Keyword.get(:internal_state) == [:p1, :p2]
     assert EffectTest |> effects() |> Keyword.get(:external_effects) == []
   end
+
+  test "if init works" do
+    component TestInit, in: [] do
+      init a, b, do: instance a * b
+    end
+
+    assert TestInit.__skitter_init__([3, 4]) == {:ok, 3 * 4}
+    end
 end
