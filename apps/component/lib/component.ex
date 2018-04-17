@@ -60,25 +60,30 @@ defmodule Skitter.Component do
   Create a skitter component.
   """
   defmacro component(name, ports, do: body) do
+    # Get metadata from header
     full_name = full_name(Macro.expand(name, __CALLER__))
     {in_ports, out_ports} = read_ports(ports)
-    {description, body} = extract_description(body)
-    {body, effects} = Macro.postwalk(body, [], &component_postwalk/2)
+
+    # Extract metadata from body AST
+    {body, desc} = extract_description(body)
+    {body, effects} = Macro.postwalk(body, [], &effect_postwalk/2)
+
+    # Gather metadata
+    metadata = %{
+      name: full_name, description: desc,
+      effects: effects, in_ports: in_ports, out_ports: out_ports
+    }
+
+    # Transform macro calls inside body AST
+    {body, _} = Macro.postwalk(body, metadata, &callback_postwalk/2)
 
     quote do
       defmodule unquote(name) do
         import unquote(__MODULE__).Internal, only: [
-          react: 2, init: 2
+          react: 3, init: 3
         ]
 
-        def __skitter_metadata__ do %{
-          name: unquote(full_name),
-          effects: unquote(effects),
-          in_ports: unquote(in_ports),
-          out_ports: unquote(out_ports),
-          description: unquote(description)
-        }
-        end
+        def __skitter_metadata__, do: unquote(Macro.escape(metadata))
 
         unquote(body)
       end
@@ -88,27 +93,11 @@ defmodule Skitter.Component do
   # AST Identifiers
   # ---------------
 
-  @effect_keyword :effect
-  @internal_function_keyword :helper
-
   @component_callbacks [:react, :init]
 
   # AST Transformation
   # ------------------
   # Transformations applied to the body provided to component/3
-
-  # Transform all calls to macros in the `@component_callbacks` list to calls
-  # where all the arguments (except for the the do block, which is the final
-  # argument) are wrapped inside a list.
-  # Thus, call to a macro `foo(a,b,c) do ...` turns into `foo([a,b,c]) do ...`
-  # This makes it possible to use arbitraty pattern matching in `react`, etc
-  #
-  # This pattern doesn't modify the postwalk accumulator.
-  defp component_postwalk({name, env, argLst}, acc)
-  when name in @component_callbacks do
-    {args, [block]} = Enum.split(argLst, -1)
-    {{name, env, [args, block]}, acc}
-  end
 
   # Extract effect declarations from the AST and add the effects to the effect
   # list.
@@ -117,20 +106,31 @@ defmodule Skitter.Component do
   #  effect effect_name
   # In both cases, the full statement will be removed from the ast, and the
   # effect will be added to the accumulator with its properties.
-  defp component_postwalk({@effect_keyword, _env, [effect]}, acc) do
+  defp effect_postwalk({:effect, _env, [effect]}, acc) do
     {effect, properties} = Macro.decompose_call(effect)
     properties = Enum.map properties, fn {name, _env, _args} -> name end
     {nil, Keyword.put(acc, effect, properties)}
   end
+  # Ignore non-effect nodes in the AST
+  defp effect_postwalk(any, acc), do: {any, acc}
 
-  # Transform @internal_function_keyword into defp.
-  # This ensures 
-  defp component_postwalk({@internal_function_keyword, env, rest}, acc) do
-    {{:defp, env, rest}, acc}
+  # Transform all calls to macros in the `@component_callbacks` list to calls
+  # where all the arguments (except for the the do block, which is the final
+  # argument) are wrapped inside a list. Provide the component metadata and
+  # do block as the second and third argument.
+  # Thus, a call to macro `foo(a,b) do ...` turns into `foo([a,b], meta) do ...`
+  # This makes it possible to use arbitraty pattern matching in `react`, etc
+  # It also provides the various callbacks information about the component.
+  defp callback_postwalk({name, env, argLst}, meta)
+  when name in @component_callbacks do
+    {args, [block]} = Enum.split(argLst, -1)
+    {{name, env, [args, meta, block]}, meta}
   end
-
-  # Fallback case, leave AST and accumulator unmodified.
-  defp component_postwalk(ast, acc), do: {ast, acc}
+  # Transform @internal_function_keyword into defp.
+  defp callback_postwalk({:helper, env, rest}, meta) do
+    {{:defp, env, rest}, meta}
+  end
+  defp callback_postwalk(any, meta), do: {any, meta}
 
   # Utility Functions
   # -----------------
@@ -157,10 +157,10 @@ defmodule Skitter.Component do
   # component description.
   # If it is not the case, leave the component body untouched.
   defp extract_description({:__block__, env, [str | r]}) when is_binary(str) do
-    {str, {:__block__, env, r}}
+    {{:__block__, env, r}, str}
   end
-  defp extract_description(str) when is_binary(str), do: {str, quote do end}
-  defp extract_description(any), do: {"", any}
+  defp extract_description(str) when is_binary(str), do: {quote do end, str}
+  defp extract_description(any), do: {any, ""}
 
   # Internal Macros
   # ---------------
@@ -196,7 +196,7 @@ defmodule Skitter.Component do
      end
    end
 
-    defmacro init(args, do: body) do
+    defmacro init(args, _meta, do: body) do
       quote do
         def __skitter_init__(unquote(args)) do
           import unquote(__MODULE__), only: [instance: 1]
@@ -206,22 +206,19 @@ defmodule Skitter.Component do
       end
     end
 
-   # TODO: postwalk to check for instance use
-   defmacro react(args, do: body) do
-     quote do
-       def __skitter_react__(var!(skitter_instance), unquote(args)) do
-         import unquote(__MODULE__), only: [instance: 1, spit: 2]
-         var!(skitter_output) = []
-
-         unquote(body)
-
-         {:ok, var!(skitter_instance), var!(skitter_output)}
-       end
-     end
-   end
+    # TODO: postwalk to check for instance use
+    # TODO: don't use output when not needed
+    defmacro react(args, _meta, do: body) do
+      quote do
+        def __skitter_react__(var!(skitter_instance), unquote(args)) do
+          import unquote(__MODULE__), only: [instance: 1, spit: 2]
+          var!(skitter_output) = []
+          unquote(body)
+          {:ok, var!(skitter_instance), var!(skitter_output)}
+        end
+      end
+    end
   end
-
-
 
   # ----------------- #
   # Auxiliary Modules #
