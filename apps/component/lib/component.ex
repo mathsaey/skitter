@@ -89,6 +89,7 @@ defmodule Skitter.Component do
   # ---------------
 
   @effect_keyword :effect
+  @internal_function_keyword :helper
 
   @component_callbacks [:react, :init]
 
@@ -120,6 +121,12 @@ defmodule Skitter.Component do
     {effect, properties} = Macro.decompose_call(effect)
     properties = Enum.map properties, fn {name, _env, _args} -> name end
     {nil, Keyword.put(acc, effect, properties)}
+  end
+
+  # Transform @internal_function_keyword into defp.
+  # This ensures 
+  defp component_postwalk({@internal_function_keyword, env, rest}, acc) do
+    {{:defp, env, rest}, acc}
   end
 
   # Fallback case, leave AST and accumulator unmodified.

@@ -57,5 +57,17 @@ defmodule Skitter.ComponentTest do
     end
 
     assert TestInit.__skitter_init__([3, 4]) == {:ok, 3 * 4}
+  end
+
+  test "if helpers work" do
+    component TestHelper, in: [] do
+      init do: instance worker()
+
+      helper worker do
+        :from_helper
+      end
     end
+
+    assert TestHelper.__skitter_init__([]) == {:ok, :from_helper}
+  end
 end
