@@ -2,6 +2,26 @@ defmodule Skitter.Component do
   @moduledoc """
   """
 
+  # ----------------- #
+  # Auxiliary Modules #
+  # ----------------- #
+
+  defmodule DefinitionError do
+    @moduledoc """
+    This error is raised when a component definition is invalid.
+    """
+    defexception [:message]
+    def exception(val), do: %DefinitionError{message: val}
+
+    @doc false
+    def inject_error(reason) do
+      quote do
+        import unquote(__MODULE__)
+        raise DefinitionError, unquote(reason)
+      end
+    end
+  end
+
   # ------------------- #
   # Component Interface #
   # ------------------- #
@@ -169,6 +189,8 @@ defmodule Skitter.Component do
   defmodule Internal do
     @moduledoc false
 
+    import DefinitionError
+
     @doc """
     Read the current component instance
     """
@@ -207,12 +229,27 @@ defmodule Skitter.Component do
     end
 
     # TODO: postwalk to check for instance use
-    # TODO: don't use output when not needed
-    defmacro react(args, _meta, do: body) do
+    # Make this cleaner, only import spit if output ports are defined?
+    # Remove output if no port is defined
+    defmacro react(args, meta, do: body) do
+      errors = cond do
+        length(args) != length(meta[:in_ports]) ->
+          inject_error "Different amount of arguments and in_ports"
+        true -> nil
+      end
+
+      # See if we need to create an output variable
+      output_var_create_ast = case meta[:out_ports] do
+        [] -> quote do var!(skitter_output) = [] end
+        _  -> quote do nil end
+      end
+
       quote do
+        unquote(errors)
         def __skitter_react__(var!(skitter_instance), unquote(args)) do
           import unquote(__MODULE__), only: [instance: 1, spit: 2]
-          var!(skitter_output) = []
+          # TODO Turn into pre-body, body, post-body
+          unquote(output_var_create_ast)
           unquote(body)
           {:ok, var!(skitter_instance), var!(skitter_output)}
         end
@@ -220,30 +257,6 @@ defmodule Skitter.Component do
     end
   end
 
-  # ----------------- #
-  # Auxiliary Modules #
-  # ----------------- #
 
-  defmodule DefinitionError do
-    @moduledoc """
-    This error is raised when a component definition is invalid.
-    """
-    defexception [:message]
-
-    def exception(val) do
-      %DefinitionError{message: val}
-    end
-  end
-
-  defmodule BadCallError do
-    @moduledoc """
-    This error is raised when a function is called on a component that does not
-    support it (due to its effects)
-    """
-    defexception [:message]
-
-    def exception(val) do
-      %BadCallError{message: val}
-    end
-  end
 end
+
