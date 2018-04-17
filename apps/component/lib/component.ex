@@ -2,9 +2,9 @@ defmodule Skitter.Component do
   @moduledoc """
   """
 
-  # ----------------- #
-  # Auxiliary Modules #
-  # ----------------- #
+  # ------------ #
+  # Error Module #
+  # ------------ #
 
   defmodule DefinitionError do
     @moduledoc """
@@ -13,7 +13,11 @@ defmodule Skitter.Component do
     defexception [:message]
     def exception(val), do: %DefinitionError{message: val}
 
-    @doc false
+    @doc """
+    Return a quoted raise statement which can be injected by a macro.
+
+    When activated, the statement will raise a DefinitionError with `reason`.
+    """
     def inject_error(reason) do
       quote do
         import unquote(__MODULE__)
@@ -146,14 +150,15 @@ defmodule Skitter.Component do
     {args, [block]} = Enum.split(argLst, -1)
     {{name, env, [args, meta, block]}, meta}
   end
-  # Transform @internal_function_keyword into defp.
+  # Transform helper into defp.
   defp callback_postwalk({:helper, env, rest}, meta) do
     {{:defp, env, rest}, meta}
   end
+  # Ignore everything else
   defp callback_postwalk(any, meta), do: {any, meta}
 
-  # Utility Functions
-  # -----------------
+  # Data Extraction
+  # ---------------
   # Functions used when expanding the component/3 macro
 
   # Generate a readable string (i.e. a string with spaces) based on the name
@@ -182,12 +187,24 @@ defmodule Skitter.Component do
   defp extract_description(str) when is_binary(str), do: {quote do end, str}
   defp extract_description(any), do: {any, ""}
 
-  # Internal Macros
-  # ---------------
-  # Macros to be used inside component/3
+  # ------------------- #
+  # Component Callbacks #
+  # ------------------- #
 
   defmodule Internal do
-    @moduledoc false
+    @moduledoc """
+    Macros to be used inside `Skitter.Component.component/3`
+
+    _This module is automatically imported by `Skitter.Component.component/3`_
+
+    ## Warning
+
+    Calls to the macros in this module are often modified by the
+    `Skitter.Component.component/3` macro.
+    Therefore, you cannot always call the macros in this module like you
+    would expect.
+    Make sure to read the documentation before calling any macro in this module.
+    """
 
     import DefinitionError
 
@@ -256,7 +273,5 @@ defmodule Skitter.Component do
       end
     end
   end
-
-
 end
 
