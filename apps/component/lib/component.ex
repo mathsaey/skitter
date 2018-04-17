@@ -288,10 +288,6 @@ defmodule Skitter.Component do
 
     # TODO:
     #   - postwalk to check for instance use
-    #   - postwalk to check for correct spit ports
-    #
-    # Make this cleaner, only import spit if output ports are defined?
-    # Remove output if no port is defined
     defmacro react(args, meta, do: body) do
       errors = check_react_body(args, meta, body)
       {output_pre, output_post} = create_react_output(args, meta, body)
