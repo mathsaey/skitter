@@ -162,16 +162,6 @@ defmodule Skitter.Component do
   defmodule Internal do
     @moduledoc false
 
-    defmacro init(args, do: body) do
-      quote do
-        def __skitter_init__(unquote(args)) do
-          import unquote(__MODULE__), only: [instance: 1]
-          unquote(body)
-          {:ok, var!(skitter_instance)}
-        end
-      end
-    end
-
     @doc """
     Read the current component instance
     """
@@ -198,6 +188,16 @@ defmodule Skitter.Component do
        )
      end
    end
+
+    defmacro init(args, do: body) do
+      quote do
+        def __skitter_init__(unquote(args)) do
+          import unquote(__MODULE__), only: [instance: 1]
+          unquote(body)
+          {:ok, var!(skitter_instance)}
+        end
+      end
+    end
 
    # TODO: postwalk to check for instance use
    defmacro react(args, do: body) do
