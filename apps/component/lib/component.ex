@@ -139,11 +139,11 @@ defmodule Skitter.Component do
   defp effect_postwalk(any, acc), do: {any, acc}
 
   # Transform all calls to macros in the `@component_callbacks` list to calls
-  # where all the arguments (except for the the do block, which is the final
+  # where all the arguments (except for the do block, which is the final
   # argument) are wrapped inside a list. Provide the component metadata and
   # do block as the second and third argument.
   # Thus, a call to macro `foo(a,b) do ...` turns into `foo([a,b], meta) do ...`
-  # This makes it possible to use arbitraty pattern matching in `react`, etc
+  # This makes it possible to use arbitrary pattern matching in `react`, etc
   # It also provides the various callbacks information about the component.
   defp callback_postwalk({name, env, argLst}, meta)
   when name in @component_callbacks do
@@ -244,8 +244,8 @@ defmodule Skitter.Component do
 
     ```
     component MyComponent, in: [:foo, :bar] do
-      init externalValue do
-        instance = externalValue
+      init external_value do
+        instance = external_value
       end
     end
     """
@@ -282,33 +282,81 @@ defmodule Skitter.Component do
       end
     end
 
-    # TODO: postwalk to check for instance use
+    # ---------------- #
+    # React Generation #
+    # ---------------- #
+
+    # TODO:
+    #   - postwalk to check for instance use
+    #   - postwalk to check for correct spit ports
+    #
     # Make this cleaner, only import spit if output ports are defined?
     # Remove output if no port is defined
     defmacro react(args, meta, do: body) do
-      errors = cond do
-        length(args) != length(meta[:in_ports]) ->
-          inject_error "Different amount of arguments and in_ports"
-        true -> nil
-      end
-
-      # See if we need to create an output variable
-      output_var_create_ast = case meta[:out_ports] do
-        [] -> quote do var!(skitter_output) = [] end
-        _  -> quote do nil end
-      end
+      errors = check_react_body(args, meta, body)
+      {output_pre, output_post} = create_react_output(args, meta, body)
 
       quote do
         unquote(errors)
-        def __skitter_react__(var!(skitter_instance), unquote(args)) do
+        def __skitter_react__(instance, unquote(args)) do
           import unquote(__MODULE__), only: [instance: 1, spit: 2]
-          # TODO Turn into pre-body, body, post-body
-          unquote(output_var_create_ast)
+          unquote(output_pre)
           unquote(body)
-          {:ok, var!(skitter_instance), var!(skitter_output)}
+          {:ok, var!(skitter_instance), unquote(output_post)}
         end
       end
     end
+
+    # Skitter Output Generation
+    # -------------------------
+
+    # Generate the ASTs for creating the initial value and reading the value
+    # of skitter_output.
+    def create_react_output(_args, _meta, body) do
+      {_, port_use_count} = Macro.postwalk(body, 0, &port_count_postwalk/2)
+      if port_use_count > 0 do
+        {
+          quote do var!(skitter_ouput) = [] end,
+          quote do var!(skitter_ouput) end
+        }
+      else
+        {nil, nil}
+      end
+    end
+
+    # Count the occurences of `spit` in the ast.
+    defp port_count_postwalk(ast = {:spit, _e, _p}, acc), do: {ast, acc + 1}
+    defp port_count_postwalk(ast, acc), do: {ast, acc}
+
+    # Error Checking
+    # --------------
+
+    # Check the body of react for some common errors.
+    defp check_react_body(args, meta, body) do
+      cond do
+        # Ensure the inputs can map to the provided argument list
+        length(args) != length(meta[:in_ports]) ->
+          inject_error "Different amount of arguments and in_ports"
+        # Ensure all spits are valid
+        (p = check_spits(meta[:out_ports], body)) != nil ->
+          inject_error "Port `#{p}` not in out_ports"
+        true -> nil
+      end
+    end
+
+    # Check the spits in the body of react through `port_check_postwalk/2`
+    defp check_spits(ports, body) do
+      {_, {_ports, port}} =
+        Macro.postwalk(body, {ports, nil}, &port_check_postwalk/2)
+      port
+    end
+    # Check all the calls to spit and verify that the output port exists.
+    # If it does not, put the output port in the accumulator
+    defp port_check_postwalk(ast = {:spit, _env, [port, _val]}, {ports, nil}) do
+      if port in ports, do: {ast, {ports, nil}}, else: {ast, {ports, port}}
+    end
+    # Fallback match, don't do anything
+    defp port_check_postwalk(ast, acc), do: {ast, acc}
   end
 end
 
