@@ -10,9 +10,9 @@ defmodule Skitter.ComponentTest do
   doctest Skitter.Component
 
   test "if names are generated correctly" do
-    component Dot.In.Name, [in: [], out: []], do: nil
-    component SimpleName,  [in: [], out: []], do: nil
-    component ACRTestACR,  [in: [], out: []], do: nil
+    component Dot.In.Name, [in: []], do: nil
+    component SimpleName,  [in: []], do: nil
+    component ACRTestACR,  [in: []], do: nil
 
     assert name(Dot.In.Name) == "Name"
     assert name(SimpleName) == "Simple Name"
@@ -39,5 +39,15 @@ defmodule Skitter.ComponentTest do
     assert description(NormalDescription) == "Description"
     assert description(WithExpression) == "Description"
     assert String.trim(description(MultilineDescription)) == "Description"
+  end
+
+  test "if effects are parsed correctly" do
+    component EffectTest, in: [] do
+      effect internal_state p1, p2
+      effect external_effects #no properties
+    end
+
+    assert EffectTest |> effects() |> Keyword.get(:internal_state) == [:p1, :p2]
+    assert EffectTest |> effects() |> Keyword.get(:external_effects) == []
   end
 end

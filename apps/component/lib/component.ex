@@ -2,9 +2,9 @@ defmodule Skitter.Component do
   @moduledoc """
   """
 
-  # ---------------- #
-  # Using Components #
-  # ---------------- #
+  # ------------------- #
+  # Component Interface #
+  # ------------------- #
 
   @doc """
   Returns the name of a component.
@@ -62,38 +62,114 @@ defmodule Skitter.Component do
   defmacro component(name, ports, do: body) do
     full_name = full_name(Macro.expand(name, __CALLER__))
     {in_ports, out_ports} = read_ports(ports)
-    {desc, body} = extract_description(body)
+    {description, body} = extract_description(body)
+    {body, effects} = Macro.postwalk(body, [], &component_postwalk/2)
 
     quote do
       defmodule unquote(name) do
-        import unquote(__MODULE__), only: [effect: 2, effect: 1]
+        import unquote(__MODULE__).Internal, only: [
+          react: 2
+        ]
 
-        # Store component metadata
-        Module.put_attribute __MODULE__, :skitter_name, unquote(full_name)
-        Module.put_attribute __MODULE__, :skitter_description, unquote(desc)
-        Module.put_attribute __MODULE__, :skitter_in_ports, unquote(in_ports)
-        Module.put_attribute __MODULE__, :skitter_out_ports, unquote(out_ports)
-
-        # Effects will be added by the effects macro
-        Module.register_attribute __MODULE__, :skitter_effects, accumulate: true
-
-        # Precompile step to generate the __skitter_metadata__ function
-        @before_compile {unquote(__MODULE__), :__generate_metadata__}
+        def __skitter_metadata__ do %{
+          name: unquote(full_name),
+          effects: unquote(effects),
+          in_ports: unquote(in_ports),
+          out_ports: unquote(out_ports),
+          description: unquote(description)
+        }
+        end
 
         unquote(body)
       end
     end
   end
 
+  # AST Identifiers
+  # ---------------
+
+  @effect_keyword :effect
+
+  @component_callbacks [:react, :init]
+
+  # AST Transformation
+  # ------------------
+
+  # Transform all calls to macros in the `@component_callbacks` list to calls
+  # where all the arguments (except for the the do block, which is the final
+  # argument) are wrapped inside a list.
+  # Thus, call to a macro `foo(a,b,c) do ...` turns into `foo([a,b,c]) do ...`
+  # This makes it possible to use arbitraty pattern matching in `react`, etc
+  #
+  # This pattern doesn't modify the postwalk accumulator.
+  defp component_postwalk({name, env, argLst}, acc)
+  when name in @component_callbacks do
+    {args, [block]} = Enum.split(argLst, -1)
+    {{name, env, [args, block]}, acc}
+  end
+
+  # Extract effect declarations from the AST and add the effects to the effect
+  # list.
+  # Effects are specified as either:
+  #  effect effect_name property1, property2
+  #  effect effect_name
+  # In both cases, the full statement will be removed from the ast, and the
+  # effect will be added to the accumulator with its properties.
+  defp component_postwalk({@effect_keyword, _env, [effect]}, acc) do
+    {effect, properties} = Macro.decompose_call(effect)
+    properties = Enum.map properties, fn {name, _env, _args} -> name end
+    {nil, Keyword.put(acc, effect, properties)}
+  end
+
+  defp component_postwalk(ast, acc), do: {ast, acc}
+
   # Internal Macros
   # ---------------
   # Macros to be used inside component/3
 
-  @doc """
-  Specify an effect of the current component.
-  """
-  defmacro effect(name, properties \\ []) do
-    quote do @skitter_effects {unquote(name), unquote(properties)} end
+  defmodule Internal do
+    @moduledoc false
+
+    @doc """
+    Read the current component instance
+    """
+   defmacro instance do
+     quote do var!(skitter_instance) end
+   end
+
+   @doc """
+    Create or modify the instance of a component.
+   """
+   defmacro instance(value) do
+     quote generated: true do
+       var!(skitter_instance) = unquote(value)
+     end
+   end
+
+   @doc """
+   Send a value to an output port.
+   """
+   defmacro spit(port, value) do
+     quote do
+       var!(skitter_output) = Keyword.put(
+         var!(skitter_output), unquote(port), unquote(value)
+       )
+     end
+   end
+
+   # TODO: postwalk to check for instance use
+   defmacro react(args, do: body) do
+     quote do
+       def __skitter_react__(var!(skitter_instance), unquote(args)) do
+         import unquote(__MODULE__), only: [instance: 1, spit: 2]
+         var!(skitter_output) = []
+
+         unquote(body)
+
+         {:ok, var!(skitter_instance), var!(skitter_output)}
+       end
+     end
+   end
   end
 
   # Utility Functions
@@ -111,9 +187,8 @@ defmodule Skitter.Component do
   # TODO: expand on this later:
   #   - Allow a single port instead of a full list
   #   - Throw errors when the list is in the wrong format
-  defp read_ports([in: in_ports, out: out_ports]) do
-    {in_ports, out_ports}
-  end
+  defp read_ports([in: in_ports]), do: {in_ports, []}
+  defp read_ports([in: in_ports, out: out_ports]), do: {in_ports, out_ports}
 
   # Retrieve the description from a component if it is present.
   # A description is provided when the component body start with a string.
@@ -125,21 +200,6 @@ defmodule Skitter.Component do
   end
   defp extract_description(str) when is_binary(str), do: {str, quote do end}
   defp extract_description(any), do: {"", any}
-
-  defmacro __generate_metadata__(env) do
-    mod = env.module
-    quote do
-      def __skitter_metadata__ do
-        %{
-          name: unquote(Module.get_attribute(mod, :skitter_name)),
-          effects: unquote(Module.get_attribute(mod, :skitter_effects)),
-          in_ports: unquote(Module.get_attribute(mod, :skitter_in_ports)),
-          out_ports: unquote(Module.get_attribute(mod, :skitter_out_ports)),
-          description: unquote(Module.get_attribute(mod, :skitter_description))
-        }
-      end
-    end
-  end
 
   # ----------------- #
   # Auxiliary Modules #
