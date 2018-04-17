@@ -195,7 +195,12 @@ defmodule Skitter.Component do
     @moduledoc """
     Macros to be used inside `Skitter.Component.component/3`
 
-    _This module is automatically imported by `Skitter.Component.component/3`_
+    __This module is automatically imported by `Skitter.Component.component/3`,
+    do not import it manually.__
+
+    The Macros in this module are used inside the body of
+    `Skitter.Component.component/3` to generate a component definition.
+    Be sure to read its documentation before proceeding.
 
     ## Warning
 
@@ -203,37 +208,69 @@ defmodule Skitter.Component do
     `Skitter.Component.component/3` macro.
     Therefore, you cannot always call the macros in this module like you
     would expect.
-    Make sure to read the documentation before calling any macro in this module.
+    The documentation in this module is only present for extra explanation,
+    __do not manually call these macros outside of the body of
+    `Skitter.Component.component/3`.__
+    The documentation will contain examples of the correct syntax of the use of
+    these macros when needed.
     """
 
     import DefinitionError
 
     @doc """
-    Read the current component instance
+    Fetch the current component instance.
+
+    Elixir will emit warnings about the `skitter_instance` variable if some error
+    with the instance variable occurs.
+
+    Usable inside `react/3`, `init/3`.
     """
-   defmacro instance do
-     quote do var!(skitter_instance) end
-   end
+    defmacro instance do
+      quote do var!(skitter_instance) end
+    end
 
-   @doc """
-    Create or modify the instance of a component.
-   """
-   defmacro instance(value) do
-     quote generated: true do
-       var!(skitter_instance) = unquote(value)
-     end
-   end
+    @doc """
+    Modify the instance of the component, __do not call this directly__.
 
-   @doc """
-   Send a value to an output port.
-   """
-   defmacro spit(port, value) do
-     quote do
-       var!(skitter_output) = Keyword.put(
-         var!(skitter_output), unquote(port), unquote(value)
-       )
-     end
-   end
+    Automatically generated when `instance = something` is encountered inside a
+    component callback.
+    Usable inside `init/3`, and inside `react/3` iff the component is marked with
+    the `:internal_state` effect.
+
+    Elixir will emit warnings about the `skitter_instance` variable if some error
+    with the instance variable occurs.
+
+    ## Example
+
+    ```
+    component MyComponent, in: [:foo, :bar] do
+      init externalValue do
+        instance = externalValue
+      end
+    end
+    """
+    defmacro instance(value) do
+      quote generated: true do
+        var!(skitter_instance) = unquote(value)
+      end
+    end
+
+    @doc """
+    Provide a value to the workflow on a given port.
+
+    The given value will be sent to every other component that is connected to
+    the provided output port of the component.
+    The value will be sent _after_ `react/3` has finished executing.
+
+    Usable inside `react/3` iff the component has an output port.
+    """
+    defmacro spit(port, value) do
+      quote do
+        var!(skitter_output) = Keyword.put(
+          var!(skitter_output), unquote(port), unquote(value)
+        )
+      end
+    end
 
     defmacro init(args, _meta, do: body) do
       quote do
