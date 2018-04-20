@@ -292,23 +292,6 @@ defmodule Skitter.Component do
       end
     end
 
-    @doc """
-    Provide a value to the workflow on a given port.
-
-    The given value will be sent to every other component that is connected to
-    the provided output port of the component.
-    The value will be sent _after_ `react/3` has finished executing.
-
-    Usable inside `react/3` iff the component has an output port.
-    """
-    defmacro spit(port, value) do
-      quote do
-        var!(skitter_output) = Keyword.put(
-          var!(skitter_output), unquote(port), unquote(value)
-        )
-      end
-    end
-
     defmacro init(args, _meta, do: body) do
       quote do
         def __skitter_init__(unquote(args)) do
@@ -337,6 +320,26 @@ defmodule Skitter.Component do
           unquote(body)
           {:ok, var!(skitter_instance), unquote(output_post)}
         end
+      end
+    end
+
+    # Internal Macros
+    # ---------------
+
+    @doc """
+    Provide a value to the workflow on a given port.
+
+    The given value will be sent to every other component that is connected to
+    the provided output port of the component.
+    The value will be sent _after_ `react/3` has finished executing.
+
+    Usable inside `react/3` iff the component has an output port.
+    """
+    defmacro spit(port, value) do
+      quote do
+        var!(skitter_output) = Keyword.put(
+          var!(skitter_output), unquote(port), unquote(value)
+        )
       end
     end
 
