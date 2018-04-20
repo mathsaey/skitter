@@ -1,30 +1,32 @@
+# ------------ #
+# Error Module #
+# ------------ #
+
+defmodule Skitter.Component.DefinitionError do
+  @moduledoc """
+  This error is raised when a component definition is invalid.
+  """
+  defexception [:message]
+  def exception(val), do: %__MODULE__{message: val}
+
+  @doc """
+  Return a quoted raise statement which can be injected by a macro.
+
+  When activated, the statement will raise a DefinitionError with `reason`.
+  """
+  def inject_error(reason) do
+    quote do
+      import unquote(__MODULE__)
+      raise Skitter.Component.DefinitionError, unquote(reason)
+    end
+  end
+end
+
 defmodule Skitter.Component do
   @moduledoc """
   """
 
-  # ------------ #
-  # Error Module #
-  # ------------ #
-
-  defmodule DefinitionError do
-    @moduledoc """
-    This error is raised when a component definition is invalid.
-    """
-    defexception [:message]
-    def exception(val), do: %DefinitionError{message: val}
-
-    @doc """
-    Return a quoted raise statement which can be injected by a macro.
-
-    When activated, the statement will raise a DefinitionError with `reason`.
-    """
-    def inject_error(reason) do
-      quote do
-        import unquote(__MODULE__)
-        raise DefinitionError, unquote(reason)
-      end
-    end
-  end
+  import Skitter.Component.DefinitionError
 
   # ------------------- #
   # Component Interface #
@@ -80,6 +82,17 @@ defmodule Skitter.Component do
   # Component Generation #
   # -------------------- #
 
+  # Constants
+  # ---------
+
+  @valid_effects [internal_state: [], external_effects: []]
+
+  @component_callbacks [:react, :init]
+
+
+  # Main Definition
+  # ---------------
+
   @doc """
   Create a skitter component.
   """
@@ -101,6 +114,9 @@ defmodule Skitter.Component do
     # Transform macro calls inside body AST
     {body, _} = Macro.postwalk(body, metadata, &callback_postwalk/2)
 
+    # Check for errors
+    errors = check_component_body(metadata, body)
+
     quote do
       defmodule unquote(name) do
         import unquote(__MODULE__).Internal, only: [
@@ -109,15 +125,11 @@ defmodule Skitter.Component do
 
         def __skitter_metadata__, do: unquote(Macro.escape(metadata))
 
+        unquote(errors)
         unquote(body)
       end
     end
   end
-
-  # AST Identifiers
-  # ---------------
-
-  @component_callbacks [:react, :init]
 
   # AST Transformation
   # ------------------
@@ -187,6 +199,31 @@ defmodule Skitter.Component do
   defp extract_description(str) when is_binary(str), do: {quote do end, str}
   defp extract_description(any), do: {any, ""}
 
+  # Error Checking
+  # --------------
+  # Functions that check if the component as a whole is correct
+
+  defp check_component_body(meta, _body) do
+    check_effects(meta)
+  end
+
+  # Check if the specified effects are valid.
+  # If they are, ensure their properties are valid as well.
+  defp check_effects(metadata) do
+    for {effect, properties} <- metadata[:effects] do
+      with valid when valid != nil  <- Keyword.get(@valid_effects, effect),
+           [] <- Enum.reject(properties, fn p -> p in valid end)
+      do
+        nil
+      else
+        nil ->
+          inject_error "Effect `#{effect}` is not valid"
+        [prop | _] ->
+          inject_error "`#{prop}` is not a valid property of `#{effect}`"
+      end
+    end
+  end
+
   # ------------------- #
   # Component Callbacks #
   # ------------------- #
@@ -215,7 +252,7 @@ defmodule Skitter.Component do
     these macros when needed.
     """
 
-    import DefinitionError
+    import Skitter.Component.DefinitionError
 
     @doc """
     Fetch the current component instance.

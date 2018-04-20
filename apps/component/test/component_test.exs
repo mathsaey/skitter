@@ -53,12 +53,13 @@ defmodule Skitter.ComponentTest do
   end
 
   test "if effects are parsed correctly" do
+    # If effect properties are ever used, be sure to add them here
     component EffectTest, in: [] do
-      effect internal_state p1, p2
-      effect external_effects #no properties
+      effect internal_state
+      effect external_effects
     end
 
-    assert EffectTest |> effects() |> Keyword.get(:internal_state) == [:p1, :p2]
+    assert EffectTest |> effects() |> Keyword.get(:internal_state) == []
     assert EffectTest |> effects() |> Keyword.get(:external_effects) == []
   end
 
@@ -82,7 +83,16 @@ defmodule Skitter.ComponentTest do
     assert TestHelper.__skitter_init__([]) == {:ok, :from_helper}
   end
 
-  test "if port errors are reported correctly" do
+  test "if effect errors are reported" do
+    # be sure to test incorrect effect properties here once we use them.
+    assert_definition_error do
+      component WrongEffects, in: [] do
+        effect does_not_exist
+      end
+    end
+  end
+
+  test "if port errors are reported" do
     assert_definition_error do
       component WrongInPorts, in: [:a,:b,:c] do
         react a, b do
