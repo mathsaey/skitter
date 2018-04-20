@@ -3,6 +3,17 @@ defmodule Skitter.ComponentTest do
 
   import Skitter.Component
 
+  # ---------------- #
+  # Extra Assertions #
+  # ---------------- #
+
+  defmacro assert_definition_error(do: body) do
+    quote do
+      assert_raise Skitter.Component.DefinitionError, fn -> unquote(body)
+      end
+    end
+  end
+
   # ----- #
   # Tests #
   # ----- #
@@ -69,5 +80,22 @@ defmodule Skitter.ComponentTest do
     end
 
     assert TestHelper.__skitter_init__([]) == {:ok, :from_helper}
+  end
+
+  test "if port errors are reported correctly" do
+    assert_definition_error do
+      component WrongInPorts, in: [:a,:b,:c] do
+        react a, b do
+        end
+      end
+    end
+
+    assert_definition_error do
+      component WrongSpit, in: [], out: [:foo] do
+        react do
+          spit :bar, 42
+        end
+      end
+    end
   end
 end
