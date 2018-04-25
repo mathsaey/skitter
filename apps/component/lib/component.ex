@@ -409,6 +409,13 @@ defmodule Skitter.Component do
         (p = check_spits(meta[:out_ports], body)) != nil ->
           inject_error("Port `#{p}` not in out_ports")
 
+        # Ensure after_failure is only used when there are external effects
+        count_occurrences(:after_failure, body) > 0 and
+            !Keyword.has_key?(meta[:effects], :external_effects) ->
+          inject_error(
+            "`after_failure` only allowed when external_effects are present"
+          )
+
         true ->
           nil
       end

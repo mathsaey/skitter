@@ -94,7 +94,7 @@ defmodule Skitter.ComponentTest do
     end
   end
 
-  test "if port errors are reported" do
+  test "if react port errors are reported" do
     assert_definition_error do
       component WrongInPorts, in: [:a, :b, :c] do
         react a, b do
@@ -106,6 +106,17 @@ defmodule Skitter.ComponentTest do
       component WrongSpit, in: [], out: [:foo] do
         react do
           spit(:bar, 42)
+        end
+      end
+    end
+  end
+
+  test "if react after_failure errors are reported" do
+    assert_definition_error do
+      component WrongAfterFailure, in: [:val] do
+        react val do
+          after_failure do
+          end
         end
       end
     end
