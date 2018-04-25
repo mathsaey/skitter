@@ -5,5 +5,4 @@
 use Mix.Config
 
 # Remove all logging except errors in production
-config :logger,
-  compile_time_purge_level: :error
+config :logger, compile_time_purge_level: :error
