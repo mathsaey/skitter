@@ -361,15 +361,27 @@ defmodule Skitter.Component do
       end
     end
 
+    @doc """
+    Code that should only be executed after a failure occurred.
+
+    The code in this block will only be executed if `react/3` is triggered
+    after a failure occurred.
+    Internally, this operation is a no-op. Post walks will filter out calls
+    to this macro when needed.
+
+    Usable inside `react/3` iff the component has an external state.
+    """
+    defmacro after_failure(do: body), do: body
+
     # Skitter Output Generation
     # -------------------------
 
     # Generate the ASTs for creating the initial value and reading the value
     # of skitter_output.
     def create_react_output(_args, _meta, body) do
-      {_, port_use_count} = Macro.postwalk(body, 0, &port_count_postwalk/2)
+      spit_use_count = count_occurrences(:spit, body)
 
-      if port_use_count > 0 do
+      if spit_use_count > 0 do
         {
           quote do
             var!(skitter_ouput) = []
@@ -382,10 +394,6 @@ defmodule Skitter.Component do
         {nil, nil}
       end
     end
-
-    # Count the occurences of `spit` in the ast.
-    defp port_count_postwalk(ast = {:spit, _e, _p}, acc), do: {ast, acc + 1}
-    defp port_count_postwalk(ast, acc), do: {ast, acc}
 
     # Error Checking
     # --------------
@@ -408,7 +416,9 @@ defmodule Skitter.Component do
 
     # Check the spits in the body of react through `port_check_postwalk/2`
     defp check_spits(ports, body) do
-      {_, {_ports, port}} = Macro.postwalk(body, {ports, nil}, &port_check_postwalk/2)
+      {_, {_ports, port}} =
+        Macro.postwalk(body, {ports, nil}, &port_check_postwalk/2)
+
       port
     end
 
@@ -420,5 +430,20 @@ defmodule Skitter.Component do
 
     # Fallback match, don't do anything
     defp port_check_postwalk(ast, acc), do: {ast, acc}
+
+    # ----------------- #
+    # Utility Functions #
+    # ----------------- #
+
+    # Count the occurrences of a given symbol in an ast.
+    defp count_occurrences(symbol, ast) do
+      {_, n} =
+        Macro.postwalk(ast, 0, fn
+          ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
+          ast, acc -> {ast, acc}
+        end)
+
+      n
+    end
   end
 end
