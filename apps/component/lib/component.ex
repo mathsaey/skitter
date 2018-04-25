@@ -102,7 +102,7 @@ defmodule Skitter.Component do
 
     # Extract metadata from body AST
     {body, desc} = extract_description(body)
-    {body, effects} = Macro.postwalk(body, [], &effect_postwalk/2)
+    {body, effects} = extract_effects(body)
 
     # Gather metadata
     metadata = %{
@@ -114,7 +114,7 @@ defmodule Skitter.Component do
     }
 
     # Transform macro calls inside body AST
-    {body, _} = Macro.postwalk(body, metadata, &callback_postwalk/2)
+    body = transform_component_callbacks(body, metadata)
 
     # Check for errors
     errors = check_component_body(metadata, body)
@@ -146,14 +146,17 @@ defmodule Skitter.Component do
   #  effect effect_name
   # In both cases, the full statement will be removed from the ast, and the
   # effect will be added to the accumulator with its properties.
-  defp effect_postwalk({:effect, _env, [effect]}, acc) do
-    {effect, properties} = Macro.decompose_call(effect)
-    properties = Enum.map(properties, fn {name, _env, _args} -> name end)
-    {nil, Keyword.put(acc, effect, properties)}
-  end
+  defp extract_effects(body) do
+    Macro.postwalk(body, [], fn
+      {:effect, _env, [effect]}, acc ->
+        {effect, properties} = Macro.decompose_call(effect)
+        properties = Enum.map(properties, fn {name, _env, _args} -> name end)
+        {nil, Keyword.put(acc, effect, properties)}
 
-  # Ignore non-effect nodes in the AST
-  defp effect_postwalk(any, acc), do: {any, acc}
+      any, acc ->
+        {any, acc}
+    end)
+  end
 
   # Transform all calls to macros in the `@component_callbacks` list to calls
   # where all the arguments (except for the do block, which is the final
@@ -162,19 +165,21 @@ defmodule Skitter.Component do
   # Thus, a call to macro `foo(a,b) do ...` turns into `foo([a,b], meta) do ...`
   # This makes it possible to use arbitrary pattern matching in `react`, etc
   # It also provides the various callbacks information about the component.
-  defp callback_postwalk({name, env, arg_lst}, meta)
-       when name in @component_callbacks do
-    {args, [block]} = Enum.split(arg_lst, -1)
-    {{name, env, [args, meta, block]}, meta}
-  end
+  # Furthermore, any calls to helper are transformed into `defp`
+  defp transform_component_callbacks(body, meta) do
+    Macro.postwalk(body, fn
+      {name, env, arg_lst}
+      when name in @component_callbacks ->
+        {args, [block]} = Enum.split(arg_lst, -1)
+        {name, env, [args, meta, block]}
 
-  # Transform helper into defp.
-  defp callback_postwalk({:helper, env, rest}, meta) do
-    {{:defp, env, rest}, meta}
-  end
+      {:helper, env, rest} ->
+        {:defp, env, rest}
 
-  # Ignore everything else
-  defp callback_postwalk(any, meta), do: {any, meta}
+      any ->
+        any
+    end)
+  end
 
   # Data Extraction
   # ---------------
