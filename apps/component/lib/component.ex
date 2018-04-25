@@ -89,7 +89,6 @@ defmodule Skitter.Component do
 
   @component_callbacks [:react, :init]
 
-
   # Main Definition
   # ---------------
 
@@ -107,8 +106,11 @@ defmodule Skitter.Component do
 
     # Gather metadata
     metadata = %{
-      name: full_name, description: desc,
-      effects: effects, in_ports: in_ports, out_ports: out_ports
+      name: full_name,
+      description: desc,
+      effects: effects,
+      in_ports: in_ports,
+      out_ports: out_ports
     }
 
     # Transform macro calls inside body AST
@@ -119,9 +121,11 @@ defmodule Skitter.Component do
 
     quote do
       defmodule unquote(name) do
-        import unquote(__MODULE__).Internal, only: [
-          react: 3, init: 3
-        ]
+        import unquote(__MODULE__).Internal,
+          only: [
+            react: 3,
+            init: 3
+          ]
 
         def __skitter_metadata__, do: unquote(Macro.escape(metadata))
 
@@ -144,9 +148,10 @@ defmodule Skitter.Component do
   # effect will be added to the accumulator with its properties.
   defp effect_postwalk({:effect, _env, [effect]}, acc) do
     {effect, properties} = Macro.decompose_call(effect)
-    properties = Enum.map properties, fn {name, _env, _args} -> name end
+    properties = Enum.map(properties, fn {name, _env, _args} -> name end)
     {nil, Keyword.put(acc, effect, properties)}
   end
+
   # Ignore non-effect nodes in the AST
   defp effect_postwalk(any, acc), do: {any, acc}
 
@@ -157,15 +162,17 @@ defmodule Skitter.Component do
   # Thus, a call to macro `foo(a,b) do ...` turns into `foo([a,b], meta) do ...`
   # This makes it possible to use arbitrary pattern matching in `react`, etc
   # It also provides the various callbacks information about the component.
-  defp callback_postwalk({name, env, argLst}, meta)
-  when name in @component_callbacks do
-    {args, [block]} = Enum.split(argLst, -1)
+  defp callback_postwalk({name, env, arg_lst}, meta)
+       when name in @component_callbacks do
+    {args, [block]} = Enum.split(arg_lst, -1)
     {{name, env, [args, meta, block]}, meta}
   end
+
   # Transform helper into defp.
   defp callback_postwalk({:helper, env, rest}, meta) do
     {{:defp, env, rest}, meta}
   end
+
   # Ignore everything else
   defp callback_postwalk(any, meta), do: {any, meta}
 
@@ -176,17 +183,17 @@ defmodule Skitter.Component do
   # Generate a readable string (i.e. a string with spaces) based on the name
   # of a component.
   defp full_name(name) do
+    name = name |> Atom.to_string() |> String.split(".") |> Enum.at(-1)
     regex = ~r/([[:upper:]]+(?=[[:upper:]]|$)|[[:upper:]][[:lower:]]*)/
-    name  = name |> Atom.to_string |> String.split(".") |> Enum.at(-1)
-    Regex.replace(regex, name, " \\0") |> String.trim
+    regex |> Regex.replace(name, " \\0") |> String.trim()
   end
 
   # Verify the ports keyword list
   # TODO: expand on this later:
   #   - Allow a single port instead of a full list
   #   - Throw errors when the list is in the wrong format
-  defp read_ports([in: in_ports]), do: {in_ports, []}
-  defp read_ports([in: in_ports, out: out_ports]), do: {in_ports, out_ports}
+  defp read_ports(in: in_ports), do: {in_ports, []}
+  defp read_ports(in: in_ports, out: out_ports), do: {in_ports, out_ports}
 
   # Retrieve the description from a component if it is present.
   # A description is provided when the component body start with a string.
@@ -196,7 +203,12 @@ defmodule Skitter.Component do
   defp extract_description({:__block__, env, [str | r]}) when is_binary(str) do
     {{:__block__, env, r}, str}
   end
-  defp extract_description(str) when is_binary(str), do: {quote do end, str}
+
+  defp extract_description(str) when is_binary(str),
+    do:
+      {quote do
+       end, str}
+
   defp extract_description(any), do: {any, ""}
 
   # Error Checking
@@ -211,15 +223,15 @@ defmodule Skitter.Component do
   # If they are, ensure their properties are valid as well.
   defp check_effects(metadata) do
     for {effect, properties} <- metadata[:effects] do
-      with valid when valid != nil  <- Keyword.get(@valid_effects, effect),
-           [] <- Enum.reject(properties, fn p -> p in valid end)
-      do
+      with valid when valid != nil <- Keyword.get(@valid_effects, effect),
+           [] <- Enum.reject(properties, fn p -> p in valid end) do
         nil
       else
         nil ->
-          inject_error "Effect `#{effect}` is not valid"
+          inject_error("Effect `#{effect}` is not valid")
+
         [prop | _] ->
-          inject_error "`#{prop}` is not a valid property of `#{effect}`"
+          inject_error("`#{prop}` is not a valid property of `#{effect}`")
       end
     end
   end
@@ -263,7 +275,9 @@ defmodule Skitter.Component do
     Usable inside `react/3`, `init/3`.
     """
     defmacro instance do
-      quote do var!(skitter_instance) end
+      quote do
+        var!(skitter_instance)
+      end
     end
 
     @doc """
@@ -314,6 +328,7 @@ defmodule Skitter.Component do
 
       quote do
         unquote(errors)
+
         def __skitter_react__(instance, unquote(args)) do
           import unquote(__MODULE__), only: [instance: 1, spit: 2]
           unquote(output_pre)
@@ -337,9 +352,12 @@ defmodule Skitter.Component do
     """
     defmacro spit(port, value) do
       quote do
-        var!(skitter_output) = Keyword.put(
-          var!(skitter_output), unquote(port), unquote(value)
-        )
+        var!(skitter_output) =
+          Keyword.put(
+            var!(skitter_output),
+            unquote(port),
+            unquote(value)
+          )
       end
     end
 
@@ -350,10 +368,15 @@ defmodule Skitter.Component do
     # of skitter_output.
     def create_react_output(_args, _meta, body) do
       {_, port_use_count} = Macro.postwalk(body, 0, &port_count_postwalk/2)
+
       if port_use_count > 0 do
         {
-          quote do var!(skitter_ouput) = [] end,
-          quote do var!(skitter_ouput) end
+          quote do
+            var!(skitter_ouput) = []
+          end,
+          quote do
+            var!(skitter_ouput)
+          end
         }
       else
         {nil, nil}
@@ -372,27 +395,30 @@ defmodule Skitter.Component do
       cond do
         # Ensure the inputs can map to the provided argument list
         length(args) != length(meta[:in_ports]) ->
-          inject_error "Different amount of arguments and in_ports"
+          inject_error("Different amount of arguments and in_ports")
+
         # Ensure all spits are valid
         (p = check_spits(meta[:out_ports], body)) != nil ->
-          inject_error "Port `#{p}` not in out_ports"
-        true -> nil
+          inject_error("Port `#{p}` not in out_ports")
+
+        true ->
+          nil
       end
     end
 
     # Check the spits in the body of react through `port_check_postwalk/2`
     defp check_spits(ports, body) do
-      {_, {_ports, port}} =
-        Macro.postwalk(body, {ports, nil}, &port_check_postwalk/2)
+      {_, {_ports, port}} = Macro.postwalk(body, {ports, nil}, &port_check_postwalk/2)
       port
     end
+
     # Check all the calls to spit and verify that the output port exists.
     # If it does not, put the output port in the accumulator
     defp port_check_postwalk(ast = {:spit, _env, [port, _val]}, {ports, nil}) do
       if port in ports, do: {ast, {ports, nil}}, else: {ast, {ports, port}}
     end
+
     # Fallback match, don't do anything
     defp port_check_postwalk(ast, acc), do: {ast, acc}
   end
 end
-
