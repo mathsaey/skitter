@@ -12,7 +12,9 @@ defmodule Skitter.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.16", only: :dev, runtime: false}
+      # Dev tools
+      {:ex_doc, "~> 0.16", only: :dev, runtime: false},
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
     ]
   end
 end
