@@ -1,6 +1,3 @@
-# Let's keep our shortcuts personal
-.iex.exs
-
 # The directory Mix will write compiled artifacts to.
 /_build/
 
