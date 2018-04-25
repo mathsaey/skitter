@@ -228,10 +228,10 @@ defmodule Skitter.Component do
         nil
       else
         nil ->
-          inject_error("Effect `#{effect}` is not valid")
+          inject_error "Effect `#{effect}` is not valid"
 
         [prop | _] ->
-          inject_error("`#{prop}` is not a valid property of `#{effect}`")
+          inject_error "`#{prop}` is not a valid property of `#{effect}`"
       end
     end
   end
@@ -373,8 +373,8 @@ defmodule Skitter.Component do
     """
     defmacro after_failure(do: body), do: body
 
-    # Skitter Output Generation
-    # -------------------------
+    # AST Creation
+    # ------------
 
     # Generate the ASTs for creating the initial value and reading the value
     # of skitter_output.
@@ -403,11 +403,11 @@ defmodule Skitter.Component do
       cond do
         # Ensure the inputs can map to the provided argument list
         length(args) != length(meta[:in_ports]) ->
-          inject_error("Different amount of arguments and in_ports")
+          inject_error "Different amount of arguments and in_ports"
 
         # Ensure all spits are valid
         (p = check_spits(meta[:out_ports], body)) != nil ->
-          inject_error("Port `#{p}` not in out_ports")
+          inject_error "Port `#{p}` not in out_ports"
 
         # Ensure after_failure is only used when there are external effects
         count_occurrences(:after_failure, body) > 0 and

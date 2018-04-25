@@ -57,8 +57,8 @@ defmodule Skitter.ComponentTest do
   test "if effects are parsed correctly" do
     # If effect properties are ever used, be sure to add them here
     component EffectTest, in: [] do
-      effect(internal_state)
-      effect(external_effects)
+      effect internal_state
+      effect external_effects
     end
 
     assert EffectTest |> effects() |> Keyword.get(:internal_state) == []
@@ -89,7 +89,7 @@ defmodule Skitter.ComponentTest do
     # be sure to test incorrect effect properties here once we use them.
     assert_definition_error do
       component WrongEffects, in: [] do
-        effect(does_not_exist)
+        effect does_not_exist
       end
     end
   end
@@ -105,7 +105,7 @@ defmodule Skitter.ComponentTest do
     assert_definition_error do
       component WrongSpit, in: [], out: [:foo] do
         react do
-          spit(:bar, 42)
+          spit :bar, 42
         end
       end
     end
