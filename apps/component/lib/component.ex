@@ -329,16 +329,29 @@ defmodule Skitter.Component do
     #   - postwalk to check for instance use
     defmacro react(args, meta, do: body) do
       errors = check_react_body(args, meta, body)
+
       {output_pre, output_post} = create_react_output(args, meta, body)
+
+      body =
+        quote do
+          import unquote(__MODULE__), only: [spit: 2]
+          unquote(output_pre)
+          unquote(body)
+          {:ok, var!(skitter_instance), unquote(output_post)}
+        end
+
+      react_body = remove_after_failure(body)
+      react_after_failure_body = build_react_after_failure_body(body, meta)
 
       quote do
         unquote(errors)
 
         def __skitter_react__(instance, unquote(args)) do
-          import unquote(__MODULE__), only: [instance: 1, spit: 2]
-          unquote(output_pre)
-          unquote(body)
-          {:ok, var!(skitter_instance), unquote(output_post)}
+          unquote(react_body)
+        end
+
+        def __skitter_react_after_failure__(instance, unquote(args)) do
+          unquote(react_after_failure_body)
         end
       end
     end
@@ -398,6 +411,29 @@ defmodule Skitter.Component do
       else
         {nil, nil}
       end
+    end
+
+    # Create the body of __skitter_react_after_failure depending on the
+    # effects of the components.
+    defp build_react_after_failure_body(body, meta) do
+      if Keyword.has_key?(meta[:effects], :external_effects) do
+        quote do
+          import unquote(__MODULE__), only: [after_failure: 1]
+          unquote(body)
+        end
+      else
+        remove_after_failure(body)
+      end
+    end
+
+    # AST Transformations
+    # -------------------
+
+    defp remove_after_failure(body) do
+      Macro.postwalk(body, fn
+        {:after_failure, _env, _args} -> nil
+        any -> any
+      end)
     end
 
     # Error Checking
