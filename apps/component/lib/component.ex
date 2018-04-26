@@ -274,8 +274,8 @@ defmodule Skitter.Component do
     @doc """
     Fetch the current component instance.
 
-    Elixir will emit warnings about the `skitter_instance` variable if some error
-    with the instance variable occurs.
+    Elixir will emit warnings about the `skitter_instance` variable if some
+    error with the instance variable occurs.
 
     Usable inside `react/3`, `init/3`.
     """
@@ -290,11 +290,11 @@ defmodule Skitter.Component do
 
     Automatically generated when `instance = something` is encountered inside a
     component callback.
-    Usable inside `init/3`, and inside `react/3` iff the component is marked with
-    the `:internal_state` effect.
+    Usable inside `init/3`, and inside `react/3` iff the component is marked
+    with the `:internal_state` effect.
 
-    Elixir will emit warnings about the `skitter_instance` variable if some error
-    with the instance variable occurs.
+    Elixir will emit warnings about the `skitter_instance` variable if some
+    error with the instance variable occurs.
 
     ## Example
 
