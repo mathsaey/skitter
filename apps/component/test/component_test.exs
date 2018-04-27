@@ -30,19 +30,19 @@ defmodule Skitter.ComponentTest do
   end
 
   test "if descriptions work as they should" do
-    component EmptyDescription, in: [:in], out: [] do
+    component EmptyDescription, in: [] do
     end
 
-    component NormalDescription, in: [:in], out: [] do
+    component NormalDescription, in: [] do
       "Description"
     end
 
-    component WithExpression, in: [:in], out: [] do
+    component WithExpression, in: [] do
       "Description"
       5 + 2
     end
 
-    component MultilineDescription, in: [:in], out: [] do
+    component MultilineDescription, in: [] do
       """
       Description
       """
@@ -52,6 +52,19 @@ defmodule Skitter.ComponentTest do
     assert description(NormalDescription) == "Description"
     assert description(WithExpression) == "Description"
     assert String.trim(description(MultilineDescription)) == "Description"
+  end
+
+  test "If correct ports are accepted" do
+    # Should not raise
+    component CorrectPorts, in: [foo, bar], out: test do
+    end
+  end
+
+  test "If incorrect ports are detected" do
+    assert_definition_error do
+      component SymbolPorts, in: [:foo, :bar] do
+      end
+    end
   end
 
   test "if effects are parsed correctly" do
@@ -113,7 +126,7 @@ defmodule Skitter.ComponentTest do
 
   test "if react after_failure errors are reported" do
     assert_definition_error do
-      component WrongAfterFailure, in: [:val] do
+      component WrongAfterFailure, in: [val] do
         react val do
           after_failure do
           end

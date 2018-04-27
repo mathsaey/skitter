@@ -193,12 +193,29 @@ defmodule Skitter.Component do
     regex |> Regex.replace(name, " \\0") |> String.trim()
   end
 
-  # Verify the ports keyword list
-  # TODO: expand on this later:
-  #   - Allow a single port instead of a full list
-  #   - Throw errors when the list is in the wrong format
-  defp read_ports(in: in_ports), do: {in_ports, []}
-  defp read_ports(in: in_ports, out: out_ports), do: {in_ports, out_ports}
+  # Parse the port lists, add an empty list for out ports if they are not
+  # provided
+  defp read_ports(in: in_ports), do: read_ports(in: in_ports, out: [])
+  defp read_ports(in: in_ports, out: out_ports) do
+    {parse_port_names(in_ports), parse_port_names(out_ports)}
+  end
+
+  # Transform bare elixir names into symbols.
+  #   e.g: port list [foo, bar] becomes [:foo, :bar]
+  # If something other than a non-elixir name is encountered, add an error that
+  # can be filtered out by `check_port_names/1` later.
+  defp parse_port_names(lst) when is_list(lst) do
+    Enum.map(lst, fn
+      {name, _env, nil} -> name
+      any -> {:error, any}
+    end)
+  end
+
+  # Allow single names to be specified outside of a list
+  #   e.g. in: foo will become in: [foo]
+  # The list variant of this function will ensure the elements are provided in a
+  # correct format.
+  defp parse_port_names(el), do: parse_port_names([el])
 
   # Retrieve the description from a component if it is present.
   # A description is provided when the component body start with a string.
@@ -221,7 +238,19 @@ defmodule Skitter.Component do
   # Functions that check if the component as a whole is correct
 
   defp check_component_body(meta, _body) do
-    check_effects(meta)
+    [
+      check_effects(meta),
+      check_port_names(meta[:in_ports]),
+      check_port_names(meta[:out_ports])
+    ]
+  end
+
+  defp check_port_names(list) do
+    case Enum.find(list, &(match?({:error, _}, &1))) do
+      {:error, val} ->
+        inject_error "`#{val}` is not a valid port"
+      nil -> nil
+    end
   end
 
   # Check if the specified effects are valid.
