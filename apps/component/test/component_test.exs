@@ -118,7 +118,7 @@ defmodule Skitter.ComponentTest do
     assert_definition_error do
       component WrongSpit, in: [], out: [:foo] do
         react do
-          spit :bar, 42
+          spit(42) -> bar
         end
       end
     end

@@ -331,6 +331,7 @@ defmodule Skitter.Component do
   # TODO:
   #   - postwalk to check for instance use
   defmacro react(args, meta, do: body) do
+    body = transform_spit(body)
     errors = check_react_body(args, meta, body)
 
     {output_pre, output_post} = create_react_output(args, meta, body)
@@ -432,9 +433,20 @@ defmodule Skitter.Component do
   # AST Transformations
   # -------------------
 
+  # Remove all `after_failure` blocks from the body
   defp remove_after_failure(body) do
     Macro.postwalk(body, fn
       {:after_failure, _env, _args} -> nil
+      any -> any
+    end)
+  end
+
+  # Transform all spit calls in the body:
+  #   spit 5 + 2 -> port becomes spit :port, 5 + 2
+  defp transform_spit(body) do
+    Macro.postwalk(body, fn
+      {:->, env, [[{:spit, _se, body}], port = {_name, _pe, _pargs}]} ->
+        {:spit, env, [transform_port_name(port), body]}
       any -> any
     end)
   end
@@ -466,19 +478,20 @@ defmodule Skitter.Component do
   end
 
   # Check the spits in the body of react through `port_check_postwalk/2`
+  # Verify that:
+  #   - no errors occured when parsing port names
+  #   - The output port is present in the output port list
   defp check_spits(ports, body) do
     {_, {_ports, port}} =
-      Macro.postwalk(body, {ports, nil}, &port_check_postwalk/2)
+      Macro.postwalk(body, {ports, nil}, fn
+        ast = {:spit, _env, [{:error, port}, _val]}, {ports, nil} ->
+          {ast, {ports, port}}
+        ast = {:spit, _env, [port, _val]}, {ports, nil} ->
+          if port in ports, do: {ast, {ports, nil}}, else: {ast, {ports, port}}
+        ast, acc -> {ast, acc}
+      end
+      )
 
     port
   end
-
-  # Check all the calls to spit and verify that the output port exists.
-  # If it does not, put the output port in the accumulator
-  defp port_check_postwalk(ast = {:spit, _env, [port, _val]}, {ports, nil}) do
-    if port in ports, do: {ast, {ports, nil}}, else: {ast, {ports, port}}
-  end
-
-  # Fallback match, don't do anything
-  defp port_check_postwalk(ast, acc), do: {ast, acc}
 end
