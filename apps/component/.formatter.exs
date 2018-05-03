@@ -7,6 +7,8 @@
     effect: :*,
     instance: :*,
     instance!: :*,
-    inject_error: :*
+    inject_error: :*,
+    internal_state: :*,
+    external_effects: :*
   ]
 ]
