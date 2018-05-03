@@ -151,10 +151,13 @@ defmodule Skitter.Component do
     Macro.postwalk(body, [], fn
       {:effect, _env, [effect]}, acc ->
         {effect, properties} = Macro.decompose_call(effect)
-        properties = Enum.map(properties, fn
-          {name, _env, _args} -> name
-          any -> {:error, any}
-        end)
+
+        properties =
+          Enum.map(properties, fn
+            {name, _env, _args} -> name
+            any -> {:error, any}
+          end)
+
         {nil, Keyword.put(acc, effect, properties)}
 
       any, acc ->
@@ -326,7 +329,7 @@ defmodule Skitter.Component do
   # ---------------- #
 
   defmacro react(args, meta, do: body) do
-    body = transform_spit(body)
+    body = body |> transform_spit() |> transform_instance()
     errors = check_react_body(args, meta, body)
 
     react_body = remove_after_failure(body)
@@ -390,13 +393,14 @@ defmodule Skitter.Component do
     {out_pre, out_post} = create_react_output(body)
     {inst_arg, inst_pre, inst_post} = create_react_instance(body)
 
-    body = quote do
+    body =
+      quote do
         import unquote(__MODULE__), only: [spit: 2, instance: 0, instance!: 1]
         unquote(inst_pre)
         unquote(out_pre)
         unquote(body)
         {:ok, unquote(inst_post), unquote(out_post)}
-    end
+      end
 
     {body, inst_arg}
   end
@@ -416,7 +420,7 @@ defmodule Skitter.Component do
         end
       }
     else
-      {nil, nil}
+      {nil, []}
     end
   end
 
@@ -424,21 +428,26 @@ defmodule Skitter.Component do
     read_count = count_occurrences(:instance, body)
     write_count = count_occurrences(:instance!, body)
 
-    arg = if read_count > 0 do
-      quote do: var!(instance_arg)
-    else
-      quote do: _instance_arg
-    end
-    pre = if read_count > 0 do
-      quote do: var!(skitter_instance) = var!(instance_arg)
-    else
-      nil
-    end
-    post = if write_count > 0 do
-      quote do: var!(skitter_instance)
-    else
-      nil
-    end
+    arg =
+      if read_count > 0 do
+        quote do: var!(instance_arg)
+      else
+        quote do: _instance_arg
+      end
+
+    pre =
+      if read_count > 0 do
+        quote do: var!(skitter_instance) = var!(instance_arg)
+      else
+        nil
+      end
+
+    post =
+      if write_count > 0 do
+        quote do: var!(skitter_instance)
+      else
+        nil
+      end
 
     {arg, pre, post}
   end
@@ -464,6 +473,19 @@ defmodule Skitter.Component do
     Macro.postwalk(body, fn
       {:after_failure, _env, _args} -> nil
       any -> any
+    end)
+  end
+
+  # Transform all instances of 'instance' into 'instance()'
+  # This is done to avoid ambigous uses of instance, which
+  # will cause elixir to show a warning.
+  defp transform_instance(body) do
+    Macro.postwalk(body, fn
+      {:instance, env, atom} when is_atom(atom) ->
+        {:instance, env, []}
+
+      any ->
+        any
     end)
   end
 
