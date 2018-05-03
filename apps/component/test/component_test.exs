@@ -60,13 +60,6 @@ defmodule Skitter.ComponentTest do
     end
   end
 
-  test "If incorrect ports are detected" do
-    assert_definition_error do
-      component SymbolPorts, in: [:foo, :bar] do
-      end
-    end
-  end
-
   test "if effects are parsed correctly" do
     # If effect properties are ever used, be sure to add them here
     component EffectTest, in: [] do
@@ -80,7 +73,7 @@ defmodule Skitter.ComponentTest do
 
   test "if init works" do
     component TestInit, in: [] do
-      init(a, b, do: instance(a * b))
+      init(a, b, do: instance!(a * b))
     end
 
     assert TestInit.__skitter_init__([3, 4]) == {:ok, 3 * 4}
@@ -88,7 +81,7 @@ defmodule Skitter.ComponentTest do
 
   test "if helpers work" do
     component TestHelper, in: [] do
-      init(do: instance(worker()))
+      init(do: instance!(worker()))
 
       helper worker do
         :from_helper
@@ -98,8 +91,58 @@ defmodule Skitter.ComponentTest do
     assert TestHelper.__skitter_init__([]) == {:ok, :from_helper}
   end
 
-  test "if effect errors are reported" do
-    # be sure to test incorrect effect properties here once we use them.
+  test "if react works" do
+    component TestSpit, in: [foo], out: out do
+      react foo do
+        spit foo ~> out
+      end
+    end
+
+    assert TestSpit.__skitter_react__(nil, [10]) == {:ok, nil, [out: 10]}
+  end
+
+  test "if instances work correctly" do
+    component TestInstance, in: [foo] do
+      effect internal_state
+
+      init(arg, do: instance!(arg))
+
+      react foo do
+        new = instance + foo
+        instance! new
+      end
+    end
+
+    {:ok, inst} = TestInstance.__skitter_init__([10])
+    assert inst == 10
+
+    {:ok, inst, []} = TestInstance.__skitter_react__(inst, [5])
+    assert inst == 15
+  end
+
+  test "if after_failure works as it should" do
+    component TestAfterFailure, in: [] do
+      effect external_effects
+
+      react do
+        after_failure do
+          raise "some error"
+        end
+      end
+    end
+
+    # should not raise
+    TestAfterFailure.__skitter_react__(nil, [])
+
+    assert_raise RuntimeError, fn ->
+      TestAfterFailure.__skitter_react_after_failure__(nil, [])
+    end
+  end
+
+  # Error Reporting
+  # ---------------
+
+  test "if incorrect effects are reported" do
     assert_definition_error do
       component WrongEffects, in: [] do
         effect does_not_exist
@@ -107,29 +150,70 @@ defmodule Skitter.ComponentTest do
     end
   end
 
-  test "if react port errors are reported" do
+  test "if incorrect effect properties are reported" do
+    assert_definition_error do
+      component WrongPropertySyntax, in: [] do
+        effect internal_state 5
+      end
+    end
+
+    assert_definition_error do
+      component WrongEffectProperties, in: [] do
+        effect internal_state foo
+      end
+    end
+  end
+
+  test "if incorrect use of react after_failure is reported" do
+    assert_definition_error do
+      component WrongAfterFailure, in: [val] do
+        react val do
+          after_failure do
+          end
+        end
+      end
+    end
+  end
+
+  test "if incorrect instance! use is reported" do
+    assert_definition_error do
+      component WrongInstance, in: [] do
+        react do
+          instance! 30
+        end
+      end
+    end
+  end
+
+  test "if incorrectly named ports are reported" do
+    assert_definition_error do
+      component SymbolPorts, in: [:foo, :bar] do
+      end
+    end
+
+    assert_definition_error do
+      component SymbolInSpit, in: [], out: [:foo] do
+        react do
+          spit(42) ~> :foo
+        end
+      end
+    end
+  end
+
+  test "if a wrong react signature is reported" do
     assert_definition_error do
       component WrongInPorts, in: [:a, :b, :c] do
         react a, b do
         end
       end
     end
+  end
 
+  test "if incorrect port use in react is reported" do
     assert_definition_error do
       component WrongSpit, in: [], out: [:foo] do
         react do
-          spit(42) -> bar
-        end
-      end
-    end
-  end
-
-  test "if react after_failure errors are reported" do
-    assert_definition_error do
-      component WrongAfterFailure, in: [val] do
-        react val do
-          after_failure do
-          end
+          spit 42 ~> bar
         end
       end
     end
