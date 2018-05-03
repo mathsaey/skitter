@@ -151,7 +151,10 @@ defmodule Skitter.Component do
     Macro.postwalk(body, [], fn
       {:effect, _env, [effect]}, acc ->
         {effect, properties} = Macro.decompose_call(effect)
-        properties = Enum.map(properties, fn {name, _env, _args} -> name end)
+        properties = Enum.map(properties, fn
+          {name, _env, _args} -> name
+          any -> {:error, any}
+        end)
         {nil, Keyword.put(acc, effect, properties)}
 
       any, acc ->
@@ -261,6 +264,9 @@ defmodule Skitter.Component do
         nil ->
           inject_error "Effect `#{effect}` is not valid"
 
+        [{:error, prop} | _] ->
+          inject_error "`#{prop}` is not a valid property"
+
         [prop | _] ->
           inject_error "`#{prop}` is not a valid property of `#{effect}`"
       end
@@ -324,7 +330,7 @@ defmodule Skitter.Component do
     errors = check_react_body(args, meta, body)
 
     react_body = remove_after_failure(body)
-    react_after_failure_body = body
+    react_after_failure_body = build_react_after_failure_body(body, meta)
 
     {react_body, react_arg} = create_react_body_and_arg(react_body)
     {fail_body, fail_arg} = create_react_body_and_arg(react_after_failure_body)
@@ -403,10 +409,10 @@ defmodule Skitter.Component do
     if spit_use_count > 0 do
       {
         quote do
-          var!(skitter_ouput) = []
+          var!(skitter_output) = []
         end,
         quote do
-          var!(skitter_ouput)
+          var!(skitter_output)
         end
       }
     else
@@ -465,7 +471,7 @@ defmodule Skitter.Component do
   #   spit 5 + 2 -> port becomes spit :port, 5 + 2
   defp transform_spit(body) do
     Macro.postwalk(body, fn
-      {:->, env, [[{:spit, _se, body}], port = {_name, _pe, _pargs}]} ->
+      {:spit, env, [{:~>, _ae, [body, port = {_name, _pe, _pargs}]}]} ->
         {:spit, env, [transform_port_name(port), body]}
 
       any ->
