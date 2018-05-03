@@ -5,6 +5,8 @@
   locals_without_parens: [
     spit: :*,
     effect: :*,
+    instance: :*,
+    instance!: :*,
     inject_error: :*
   ]
 ]

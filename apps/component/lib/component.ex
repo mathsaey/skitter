@@ -213,6 +213,7 @@ defmodule Skitter.Component do
   # Parse the port lists, add an empty list for out ports if they are not
   # provided
   defp read_ports(in: in_ports), do: read_ports(in: in_ports, out: [])
+
   defp read_ports(in: in_ports, out: out_ports) do
     {parse_port_names(in_ports), parse_port_names(out_ports)}
   end
@@ -240,10 +241,12 @@ defmodule Skitter.Component do
   end
 
   defp check_port_names(list) do
-    case Enum.find(list, &(match?({:error, _}, &1))) do
+    case Enum.find(list, &match?({:error, _}, &1)) do
       {:error, val} ->
         inject_error "`#{val}` is not a valid port"
-      nil -> nil
+
+      nil ->
+        nil
     end
   end
 
@@ -284,31 +287,19 @@ defmodule Skitter.Component do
   end
 
   @doc """
-  Modify the instance of the component, __do not call this directly__.
+  Modify the instance of the component.
 
-  Automatically generated when `instance = something` is encountered inside a
-  component callback.
   Usable inside `init/3`, and inside `react/3` iff the component is marked
   with the `:internal_state` effect.
 
   Elixir will emit warnings about the `skitter_instance` variable if some
   error with the instance variable occurs.
-
-  ## Example
-
-  ```
-  component MyComponent, in: [:foo, :bar] do
-    init external_value do
-      instance = external_value
-    end
-  end
   """
-  defmacro instance(value) do
-    quote generated: true do
+  defmacro instance!(value) do
+    quote do
       var!(skitter_instance) = unquote(value)
     end
   end
-
 
   # --------------- #
   # Init Generation #
@@ -317,7 +308,7 @@ defmodule Skitter.Component do
   defmacro init(args, _meta, do: body) do
     quote do
       def __skitter_init__(unquote(args)) do
-        import unquote(__MODULE__), only: [instance: 1]
+        import unquote(__MODULE__), only: [instance!: 1]
         unquote(body)
         {:ok, var!(skitter_instance)}
       end
@@ -328,34 +319,25 @@ defmodule Skitter.Component do
   # React Generation #
   # ---------------- #
 
-  # TODO:
-  #   - postwalk to check for instance use
   defmacro react(args, meta, do: body) do
     body = transform_spit(body)
     errors = check_react_body(args, meta, body)
 
-    {output_pre, output_post} = create_react_output(args, meta, body)
-
-    body =
-      quote do
-        import unquote(__MODULE__), only: [spit: 2]
-        unquote(output_pre)
-        unquote(body)
-        {:ok, var!(skitter_instance), unquote(output_post)}
-      end
-
     react_body = remove_after_failure(body)
-    react_after_failure_body = build_react_after_failure_body(body, meta)
+    react_after_failure_body = body
+
+    {react_body, react_arg} = create_react_body_and_arg(react_body)
+    {fail_body, fail_arg} = create_react_body_and_arg(react_after_failure_body)
 
     quote do
       unquote(errors)
 
-      def __skitter_react__(instance, unquote(args)) do
+      def __skitter_react__(unquote(react_arg), unquote(args)) do
         unquote(react_body)
       end
 
-      def __skitter_react_after_failure__(instance, unquote(args)) do
-        unquote(react_after_failure_body)
+      def __skitter_react_after_failure__(unquote(fail_arg), unquote(args)) do
+        unquote(fail_body)
       end
     end
   end
@@ -398,9 +380,24 @@ defmodule Skitter.Component do
   # AST Creation
   # ------------
 
+  defp create_react_body_and_arg(body) do
+    {out_pre, out_post} = create_react_output(body)
+    {inst_arg, inst_pre, inst_post} = create_react_instance(body)
+
+    body = quote do
+        import unquote(__MODULE__), only: [spit: 2, instance: 0, instance!: 1]
+        unquote(inst_pre)
+        unquote(out_pre)
+        unquote(body)
+        {:ok, unquote(inst_post), unquote(out_post)}
+    end
+
+    {body, inst_arg}
+  end
+
   # Generate the ASTs for creating the initial value and reading the value
   # of skitter_output.
-  def create_react_output(_args, _meta, body) do
+  def create_react_output(body) do
     spit_use_count = count_occurrences(:spit, body)
 
     if spit_use_count > 0 do
@@ -415,6 +412,29 @@ defmodule Skitter.Component do
     else
       {nil, nil}
     end
+  end
+
+  def create_react_instance(body) do
+    read_count = count_occurrences(:instance, body)
+    write_count = count_occurrences(:instance!, body)
+
+    arg = if read_count > 0 do
+      quote do: var!(instance_arg)
+    else
+      quote do: _instance_arg
+    end
+    pre = if read_count > 0 do
+      quote do: var!(skitter_instance) = var!(instance_arg)
+    else
+      nil
+    end
+    post = if write_count > 0 do
+      quote do: var!(skitter_instance)
+    else
+      nil
+    end
+
+    {arg, pre, post}
   end
 
   # Create the body of __skitter_react_after_failure depending on the
@@ -447,7 +467,9 @@ defmodule Skitter.Component do
     Macro.postwalk(body, fn
       {:->, env, [[{:spit, _se, body}], port = {_name, _pe, _pargs}]} ->
         {:spit, env, [transform_port_name(port), body]}
-      any -> any
+
+      any ->
+        any
     end)
   end
 
@@ -472,6 +494,14 @@ defmodule Skitter.Component do
           "`after_failure` only allowed when external_effects are present"
         )
 
+      # Ensure instance! is only used when there is an internal state
+      count_occurrences(:instance!, body) > 0 and
+          !Keyword.has_key?(meta[:effects], :internal_state) ->
+        inject_error(
+          "`instance!` only allowed when the internal_state effect is present"
+        )
+
+      # Fallback case, no errors
       true ->
         nil
     end
@@ -486,11 +516,13 @@ defmodule Skitter.Component do
       Macro.postwalk(body, {ports, nil}, fn
         ast = {:spit, _env, [{:error, port}, _val]}, {ports, nil} ->
           {ast, {ports, port}}
+
         ast = {:spit, _env, [port, _val]}, {ports, nil} ->
           if port in ports, do: {ast, {ports, nil}}, else: {ast, {ports, port}}
-        ast, acc -> {ast, acc}
-      end
-      )
+
+        ast, acc ->
+          {ast, acc}
+      end)
 
     port
   end
