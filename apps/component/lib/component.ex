@@ -54,6 +54,36 @@ defmodule Skitter.Component do
   """
   def out_ports(comp), do: comp.__skitter_metadata__.out_ports
 
+  # ------------------- #
+  # Component Callbacks #
+  # ------------------- #
+  # Callbacks that each skitter component should implement.
+  #
+  # All of these callbacks should be automatically provided when the
+  # `component/3` macro is used. Nevertheless, we provide a behaviour to get an
+  # early warning if the `component/3` DSL generates incorrect code.
+  #
+  # Although it is possible to implement these callbacks correctly, it is
+  # preferable to use the `component/3` macro, as it verifies whether or not
+  # the provided component is a legal skitter component.
+
+  @type component :: module()
+  @type instance :: any()
+
+  @callback __skitter_metadata__ :: %{
+              name: String.t(),
+              description: String.t(),
+              effects: [keyword()],
+              in_ports: [atom()],
+              out_ports: [atom()]
+            }
+
+  @callback __skitter_init__([]) :: {:ok, instance}
+
+  @callback __skitter_react__(instance, []) :: {:ok, instance, [keyword()]}
+  @callback __skitter_react_after_failure__(instance, []) ::
+              {:ok, instance, [keyword()]}
+
   # ----------------- #
   # Shared Macro Code #
   # ----------------- #
@@ -122,6 +152,7 @@ defmodule Skitter.Component do
 
     quote do
       defmodule unquote(name) do
+        @behaviour unquote(__MODULE__)
         import unquote(__MODULE__),
           only: [
             react: 3,
