@@ -53,15 +53,6 @@ defmodule Skitter.ComponentTest do
       end
     end
 
-    component WithExpression, in: [] do
-      "Description"
-
-      react do
-      end
-
-      5 + 2
-    end
-
     component MultilineDescription, in: [] do
       """
       Description
@@ -73,7 +64,6 @@ defmodule Skitter.ComponentTest do
 
     assert description(EmptyDescription) == ""
     assert description(NormalDescription) == "Description"
-    assert description(WithExpression) == "Description"
     assert String.trim(description(MultilineDescription)) == "Description"
   end
 
