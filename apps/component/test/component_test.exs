@@ -106,7 +106,7 @@ defmodule Skitter.ComponentTest do
       end
     end
 
-    assert TestGeneratedInit.__skitter_init__([]) == nil
+    assert TestGeneratedInit.__skitter_init__([]) == {:ok, nil}
   end
 
   test "if helpers work" do

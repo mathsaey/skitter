@@ -292,7 +292,7 @@ defmodule Skitter.Component do
 
   defp default_init() do
     quote do
-      def __skitter_init__(_), do: nil
+      def __skitter_init__(_), do: {:ok, nil}
     end
   end
 
