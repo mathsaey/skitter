@@ -100,6 +100,15 @@ defmodule Skitter.ComponentTest do
     assert TestInit.__skitter_init__([3, 4]) == {:ok, 3 * 4}
   end
 
+  test "if defaults are generated correctly" do
+    component TestGeneratedInit, in: [] do
+      react do
+      end
+    end
+
+    assert TestGeneratedInit.__skitter_init__([]) == nil
+  end
+
   test "if helpers work" do
     component TestHelper, in: [] do
       init(do: instance!(worker()))

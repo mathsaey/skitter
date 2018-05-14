@@ -96,6 +96,8 @@ defmodule Skitter.Component do
 
   @component_callbacks [:react, :init]
 
+  @default_callbacks [:init]
+
   # AST Transformations
   # -------------------
 
@@ -144,6 +146,9 @@ defmodule Skitter.Component do
       out_ports: out_ports
     }
 
+    # Add default callbacks
+    defaults = generate_default_callbacks(metadata, body)
+
     # Transform macro calls inside body AST
     body = transform_component_callbacks(body, metadata)
 
@@ -161,8 +166,9 @@ defmodule Skitter.Component do
 
         def __skitter_metadata__, do: unquote(Macro.escape(metadata))
 
-        unquote(errors)
         unquote(body)
+        unquote(errors)
+        unquote(defaults)
       end
     end
   end
@@ -264,6 +270,31 @@ defmodule Skitter.Component do
   #   e.g. in: foo will become in: [foo]
   # Leave the actual parsing up to the list variant of this function.
   defp parse_port_names(el), do: parse_port_names([el])
+
+  # Default Generation
+  # ------------------
+  # Default implementations of various skitter functions
+  # We cannot use defoverridable, as the compiler will remove it before
+  # the init, react, ... macros are expanded.
+
+  defp generate_default_callbacks(_meta, body) do
+    # We cannot store callbacks in attributes, so we store them in a map here.
+    defaults = %{init: &default_init/0}
+
+    Enum.map(@default_callbacks, fn name ->
+      if count_occurrences(name, body) >= 1 do
+        nil
+      else
+        defaults[name].()
+      end
+    end)
+  end
+
+  defp default_init() do
+    quote do
+      def __skitter_init__(_), do: nil
+    end
+  end
 
   # Error Checking
   # --------------
