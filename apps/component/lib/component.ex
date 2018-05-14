@@ -269,9 +269,10 @@ defmodule Skitter.Component do
   # --------------
   # Functions that check if the component as a whole is correct
 
-  defp check_component_body(meta, _body) do
+  defp check_component_body(meta, body) do
     [
       check_effects(meta),
+      check_react(meta, body),
       check_port_names(meta[:in_ports]),
       check_port_names(meta[:out_ports])
     ]
@@ -304,6 +305,12 @@ defmodule Skitter.Component do
         [prop | _] ->
           inject_error "`#{prop}` is not a valid property of `#{effect}`"
       end
+    end
+  end
+
+  defp check_react(meta, body) do
+    unless count_occurrences(:react, body) >= 1 do
+      inject_error "Component `#{meta.name}` lacks a react implementation"
     end
   end
 

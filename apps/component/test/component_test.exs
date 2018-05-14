@@ -20,9 +20,20 @@ defmodule Skitter.ComponentTest do
   doctest Skitter.Component
 
   test "if names are generated correctly" do
-    component(Dot.In.Name, [in: []], do: nil)
-    component(SimpleName, [in: []], do: nil)
-    component(ACRTestACR, [in: []], do: nil)
+    component Dot.In.Name, in: [] do
+      react do
+      end
+    end
+
+    component SimpleName, in: [] do
+      react do
+      end
+    end
+
+    component ACRTestACR, in: [] do
+      react do
+      end
+    end
 
     assert name(Dot.In.Name) == "Name"
     assert name(SimpleName) == "Simple Name"
@@ -31,14 +42,23 @@ defmodule Skitter.ComponentTest do
 
   test "if descriptions work as they should" do
     component EmptyDescription, in: [] do
+      react do
+      end
     end
 
     component NormalDescription, in: [] do
       "Description"
+
+      react do
+      end
     end
 
     component WithExpression, in: [] do
       "Description"
+
+      react do
+      end
+
       5 + 2
     end
 
@@ -46,6 +66,9 @@ defmodule Skitter.ComponentTest do
       """
       Description
       """
+
+      react do
+      end
     end
 
     assert description(EmptyDescription) == ""
@@ -57,6 +80,8 @@ defmodule Skitter.ComponentTest do
   test "If correct ports are accepted" do
     # Should not raise
     component CorrectPorts, in: [foo, bar], out: test do
+      react _foo, _bar do
+      end
     end
   end
 
@@ -65,6 +90,9 @@ defmodule Skitter.ComponentTest do
     component EffectTest, in: [] do
       effect internal_state
       effect external_effects
+
+      react do
+      end
     end
 
     assert EffectTest |> effects() |> Keyword.get(:internal_state) == []
@@ -74,6 +102,9 @@ defmodule Skitter.ComponentTest do
   test "if init works" do
     component TestInit, in: [] do
       init(a, b, do: instance!(a * b))
+
+      react do
+      end
     end
 
     assert TestInit.__skitter_init__([3, 4]) == {:ok, 3 * 4}
@@ -85,6 +116,9 @@ defmodule Skitter.ComponentTest do
 
       helper worker do
         :from_helper
+      end
+
+      react do
       end
     end
 
@@ -146,6 +180,17 @@ defmodule Skitter.ComponentTest do
     assert_definition_error do
       component WrongEffects, in: [] do
         effect does_not_exist
+
+        react do
+        end
+      end
+    end
+  end
+
+  test "if a missing react is reported" do
+    assert_definition_error do
+      component MissingReact, in: [] do
+        # No react should cause an error
       end
     end
   end
@@ -154,12 +199,18 @@ defmodule Skitter.ComponentTest do
     assert_definition_error do
       component WrongPropertySyntax, in: [] do
         effect internal_state 5
+
+        react do
+        end
       end
     end
 
     assert_definition_error do
       component WrongEffectProperties, in: [] do
         effect internal_state foo
+
+        react do
+        end
       end
     end
   end

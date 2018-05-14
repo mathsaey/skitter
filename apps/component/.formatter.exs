@@ -7,6 +7,7 @@
     effect: :*,
     instance: :*,
     instance!: :*,
+    component: :*,
     inject_error: :*,
     internal_state: :*,
     external_effects: :*
