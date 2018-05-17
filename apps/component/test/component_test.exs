@@ -100,13 +100,37 @@ defmodule Skitter.ComponentTest do
     assert TestInit.__skitter_init__([3, 4]) == {:ok, 3 * 4}
   end
 
+  test "if terminate works" do
+    component TestTerminateNoInst, in: [] do
+      react do
+      end
+
+      terminate do
+      end
+    end
+
+    component TestTerminateInst, in: [] do
+      react do
+      end
+
+      terminate do
+        send(self(), instance)
+      end
+    end
+
+    assert TestTerminateNoInst.__skitter_terminate__(:not_used) == :ok
+    assert TestTerminateInst.__skitter_terminate__(:used) == :ok
+    assert_received :used
+  end
+
   test "if defaults are generated correctly" do
-    component TestGeneratedInit, in: [] do
+    component TestGenerated, in: [] do
       react do
       end
     end
 
-    assert TestGeneratedInit.__skitter_init__([]) == {:ok, nil}
+    assert TestGenerated.__skitter_init__([]) == {:ok, nil}
+    assert TestGenerated.__skitter_terminate__(nil) == :ok
   end
 
   test "if helpers work" do

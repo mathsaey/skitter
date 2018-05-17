@@ -79,6 +79,7 @@ defmodule Skitter.Component do
             }
 
   @callback __skitter_init__([]) :: {:ok, instance}
+  @callback __skitter_terminate__(instance) :: :ok
 
   @callback __skitter_react__(instance, []) :: {:ok, instance, [keyword()]}
   @callback __skitter_react_after_failure__(instance, []) ::
@@ -94,9 +95,9 @@ defmodule Skitter.Component do
 
   @valid_effects [internal_state: [], external_effects: []]
 
-  @component_callbacks [:react, :init]
+  @component_callbacks [:react, :init, :terminate]
 
-  @default_callbacks [:init]
+  @default_callbacks [:init, :terminate]
 
   # AST Transformations
   # -------------------
@@ -106,6 +107,19 @@ defmodule Skitter.Component do
   # If the name is ill-formed, return an {:error, form} pair.
   defp transform_port_name({name, _env, nil}), do: name
   defp transform_port_name(any), do: {:error, any}
+
+  # Transform all instances of 'instance' into 'instance()'
+  # This is done to avoid ambigous uses of instance, which
+  # will cause elixir to show a warning.
+  defp transform_instance(body) do
+    Macro.postwalk(body, fn
+      {:instance, env, atom} when is_atom(atom) ->
+        {:instance, env, []}
+
+      any ->
+        any
+    end)
+  end
 
   # Utility Functions
   # -----------------
@@ -161,7 +175,8 @@ defmodule Skitter.Component do
         import unquote(__MODULE__),
           only: [
             react: 3,
-            init: 3
+            init: 3,
+            terminate: 3
           ]
 
         def __skitter_metadata__, do: unquote(Macro.escape(metadata))
@@ -279,7 +294,7 @@ defmodule Skitter.Component do
 
   defp generate_default_callbacks(_meta, body) do
     # We cannot store callbacks in attributes, so we store them in a map here.
-    defaults = %{init: &default_init/0}
+    defaults = %{init: &default_init/0, terminate: &default_terminate/0}
 
     Enum.map(@default_callbacks, fn name ->
       if count_occurrences(name, body) >= 1 do
@@ -293,6 +308,12 @@ defmodule Skitter.Component do
   defp default_init() do
     quote do
       def __skitter_init__(_), do: {:ok, nil}
+    end
+  end
+
+  defp default_terminate() do
+    quote do
+      def __skitter_terminate__(_), do: :ok
     end
   end
 
@@ -389,6 +410,35 @@ defmodule Skitter.Component do
         import unquote(__MODULE__), only: [instance!: 1]
         unquote(body)
         {:ok, var!(skitter_instance)}
+      end
+    end
+  end
+
+  # -------------------- #
+  # Terminate Generation #
+  # -------------------- #
+
+  defmacro terminate([], _meta, do: body) do
+    instance_count = count_occurrences(:instance, body)
+
+    instance_arg =
+      if instance_count >= 1 do
+        quote do
+          var!(skitter_instance)
+        end
+      else
+        quote do
+          _
+        end
+      end
+
+    body = transform_instance(body)
+
+    quote do
+      def __skitter_terminate__(unquote(instance_arg)) do
+        import unquote(__MODULE__), only: [instance: 0]
+        unquote(body)
+        :ok
       end
     end
   end
@@ -542,19 +592,6 @@ defmodule Skitter.Component do
     Macro.postwalk(body, fn
       {:after_failure, _env, _args} -> nil
       any -> any
-    end)
-  end
-
-  # Transform all instances of 'instance' into 'instance()'
-  # This is done to avoid ambigous uses of instance, which
-  # will cause elixir to show a warning.
-  defp transform_instance(body) do
-    Macro.postwalk(body, fn
-      {:instance, env, atom} when is_atom(atom) ->
-        {:instance, env, []}
-
-      any ->
-        any
     end)
   end
 
