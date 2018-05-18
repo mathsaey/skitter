@@ -76,7 +76,6 @@ defmodule Skitter.ComponentTest do
   end
 
   test "if effects are parsed correctly" do
-    # If effect properties are ever used, be sure to add them here
     component EffectTest, in: [] do
       effect internal_state
       effect external_effects
@@ -85,8 +84,24 @@ defmodule Skitter.ComponentTest do
       end
     end
 
+    component PropTest, in: [] do
+      effect internal_state managed
+
+      react do
+      end
+
+      checkpoint do
+        checkpoint!(nil)
+      end
+
+      restore _ do
+        instance! nil
+      end
+    end
+
     assert EffectTest |> effects() |> Keyword.get(:internal_state) == []
     assert EffectTest |> effects() |> Keyword.get(:external_effects) == []
+    assert PropTest |> effects() |> Keyword.get(:internal_state) == [:managed]
   end
 
   test "if init works" do
@@ -123,6 +138,34 @@ defmodule Skitter.ComponentTest do
     assert_received :used
   end
 
+  test "if checkpoint and restore work" do
+    component CPTest, in: [] do
+      effect internal_state managed
+
+      react do
+      end
+
+      init val do
+        instance! val
+      end
+
+      checkpoint do
+        checkpoint!(instance)
+      end
+
+      restore val do
+        instance! val
+      end
+    end
+
+    {:ok, inst} = CPTest.__skitter_init__([:val])
+    {:ok, chkp} = CPTest.__skitter_checkpoint__(inst)
+    {:ok, rest} = CPTest.__skitter_restore__([chkp])
+
+    assert chkp == :val
+    assert rest == :val
+  end
+
   test "if defaults are generated correctly" do
     component TestGenerated, in: [] do
       react do
@@ -131,6 +174,8 @@ defmodule Skitter.ComponentTest do
 
     assert TestGenerated.__skitter_init__([]) == {:ok, nil}
     assert TestGenerated.__skitter_terminate__(nil) == :ok
+    assert TestGenerated.__skitter_checkpoint__(nil) == :nocheckpoint
+    assert TestGenerated.__skitter_restore__(nil) == :nocheckpoint
   end
 
   test "if helpers work" do
@@ -218,6 +263,34 @@ defmodule Skitter.ComponentTest do
     end
   end
 
+  test "if missing checkpoints are reported" do
+    assert_definition_error do
+      component MissingCheckpoint, in: [] do
+        effect internal_state managed
+
+        react do
+        end
+
+        restore _ do
+          instance! nil
+        end
+      end
+    end
+
+    assert_definition_error do
+      component MissingRestore, in: [] do
+        effect internal_state managed
+
+        react do
+        end
+
+        checkpoint do
+          checkpoint!(nil)
+        end
+      end
+    end
+  end
+
   test "if incorrect effect properties are reported" do
     assert_definition_error do
       component WrongPropertySyntax, in: [] do
@@ -244,6 +317,78 @@ defmodule Skitter.ComponentTest do
         react val do
           after_failure do
           end
+        end
+      end
+    end
+  end
+
+  test "if a useless init is reported" do
+    assert_definition_error do
+      component UselessInit, in: [] do
+        init do
+          :does_nothing
+        end
+
+        react do
+        end
+      end
+    end
+  end
+
+  test "if a useless checkpoint/restore is reported" do
+    assert_definition_error do
+      component UselessCheckpoint, in: [] do
+        effect internal_state managed
+
+        react do
+        end
+
+        checkpoint do
+        end
+
+        restore _ do
+          instance! nil
+        end
+      end
+    end
+
+    assert_definition_error do
+      component UselessRestore, in: [] do
+        effect internal_state managed
+
+        react do
+        end
+
+        checkpoint do
+          checkpoint!(nil)
+        end
+
+        restore _ do
+          nil
+        end
+      end
+    end
+  end
+
+  test "if incorrect use of checkpoint/restore is reported" do
+    assert_definition_error do
+      component WrongCheckpoint, in: [] do
+        react do
+        end
+
+        checkpoint do
+          checkpoint!(nil)
+        end
+      end
+    end
+
+    assert_definition_error do
+      component WrongRestore, in: [] do
+        react do
+        end
+
+        restore _ do
+          instance! nil
         end
       end
     end

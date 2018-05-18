@@ -68,6 +68,7 @@ defmodule Skitter.Component do
   # the provided component is a legal skitter component.
 
   @type component :: module()
+  @type checkpoint :: any()
   @type instance :: any()
 
   @callback __skitter_metadata__ :: %{
@@ -81,6 +82,10 @@ defmodule Skitter.Component do
   @callback __skitter_init__([]) :: {:ok, instance}
   @callback __skitter_terminate__(instance) :: :ok
 
+  @callback __skitter_checkpoint__(instance) ::
+              {:ok, checkpoint} | :nocheckpoint
+  @callback __skitter_restore__(checkpoint) :: {:ok, instance} | :nocheckpoint
+
   @callback __skitter_react__(instance, []) :: {:ok, instance, [keyword()]}
   @callback __skitter_react_after_failure__(instance, []) ::
               {:ok, instance, [keyword()]}
@@ -93,11 +98,11 @@ defmodule Skitter.Component do
   # Constants
   # ---------
 
-  @valid_effects [internal_state: [], external_effects: []]
+  @valid_effects [internal_state: [:managed], external_effects: []]
 
-  @component_callbacks [:react, :init, :terminate]
+  @component_callbacks [:react, :init, :terminate, :checkpoint, :restore]
 
-  @default_callbacks [:init, :terminate]
+  @default_callbacks [:init, :terminate, :checkpoint, :restore]
 
   # AST Transformations
   # -------------------
@@ -133,6 +138,18 @@ defmodule Skitter.Component do
       end)
 
     n
+  end
+
+  # -------------- #
+  # Error Checking #
+  # -------------- #
+
+  defp use_or_error(body, symbol, error) do
+    if count_occurrences(symbol, body) >= 1 do
+      nil
+    else
+      inject_error error
+    end
   end
 
   # -------------------- #
@@ -176,7 +193,9 @@ defmodule Skitter.Component do
           only: [
             react: 3,
             init: 3,
-            terminate: 3
+            terminate: 3,
+            checkpoint: 3,
+            restore: 3
           ]
 
         def __skitter_metadata__, do: unquote(Macro.escape(metadata))
@@ -225,6 +244,7 @@ defmodule Skitter.Component do
   # This makes it possible to use arbitrary pattern matching in `react`, etc
   # It also provides the various callbacks information about the component.
   # Furthermore, any calls to helper are transformed into `defp`
+  # TODO: only turn into list when needed
   defp transform_component_callbacks(body, meta) do
     Macro.postwalk(body, fn
       {name, env, arg_lst}
@@ -294,7 +314,12 @@ defmodule Skitter.Component do
 
   defp generate_default_callbacks(_meta, body) do
     # We cannot store callbacks in attributes, so we store them in a map here.
-    defaults = %{init: &default_init/0, terminate: &default_terminate/0}
+    defaults = %{
+      init: &default_init/0,
+      terminate: &default_terminate/0,
+      checkpoint: &default_checkpoint/0,
+      restore: &default_restore/0
+    }
 
     Enum.map(@default_callbacks, fn name ->
       if count_occurrences(name, body) >= 1 do
@@ -317,6 +342,18 @@ defmodule Skitter.Component do
     end
   end
 
+  defp default_checkpoint() do
+    quote do
+      def __skitter_checkpoint__(_), do: :nocheckpoint
+    end
+  end
+
+  defp default_restore() do
+    quote do
+      def __skitter_restore__(_), do: :nocheckpoint
+    end
+  end
+
   # Error Checking
   # --------------
   # Functions that check if the component as a whole is correct
@@ -325,6 +362,7 @@ defmodule Skitter.Component do
     [
       check_effects(meta),
       check_react(meta, body),
+      check_checkpoint(meta, body),
       check_port_names(meta[:in_ports]),
       check_port_names(meta[:out_ports])
     ]
@@ -363,6 +401,30 @@ defmodule Skitter.Component do
   defp check_react(meta, body) do
     unless count_occurrences(:react, body) >= 1 do
       inject_error "Component `#{meta.name}` lacks a react implementation"
+    end
+  end
+
+  defp check_checkpoint(meta, body) do
+    required = :managed in Keyword.get(meta[:effects], :internal_state, [])
+    cp_present = count_occurrences(:checkpoint, body) >= 1
+    rt_present = count_occurrences(:restore, body) >= 1
+    either_present = cp_present or rt_present
+    both_present = cp_present and rt_present
+
+    case {required, either_present, both_present} do
+      {true, _, true} ->
+        nil
+
+      {false, false, _} ->
+        nil
+
+      {true, _, false} ->
+        inject_error "`checkpoint` and `restore` are required when the " <>
+                       "internal state is managed"
+
+      {false, true, _} ->
+        inject_error "`checkpoint` and `restore` are only allowed when the " <>
+                       "internal state is managed"
     end
   end
 
@@ -405,7 +467,16 @@ defmodule Skitter.Component do
   # --------------- #
 
   defmacro init(args, _meta, do: body) do
+    error =
+      use_or_error(
+        body,
+        :instance!,
+        "`init` needs to return a component instance using `instance!`"
+      )
+
     quote do
+      unquote(error)
+
       def __skitter_init__(unquote(args)) do
         import unquote(__MODULE__), only: [instance!: 1]
         unquote(body)
@@ -439,6 +510,73 @@ defmodule Skitter.Component do
         import unquote(__MODULE__), only: [instance: 0]
         unquote(body)
         :ok
+      end
+    end
+  end
+
+  # --------------------- #
+  # Checkpoint Generation #
+  # --------------------- #
+
+  defmacro checkpoint([], _meta, do: body) do
+    instance_count = count_occurrences(:instance, body)
+
+    instance_arg =
+      if instance_count >= 1 do
+        quote do
+          var!(skitter_instance)
+        end
+      else
+        quote do
+          _
+        end
+      end
+
+    body = transform_instance(body)
+
+    error =
+      use_or_error(
+        body,
+        :checkpoint!,
+        "`checkpoint` needs to return a checkpoint using `checkpoint!`"
+      )
+
+    quote do
+      unquote(error)
+
+      def __skitter_checkpoint__(unquote(instance_arg)) do
+        import unquote(__MODULE__), only: [instance: 0, checkpoint!: 1]
+        unquote(body)
+        {:ok, var!(skitter_checkpoint)}
+      end
+    end
+  end
+
+  defmacro checkpoint!(value) do
+    quote do
+      var!(skitter_checkpoint) = unquote(value)
+    end
+  end
+
+  # ------------------ #
+  # Restore Generation #
+  # ------------------ #
+
+  defmacro restore(args, _meta, do: body) do
+    error =
+      use_or_error(
+        body,
+        :instance!,
+        "`restore` needs to return a component instance using `instance!`"
+      )
+
+    quote do
+      unquote(error)
+
+      def __skitter_restore__(unquote(args)) do
+        import unquote(__MODULE__), only: [instance!: 1]
+        unquote(body)
+        {:ok, var!(skitter_instance)}
       end
     end
   end
