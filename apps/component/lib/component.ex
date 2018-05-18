@@ -244,7 +244,6 @@ defmodule Skitter.Component do
   # This makes it possible to use arbitrary pattern matching in `react`, etc
   # It also provides the various callbacks information about the component.
   # Furthermore, any calls to helper are transformed into `defp`
-  # TODO: only turn into list when needed
   defp transform_component_callbacks(body, meta) do
     Macro.postwalk(body, fn
       {name, env, arg_lst}
