@@ -144,6 +144,7 @@ defmodule Skitter.Component do
   # Error Checking #
   # -------------- #
 
+  # Inject an error if a certain symbol is not present in an AST.
   defp use_or_error(body, symbol, error) do
     if count_occurrences(symbol, body) >= 1 do
       nil
@@ -307,10 +308,10 @@ defmodule Skitter.Component do
 
   # Default Generation
   # ------------------
+
   # Default implementations of various skitter functions
   # We cannot use defoverridable, as the compiler will remove it before
   # the init, react, ... macros are expanded.
-
   defp generate_default_callbacks(_meta, body) do
     # We cannot store callbacks in attributes, so we store them in a map here.
     defaults = %{
@@ -397,12 +398,15 @@ defmodule Skitter.Component do
     end
   end
 
+  # Ensure react is present in the component
   defp check_react(meta, body) do
     unless count_occurrences(:react, body) >= 1 do
       inject_error "Component `#{meta.name}` lacks a react implementation"
     end
   end
 
+  # Ensure checkpoint and restore are present if the component manages its own
+  # internal state. If it does not, ensure they are not present.
   defp check_checkpoint(meta, body) do
     required = :managed in Keyword.get(meta[:effects], :internal_state, [])
     cp_present = count_occurrences(:checkpoint, body) >= 1
@@ -645,6 +649,10 @@ defmodule Skitter.Component do
   # AST Creation
   # ------------
 
+  # Create the AST which will become the body of react. Besides this, generate
+  # the arguments for the react function header.
+  # This needs to happen to ensure that var! can be injected into the argument
+  # list of the function header if needed.
   defp create_react_body_and_arg(body) do
     {out_pre, out_post} = create_react_output(body)
     {inst_arg, inst_pre, inst_post} = create_react_instance(body)
@@ -680,6 +688,14 @@ defmodule Skitter.Component do
     end
   end
 
+  # Create the AST which managed the __skitter_instance__ variable throughout
+  # the call to __skitter_react__ and __skitter_react_after_failure.
+  # The following 3 ASTs are created:
+  #   - The AST which will be injected into the react signature, this way, the
+  #     skitter instance can be ignored if it is not used.
+  #   - The AST which initializes the skitter instance variable.
+  #   - The AST which provides the value that will be returned to the skitter
+  #     runtime.
   def create_react_instance(body) do
     read_count = count_occurrences(:instance, body)
     write_count = count_occurrences(:instance!, body)
@@ -708,8 +724,12 @@ defmodule Skitter.Component do
     {arg, pre, post}
   end
 
-  # Create the body of __skitter_react_after_failure depending on the
-  # effects of the components.
+  # Create the body of __skitter_react_after_failure based on the effects of
+  # the component.
+  #   - If the component has external effects, include the after_failure body
+  #   - If the component has no external effects, generated the same code as
+  #     in __skitter_react__. This makes it possible to simplify the skitter
+  #     runtime code.
   defp build_react_after_failure_body(body, meta) do
     if Keyword.has_key?(meta[:effects], :external_effects) do
       quote do
