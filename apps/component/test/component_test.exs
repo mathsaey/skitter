@@ -241,6 +241,27 @@ defmodule Skitter.ComponentTest do
     end
   end
 
+  test "if errors work" do
+    component ErrorsEverywhere, in: [] do
+      init do
+        instance! :not_used
+        error "error!"
+      end
+
+      react do
+        error "error!"
+      end
+
+      terminate do
+        error "error!"
+      end
+    end
+
+    assert ErrorsEverywhere.__skitter_init__([]) == {:error, "error!"}
+    assert ErrorsEverywhere.__skitter_react__(nil, []) == {:error, "error!"}
+    assert ErrorsEverywhere.__skitter_terminate__(nil) == {:error, "error!"}
+  end
+
   # Error Reporting
   # ---------------
 

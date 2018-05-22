@@ -70,6 +70,7 @@ defmodule Skitter.Component do
   @type component :: module()
   @type checkpoint :: any()
   @type instance :: any()
+  @type reason :: any()
 
   @callback __skitter_metadata__ :: %{
               name: String.t(),
@@ -79,16 +80,17 @@ defmodule Skitter.Component do
               out_ports: [atom()]
             }
 
-  @callback __skitter_init__([]) :: {:ok, instance}
-  @callback __skitter_terminate__(instance) :: :ok
+  @callback __skitter_init__([]) :: {:ok, instance} | {:error, reason}
+  @callback __skitter_terminate__(instance) :: :ok | {:error, reason}
 
   @callback __skitter_checkpoint__(instance) ::
               {:ok, checkpoint} | :nocheckpoint
   @callback __skitter_restore__(checkpoint) :: {:ok, instance} | :nocheckpoint
 
-  @callback __skitter_react__(instance, []) :: {:ok, instance, [keyword()]}
+  @callback __skitter_react__(instance, []) ::
+              {:ok, instance, [keyword()]} | {:error, reason}
   @callback __skitter_react_after_failure__(instance, []) ::
-              {:ok, instance, [keyword()]}
+              {:ok, instance, [keyword()]} | {:error, reason}
 
   # ----------------- #
   # Shared Macro Code #
@@ -124,6 +126,23 @@ defmodule Skitter.Component do
       any ->
         any
     end)
+  end
+
+  # Wrap a body with try/do if the `error/1` macro is used.
+  defp add_skitter_error_handler(body) do
+    if count_occurrences(:error, body) >= 1 do
+      quote do
+        try do
+          unquote(body)
+        catch
+          {:skitter_error, reason} -> {:error, reason}
+        end
+      end
+    else
+      quote do
+        unquote(body)
+      end
+    end
   end
 
   # Utility Functions
@@ -465,6 +484,15 @@ defmodule Skitter.Component do
     end
   end
 
+  @doc """
+  Stop the current callback and return with an error.
+  """
+  defmacro error(reason) do
+    quote do
+      throw({:skitter_error, unquote(reason)})
+    end
+  end
+
   # --------------- #
   # Init Generation #
   # --------------- #
@@ -477,13 +505,20 @@ defmodule Skitter.Component do
         "`init` needs to return a component instance using `instance!`"
       )
 
+    body =
+      quote do
+        import unquote(__MODULE__), only: [instance!: 1, error: 1]
+        unquote(body)
+        {:ok, var!(skitter_instance)}
+      end
+
+    body = add_skitter_error_handler(body)
+
     quote do
       unquote(error)
 
       def __skitter_init__(unquote(args)) do
-        import unquote(__MODULE__), only: [instance!: 1]
         unquote(body)
-        {:ok, var!(skitter_instance)}
       end
     end
   end
@@ -506,13 +541,18 @@ defmodule Skitter.Component do
         end
       end
 
-    body = transform_instance(body)
+    body =
+      quote do
+        import unquote(__MODULE__), only: [instance: 0, error: 1]
+        unquote(body)
+        :ok
+      end
+
+    body = body |> transform_instance() |> add_skitter_error_handler()
 
     quote do
       def __skitter_terminate__(unquote(instance_arg)) do
-        import unquote(__MODULE__), only: [instance: 0]
         unquote(body)
-        :ok
       end
     end
   end
@@ -573,11 +613,13 @@ defmodule Skitter.Component do
         "`restore` needs to return a component instance using `instance!`"
       )
 
+    body = add_skitter_error_handler(body)
+
     quote do
       unquote(error)
 
       def __skitter_restore__(unquote(args)) do
-        import unquote(__MODULE__), only: [instance!: 1]
+        import unquote(__MODULE__), only: [instance!: 1, error: 1]
         unquote(body)
         {:ok, var!(skitter_instance)}
       end
@@ -659,12 +701,21 @@ defmodule Skitter.Component do
 
     body =
       quote do
-        import unquote(__MODULE__), only: [spit: 2, instance: 0, instance!: 1]
+        import unquote(__MODULE__),
+          only: [
+            spit: 2,
+            instance: 0,
+            instance!: 1,
+            error: 1
+          ]
+
         unquote(inst_pre)
         unquote(out_pre)
         unquote(body)
         {:ok, unquote(inst_post), unquote(out_post)}
       end
+
+    body = add_skitter_error_handler(body)
 
     {body, inst_arg}
   end
