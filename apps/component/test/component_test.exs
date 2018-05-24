@@ -203,6 +203,31 @@ defmodule Skitter.ComponentTest do
     assert TestSpit.__skitter_react__(nil, [10]) == {:ok, nil, [out: 10]}
   end
 
+  test "if pattern matching works" do
+    component Patterns, in: input, out: out do
+      init :foo do
+        instance! :foo
+      end
+
+      init :bar do
+        instance! :bar
+      end
+
+      react :foo do
+        spit :foo ~> out
+      end
+
+      react :bar do
+        spit :bar ~> out
+      end
+    end
+
+    assert Patterns.__skitter_init__([:foo]) == {:ok, :foo}
+    assert Patterns.__skitter_init__([:bar]) == {:ok, :bar}
+    assert Patterns.__skitter_react__(nil, [:foo]) == {:ok, nil, [out: :foo]}
+    assert Patterns.__skitter_react__(nil, [:bar]) == {:ok, nil, [out: :bar]}
+  end
+
   test "if instances work correctly" do
     component TestInstance, in: [foo] do
       effect internal_state
