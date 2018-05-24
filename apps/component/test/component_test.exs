@@ -266,6 +266,22 @@ defmodule Skitter.ComponentTest do
     end
   end
 
+  test "if spit works" do
+    component TestSkip, in: [bool], out: [inner, outer] do
+      react bool do
+        spit :foo ~> inner
+        if bool, do: skip
+        spit :foo ~> outer
+      end
+    end
+
+    assert TestSkip.__skitter_react_after_failure__(nil, [true]) ==
+             {:ok, nil, [inner: :foo]}
+
+    assert TestSkip.__skitter_react_after_failure__(nil, [false]) ==
+             {:ok, nil, [outer: :foo, inner: :foo]}
+  end
+
   test "if errors work" do
     component ErrorsEverywhere, in: [] do
       init do

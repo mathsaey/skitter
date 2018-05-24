@@ -688,6 +688,28 @@ defmodule Skitter.Component do
   """
   defmacro after_failure(do: body), do: body
 
+  @doc """
+  Stop the execution of react, and return the current instance and spits.
+
+  Using this macro will automatically stop the execution of react. Unlike the
+  use of `error/1`, any changes made to the instance (through `instance!/1`)
+  and any values provided to `spit/2` will still be returned to the skitter
+  runtime.
+
+  This macro is useful when the execution of react should only continue under
+  certain conditions. It is especially useful in an `after_failure/1` body, as
+  it can be used to only continue the execution of react if no effect occurred
+  in the original call to react.
+
+  Do not call this manually, as the `instance` and `output` arguments are
+  provided by macro expansion code in `react/3`.
+  """
+  defmacro skip(instance, output) do
+    quote do
+      throw {:skitter_skip, unquote(instance), unquote(output)}
+    end
+  end
+
   # AST Creation
   # ------------
 
@@ -704,9 +726,11 @@ defmodule Skitter.Component do
         import unquote(__MODULE__),
           only: [
             spit: 2,
+            skip: 2,
             instance: 0,
             instance!: 1,
-            error: 1
+            error: 1,
+            after_failure: 1
           ]
 
         unquote(inst_pre)
@@ -715,6 +739,7 @@ defmodule Skitter.Component do
         {:ok, unquote(inst_post), unquote(out_post)}
       end
 
+    body = add_skip_handler(body, inst_post, out_post)
     body = add_skitter_error_handler(body)
 
     {body, inst_arg}
@@ -784,11 +809,38 @@ defmodule Skitter.Component do
   defp build_react_after_failure_body(body, meta) do
     if Keyword.has_key?(meta[:effects], :external_effects) do
       quote do
-        import unquote(__MODULE__), only: [after_failure: 1]
         unquote(body)
       end
     else
       remove_after_failure(body)
+    end
+  end
+
+  # Add a handler for `skip`, if it is used. If it's not, this just returns the
+  # body unchanged.
+  # Skip is implemented through the use of a throw. It will simply throw the
+  # current values for skitter_instance and skitter_output and return them as
+  # the result of the block as a whole.
+  # The quoted code for instance and output are provided by
+  # `create_react_body_and_arg` to avoid code duplication.
+  defp add_skip_handler(body, inst, out) do
+    if count_occurrences(:skip, body) >= 1 do
+      body =
+        Macro.postwalk(body, fn
+          {:skip, env, []} -> {:skip, env, [inst, out]}
+          {:skip, env, atom} when is_atom(atom) -> {:skip, env, [inst, out]}
+          any -> any
+        end)
+
+      quote do
+        try do
+          unquote(body)
+        catch
+          {:skitter_skip, instance, output} -> {:ok, instance, output}
+        end
+      end
+    else
+      body
     end
   end
 
