@@ -489,7 +489,7 @@ defmodule Skitter.Component do
   """
   defmacro error(reason) do
     quote do
-      throw({:skitter_error, unquote(reason)})
+      throw {:skitter_error, unquote(reason)}
     end
   end
 
