@@ -313,6 +313,17 @@ defmodule Skitter.ComponentDSLTest do
     assert ErrorsEverywhere.__skitter_terminate__(nil) == {:error, "error!"}
   end
 
+  test "if a warning is shown when modifying names inside catch/if/..." do
+    component CaseComp, in: val, out: [gt, lt] do
+      react val do
+        case val do
+          x when x > 5 -> spit x ~> gt
+          x when x < 5 -> spit x ~> lt
+        end
+      end
+    end
+  end
+
   # Error Reporting
   # ---------------
 

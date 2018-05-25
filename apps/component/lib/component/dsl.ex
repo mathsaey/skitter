@@ -121,7 +121,7 @@ defmodule Skitter.Component.DSL do
   # Wrap a body with try/do if the `error/1` macro is used.
   defp add_skitter_error_handler(body) do
     if count_occurrences(:error, body) >= 1 do
-      quote do
+      quote generated: true do
         try do
           unquote(body)
         catch
@@ -129,7 +129,7 @@ defmodule Skitter.Component.DSL do
         end
       end
     else
-      quote do
+      quote generated: true do
         unquote(body)
       end
     end
@@ -199,7 +199,7 @@ defmodule Skitter.Component.DSL do
     # Check for errors
     errors = check_component_body(metadata, body)
 
-    quote do
+    quote generated: true do
       defmodule unquote(name) do
         @behaviour unquote(Skitter.Component)
         import unquote(Skitter.Component), only: []
@@ -285,7 +285,7 @@ defmodule Skitter.Component.DSL do
 
   defp extract_description(str) when is_binary(str),
     do:
-      {quote do
+      {quote generated: true do
        end, str}
 
   defp extract_description(any), do: {any, ""}
@@ -345,25 +345,25 @@ defmodule Skitter.Component.DSL do
   end
 
   defp default_init() do
-    quote do
+    quote generated: true do
       def __skitter_init__(_), do: {:ok, nil}
     end
   end
 
   defp default_terminate() do
-    quote do
+    quote generated: true do
       def __skitter_terminate__(_), do: :ok
     end
   end
 
   defp default_checkpoint() do
-    quote do
+    quote generated: true do
       def __skitter_checkpoint__(_), do: :nocheckpoint
     end
   end
 
   defp default_restore() do
-    quote do
+    quote generated: true do
       def __skitter_restore__(_), do: :nocheckpoint
     end
   end
@@ -458,7 +458,7 @@ defmodule Skitter.Component.DSL do
   Usable inside `react/3`, `init/3`.
   """
   defmacro instance do
-    quote do
+    quote generated: true do
       var!(skitter_instance)
     end
   end
@@ -470,7 +470,7 @@ defmodule Skitter.Component.DSL do
   with the `:internal_state` effect.
   """
   defmacro instance!(value) do
-    quote do
+    quote generated: true do
       var!(skitter_instance) = unquote(value)
     end
   end
@@ -482,7 +482,7 @@ defmodule Skitter.Component.DSL do
   the use of this macro will crash the entire workflow.
   """
   defmacro error(reason) do
-    quote do
+    quote generated: true do
       throw {:skitter_error, unquote(reason)}
     end
   end
@@ -520,7 +520,7 @@ defmodule Skitter.Component.DSL do
       )
 
     body =
-      quote do
+      quote generated: true do
         import unquote(__MODULE__), only: [instance!: 1, error: 1]
         unquote(body)
         {:ok, var!(skitter_instance)}
@@ -528,7 +528,7 @@ defmodule Skitter.Component.DSL do
 
     body = add_skitter_error_handler(body)
 
-    quote do
+    quote generated: true do
       unquote(error)
 
       def __skitter_init__(unquote(args)) do
@@ -553,17 +553,17 @@ defmodule Skitter.Component.DSL do
 
     instance_arg =
       if instance_count >= 1 do
-        quote do
+        quote generated: true do
           var!(skitter_instance)
         end
       else
-        quote do
+        quote generated: true do
           _
         end
       end
 
     body =
-      quote do
+      quote generated: true do
         import unquote(__MODULE__), only: [instance: 0, error: 1]
         unquote(body)
         :ok
@@ -571,7 +571,7 @@ defmodule Skitter.Component.DSL do
 
     body = body |> transform_instance() |> add_skitter_error_handler()
 
-    quote do
+    quote generated: true do
       def __skitter_terminate__(unquote(instance_arg)) do
         unquote(body)
       end
@@ -598,11 +598,11 @@ defmodule Skitter.Component.DSL do
 
     instance_arg =
       if instance_count >= 1 do
-        quote do
+        quote generated: true do
           var!(skitter_instance)
         end
       else
-        quote do
+        quote generated: true do
           _
         end
       end
@@ -616,7 +616,7 @@ defmodule Skitter.Component.DSL do
         "`checkpoint` needs to return a checkpoint using `checkpoint!`"
       )
 
-    quote do
+    quote generated: true do
       unquote(error)
 
       def __skitter_checkpoint__(unquote(instance_arg)) do
@@ -633,7 +633,7 @@ defmodule Skitter.Component.DSL do
   Using this macro multiple times will overwrite the previous value.
   """
   defmacro checkpoint!(value) do
-    quote do
+    quote generated: true do
       var!(skitter_checkpoint) = unquote(value)
     end
   end
@@ -659,7 +659,7 @@ defmodule Skitter.Component.DSL do
 
     body = add_skitter_error_handler(body)
 
-    quote do
+    quote generated: true do
       unquote(error)
 
       def __skitter_restore__(unquote(args)) do
@@ -699,7 +699,7 @@ defmodule Skitter.Component.DSL do
     {react_body, react_arg} = create_react_body_and_arg(react_body)
     {fail_body, fail_arg} = create_react_body_and_arg(react_after_failure_body)
 
-    quote do
+    quote generated: true do
       unquote(errors)
 
       def __skitter_react__(unquote(react_arg), unquote(args)) do
@@ -725,7 +725,7 @@ defmodule Skitter.Component.DSL do
   Usable inside `react/3` iff the component has an output port.
   """
   defmacro spit(port, value) do
-    quote do
+    quote generated: true do
       var!(skitter_output) =
         Keyword.put(
           var!(skitter_output),
@@ -806,7 +806,7 @@ defmodule Skitter.Component.DSL do
   provided by macro expansion code in `react/3`.
   """
   defmacro skip(instance, output) do
-    quote do
+    quote generated: true do
       throw {:skitter_skip, unquote(instance), unquote(output)}
     end
   end
@@ -823,7 +823,7 @@ defmodule Skitter.Component.DSL do
     {inst_arg, inst_pre, inst_post} = create_react_instance(body)
 
     body =
-      quote do
+      quote generated: true do
         import unquote(__MODULE__),
           only: [
             spit: 2,
@@ -853,10 +853,10 @@ defmodule Skitter.Component.DSL do
 
     if spit_use_count > 0 do
       {
-        quote do
+        quote generated: true do
           var!(skitter_output) = []
         end,
-        quote do
+        quote generated: true do
           var!(skitter_output)
         end
       }
@@ -879,21 +879,21 @@ defmodule Skitter.Component.DSL do
 
     arg =
       if read_count > 0 do
-        quote do: var!(instance_arg)
+        quote generated: true, do: var!(instance_arg)
       else
-        quote do: _instance_arg
+        quote generated: true, do: _instance_arg
       end
 
     pre =
       if read_count > 0 do
-        quote do: var!(skitter_instance) = var!(instance_arg)
+        quote generated: true, do: var!(skitter_instance) = var!(instance_arg)
       else
         nil
       end
 
     post =
       if write_count > 0 do
-        quote do: var!(skitter_instance)
+        quote generated: true, do: var!(skitter_instance)
       else
         nil
       end
@@ -909,7 +909,7 @@ defmodule Skitter.Component.DSL do
   #     runtime code.
   defp build_react_after_failure_body(body, meta) do
     if Keyword.has_key?(meta.effects, :external_effects) do
-      quote do
+      quote generated: true do
         unquote(body)
       end
     else
@@ -933,7 +933,7 @@ defmodule Skitter.Component.DSL do
           any -> any
         end)
 
-      quote do
+      quote generated: true do
         try do
           unquote(body)
         catch
