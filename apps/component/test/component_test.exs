@@ -12,8 +12,8 @@ defmodule Skitter.ComponentTest do
   end
 
   component TestComponent2, in: [foo, bar] do
-    effect internal_state managed
-    effect external_effects
+    effect state_change hidden
+    effect external_effect
 
     init do
       instance! :init_works
@@ -36,14 +36,14 @@ defmodule Skitter.ComponentTest do
     assert description(TestComponent1) == "Description"
     assert in_ports(TestComponent1) == [:foo, :bar]
     assert out_ports(TestComponent1) == [:foo, :bar]
-    assert internal_state?(TestComponent1) == false
-    assert external_effects?(TestComponent1) == false
-    assert managed_internal_state?(TestComponent1) == false
+    assert state_change?(TestComponent1) == false
+    assert external_effect?(TestComponent1) == false
+    assert hidden_state_change?(TestComponent1) == false
     assert in_ports(TestComponent2) == [:foo, :bar]
     assert out_ports(TestComponent2) == []
-    assert internal_state?(TestComponent2) == true
-    assert external_effects?(TestComponent2) == true
-    assert managed_internal_state?(TestComponent2) == true
+    assert state_change?(TestComponent2) == true
+    assert external_effect?(TestComponent2) == true
+    assert hidden_state_change?(TestComponent2) == true
   end
 
   test "if callbacks work" do

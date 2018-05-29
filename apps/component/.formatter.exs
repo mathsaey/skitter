@@ -11,7 +11,7 @@
     instance!: :*,
     component: :*,
     inject_error: :*,
-    internal_state: :*,
-    external_effects: :*
+    state_change: :*,
+    external_effect: :*
   ]
 ]
