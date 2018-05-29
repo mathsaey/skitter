@@ -58,41 +58,42 @@ defmodule Skitter.Component do
   runtime to determine how to handle distribution and fault tolerance.
 
   Calling this function directly is generally not required, instead, rely on
-  more specific functions such as `internal_state?/1`, `external_effects?/1`,
+  more specific functions such as `state_change?/1`, `external_effect?/1`,
   etc.
   """
   def effects(comp), do: comp.__skitter_metadata__.effects
 
   @doc """
-  Verify if a component has an internal state.
+  Verify if a component can update its state.
 
-  A component has an internal state if it has the `internal_state` effect.
+  A component can update its state if it has the `state_change` effect.
   This effect signifies that every call to `c:__skitter_react__/2` needs to
   access a shared state which may be modified.
   """
-  def internal_state?(comp) do
-    comp |> effects() |> Keyword.has_key?(:internal_state)
+  def state_change?(comp) do
+    comp |> effects() |> Keyword.has_key?(:state_change)
   end
 
   @doc """
-  Verify if a component has a managed internal state.
+  Verify if a component can change its state without explicitly passing a new
+  state.
 
-  A component has a managed if it has the `internal_state` effect with the
-  `managed` property. Components with a managed internal state manage their own
+  A component has a hidden state if it has the `state_change` effect with the
+  `hidden` property. Components with a hidden state change manage their own
   state and do not hand it over to skitter every time `c:__skitter_react__/2`
   is called. Instead, these components return a _reference_ to their internal
   state. Furthermore, these components are required to implement the
   `c:__skitter_checkpoint__/1` and `c:__skitter_restore__/1` callbacks.
   """
-  def managed_internal_state?(comp) do
-    lst = comp |> effects() |> Keyword.get(:internal_state, [])
-    :managed in lst
+  def hidden_state_change?(comp) do
+    lst = comp |> effects() |> Keyword.get(:state_change, [])
+    :hidden in lst
   end
 
   @doc """
   Verify if a component has external effects.
 
-  A component has external effect if it provides the `external_effects` effect.
+  A component has external effects if it provides the `external_effect` effect.
   A component with this effect specifies that the execution of
   `c:__skitter_react__/2` may lead to side effects beyond the scope of the
   component (e.g. I/O).
@@ -102,8 +103,8 @@ defmodule Skitter.Component do
   makes it possible to clean up any external effects a previous, failed, call
   may have had.
   """
-  def external_effects?(comp) do
-    comp |> effects() |> Keyword.has_key?(:external_effects)
+  def external_effect?(comp) do
+    comp |> effects() |> Keyword.has_key?(:external_effect)
   end
 
   @doc "Call the `c:__skitter_init__/1` callback of a component."
@@ -198,7 +199,7 @@ defmodule Skitter.Component do
 
   Skitter automatically checkpoints the internal state which it receives from
   the invocation of react. However, if a component manages its own state (as
-  specified by the `managed` property of the `:internal_state` effect), skitter
+  specified by the `hidden` property of the `:state_change` effect), skitter
   cannot access this data. Therefore, skitter can use this callback to
   explicitly request a checkpoint to be made. In turn, this callback should
   return a checkpoint which it can use to reconstruct the current internal
@@ -229,7 +230,7 @@ defmodule Skitter.Component do
   Use this callback to process any incoming data. When the processing is
   successful, the component should return `{:ok, instance, kwlist}`.
   `instance` represents the current instance of the component; if the component
-  has the `internal_state` effect, this instance may be different from the
+  has the `state_change` effect, this instance may be different from the
   `instance` argument. The `kwlist` should be a keyword list which specifies
   the value should be sent to the which output port.
 

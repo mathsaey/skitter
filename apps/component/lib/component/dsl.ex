@@ -18,7 +18,7 @@ defmodule Skitter.Component.DSL do
   behaviour by default. Besides this, the DSL will protect the programmer
   against some easy to make mistakes which the behaviour cannot verify.
   For instance, the DSL will check that a component which does not specify the
-  `internal_state` effect does not modify its instance.
+  `state_change` effect does not modify its instance.
   - Finally, the DSL automatically generates default code for most of the
   required callbacks. Thus, using the DSL will drastically cut down on the
   amount of boilerplate code the programmer has to write.
@@ -62,11 +62,11 @@ defmodule Skitter.Component.DSL do
   Multiple effects can be specified for a single component.
 
   The following list contains all valid effects:
-  - `effect internal_state`
-  - `effect external_effects`
+  - `effect state_change`
+  - `effect external_effect`
 
-  Furthermore, the `internal_state` effect has one possible property:
-  `managed`. This would be declared as: `effect internal_state managed`
+  Furthermore, the `state_change` effect has one possible property:
+  `hidden`. This would be declared as: `effect state_change hidden`
 
   ## Callbacks
 
@@ -90,7 +90,7 @@ defmodule Skitter.Component.DSL do
   # Constants
   # ---------
 
-  @valid_effects [internal_state: [:managed], external_effects: []]
+  @valid_effects [state_change: [:hidden], external_effect: []]
 
   @component_callbacks [:react, :init, :terminate, :checkpoint, :restore]
 
@@ -424,7 +424,7 @@ defmodule Skitter.Component.DSL do
   # Ensure checkpoint and restore are present if the component manages its own
   # internal state. If it does not, ensure they are not present.
   defp check_checkpoint(meta, body) do
-    required = :managed in Keyword.get(meta.effects, :internal_state, [])
+    required = :hidden in Keyword.get(meta.effects, :state_change, [])
     cp_present = count_occurrences(:checkpoint, body) >= 1
     rt_present = count_occurrences(:restore, body) >= 1
     either_present = cp_present or rt_present
@@ -439,11 +439,11 @@ defmodule Skitter.Component.DSL do
 
       {true, _, false} ->
         inject_error "`checkpoint` and `restore` are required when the " <>
-                       "internal state is managed"
+                       "state change is hidden"
 
       {false, true, _} ->
         inject_error "`checkpoint` and `restore` are only allowed when the " <>
-                       "internal state is managed"
+                       "state changeis hidden"
     end
   end
 
@@ -467,7 +467,7 @@ defmodule Skitter.Component.DSL do
   Modify the instance of the component.
 
   Usable inside `init/3`, and inside `react/3` iff the component is marked
-  with the `:internal_state` effect.
+  with the `:state_change` effect.
   """
   defmacro instance!(value) do
     quote generated: true do
@@ -865,7 +865,7 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # Create the AST which managed the __skitter_instance__ variable throughout
+  # Create the AST which manages the __skitter_instance__ variable throughout
   # the call to __skitter_react__ and __skitter_react_after_failure.
   # The following 3 ASTs are created:
   #   - The AST which will be injected into the react signature, this way, the
@@ -908,7 +908,7 @@ defmodule Skitter.Component.DSL do
   #     in __skitter_react__. This makes it possible to simplify the skitter
   #     runtime code.
   defp build_react_after_failure_body(body, meta) do
-    if Keyword.has_key?(meta.effects, :external_effects) do
+    if Keyword.has_key?(meta.effects, :external_effect) do
       quote generated: true do
         unquote(body)
       end
@@ -984,16 +984,16 @@ defmodule Skitter.Component.DSL do
 
       # Ensure after_failure is only used when there are external effects
       count_occurrences(:after_failure, body) > 0 and
-          !Keyword.has_key?(meta.effects, :external_effects) ->
+          !Keyword.has_key?(meta.effects, :external_effect) ->
         inject_error(
-          "`after_failure` only allowed when external_effects are present"
+          "`after_failure` only allowed when external_effect are present"
         )
 
       # Ensure instance! is only used when there is an internal state
       count_occurrences(:instance!, body) > 0 and
-          !Keyword.has_key?(meta.effects, :internal_state) ->
+          !Keyword.has_key?(meta.effects, :state_change) ->
         inject_error(
-          "`instance!` only allowed when the internal_state effect is present"
+          "`instance!` only allowed when the state_change effect is present"
         )
 
       # Fallback case, no errors

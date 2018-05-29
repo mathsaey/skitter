@@ -82,15 +82,15 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if effects are parsed correctly" do
     component EffectTest, in: [] do
-      effect internal_state
-      effect external_effects
+      effect state_change
+      effect external_effect
 
       react do
       end
     end
 
     component PropTest, in: [] do
-      effect internal_state managed
+      effect state_change hidden
 
       react do
       end
@@ -105,13 +105,13 @@ defmodule Skitter.ComponentDSLTest do
     end
 
     assert EffectTest.__skitter_metadata__().effects
-           |> Keyword.get(:internal_state) == []
+           |> Keyword.get(:state_change) == []
 
     assert EffectTest.__skitter_metadata__().effects
-           |> Keyword.get(:external_effects) == []
+           |> Keyword.get(:external_effect) == []
 
     assert PropTest.__skitter_metadata__().effects
-           |> Keyword.get(:internal_state) == [:managed]
+           |> Keyword.get(:state_change) == [:hidden]
   end
 
   test "if init works" do
@@ -150,7 +150,7 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if checkpoint and restore work" do
     component CPTest, in: [] do
-      effect internal_state managed
+      effect state_change hidden
 
       react do
       end
@@ -240,7 +240,7 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if instances work correctly" do
     component TestInstance, in: [foo] do
-      effect internal_state
+      effect state_change
 
       init(arg, do: instance!(arg))
 
@@ -259,7 +259,7 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if after_failure works as it should" do
     component TestAfterFailure, in: [] do
-      effect external_effects
+      effect external_effect
 
       react do
         after_failure do
@@ -349,7 +349,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if missing checkpoints are reported" do
     assert_definition_error do
       component MissingCheckpoint, in: [] do
-        effect internal_state managed
+        effect state_change hidden
 
         react do
         end
@@ -362,7 +362,7 @@ defmodule Skitter.ComponentDSLTest do
 
     assert_definition_error do
       component MissingRestore, in: [] do
-        effect internal_state managed
+        effect state_change hidden
 
         react do
         end
@@ -377,7 +377,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if incorrect effect properties are reported" do
     assert_definition_error do
       component WrongPropertySyntax, in: [] do
-        effect internal_state 5
+        effect state_change 5
 
         react do
         end
@@ -386,7 +386,7 @@ defmodule Skitter.ComponentDSLTest do
 
     assert_definition_error do
       component WrongEffectProperties, in: [] do
-        effect internal_state foo
+        effect state_change foo
 
         react do
         end
@@ -421,7 +421,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if a useless checkpoint/restore is reported" do
     assert_definition_error do
       component UselessCheckpoint, in: [] do
-        effect internal_state managed
+        effect state_change hidden
 
         react do
         end
@@ -437,7 +437,7 @@ defmodule Skitter.ComponentDSLTest do
 
     assert_definition_error do
       component UselessRestore, in: [] do
-        effect internal_state managed
+        effect state_change hidden
 
         react do
         end
