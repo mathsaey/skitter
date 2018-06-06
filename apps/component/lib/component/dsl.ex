@@ -92,9 +92,22 @@ defmodule Skitter.Component.DSL do
 
   @valid_effects [state_change: [:hidden], external_effect: []]
 
-  @component_callbacks [:react, :init, :terminate, :checkpoint, :restore]
+  @component_callbacks [
+    :react,
+    :init,
+    :terminate,
+    :checkpoint,
+    :restore,
+    :clean_checkpoint
+  ]
 
-  @default_callbacks [:init, :terminate, :checkpoint, :restore]
+  @default_callbacks [
+    :init,
+    :terminate,
+    :checkpoint,
+    :restore,
+    :clean_checkpoint
+  ]
 
   # AST Transformations
   # -------------------
@@ -210,7 +223,8 @@ defmodule Skitter.Component.DSL do
             init: 3,
             terminate: 3,
             checkpoint: 3,
-            restore: 3
+            restore: 3,
+            clean_checkpoint: 3
           ]
 
         def __skitter_metadata__, do: unquote(Macro.escape(metadata))
@@ -326,45 +340,55 @@ defmodule Skitter.Component.DSL do
   # Default implementations of various skitter functions
   # We cannot use defoverridable, as the compiler will remove it before
   # the init, react, ... macros are expanded.
-  defp generate_default_callbacks(_meta, body) do
+  defp generate_default_callbacks(meta, body) do
     # We cannot store callbacks in attributes, so we store them in a map here.
     defaults = %{
-      init: &default_init/0,
-      terminate: &default_terminate/0,
-      checkpoint: &default_checkpoint/0,
-      restore: &default_restore/0
+      init: &default_init/1,
+      terminate: &default_terminate/1,
+      checkpoint: &default_checkpoint/1,
+      restore: &default_restore/1,
+      clean_checkpoint: &defaul_clean_checkpoint/1
     }
 
     Enum.map(@default_callbacks, fn name ->
       if count_occurrences(name, body) >= 1 do
         nil
       else
-        defaults[name].()
+        defaults[name].(meta)
       end
     end)
   end
 
-  defp default_init() do
+  defp default_init(_) do
     quote generated: true do
       def __skitter_init__(_), do: {:ok, nil}
     end
   end
 
-  defp default_terminate() do
+  defp default_terminate(_) do
     quote generated: true do
       def __skitter_terminate__(_), do: :ok
     end
   end
 
-  defp default_checkpoint() do
+  defp default_checkpoint(_) do
     quote generated: true do
       def __skitter_checkpoint__(_), do: :nocheckpoint
     end
   end
 
-  defp default_restore() do
+  defp default_restore(_) do
     quote generated: true do
       def __skitter_restore__(_), do: :nocheckpoint
+    end
+  end
+
+  defp defaul_clean_checkpoint(meta) do
+    required = :hidden in Keyword.get(meta.effects, :state_change, [])
+    res = if required, do: :ok, else: :nocheckpoint
+
+    quote generated: true do
+      def __skitter_clean_checkpoint__(_), do: unquote(res)
     end
   end
 
@@ -427,7 +451,8 @@ defmodule Skitter.Component.DSL do
     required = :hidden in Keyword.get(meta.effects, :state_change, [])
     cp_present = count_occurrences(:checkpoint, body) >= 1
     rt_present = count_occurrences(:restore, body) >= 1
-    either_present = cp_present or rt_present
+    cl_present = count_occurrences(:clean_checkpoint, body) >= 1
+    either_present = cp_present or rt_present or cl_present
     both_present = cp_present and rt_present
 
     case {required, either_present, both_present} do
@@ -442,8 +467,8 @@ defmodule Skitter.Component.DSL do
                        "state change is hidden"
 
       {false, true, _} ->
-        inject_error "`checkpoint` and `restore` are only allowed when the " <>
-                       "state changeis hidden"
+        inject_error "`checkpoint`, `restore` and `clean_checkpoint` are " <>
+                       "only allowed when the state change is hidden"
     end
   end
 
@@ -657,8 +682,6 @@ defmodule Skitter.Component.DSL do
         "`restore` needs to return a component instance using `instance!`"
       )
 
-    body = add_skitter_error_handler(body)
-
     quote generated: true do
       unquote(error)
 
@@ -666,6 +689,27 @@ defmodule Skitter.Component.DSL do
         import unquote(__MODULE__), only: [instance!: 1, error: 1]
         unquote(body)
         {:ok, var!(skitter_instance)}
+      end
+    end
+  end
+
+  # --------------------------- #
+  # Clean Checkpoint Generation #
+  # --------------------------- #
+
+  @doc """
+  Clean up an existing checkpoint.
+
+  Skitter calls this macro when it will not use a certain checkpoint anymore.
+  This checkpoint is passed as the only input argument to the macro.
+  The body of the macro is responsible for cleaning up any resources associated
+  with this particular checkpoint.
+  """
+  defmacro clean_checkpoint(args, _meta, do: body) do
+    quote generated: true do
+      def __skitter_clean_checkpoint__(unquote(args)) do
+        unquote(body)
+        :ok
       end
     end
   end

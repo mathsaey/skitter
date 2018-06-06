@@ -119,6 +119,11 @@ defmodule Skitter.Component do
   @doc "Call the `c:__skitter_restore__/1` callback of a component."
   def restore(comp, checkpoint), do: comp.__skitter_restore__(checkpoint)
 
+  @doc "Call the `c:__skitter_clean_checkpoint__/1` callback of a component."
+  def clean_checkpoint(comp, checkpoint) do
+    comp.__skitter_clean_checkpoint__(checkpoint)
+  end
+
   @doc "Call the `c:__skitter_react__/2` callback of a component."
   def react(comp, inst, args), do: comp.__skitter_react__(inst, args)
 
@@ -218,6 +223,15 @@ defmodule Skitter.Component do
   checkpoint and recreates a component instance based on this checkpoint.
   """
   @callback __skitter_restore__(checkpoint) :: {:ok, instance} | :nocheckpoint
+
+  @doc """
+  Remove an old checkpoint.
+
+  This callback is called by the skitter runtime to indicate that a checkpoint,
+  created by `c:__skitter_checkpoint__/1`, is no longer needed.
+  This gives the component the ability to clean old checkpoint data when needed.
+  """
+  @callback __skitter_clean_checkpoint__(checkpoint) :: :ok | :nocheckpoint
 
   @doc """
   React to incoming data.
