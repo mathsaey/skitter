@@ -181,7 +181,7 @@ defmodule Skitter.Component do
   This callback accepts a single argument. This argument contains user-provided
   data which will contain the necessary parameters to initialize the component.
   """
-  @callback __skitter_init__([]) :: {:ok, instance} | {:error, reason}
+  @callback __skitter_init__(any()) :: {:ok, instance} | {:error, reason}
 
   @doc """
   Clean up resources associated with the instance of a component.

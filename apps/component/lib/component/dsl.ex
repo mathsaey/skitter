@@ -92,15 +92,28 @@ defmodule Skitter.Component.DSL do
 
   @valid_effects [state_change: [:hidden], external_effect: []]
 
-  @component_callbacks [
-    :react,
+  # Transform the calls to the following callbacks
+  # See: transform_component_callbacks(body, meta)
+  # All of these callbacks are handled by the same function.
+  # However, arguments to these calls are handled slightly differently.
+  @component_callbacks_single_arg [
+    # Only accept a single argument, which should not be modified
     :init,
-    :terminate,
-    :checkpoint,
     :restore,
     :clean_checkpoint
   ]
+  @component_callbacks_arglst [
+    # Accept an arbitrary amount of arguments, which are wrapped in a list
+    :react
+  ]
+  @component_callbacks_no_args [
+    # Don't accept any arguments besides the function body
+    :terminate,
+    :checkpoint
+  ]
 
+  # Generate default implementations for the following callbacks.
+  # See: generate_default_callbacks(meta, body)
   @default_callbacks [
     :init,
     :terminate,
@@ -119,7 +132,7 @@ defmodule Skitter.Component.DSL do
   defp transform_port_name(any), do: {:error, any}
 
   # Transform all instances of 'instance' into 'instance()'
-  # This is done to avoid ambigous uses of instance, which
+  # This is done to avoid ambiguous uses of instance, which
   # will cause elixir to show a warning.
   defp transform_instance(body) do
     Macro.postwalk(body, fn
@@ -221,8 +234,8 @@ defmodule Skitter.Component.DSL do
           only: [
             react: 3,
             init: 3,
-            terminate: 3,
-            checkpoint: 3,
+            terminate: 2,
+            checkpoint: 2,
             restore: 3,
             clean_checkpoint: 3
           ]
@@ -265,20 +278,29 @@ defmodule Skitter.Component.DSL do
     end)
   end
 
-  # Transform all calls to macros in the `@component_callbacks` list to calls
-  # where all the arguments (except for the do block, which is the final
-  # argument) are wrapped inside a list. Provide the component metadata and
-  # do block as the second and third argument.
-  # Thus, a call to macro `foo(a,b) do ...` turns into `foo([a,b], meta) do ...`
-  # This makes it possible to use arbitrary pattern matching in `react`, etc
-  # It also provides the various callbacks information about the component.
-  # Furthermore, any calls to helper are transformed into `defp`
+  # Inject the component metadata into all macro calls which are present in any
+  # of the component_callback attribute lists.
+  # Depending on the exact lists which a callback is in, the remainder of the
+  # arguments should be modified.
+  #
+  # This function is also responsible for modifying all calls to helper into
+  # calls to defp
   defp transform_component_callbacks(body, meta) do
     Macro.postwalk(body, fn
-      {name, env, arg_lst}
-      when name in @component_callbacks ->
+      # Wrap an arbitrary amount of arguments into a list: `foo(a, b)` becomes
+      # `foo([a,b])`. This makes it possible to specify an arbitrary amount of
+      # arguments
+      {name, env, arg_lst} when name in @component_callbacks_arglst ->
         {args, [block]} = Enum.split(arg_lst, -1)
         {name, env, [args, meta, block]}
+
+      # Don't accept any args besides the body
+      {name, env, [block]} when name in @component_callbacks_no_args ->
+        {name, env, [meta, block]}
+
+      # Accept a single argument, which remains unchanged
+      {name, env, [arg, block]} when name in @component_callbacks_single_arg ->
+        {name, env, [arg, meta, block]}
 
       {:helper, env, rest} ->
         {:defp, env, rest}
@@ -522,14 +544,13 @@ defmodule Skitter.Component.DSL do
   This macro will generate the code that will instantiate the skitter component.
   You should use `instance!/1` inside this macro to return a valid instance.
 
-  The parameters you specify in the init "signature" will be wrapped inside a
-  list in the generated implementation of
-  `c:Skitter.Component.__skitter_init__/1`
+  Besides the body, this callback accepts a single argument, which can be used
+  to pattern match on the user-provided input this callback will receive.
 
   ## Example
 
   ```
-  init foo, bar do
+  init [foo, bar] do
     instance! foo + bar
   end
   ```
@@ -573,7 +594,7 @@ defmodule Skitter.Component.DSL do
   down. `instance/0` can be used in the body of this macro if data from the
   current instance is needed.
   """
-  defmacro terminate([], _meta, do: body) do
+  defmacro terminate(_meta, do: body) do
     instance_count = count_occurrences(:instance, body)
 
     instance_arg =
@@ -618,7 +639,7 @@ defmodule Skitter.Component.DSL do
   of `instance/0`. The body is required to return a checkpoint by using
   `checkpoint!/1`.
   """
-  defmacro checkpoint([], _meta, do: body) do
+  defmacro checkpoint(_meta, do: body) do
     instance_count = count_occurrences(:instance, body)
 
     instance_arg =
@@ -671,7 +692,7 @@ defmodule Skitter.Component.DSL do
   Restore a component instance from a checkpoint.
 
   This macro is almost identical to `init/3`. It accepts a checkpoint, provided
-  by `checkpoint/3` as its only input argument. Just like `init/3`, it is
+  by `checkpoint/2` as its only input argument. Just like `init/3`, it is
   required to return an instance through the use of `instance!/1`.
   """
   defmacro restore(args, _meta, do: body) do

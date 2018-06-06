@@ -15,7 +15,7 @@ defmodule Skitter.ComponentTest do
     effect state_change hidden
     effect external_effect
 
-    init do
+    init _ do
       instance! :init_works
     end
 
@@ -26,7 +26,7 @@ defmodule Skitter.ComponentTest do
       checkpoint!(:checkpoint_works)
     end
 
-    restore do
+    restore _ do
       instance! :restore_works
     end
   end
@@ -47,11 +47,11 @@ defmodule Skitter.ComponentTest do
   end
 
   test "if callbacks work" do
-    assert init(TestComponent2, []) == {:ok, :init_works}
+    assert init(TestComponent2, nil) == {:ok, :init_works}
     assert terminate(TestComponent2, nil) == :ok
     assert checkpoint(TestComponent2, nil) == {:ok, :checkpoint_works}
-    assert restore(TestComponent2, []) == {:ok, :restore_works}
-    assert clean_checkpoint(TestComponent2, []) == :ok
+    assert restore(TestComponent2, nil) == {:ok, :restore_works}
+    assert clean_checkpoint(TestComponent2, nil) == :ok
     assert react(TestComponent2, nil, [nil, nil]) == {:ok, nil, []}
 
     assert react_after_failure(TestComponent2, nil, [nil, nil]) ==

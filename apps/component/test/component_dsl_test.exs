@@ -116,13 +116,15 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if init works" do
     component TestInit, in: [] do
-      init(a, b, do: instance!(a * b))
+      init {a, b} do
+        instance! a * b
+      end
 
       react do
       end
     end
 
-    assert TestInit.__skitter_init__([3, 4]) == {:ok, 3 * 4}
+    assert TestInit.__skitter_init__({3, 4}) == {:ok, 3 * 4}
   end
 
   test "if terminate works" do
@@ -171,14 +173,14 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    {:ok, inst} = CPTest.__skitter_init__([:val])
+    {:ok, inst} = CPTest.__skitter_init__(:val)
     {:ok, chkp} = CPTest.__skitter_checkpoint__(inst)
-    {:ok, rest} = CPTest.__skitter_restore__([chkp])
+    {:ok, rest} = CPTest.__skitter_restore__(chkp)
 
     assert chkp == :val
     assert rest == :val
 
-    assert CPTest.__skitter_clean_checkpoint__([chkp]) == :ok
+    assert CPTest.__skitter_clean_checkpoint__(chkp) == :ok
   end
 
   test "if defaults are generated correctly" do
@@ -196,7 +198,9 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if helpers work" do
     component TestHelper, in: [] do
-      init(do: instance!(worker()))
+      init _ do
+        instance! worker()
+      end
 
       helper worker do
         :from_helper
@@ -238,8 +242,8 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert Patterns.__skitter_init__([:foo]) == {:ok, :foo}
-    assert Patterns.__skitter_init__([:bar]) == {:ok, :bar}
+    assert Patterns.__skitter_init__(:foo) == {:ok, :foo}
+    assert Patterns.__skitter_init__(:bar) == {:ok, :bar}
     assert Patterns.__skitter_react__(nil, [:foo]) == {:ok, nil, [out: :foo]}
     assert Patterns.__skitter_react__(nil, [:bar]) == {:ok, nil, [out: :bar]}
   end
@@ -248,7 +252,9 @@ defmodule Skitter.ComponentDSLTest do
     component TestInstance, in: [foo] do
       effect state_change
 
-      init(arg, do: instance!(arg))
+      init arg do
+        instance! arg
+      end
 
       react foo do
         new = instance + foo
@@ -256,7 +262,7 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    {:ok, inst} = TestInstance.__skitter_init__([10])
+    {:ok, inst} = TestInstance.__skitter_init__(10)
     assert inst == 10
 
     {:ok, inst, []} = TestInstance.__skitter_react__(inst, [5])
@@ -300,7 +306,7 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if errors work" do
     component ErrorsEverywhere, in: [] do
-      init do
+      init _ do
         instance! :not_used
         error "error!"
       end
@@ -414,7 +420,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if a useless init is reported" do
     assert_definition_error do
       component UselessInit, in: [] do
-        init do
+        init _ do
           :does_nothing
         end
 
