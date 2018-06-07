@@ -1051,7 +1051,7 @@ defmodule Skitter.Component.DSL do
       count_occurrences(:after_failure, body) > 0 and
           !Keyword.has_key?(meta.effects, :external_effect) ->
         inject_error(
-          "`after_failure` only allowed when external_effect are present"
+          "`after_failure` only allowed when external_effect is present"
         )
 
       # Ensure instance! is only used when there is an internal state
