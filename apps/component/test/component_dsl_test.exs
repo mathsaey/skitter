@@ -173,9 +173,9 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    {:ok, inst} = CPTest.__skitter_init__(:val)
-    {:ok, chkp} = CPTest.__skitter_checkpoint__(inst)
-    {:ok, rest} = CPTest.__skitter_restore__(chkp)
+    assert {:ok, inst} = CPTest.__skitter_init__(:val)
+    assert {:ok, chkp} = CPTest.__skitter_checkpoint__(inst)
+    assert {:ok, rest} = CPTest.__skitter_restore__(chkp)
 
     assert chkp == :val
     assert rest == :val
