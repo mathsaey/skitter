@@ -34,6 +34,11 @@ defmodule Skitter.ComponentTest do
   end
 
   test "if fetching metadata works correctly" do
+    refute is_component?(4)
+    refute is_component?(X)
+    refute is_component?(Enum)
+    assert is_component?(T1)
+    assert is_component?(T2)
     assert name(T1) == "T 1"
     assert description(T1) == "Description"
     assert in_ports(T1) == [:foo, :bar]

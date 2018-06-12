@@ -19,6 +19,14 @@ defmodule Skitter.Component do
   # Interface #
   # --------- #
 
+  @doc "Verify if something is a component"
+  def is_component?(mod) when is_atom(mod) do
+    function_exported?(mod, :__skitter_metadata__, 0) and
+      match?(%Skitter.Component.Metadata{}, mod.__skitter_metadata__)
+  end
+
+  def is_component?(_), do: false
+
   @doc "Get the name of a component."
   def name(comp), do: comp.__skitter_metadata__.name
 
