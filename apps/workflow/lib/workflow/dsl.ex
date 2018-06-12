@@ -12,7 +12,8 @@ defmodule Skitter.Workflow.DSL do
         |> transform_underscores()
         |> transform_binds!()
 
-      body |> validate_components()
+      validate_components(body)
+      validate_ports(body)
 
       quote generated: true do
         unquote(name) = unquote(body)
@@ -28,10 +29,14 @@ defmodule Skitter.Workflow.DSL do
         inject_error "Unknown component instance name: `#{name}`"
 
       {:error, :unknown_module, mod} ->
-        inject_error "Module `#{mod}` does not exist or is not loaded"
+        inject_error "`#{mod}` does not exist or is not loaded"
 
       {:error, :no_component, mod} ->
-        inject_error "Module `#{mod}` is not a valid skitter component"
+        inject_error "`#{mod}` is not a valid skitter component"
+
+      {:error, :invalid_port, type, port, cmp} ->
+        type = Atom.to_string(type)
+        inject_error "`#{port}` is not a valid #{type} port of `#{cmp}`"
     end
   end
 
@@ -159,6 +164,7 @@ defmodule Skitter.Workflow.DSL do
   # Validation #
   # ---------- #
 
+  # Ensure the provided modules exist and are a skitter component
   defp validate_components(body) do
     Enum.map(body, fn {:{}, _env, [_id, mod, _init, _links]} ->
       mod = Macro.expand(mod, __ENV__)
@@ -170,6 +176,42 @@ defmodule Skitter.Workflow.DSL do
       unless is_component?(mod) do
         throw {:error, :no_component, mod}
       end
+    end)
+  end
+
+  defp validate_ports(body) do
+    validate_out_ports(body)
+    validate_in_ports(body)
+  end
+
+  defp validate_out_ports(body) do
+    Enum.map(body, fn {:{}, _env, [_id, cmp, _init, links]} ->
+      cmp = Macro.expand(cmp, __ENV__)
+
+      Enum.map(links, fn {out, _} ->
+        unless out in out_ports(cmp) do
+          throw {:error, :invalid_port, :out, out, cmp}
+        end
+      end)
+    end)
+  end
+
+  defp validate_in_ports(body) do
+    binds =
+      Enum.reduce(body, Map.new(), fn {:{}, _env, [id, cmp, _init, _links]},
+                                      acc ->
+        cmp = Macro.expand(cmp, __ENV__)
+        Map.put(acc, id, cmp)
+      end)
+
+    Enum.map(body, fn {:{}, _env, [_id, _cmp, _init, links]} ->
+      Enum.map(links, fn {_, lst} ->
+        Enum.map(lst, fn {id, port} ->
+          unless port in in_ports(binds[id]) do
+            throw {:error, :invalid_port, :in, port, binds[id]}
+          end
+        end)
+      end)
     end)
   end
 end
