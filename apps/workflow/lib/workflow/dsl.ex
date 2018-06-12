@@ -1,5 +1,6 @@
 defmodule Skitter.Workflow.DSL do
   import Skitter.Workflow.DefinitionError
+  import Skitter.Component
 
   defmacro workflow(name, do: body) do
     try do
@@ -11,20 +12,32 @@ defmodule Skitter.Workflow.DSL do
         |> transform_underscores()
         |> transform_binds!()
 
+      body |> validate_components()
+
       quote generated: true do
         unquote(name) = unquote(body)
       end
     catch
-      {:error, :no_component, other} ->
-        inject_error("Invalid workflow syntax: `#{Macro.to_string(other)}`")
+      {:error, :invalid_syntax, other} ->
+        inject_error "Invalid workflow syntax: `#{Macro.to_string(other)}`"
 
       {:error, :duplicate_name, name} ->
-        inject_error("Duplicate component instance name: `#{name}`")
+        inject_error "Duplicate component instance name: `#{name}`"
 
       {:error, :unknown_name, name} ->
-        inject_error("Unknown component instance name: `#{name}`")
+        inject_error "Unknown component instance name: `#{name}`"
+
+      {:error, :unknown_module, mod} ->
+        inject_error "Module `#{mod}` does not exist or is not loaded"
+
+      {:error, :no_component, mod} ->
+        inject_error "Module `#{mod}` is not a valid skitter component"
     end
   end
+
+  # --------------- #
+  # Transformations #
+  # --------------- #
 
   # Transform the do block of the workflow into a list of component instances.
   # If there is only one statement, wrap it in a list.
@@ -39,7 +52,7 @@ defmodule Skitter.Workflow.DSL do
     Enum.map(body, fn
       {:=, _e, [{name, _n, nil}, {a, b}]} -> {:{}, [], [name, a, b]}
       {:=, _e, [{name, _n, nil}, {:{}, env, lst}]} -> {:{}, env, [name | lst]}
-      other -> throw({:error, :no_component, other})
+      other -> throw {:error, :invalid_syntax, other}
     end)
   end
 
@@ -140,5 +153,23 @@ defmodule Skitter.Workflow.DSL do
   # Same as `resolve`, but for a specific link
   defp resolve_link!(name, binds) do
     Map.get_lazy(binds, name, fn -> throw({:error, :unknown_name, name}) end)
+  end
+
+  # ---------- #
+  # Validation #
+  # ---------- #
+
+  defp validate_components(body) do
+    Enum.map(body, fn {:{}, _env, [_id, mod, _init, _links]} ->
+      mod = Macro.expand(mod, __ENV__)
+
+      unless Code.ensure_loaded?(mod) do
+        throw {:error, :unknown_module, mod}
+      end
+
+      unless is_component?(mod) do
+        throw {:error, :no_component, mod}
+      end
+    end)
   end
 end
