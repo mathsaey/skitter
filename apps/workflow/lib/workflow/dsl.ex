@@ -1,8 +1,51 @@
 defmodule Skitter.Workflow.DSL do
+  @moduledoc """
+  DSL to define skitter workflows.
+
+  This module offers the `workflow/1` macro, which should be used if you plan
+  to write a workflow by hand. If you want to automatically generate a workflow
+  (e.g. based on the input to some graphical tool), you can use this format or
+  the layout described in `Skitter.Component`. Internally, the macro will
+  compile its input to the same representation. Additionally, this macro will
+  ensure that the workflow does not contain some common errors.
+
+  A workflow definition is a list of component instances with a unique name.
+  The following syntax is used:
+  `instance_name = {component_module, initialization_arguments, links}`.
+  For instance, if we have a component `Foo`, with in ports `a, b, c` and out
+  ports: `d, e` we can define the following workflow:
+
+  ```
+  workflow do
+    instance = {
+      Foo, _,
+      d ~> other.a,
+      d ~> other.b,
+      e ~> other.c
+    }
+    other = {Foo, _}
+  end
+  ```
+
+  This workflow consists of multiple instances of the same component (`Foo`).
+  Foo does not take any initialisation arguments (which is why `_` is used).
+  The first instance of `Foo` (`instance`) is linked to the second instance of
+  `Foo` (`other`) through the use of the link syntax:
+  `out_port ~> instance.in_port`. As shown in the example, multiple links can
+  start from the same out port, however, only one incoming link is allowed per
+  input port.
+  """
+
   import Skitter.Workflow.DefinitionError
   import Skitter.Component
 
-  defmacro workflow(name, do: body) do
+  @doc """
+  Create a skitter workflow.
+
+  This macro serves as the entry point of the `Skitter.Workflow.DSL` DSL.
+  Please refer to the module documentation for additional details.
+  """
+  defmacro workflow(do: body) do
     try do
       body =
         body
@@ -16,7 +59,7 @@ defmodule Skitter.Workflow.DSL do
       validate_ports(body)
 
       quote generated: true do
-        unquote(name) = unquote(body)
+        unquote(body)
       end
     catch
       {:error, :invalid_syntax, other} ->
@@ -179,11 +222,13 @@ defmodule Skitter.Workflow.DSL do
     end)
   end
 
+  # Ensure all the used ports are valid
   defp validate_ports(body) do
     validate_out_ports(body)
     validate_in_ports(body)
   end
 
+  # Ensure the source port is an out port of the component it's linking from
   defp validate_out_ports(body) do
     Enum.map(body, fn {:{}, _env, [_id, cmp, _init, links]} ->
       cmp = Macro.expand(cmp, __ENV__)
@@ -196,6 +241,7 @@ defmodule Skitter.Workflow.DSL do
     end)
   end
 
+  # Ensure the destination port is an in port of the component it's linking to
   defp validate_in_ports(body) do
     binds =
       Enum.reduce(body, Map.new(), fn {:{}, _env, [id, cmp, _init, _links]},
