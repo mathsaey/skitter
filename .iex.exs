@@ -1,5 +1,6 @@
 # Common imports
 import Skitter.Component
+import Skitter.Workflow.DSL
 
 # Debugging tools
 defmodule SkDebug do
