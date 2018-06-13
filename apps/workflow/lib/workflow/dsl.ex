@@ -136,7 +136,7 @@ defmodule Skitter.Workflow.DSL do
         acc,
         out_port,
         [{name, in_port}],
-        fn links -> [{name, in_port} | links] end
+        fn links -> links ++ [{name, in_port}] end
       )
     end)
   end
