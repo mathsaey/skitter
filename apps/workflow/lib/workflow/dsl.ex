@@ -55,8 +55,8 @@ defmodule Skitter.Workflow.DSL do
         |> transform_underscores()
         |> transform_binds!()
 
-      validate_components(body)
-      validate_ports(body)
+      validate_components(body, __CALLER__)
+      validate_ports(body, __CALLER__)
 
       quote generated: true do
         unquote(body)
@@ -208,9 +208,9 @@ defmodule Skitter.Workflow.DSL do
   # ---------- #
 
   # Ensure the provided modules exist and are a skitter component
-  defp validate_components(body) do
+  defp validate_components(body, env) do
     Enum.map(body, fn {:{}, _env, [_id, mod, _init, _links]} ->
-      mod = Macro.expand(mod, __ENV__)
+      mod = Macro.expand(mod, env)
 
       unless Code.ensure_loaded?(mod) do
         throw {:error, :unknown_module, mod}
@@ -223,15 +223,15 @@ defmodule Skitter.Workflow.DSL do
   end
 
   # Ensure all the used ports are valid
-  defp validate_ports(body) do
-    validate_out_ports(body)
-    validate_in_ports(body)
+  defp validate_ports(body, env) do
+    validate_out_ports(body, env)
+    validate_in_ports(body, env)
   end
 
   # Ensure the source port is an out port of the component it's linking from
-  defp validate_out_ports(body) do
+  defp validate_out_ports(body, env) do
     Enum.map(body, fn {:{}, _env, [_id, cmp, _init, links]} ->
-      cmp = Macro.expand(cmp, __ENV__)
+      cmp = Macro.expand(cmp, env)
 
       Enum.map(links, fn {out, _} ->
         unless out in out_ports(cmp) do
@@ -242,11 +242,11 @@ defmodule Skitter.Workflow.DSL do
   end
 
   # Ensure the destination port is an in port of the component it's linking to
-  defp validate_in_ports(body) do
+  defp validate_in_ports(body, env) do
     binds =
       Enum.reduce(body, Map.new(), fn {:{}, _env, [id, cmp, _init, _links]},
                                       acc ->
-        cmp = Macro.expand(cmp, __ENV__)
+        cmp = Macro.expand(cmp, env)
         Map.put(acc, id, cmp)
       end)
 
