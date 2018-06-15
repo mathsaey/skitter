@@ -72,6 +72,22 @@ defmodule Skitter.ComponentDSLTest do
     assert String.trim(MultilineD.__skitter_metadata__().description) == "D"
   end
 
+  test "if structs are generated correctly" do
+    component WithStruct, in: foo do
+      fields a, b, c
+
+      react _ do
+      end
+    end
+
+    # Structs don't want to work in the scope of the test for whatever reason
+    defmodule T do
+      assert Map.from_struct(%WithStruct{}) == %{a: nil, b: nil, c: nil}
+      assert Map.from_struct(%WithStruct{a: 1}) == %{a: 1, b: nil, c: nil}
+      assert Map.from_struct(%WithStruct{b: 2}) == %{a: nil, b: 2, c: nil}
+    end
+  end
+
   test "If correct ports are accepted" do
     # Should not raise
     component CorrectPorts, in: [foo, bar], out: test do
@@ -345,6 +361,27 @@ defmodule Skitter.ComponentDSLTest do
         effect does_not_exist
 
         react do
+        end
+      end
+    end
+  end
+
+  test "if incorrect fields are reported" do
+    assert_definition_error do
+      component WrongFields, in: [] do
+        fields :a, :b
+
+        react _ do
+        end
+      end
+    end
+
+    assert_definition_error do
+      component MultipleFields, in: [] do
+        fields a
+        fields b
+
+        react _ do
         end
       end
     end

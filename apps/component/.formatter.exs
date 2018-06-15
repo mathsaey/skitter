@@ -7,6 +7,7 @@
     throw: :*,
     error: :*,
     effect: :*,
+    fields: :*,
     instance: :*,
     instance!: :*,
     component: :*,

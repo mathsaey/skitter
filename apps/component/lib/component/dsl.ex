@@ -205,28 +205,33 @@ defmodule Skitter.Component.DSL do
 
     # Extract metadata from body AST
     {body, desc} = extract_description(body)
+    {body, fields} = extract_fields(body)
     {body, effects} = extract_effects(body)
 
     # Generate moduledoc based on description
     moduledoc = generate_moduledoc(desc)
 
     # Gather metadata
-    metadata = %Skitter.Component.Metadata{
+    internal_metadata = %{
       name: full_name,
       description: desc,
+      fields: fields,
       effects: effects,
       in_ports: in_ports,
       out_ports: out_ports
     }
 
+    # Create metadata struct
+    component_metadata = struct(Skitter.Component.Metadata, internal_metadata)
+
     # Add default callbacks
-    defaults = generate_default_callbacks(metadata, body)
+    defaults = generate_default_callbacks(internal_metadata, body)
 
     # Transform macro calls inside body AST
-    body = transform_component_callbacks(body, metadata)
+    body = transform_component_callbacks(body, internal_metadata)
 
     # Check for errors
-    errors = check_component_body(metadata, body)
+    errors = check_component_body(internal_metadata, body)
 
     quote generated: true do
       defmodule unquote(name) do
@@ -245,7 +250,7 @@ defmodule Skitter.Component.DSL do
 
         @moduledoc unquote(moduledoc)
 
-        def __skitter_metadata__, do: unquote(Macro.escape(metadata))
+        def __skitter_metadata__, do: unquote(Macro.escape(component_metadata))
 
         unquote(body)
         unquote(errors)
@@ -277,6 +282,33 @@ defmodule Skitter.Component.DSL do
           end)
 
         {nil, Keyword.put(acc, effect, properties)}
+
+      any, acc ->
+        {any, acc}
+    end)
+  end
+
+  # Find field declarations in the AST and transform them into a defstruct.
+  # Return the list of fields to the caller. If there are multiple field
+  # statements, add an error.
+  defp extract_fields(body) do
+    Macro.postwalk(body, nil, fn
+      {:fields, _env, fields}, nil ->
+        fields =
+          Enum.map(fields, fn
+            {name, _env, atom} when is_atom(atom) -> name
+            any -> {:error, any}
+          end)
+
+        {
+          quote do
+            defstruct unquote(fields)
+          end,
+          fields
+        }
+
+      {:fields, _env, _args}, _fields ->
+        {nil, :error}
 
       any, acc ->
         {any, acc}
@@ -436,6 +468,7 @@ defmodule Skitter.Component.DSL do
 
   defp check_component_body(meta, body) do
     [
+      check_fields(meta),
       check_effects(meta),
       check_react(meta, body),
       check_checkpoint(meta, body),
@@ -473,6 +506,23 @@ defmodule Skitter.Component.DSL do
         [prop | _] ->
           inject_error "`#{prop}` is not a valid property of `#{effect}`"
       end
+    end
+  end
+
+  # Handle the errors returned by `extract_fields/1`
+  defp check_fields(metadata) do
+    case metadata.fields do
+      nil ->
+        nil
+
+      :error ->
+        inject_error "Fields can only be defined once."
+
+      lst when is_list(lst) ->
+        Enum.map(lst, fn
+          {:error, any} -> inject_error "`#{any}` is not a valid field"
+          _ -> nil
+        end)
     end
   end
 
