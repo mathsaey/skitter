@@ -371,7 +371,7 @@ defmodule Skitter.ComponentDSLTest do
       component WrongFields, in: [] do
         fields :a, :b
 
-        react _ do
+        react do
         end
       end
     end
