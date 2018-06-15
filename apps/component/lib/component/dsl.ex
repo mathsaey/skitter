@@ -225,13 +225,13 @@ defmodule Skitter.Component.DSL do
     component_metadata = struct(Skitter.Component.Metadata, internal_metadata)
 
     # Add default callbacks
-    defaults = generate_default_callbacks(internal_metadata, body)
+    defaults = generate_default_callbacks(body, internal_metadata)
 
     # Transform macro calls inside body AST
     body = transform_component_callbacks(body, internal_metadata)
 
     # Check for errors
-    errors = check_component_body(internal_metadata, body)
+    errors = check_component_body(body, internal_metadata)
 
     quote generated: true do
       defmodule unquote(name) do
@@ -410,7 +410,7 @@ defmodule Skitter.Component.DSL do
   # Default implementations of various skitter functions
   # We cannot use defoverridable, as the compiler will remove it before
   # the init, react, ... macros are expanded.
-  defp generate_default_callbacks(meta, body) do
+  defp generate_default_callbacks(body, meta) do
     # We cannot store callbacks in attributes, so we store them in a map here.
     defaults = %{
       init: &default_init/1,
@@ -466,7 +466,7 @@ defmodule Skitter.Component.DSL do
   # --------------
   # Functions that check if the component as a whole is correct
 
-  defp check_component_body(meta, body) do
+  defp check_component_body(body, meta) do
     [
       check_fields(meta),
       check_effects(meta),
