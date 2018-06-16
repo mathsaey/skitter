@@ -9,7 +9,6 @@
     effect: :*,
     fields: :*,
     instance: :*,
-    instance!: :*,
     component: :*,
     inject_error: :*,
     state_change: :*,

@@ -51,7 +51,7 @@ defmodule Skitter.Component.DSL do
   Besides this, a developer can specify a description (shown in our example),
   and the effects this component may have. Furthermore, the various macros
   documented in this module can be used to implement various callbacks defined
-  in `Skitter.Component`. Both of these are described in the following sections.
+  in `Sitter.Component`. Both of these are described in the following sections.
 
   ## Effects
 
@@ -138,6 +138,41 @@ defmodule Skitter.Component.DSL do
     Macro.postwalk(body, fn
       {:instance, env, atom} when is_atom(atom) ->
         {:instance, env, []}
+
+      any ->
+        any
+    end)
+  end
+
+  # Generic function to transform the use of the match operator (`=`) into
+  # calls to macros that provide imperative-style behaviour to skitter.
+  # The binds argument contains a keyword list. Any key in this list that is
+  # found on the left hand side of a match operation will be transformed into a
+  # call to a function. The function name (without arity)should be provided as
+  # the value for the key.
+  defp transform_assigns(body, binds \\ [instance: :instance!]) do
+    Macro.postwalk(body, fn
+      ast = {:=, env, [{name, _venv, _atom}, expr]} when is_atom(name) ->
+        if Keyword.has_key?(binds, name) do
+          {Keyword.fetch!(binds, name), env, [expr]}
+        else
+          ast
+        end
+
+      any ->
+        any
+    end)
+  end
+
+  # Transform uses of `instance.field = expr` into instance!(field, expr).
+  defp transform_field_assigns(body) do
+    Macro.postwalk(body, fn
+      {:=, env,
+       [
+         {{:., _dienv, [{:instance, _ienv, _atom}, field]}, _doenv, []},
+         expr
+       ]} ->
+        {:instance!, env, [field, expr]}
 
       any ->
         any
@@ -429,9 +464,15 @@ defmodule Skitter.Component.DSL do
     end)
   end
 
-  defp default_init(_) do
+  defp default_init(%{fields: nil}) do
     quote generated: true do
       def __skitter_init__(_), do: {:ok, nil}
+    end
+  end
+
+  defp default_init(_) do
+    quote generated: true do
+      def __skitter_init__(_), do: {:ok, %__MODULE__{}}
     end
   end
 
@@ -589,6 +630,19 @@ defmodule Skitter.Component.DSL do
   end
 
   @doc """
+  Modify a specific field of the component instance.
+
+  Usable inside `init/3`, and inside `react/3` iff the component is marked
+  with the `:state_change` effect.
+  """
+  defmacro instance!(field, value) do
+    quote generated: true do
+      var!(skitter_instance) =
+        Map.replace!(var!(skitter_instance), unquote(field), unquote(value))
+    end
+  end
+
+  @doc """
   Stop the current callback and return with an error.
 
   A reason should be provided as a string. In certain contexts (e.g. `init/3`),
@@ -623,17 +677,33 @@ defmodule Skitter.Component.DSL do
 
   Can be called as: `Skitter.Component.init(ComponentName, [1,2])`
   """
-  defmacro init(args, _meta, do: body) do
+  defmacro init(args, %{fields: fields}, do: body) do
+    body = body |> transform_assigns() |> transform_field_assigns()
+
     error =
       use_or_error(
         body,
         :instance!,
-        "`init` needs to return a component instance using `instance!`"
+        "`init` needs to return a modified component instance"
       )
+
+    inst =
+      if fields do
+        quote generated: true do
+          var!(skitter_instance) = %__MODULE__{}
+        end
+      end
 
     body =
       quote generated: true do
-        import unquote(__MODULE__), only: [instance!: 1, error: 1]
+        import unquote(__MODULE__),
+          only: [
+            instance!: 1,
+            instance!: 2,
+            error: 1
+          ]
+
+        unquote(inst)
         unquote(body)
         {:ok, var!(skitter_instance)}
       end
@@ -719,13 +789,16 @@ defmodule Skitter.Component.DSL do
         end
       end
 
-    body = transform_instance(body)
+    body =
+      body
+      |> transform_instance()
+      |> transform_assigns(checkpoint: :checkpoint!)
 
     error =
       use_or_error(
         body,
         :checkpoint!,
-        "`checkpoint` needs to return a checkpoint using `checkpoint!`"
+        "A valid checkpoint needs to be assigned inside `checkpoint`"
       )
 
     quote generated: true do
@@ -762,11 +835,13 @@ defmodule Skitter.Component.DSL do
   required to return an instance through the use of `instance!/1`.
   """
   defmacro restore(args, _meta, do: body) do
+    body = transform_assigns(body)
+
     error =
       use_or_error(
         body,
         :instance!,
-        "`restore` needs to return a component instance using `instance!`"
+        "A valid component instance needs to be assigned inside `restore`"
       )
 
     quote generated: true do
@@ -821,7 +896,13 @@ defmodule Skitter.Component.DSL do
   current instance.
   """
   defmacro react(args, meta, do: body) do
-    body = body |> transform_spit() |> transform_instance()
+    body =
+      body
+      |> transform_spit()
+      |> transform_instance()
+      |> transform_assigns()
+      |> transform_field_assigns()
+
     errors = check_react_body(args, meta, body)
 
     react_body = remove_after_failure(body)
