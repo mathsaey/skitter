@@ -51,7 +51,7 @@ defmodule Skitter.Component.DSL do
   Besides this, a developer can specify a description (shown in our example),
   and the effects this component may have. Furthermore, the various macros
   documented in this module can be used to implement various callbacks defined
-  in `Sitter.Component`. Both of these are described in the following sections.
+  in `Skitter.Component`. Both of these are described in the following sections.
 
   ## Effects
 
@@ -78,6 +78,26 @@ defmodule Skitter.Component.DSL do
   transformations on the component code which it receives, therefore it is
   generally not possible to call these macros directly. Instead, the
   documentation will specify how these macros can be used.
+
+  ## Instance structs
+
+  This module offers an abstraction over Elixir structs. This makes it possible
+  to predefine the layout of the instance of a component.
+
+  ```
+  component StructExample, in: foo do
+    effect state_change
+    fields a, b, c
+
+    init val do
+      instance.a = value
+    end
+
+    react foo do
+      instance.b - value
+    end
+
+  ```
   """
 
   import Skitter.Component.DefinitionError
@@ -240,8 +260,10 @@ defmodule Skitter.Component.DSL do
 
     # Extract metadata from body AST
     {body, desc} = extract_description(body)
-    {body, fields} = extract_fields(body)
     {body, effects} = extract_effects(body)
+
+    # Generate the struct macros and extract the field names
+    {body, fields} = extract_fields(body)
 
     # Generate moduledoc based on description
     moduledoc = generate_moduledoc(desc)
@@ -620,6 +642,9 @@ defmodule Skitter.Component.DSL do
   @doc """
   Modify the instance of the component.
 
+  You should not use this macro directly, instead, you can use
+  `instance = value`, which will be transformed into a call to this macro.
+
   Usable inside `init/3`, and inside `react/3` iff the component is marked
   with the `:state_change` effect.
   """
@@ -631,6 +656,9 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Modify a specific field of the component instance.
+
+  You should not use this macro directly, instead, you can use
+  `instance.field = value`, which will be transformed into a call to this macro.
 
   Usable inside `init/3`, and inside `react/3` iff the component is marked
   with the `:state_change` effect.
@@ -662,7 +690,8 @@ defmodule Skitter.Component.DSL do
   Instantiate a skitter component.
 
   This macro will generate the code that will instantiate the skitter component.
-  You should use `instance!/1` inside this macro to return a valid instance.
+  You should assign a value to `instance` or `instance.field` with `=` in this
+  macro to return a valid instance.
 
   Besides the body, this callback accepts a single argument, which can be used
   to pattern match on the user-provided input this callback will receive.
@@ -768,13 +797,13 @@ defmodule Skitter.Component.DSL do
   @doc """
   Create a checkpoint.
 
-  _Use as `checkpoint do ... end`, `instance/0` and `instance!/1` are usable
-  inside of the body of checkpoint._
+  _Use as `checkpoint do ... end`, `instance/0` is usable inside the body of
+  this callback._
 
   Use this macro to automatically generate the code for creating a checkpoint.
   The current instance can be obtained inside this checkpoint, through the use
   of `instance/0`. The body is required to return a checkpoint by using
-  `checkpoint!/1`.
+  `checkpoint = value`.
   """
   defmacro checkpoint(_meta, do: body) do
     instance_count = count_occurrences(:instance, body)
@@ -816,6 +845,9 @@ defmodule Skitter.Component.DSL do
   @doc """
   Update the current return value of checkpoint.
 
+  You should not use this macro directly, instead, you can use
+  `checkpoint = value`, which will be transformed into a call to this macro.
+
   Using this macro multiple times will overwrite the previous value.
   """
   defmacro checkpoint!(value) do
@@ -833,7 +865,7 @@ defmodule Skitter.Component.DSL do
 
   This macro is almost identical to `init/3`. It accepts a checkpoint, provided
   by `checkpoint/2` as its only input argument. Just like `init/3`, it is
-  required to return an instance through the use of `instance!/1`.
+  required to return an instance by using `instance = value`
   """
   defmacro restore(args, _meta, do: body) do
     body = transform_assigns(body)
@@ -893,8 +925,8 @@ defmodule Skitter.Component.DSL do
 
   Inside the body of react, `spit/2` can be used to send data to output ports,
   `instance/0` can be used to obtain the value of the current instance. If the
-  component has an internal state, `instance!` can be used to update the
-  current instance.
+  component has an internal state, `instance = value` or
+  `instance.field = value` can be used to update the current instance.
   """
   defmacro react(args, meta, do: body) do
     body =
