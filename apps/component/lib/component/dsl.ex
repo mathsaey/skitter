@@ -172,7 +172,7 @@ defmodule Skitter.Component.DSL do
          {{:., _dienv, [{:instance, _ienv, _atom}, field]}, _doenv, []},
          expr
        ]} ->
-        {:instance!, env, [field, expr]}
+        {:instance_field!, env, [field, expr]}
 
       any ->
         any
@@ -635,7 +635,7 @@ defmodule Skitter.Component.DSL do
   Usable inside `init/3`, and inside `react/3` iff the component is marked
   with the `:state_change` effect.
   """
-  defmacro instance!(field, value) do
+  defmacro instance_field!(field, value) do
     quote generated: true do
       var!(skitter_instance) =
         Map.replace!(var!(skitter_instance), unquote(field), unquote(value))
@@ -680,12 +680,13 @@ defmodule Skitter.Component.DSL do
   defmacro init(args, %{fields: fields}, do: body) do
     body = body |> transform_assigns() |> transform_field_assigns()
 
+    write_count = count_occurrences(:instance!, body)
+    field_count = count_occurrences(:instance_field!, body)
+
     error =
-      use_or_error(
-        body,
-        :instance!,
-        "`init` needs to return a modified component instance"
-      )
+      unless write_count + field_count > 0 do
+        inject_error "`init` needs to return a component instance"
+      end
 
     inst =
       if fields do
@@ -699,7 +700,7 @@ defmodule Skitter.Component.DSL do
         import unquote(__MODULE__),
           only: [
             instance!: 1,
-            instance!: 2,
+            instance_field!: 2,
             error: 1
           ]
 
@@ -1028,7 +1029,7 @@ defmodule Skitter.Component.DSL do
 
   # Create the AST which will become the body of react. Besides this, generate
   # the arguments for the react function header.
-  # This needs to happen to ensure that var! can be injected into the argument
+  # This needs to happen to ensure that `var!` can be injected into the argument
   # list of the function header if needed.
   defp create_react_body_and_arg(body) do
     {out_pre, out_post} = create_react_output(body)
@@ -1042,6 +1043,7 @@ defmodule Skitter.Component.DSL do
             skip: 2,
             instance: 0,
             instance!: 1,
+            instance_field!: 2,
             error: 1,
             after_failure: 1
           ]
@@ -1088,23 +1090,26 @@ defmodule Skitter.Component.DSL do
   defp create_react_instance(body) do
     read_count = count_occurrences(:instance, body)
     write_count = count_occurrences(:instance!, body)
+    field_count = count_occurrences(:instance_field!, body)
+    inst_var_required? = read_count > 0 or field_count > 0
+    inst_ret_required? = write_count > 0 or field_count > 0
 
     arg =
-      if read_count > 0 do
+      if inst_var_required? do
         quote generated: true, do: var!(instance_arg)
       else
         quote generated: true, do: _instance_arg
       end
 
     pre =
-      if read_count > 0 do
+      if inst_var_required? do
         quote generated: true, do: var!(skitter_instance) = var!(instance_arg)
       else
         nil
       end
 
     post =
-      if write_count > 0 do
+      if inst_ret_required? do
         quote generated: true, do: var!(skitter_instance)
       else
         nil
