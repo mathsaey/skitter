@@ -72,6 +72,22 @@ defmodule Skitter.ComponentDSLTest do
     assert String.trim(MultilineD.__skitter_metadata__().description) == "D"
   end
 
+  test "if structs are generated correctly" do
+    component WithStruct, in: foo do
+      fields a, b, c
+
+      react _ do
+      end
+    end
+
+    # Structs don't want to work in the scope of the test for whatever reason
+    defmodule T1 do
+      assert Map.from_struct(%WithStruct{}) == %{a: nil, b: nil, c: nil}
+      assert Map.from_struct(%WithStruct{a: 1}) == %{a: 1, b: nil, c: nil}
+      assert Map.from_struct(%WithStruct{b: 2}) == %{a: nil, b: 2, c: nil}
+    end
+  end
+
   test "If correct ports are accepted" do
     # Should not raise
     component CorrectPorts, in: [foo, bar], out: test do
@@ -96,11 +112,11 @@ defmodule Skitter.ComponentDSLTest do
       end
 
       checkpoint do
-        checkpoint!(nil)
+        checkpoint = nil
       end
 
       restore _ do
-        instance! nil
+        instance = nil
       end
     end
 
@@ -115,16 +131,34 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if init works" do
-    component TestInit, in: [] do
+    component TestInit1, in: [] do
       init {a, b} do
-        instance! a * b
+        instance = a * b
       end
 
       react do
       end
     end
 
-    assert TestInit.__skitter_init__({3, 4}) == {:ok, 3 * 4}
+    component TestInit2, in: [] do
+      fields a, b, c
+
+      init {a, b} do
+        instance.a = a
+        instance.b = b
+      end
+
+      react do
+      end
+    end
+
+    # Structs don't want to work in the scope of the test for whatever reason
+    defmodule T2 do
+      assert TestInit1.__skitter_init__({3, 4}) == {:ok, 3 * 4}
+
+      assert TestInit2.__skitter_init__({3, 4}) ==
+               {:ok, %TestInit2{a: 3, b: 4, c: nil}}
+    end
   end
 
   test "if terminate works" do
@@ -158,15 +192,15 @@ defmodule Skitter.ComponentDSLTest do
       end
 
       init val do
-        instance! val
+        instance = val
       end
 
       checkpoint do
-        checkpoint!(instance)
+        checkpoint = instance
       end
 
       restore val do
-        instance! val
+        instance = val
       end
 
       clean_checkpoint _ do
@@ -199,7 +233,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if helpers work" do
     component TestHelper, in: [] do
       init _ do
-        instance! worker()
+        instance = worker()
       end
 
       helper worker do
@@ -226,11 +260,11 @@ defmodule Skitter.ComponentDSLTest do
   test "if pattern matching works" do
     component Patterns, in: input, out: out do
       init :foo do
-        instance! :foo
+        instance = :foo
       end
 
       init :bar do
-        instance! :bar
+        instance = :bar
       end
 
       react :foo do
@@ -253,12 +287,11 @@ defmodule Skitter.ComponentDSLTest do
       effect state_change
 
       init arg do
-        instance! arg
+        instance = arg
       end
 
       react foo do
-        new = instance + foo
-        instance! new
+        instance = instance + foo
       end
     end
 
@@ -267,6 +300,28 @@ defmodule Skitter.ComponentDSLTest do
 
     {:ok, inst, []} = TestInstance.__skitter_react__(inst, [5])
     assert inst == 15
+  end
+
+  test "if instance structs work correctly" do
+    component TestStructInstance, in: [foo] do
+      effect state_change
+      fields a, b, c
+
+      init arg do
+        instance.a = arg
+      end
+
+      react foo do
+        instance.b = foo
+      end
+    end
+
+    defmodule T3 do
+      {:ok, inst} = TestStructInstance.__skitter_init__(10)
+      assert inst == %TestStructInstance{a: 10, b: nil, c: nil}
+      {:ok, inst, []} = TestStructInstance.__skitter_react__(inst, [15])
+      assert inst == %TestStructInstance{a: 10, b: 15, c: nil}
+    end
   end
 
   test "if after_failure works as it should" do
@@ -307,7 +362,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if errors work" do
     component ErrorsEverywhere, in: [] do
       init _ do
-        instance! :not_used
+        instance = :not_used
         error "error!"
       end
 
@@ -350,6 +405,27 @@ defmodule Skitter.ComponentDSLTest do
     end
   end
 
+  test "if incorrect fields are reported" do
+    assert_definition_error do
+      component WrongFields, in: [] do
+        fields :a, :b
+
+        react do
+        end
+      end
+    end
+
+    assert_definition_error do
+      component MultipleFields, in: [] do
+        fields a
+        fields b
+
+        react _ do
+        end
+      end
+    end
+  end
+
   test "if a missing react is reported" do
     assert_definition_error do
       component MissingReact, in: [] do
@@ -367,7 +443,7 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         restore _ do
-          instance! nil
+          instance = nil
         end
       end
     end
@@ -380,7 +456,7 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         checkpoint do
-          checkpoint!(nil)
+          checkpoint = nil
         end
       end
     end
@@ -442,7 +518,7 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         restore _ do
-          instance! nil
+          instance = nil
         end
       end
     end
@@ -455,7 +531,7 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         checkpoint do
-          checkpoint!(nil)
+          checkpoint = nil
         end
 
         restore _ do
@@ -472,7 +548,7 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         checkpoint do
-          checkpoint!(nil)
+          checkpoint = nil
         end
       end
     end
@@ -483,17 +559,17 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         restore _ do
-          instance! nil
+          instance = nil
         end
       end
     end
   end
 
-  test "if incorrect instance! use is reported" do
+  test "if incorrect use of `instance =` is reported" do
     assert_definition_error do
       component WrongInstance, in: [] do
         react do
-          instance! 30
+          instance = 30
         end
       end
     end
@@ -508,7 +584,7 @@ defmodule Skitter.ComponentDSLTest do
     assert_definition_error do
       component SymbolInSpit, in: [], out: [:foo] do
         react do
-          spit(42) ~> :foo
+          spit 42 ~> :foo
         end
       end
     end

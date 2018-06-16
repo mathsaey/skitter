@@ -78,6 +78,26 @@ defmodule Skitter.Component.DSL do
   transformations on the component code which it receives, therefore it is
   generally not possible to call these macros directly. Instead, the
   documentation will specify how these macros can be used.
+
+  ## Instance structs
+
+  This module offers an abstraction over Elixir structs. This makes it possible
+  to predefine the layout of the instance of a component.
+
+  ```
+  component StructExample, in: foo do
+    effect state_change
+    fields a, b, c
+
+    init val do
+      instance.a = value
+    end
+
+    react foo do
+      instance.b - value
+    end
+
+  ```
   """
 
   import Skitter.Component.DefinitionError
@@ -138,6 +158,41 @@ defmodule Skitter.Component.DSL do
     Macro.postwalk(body, fn
       {:instance, env, atom} when is_atom(atom) ->
         {:instance, env, []}
+
+      any ->
+        any
+    end)
+  end
+
+  # Generic function to transform the use of the match operator (`=`) into
+  # calls to macros that provide imperative-style behaviour to skitter.
+  # The binds argument contains a keyword list. Any key in this list that is
+  # found on the left hand side of a match operation will be transformed into a
+  # call to a function. The function name (without arity)should be provided as
+  # the value for the key.
+  defp transform_assigns(body, binds \\ [instance: :instance!]) do
+    Macro.postwalk(body, fn
+      ast = {:=, env, [{name, _venv, _atom}, expr]} when is_atom(name) ->
+        if Keyword.has_key?(binds, name) do
+          {Keyword.fetch!(binds, name), env, [expr]}
+        else
+          ast
+        end
+
+      any ->
+        any
+    end)
+  end
+
+  # Transform uses of `instance.field = expr` into instance!(field, expr).
+  defp transform_field_assigns(body) do
+    Macro.postwalk(body, fn
+      {:=, env,
+       [
+         {{:., _dienv, [{:instance, _ienv, _atom}, field]}, _doenv, []},
+         expr
+       ]} ->
+        {:instance_field!, env, [field, expr]}
 
       any ->
         any
@@ -207,26 +262,33 @@ defmodule Skitter.Component.DSL do
     {body, desc} = extract_description(body)
     {body, effects} = extract_effects(body)
 
+    # Generate the struct macros and extract the field names
+    {body, fields} = extract_fields(body)
+
     # Generate moduledoc based on description
     moduledoc = generate_moduledoc(desc)
 
     # Gather metadata
-    metadata = %Skitter.Component.Metadata{
+    internal_metadata = %{
       name: full_name,
       description: desc,
+      fields: fields,
       effects: effects,
       in_ports: in_ports,
       out_ports: out_ports
     }
 
+    # Create metadata struct
+    component_metadata = struct(Skitter.Component.Metadata, internal_metadata)
+
     # Add default callbacks
-    defaults = generate_default_callbacks(metadata, body)
+    defaults = generate_default_callbacks(body, internal_metadata)
 
     # Transform macro calls inside body AST
-    body = transform_component_callbacks(body, metadata)
+    body = transform_component_callbacks(body, internal_metadata)
 
     # Check for errors
-    errors = check_component_body(metadata, body)
+    errors = check_component_body(body, internal_metadata)
 
     quote generated: true do
       defmodule unquote(name) do
@@ -245,7 +307,7 @@ defmodule Skitter.Component.DSL do
 
         @moduledoc unquote(moduledoc)
 
-        def __skitter_metadata__, do: unquote(Macro.escape(metadata))
+        def __skitter_metadata__, do: unquote(Macro.escape(component_metadata))
 
         unquote(body)
         unquote(errors)
@@ -277,6 +339,33 @@ defmodule Skitter.Component.DSL do
           end)
 
         {nil, Keyword.put(acc, effect, properties)}
+
+      any, acc ->
+        {any, acc}
+    end)
+  end
+
+  # Find field declarations in the AST and transform them into a defstruct.
+  # Return the list of fields to the caller. If there are multiple field
+  # statements, add an error.
+  defp extract_fields(body) do
+    Macro.postwalk(body, nil, fn
+      {:fields, _env, fields}, nil ->
+        fields =
+          Enum.map(fields, fn
+            {name, _env, atom} when is_atom(atom) -> name
+            any -> {:error, any}
+          end)
+
+        {
+          quote do
+            defstruct unquote(fields)
+          end,
+          fields
+        }
+
+      {:fields, _env, _args}, _fields ->
+        {nil, :error}
 
       any, acc ->
         {any, acc}
@@ -378,7 +467,7 @@ defmodule Skitter.Component.DSL do
   # Default implementations of various skitter functions
   # We cannot use defoverridable, as the compiler will remove it before
   # the init, react, ... macros are expanded.
-  defp generate_default_callbacks(meta, body) do
+  defp generate_default_callbacks(body, meta) do
     # We cannot store callbacks in attributes, so we store them in a map here.
     defaults = %{
       init: &default_init/1,
@@ -397,9 +486,15 @@ defmodule Skitter.Component.DSL do
     end)
   end
 
-  defp default_init(_) do
+  defp default_init(%{fields: nil}) do
     quote generated: true do
       def __skitter_init__(_), do: {:ok, nil}
+    end
+  end
+
+  defp default_init(_) do
+    quote generated: true do
+      def __skitter_init__(_), do: {:ok, %__MODULE__{}}
     end
   end
 
@@ -434,8 +529,9 @@ defmodule Skitter.Component.DSL do
   # --------------
   # Functions that check if the component as a whole is correct
 
-  defp check_component_body(meta, body) do
+  defp check_component_body(body, meta) do
     [
+      check_fields(meta),
       check_effects(meta),
       check_react(meta, body),
       check_checkpoint(meta, body),
@@ -473,6 +569,23 @@ defmodule Skitter.Component.DSL do
         [prop | _] ->
           inject_error "`#{prop}` is not a valid property of `#{effect}`"
       end
+    end
+  end
+
+  # Handle the errors returned by `extract_fields/1`
+  defp check_fields(metadata) do
+    case metadata.fields do
+      nil ->
+        nil
+
+      :error ->
+        inject_error "Fields can only be defined once."
+
+      lst when is_list(lst) ->
+        Enum.map(lst, fn
+          {:error, any} -> inject_error "`#{any}` is not a valid field"
+          _ -> nil
+        end)
     end
   end
 
@@ -529,12 +642,31 @@ defmodule Skitter.Component.DSL do
   @doc """
   Modify the instance of the component.
 
+  You should not use this macro directly, instead, you can use
+  `instance = value`, which will be transformed into a call to this macro.
+
   Usable inside `init/3`, and inside `react/3` iff the component is marked
   with the `:state_change` effect.
   """
   defmacro instance!(value) do
     quote generated: true do
       var!(skitter_instance) = unquote(value)
+    end
+  end
+
+  @doc """
+  Modify a specific field of the component instance.
+
+  You should not use this macro directly, instead, you can use
+  `instance.field = value`, which will be transformed into a call to this macro.
+
+  Usable inside `init/3`, and inside `react/3` iff the component is marked
+  with the `:state_change` effect.
+  """
+  defmacro instance_field!(field, value) do
+    quote generated: true do
+      var!(skitter_instance) =
+        Map.replace!(var!(skitter_instance), unquote(field), unquote(value))
     end
   end
 
@@ -558,7 +690,8 @@ defmodule Skitter.Component.DSL do
   Instantiate a skitter component.
 
   This macro will generate the code that will instantiate the skitter component.
-  You should use `instance!/1` inside this macro to return a valid instance.
+  You should assign a value to `instance` or `instance.field` with `=` in this
+  macro to return a valid instance.
 
   Besides the body, this callback accepts a single argument, which can be used
   to pattern match on the user-provided input this callback will receive.
@@ -573,17 +706,34 @@ defmodule Skitter.Component.DSL do
 
   Can be called as: `Skitter.Component.init(ComponentName, [1,2])`
   """
-  defmacro init(args, _meta, do: body) do
+  defmacro init(args, %{fields: fields}, do: body) do
+    body = body |> transform_assigns() |> transform_field_assigns()
+
+    write_count = count_occurrences(:instance!, body)
+    field_count = count_occurrences(:instance_field!, body)
+
     error =
-      use_or_error(
-        body,
-        :instance!,
-        "`init` needs to return a component instance using `instance!`"
-      )
+      unless write_count + field_count > 0 do
+        inject_error "`init` needs to return a component instance"
+      end
+
+    inst =
+      if fields do
+        quote generated: true do
+          var!(skitter_instance) = %__MODULE__{}
+        end
+      end
 
     body =
       quote generated: true do
-        import unquote(__MODULE__), only: [instance!: 1, error: 1]
+        import unquote(__MODULE__),
+          only: [
+            instance!: 1,
+            instance_field!: 2,
+            error: 1
+          ]
+
+        unquote(inst)
         unquote(body)
         {:ok, var!(skitter_instance)}
       end
@@ -647,13 +797,13 @@ defmodule Skitter.Component.DSL do
   @doc """
   Create a checkpoint.
 
-  _Use as `checkpoint do ... end`, `instance/0` and `instance!/1` are usable
-  inside of the body of checkpoint._
+  _Use as `checkpoint do ... end`, `instance/0` is usable inside the body of
+  this callback._
 
   Use this macro to automatically generate the code for creating a checkpoint.
   The current instance can be obtained inside this checkpoint, through the use
   of `instance/0`. The body is required to return a checkpoint by using
-  `checkpoint!/1`.
+  `checkpoint = value`.
   """
   defmacro checkpoint(_meta, do: body) do
     instance_count = count_occurrences(:instance, body)
@@ -669,13 +819,16 @@ defmodule Skitter.Component.DSL do
         end
       end
 
-    body = transform_instance(body)
+    body =
+      body
+      |> transform_instance()
+      |> transform_assigns(checkpoint: :checkpoint!)
 
     error =
       use_or_error(
         body,
         :checkpoint!,
-        "`checkpoint` needs to return a checkpoint using `checkpoint!`"
+        "A valid checkpoint needs to be assigned inside `checkpoint`"
       )
 
     quote generated: true do
@@ -691,6 +844,9 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Update the current return value of checkpoint.
+
+  You should not use this macro directly, instead, you can use
+  `checkpoint = value`, which will be transformed into a call to this macro.
 
   Using this macro multiple times will overwrite the previous value.
   """
@@ -709,14 +865,16 @@ defmodule Skitter.Component.DSL do
 
   This macro is almost identical to `init/3`. It accepts a checkpoint, provided
   by `checkpoint/2` as its only input argument. Just like `init/3`, it is
-  required to return an instance through the use of `instance!/1`.
+  required to return an instance by using `instance = value`
   """
   defmacro restore(args, _meta, do: body) do
+    body = transform_assigns(body)
+
     error =
       use_or_error(
         body,
         :instance!,
-        "`restore` needs to return a component instance using `instance!`"
+        "A valid component instance needs to be assigned inside `restore`"
       )
 
     quote generated: true do
@@ -767,11 +925,17 @@ defmodule Skitter.Component.DSL do
 
   Inside the body of react, `spit/2` can be used to send data to output ports,
   `instance/0` can be used to obtain the value of the current instance. If the
-  component has an internal state, `instance!` can be used to update the
-  current instance.
+  component has an internal state, `instance = value` or
+  `instance.field = value` can be used to update the current instance.
   """
   defmacro react(args, meta, do: body) do
-    body = body |> transform_spit() |> transform_instance()
+    body =
+      body
+      |> transform_spit()
+      |> transform_instance()
+      |> transform_assigns()
+      |> transform_field_assigns()
+
     errors = check_react_body(args, meta, body)
 
     react_body = remove_after_failure(body)
@@ -897,7 +1061,7 @@ defmodule Skitter.Component.DSL do
 
   # Create the AST which will become the body of react. Besides this, generate
   # the arguments for the react function header.
-  # This needs to happen to ensure that var! can be injected into the argument
+  # This needs to happen to ensure that `var!` can be injected into the argument
   # list of the function header if needed.
   defp create_react_body_and_arg(body) do
     {out_pre, out_post} = create_react_output(body)
@@ -911,6 +1075,7 @@ defmodule Skitter.Component.DSL do
             skip: 2,
             instance: 0,
             instance!: 1,
+            instance_field!: 2,
             error: 1,
             after_failure: 1
           ]
@@ -957,23 +1122,26 @@ defmodule Skitter.Component.DSL do
   defp create_react_instance(body) do
     read_count = count_occurrences(:instance, body)
     write_count = count_occurrences(:instance!, body)
+    field_count = count_occurrences(:instance_field!, body)
+    inst_var_required? = read_count > 0 or field_count > 0
+    inst_ret_required? = write_count > 0 or field_count > 0
 
     arg =
-      if read_count > 0 do
+      if inst_var_required? do
         quote generated: true, do: var!(instance_arg)
       else
         quote generated: true, do: _instance_arg
       end
 
     pre =
-      if read_count > 0 do
+      if inst_var_required? do
         quote generated: true, do: var!(skitter_instance) = var!(instance_arg)
       else
         nil
       end
 
     post =
-      if write_count > 0 do
+      if inst_ret_required? do
         quote generated: true, do: var!(skitter_instance)
       else
         nil

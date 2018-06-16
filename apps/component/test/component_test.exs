@@ -16,18 +16,18 @@ defmodule Skitter.ComponentTest do
     effect external_effect
 
     init _ do
-      instance! :init_works
+      instance = :init_works
     end
 
     react _foo, _bar do
     end
 
     checkpoint do
-      checkpoint!(:checkpoint_works)
+      checkpoint = :checkpoint_works
     end
 
     restore _ do
-      instance! :restore_works
+      instance = :restore_works
     end
   end
 
