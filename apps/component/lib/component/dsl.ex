@@ -1241,9 +1241,8 @@ defmodule Skitter.Component.DSL do
       # Ensure instance! is only used when there is an internal state
       count_occurrences(:instance!, body) > 0 and
           !Keyword.has_key?(meta.effects, :state_change) ->
-        inject_error(
-          "`instance!` only allowed when the state_change effect is present"
-        )
+        inject_error "Modifying `instance` is only allowed when the " <>
+                       "state_change effect is present"
 
       # Fallback case, no errors
       true ->
