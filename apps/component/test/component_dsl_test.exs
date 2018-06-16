@@ -302,6 +302,28 @@ defmodule Skitter.ComponentDSLTest do
     assert inst == 15
   end
 
+  test "if instance structs work correctly" do
+    component TestStructInstance, in: [foo] do
+      effect state_change
+      fields a, b, c
+
+      init arg do
+        instance.a = arg
+      end
+
+      react foo do
+        instance.b = foo
+      end
+    end
+
+    defmodule T3 do
+      {:ok, inst} = TestStructInstance.__skitter_init__(10)
+      assert inst == %TestStructInstance{a: 10, b: nil, c: nil}
+      {:ok, inst, []} = TestStructInstance.__skitter_react__(inst, [15])
+      assert inst == %TestStructInstance{a: 10, b: 15, c: nil}
+    end
+  end
+
   test "if after_failure works as it should" do
     component TestAfterFailure, in: [] do
       effect external_effect
@@ -562,7 +584,7 @@ defmodule Skitter.ComponentDSLTest do
     assert_definition_error do
       component SymbolInSpit, in: [], out: [:foo] do
         react do
-          spit(42) ~> :foo
+          spit 42 ~> :foo
         end
       end
     end
