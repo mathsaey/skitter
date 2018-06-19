@@ -55,10 +55,13 @@ defmodule Skitter.Workflow.DSL do
         |> transform_underscores()
         |> transform_binds!()
 
+      requires = body |> extract_modules() |> build_requires()
+
       validate_components(body, __CALLER__)
       validate_ports(body, __CALLER__)
 
       quote generated: true do
+        unquote(requires)
         unquote(body)
       end
     catch
@@ -201,6 +204,23 @@ defmodule Skitter.Workflow.DSL do
   # Same as `resolve`, but for a specific link
   defp resolve_link!(name, binds) do
     Map.get_lazy(binds, name, fn -> throw({:error, :unknown_name, name}) end)
+  end
+
+  # Extract all the module names
+  defp extract_modules(body) do
+    Enum.reduce(body, MapSet.new(), fn {:{}, _env, [_name, mod, _init, _links]},
+                                       acc ->
+      MapSet.put(acc, mod)
+    end)
+  end
+
+  # Generate `require` statements for a list of (quoted) modules
+  defp build_requires(modules) do
+    Enum.map(modules, fn mod ->
+      quote do
+        require unquote(mod)
+      end
+    end)
   end
 
   # ---------- #
