@@ -116,7 +116,7 @@ defmodule Skitter.ComponentDSLTest do
       end
 
       restore _ do
-        instance = nil
+        state = nil
       end
     end
 
@@ -133,7 +133,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if init works" do
     component TestInit1, in: [] do
       init {a, b} do
-        instance = a * b
+        state = a * b
       end
 
       react do
@@ -144,8 +144,8 @@ defmodule Skitter.ComponentDSLTest do
       fields a, b, c
 
       init {a, b} do
-        instance.a = a
-        instance.b = b
+        state.a = a
+        state.b = b
       end
 
       react do
@@ -175,7 +175,7 @@ defmodule Skitter.ComponentDSLTest do
       end
 
       terminate do
-        send(self(), instance)
+        send(self(), state)
       end
     end
 
@@ -192,15 +192,15 @@ defmodule Skitter.ComponentDSLTest do
       end
 
       init val do
-        instance = val
+        state = val
       end
 
       checkpoint do
-        checkpoint = instance
+        checkpoint = state
       end
 
       restore val do
-        instance = val
+        state = val
       end
 
       clean_checkpoint _ do
@@ -233,7 +233,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if helpers work" do
     component TestHelper, in: [] do
       init _ do
-        instance = worker()
+        state = worker()
       end
 
       helper worker do
@@ -260,11 +260,11 @@ defmodule Skitter.ComponentDSLTest do
   test "if pattern matching works" do
     component Patterns, in: input, out: out do
       init :foo do
-        instance = :foo
+        state = :foo
       end
 
       init :bar do
-        instance = :bar
+        state = :bar
       end
 
       react :foo do
@@ -282,45 +282,45 @@ defmodule Skitter.ComponentDSLTest do
     assert Patterns.__skitter_react__(nil, [:bar]) == {:ok, nil, [out: :bar]}
   end
 
-  test "if instances work correctly" do
-    component TestInstance, in: [foo] do
+  test "if state works correctly" do
+    component TestState, in: [foo] do
       effect state_change
 
       init arg do
-        instance = arg
+        state = arg
       end
 
       react foo do
-        instance = instance + foo
+        state = state + foo
       end
     end
 
-    {:ok, inst} = TestInstance.__skitter_init__(10)
+    {:ok, inst} = TestState.__skitter_init__(10)
     assert inst == 10
 
-    {:ok, inst, []} = TestInstance.__skitter_react__(inst, [5])
+    {:ok, inst, []} = TestState.__skitter_react__(inst, [5])
     assert inst == 15
   end
 
-  test "if instance structs work correctly" do
-    component TestStructInstance, in: [foo] do
+  test "if state structs work correctly" do
+    component TestStructState, in: [foo] do
       effect state_change
       fields a, b, c
 
       init arg do
-        instance.a = arg
+        state.a = arg
       end
 
       react foo do
-        instance.b = foo
+        state.b = foo
       end
     end
 
     defmodule T3 do
-      {:ok, inst} = TestStructInstance.__skitter_init__(10)
-      assert inst == %TestStructInstance{a: 10, b: nil, c: nil}
-      {:ok, inst, []} = TestStructInstance.__skitter_react__(inst, [15])
-      assert inst == %TestStructInstance{a: 10, b: 15, c: nil}
+      {:ok, inst} = TestStructState.__skitter_init__(10)
+      assert inst == %TestStructState{a: 10, b: nil, c: nil}
+      {:ok, inst, []} = TestStructState.__skitter_react__(inst, [15])
+      assert inst == %TestStructState{a: 10, b: 15, c: nil}
     end
   end
 
@@ -362,7 +362,7 @@ defmodule Skitter.ComponentDSLTest do
   test "if errors work" do
     component ErrorsEverywhere, in: [] do
       init _ do
-        instance = :not_used
+        state = :not_used
         error "error!"
       end
 
@@ -443,7 +443,7 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         restore _ do
-          instance = nil
+          state = nil
         end
       end
     end
@@ -518,7 +518,7 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         restore _ do
-          instance = nil
+          state = nil
         end
       end
     end
@@ -559,17 +559,17 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         restore _ do
-          instance = nil
+          state = nil
         end
       end
     end
   end
 
-  test "if incorrect use of `instance =` is reported" do
+  test "if incorrect use of `state =` is reported" do
     assert_definition_error do
-      component WrongInstance, in: [] do
+      component WrongState, in: [] do
         react do
-          instance = 30
+          state = 30
         end
       end
     end

@@ -18,7 +18,7 @@ defmodule Skitter.Component.DSL do
   behaviour by default. Besides this, the DSL will protect the programmer
   against some easy to make mistakes which the behaviour cannot verify.
   For instance, the DSL will check that a component which does not specify the
-  `state_change` effect does not modify its instance.
+  `state_change` effect does not modify the state of its instance.
   - Finally, the DSL automatically generates default code for most of the
   required callbacks. Thus, using the DSL will drastically cut down on the
   amount of boilerplate code the programmer has to write.
@@ -79,10 +79,10 @@ defmodule Skitter.Component.DSL do
   generally not possible to call these macros directly. Instead, the
   documentation will specify how these macros can be used.
 
-  ## Instance structs
+  ## State structs
 
   This module offers an abstraction over Elixir structs. This makes it possible
-  to predefine the layout of the instance of a component.
+  to predefine the layout of the state of a component instance.
 
   ```
   component StructExample, in: foo do
@@ -90,11 +90,11 @@ defmodule Skitter.Component.DSL do
     fields a, b, c
 
     init val do
-      instance.a = value
+      state.a = value
     end
 
     react foo do
-      instance.b - value
+      state.b - value
     end
 
   ```
@@ -151,16 +151,16 @@ defmodule Skitter.Component.DSL do
   defp transform_port_name({name, _env, nil}), do: name
   defp transform_port_name(any), do: {:error, any}
 
-  # Transform all instances of 'instance' into 'instance()'
-  # This is done to avoid ambiguous uses of instance, which
+  # Transform all instances of 'state' into 'state()'
+  # This is done to avoid ambiguous uses of state, which
   # will cause elixir to show a warning.
-  defp transform_instance(body) do
+  defp transform_state(body) do
     Macro.postwalk(body, fn
-      {:instance, env, atom} when is_atom(atom) ->
-        {:instance, env, []}
+      {:state, env, atom} when is_atom(atom) ->
+        {:state, env, []}
 
       any ->
-        any
+        state
     end)
   end
 
@@ -170,7 +170,7 @@ defmodule Skitter.Component.DSL do
   # found on the left hand side of a match operation will be transformed into a
   # call to a function. The function name (without arity)should be provided as
   # the value for the key.
-  defp transform_assigns(body, binds \\ [instance: :instance!]) do
+  defp transform_assigns(body, binds \\ [state: :state!]) do
     Macro.postwalk(body, fn
       ast = {:=, env, [{name, _venv, _atom}, expr]} when is_atom(name) ->
         if Keyword.has_key?(binds, name) do
@@ -184,15 +184,15 @@ defmodule Skitter.Component.DSL do
     end)
   end
 
-  # Transform uses of `instance.field = expr` into instance!(field, expr).
+  # Transform uses of `state.field = expr` into state(field, expr).
   defp transform_field_assigns(body) do
     Macro.postwalk(body, fn
       {:=, env,
        [
-         {{:., _dienv, [{:instance, _ienv, _atom}, field]}, _doenv, []},
+         {{:., _dienv, [{:state, _ienv, _atom}, field]}, _doenv, []},
          expr
        ]} ->
-        {:instance_field!, env, [field, expr]}
+        {:state_field!, env, [field, expr]}
 
       any ->
         any
@@ -629,44 +629,44 @@ defmodule Skitter.Component.DSL do
   # Macros which are usable inside multiple callbacks inside component.
 
   @doc """
-  Fetch the current component instance.
+  Fetch the current state of the component instance.
 
   Usable inside `react/3`, `init/3`.
   """
-  defmacro instance do
+  defmacro state do
     quote generated: true do
-      var!(skitter_instance)
+      var!(skitter_state)
     end
   end
 
   @doc """
-  Modify the instance of the component.
+  Modify the state of the component instance.
 
   You should not use this macro directly, instead, you can use
-  `instance = value`, which will be transformed into a call to this macro.
+  `state = value`, which will be transformed into a call to this macro.
 
   Usable inside `init/3`, and inside `react/3` iff the component is marked
   with the `:state_change` effect.
   """
-  defmacro instance!(value) do
+  defmacro state!(value) do
     quote generated: true do
-      var!(skitter_instance) = unquote(value)
+      var!(skitter_state) = unquote(value)
     end
   end
 
   @doc """
-  Modify a specific field of the component instance.
+  Modify a specific field of the component instance state.
 
   You should not use this macro directly, instead, you can use
-  `instance.field = value`, which will be transformed into a call to this macro.
+  `state.field = value`, which will be transformed into a call to this macro.
 
   Usable inside `init/3`, and inside `react/3` iff the component is marked
   with the `:state_change` effect.
   """
-  defmacro instance_field!(field, value) do
+  defmacro state_field!(field, value) do
     quote generated: true do
-      var!(skitter_instance) =
-        Map.replace!(var!(skitter_instance), unquote(field), unquote(value))
+      var!(skitter_state) =
+        Map.replace!(var!(skitter_state), unquote(field), unquote(value))
     end
   end
 
@@ -690,8 +690,8 @@ defmodule Skitter.Component.DSL do
   Instantiate a skitter component.
 
   This macro will generate the code that will instantiate the skitter component.
-  You should assign a value to `instance` or `instance.field` with `=` in this
-  macro to return a valid instance.
+  You should assign a value to `state` or `state.field` with `=` in this macro
+  to return a valid instance.
 
   Besides the body, this callback accepts a single argument, which can be used
   to pattern match on the user-provided input this callback will receive.
@@ -700,7 +700,7 @@ defmodule Skitter.Component.DSL do
 
   ```
   init [foo, bar] do
-    instance! foo + bar
+    state = foo + bar
   end
   ```
 
@@ -709,18 +709,18 @@ defmodule Skitter.Component.DSL do
   defmacro init(args, %{fields: fields}, do: body) do
     body = body |> transform_assigns() |> transform_field_assigns()
 
-    write_count = count_occurrences(:instance!, body)
-    field_count = count_occurrences(:instance_field!, body)
+    write_count = count_occurrences(:state!, body)
+    field_count = count_occurrences(:state_field!, body)
 
     error =
       unless write_count + field_count > 0 do
-        inject_error "`init` needs to return a component instance"
+        inject_error "`init` needs to modify the state of the component instance"
       end
 
-    inst =
+    state =
       if fields do
         quote generated: true do
-          var!(skitter_instance) = %__MODULE__{}
+          var!(skitter_state) = %__MODULE__{}
         end
       end
 
@@ -728,14 +728,14 @@ defmodule Skitter.Component.DSL do
       quote generated: true do
         import unquote(__MODULE__),
           only: [
-            instance!: 1,
-            instance_field!: 2,
+            state!: 1,
+            state_field!: 2,
             error: 1
           ]
 
-        unquote(inst)
+        unquote(state)
         unquote(body)
-        {:ok, var!(skitter_instance)}
+        {:ok, var!(skitter_state)}
       end
 
     body = add_skitter_error_handler(body)
@@ -757,16 +757,16 @@ defmodule Skitter.Component.DSL do
   Generate component cleanup code.
 
   This macro can be used to cleanup any resources before a component is shut
-  down. `instance/0` can be used in the body of this macro if data from the
-  current instance is needed.
+  down. `state/0` can be used in the body of this macro if data from the state
+  of the current instance is needed.
   """
   defmacro terminate(_meta, do: body) do
-    instance_count = count_occurrences(:instance, body)
+    state_count = count_occurrences(:state, body)
 
-    instance_arg =
-      if instance_count >= 1 do
+    state_arg =
+      if state_count >= 1 do
         quote generated: true do
-          var!(skitter_instance)
+          var!(skitter_state)
         end
       else
         quote generated: true do
@@ -776,15 +776,15 @@ defmodule Skitter.Component.DSL do
 
     body =
       quote generated: true do
-        import unquote(__MODULE__), only: [instance: 0, error: 1]
+        import unquote(__MODULE__), only: [state: 0, error: 1]
         unquote(body)
         :ok
       end
 
-    body = body |> transform_instance() |> add_skitter_error_handler()
+    body = body |> transform_state() |> add_skitter_error_handler()
 
     quote generated: true do
-      def __skitter_terminate__(unquote(instance_arg)) do
+      def __skitter_terminate__(unquote(state_arg)) do
         unquote(body)
       end
     end
@@ -797,21 +797,21 @@ defmodule Skitter.Component.DSL do
   @doc """
   Create a checkpoint.
 
-  _Use as `checkpoint do ... end`, `instance/0` is usable inside the body of
+  _Use as `checkpoint do ... end`, `state/0` is usable inside the body of
   this callback._
 
   Use this macro to automatically generate the code for creating a checkpoint.
-  The current instance can be obtained inside this checkpoint, through the use
-  of `instance/0`. The body is required to return a checkpoint by using
-  `checkpoint = value`.
+  The state of the current instance can be obtained inside this checkpoint
+  through the use of `state/0`. The body is required to return a checkpoint by
+  using `checkpoint = value`.
   """
   defmacro checkpoint(_meta, do: body) do
-    instance_count = count_occurrences(:instance, body)
+    state_count = count_occurrences(:state, body)
 
-    instance_arg =
-      if instance_count >= 1 do
+    state_arg =
+      if state_count >= 1 do
         quote generated: true do
-          var!(skitter_instance)
+          var!(skitter_state)
         end
       else
         quote generated: true do
@@ -821,7 +821,7 @@ defmodule Skitter.Component.DSL do
 
     body =
       body
-      |> transform_instance()
+      |> transform_state()
       |> transform_assigns(checkpoint: :checkpoint!)
 
     error =
@@ -834,8 +834,8 @@ defmodule Skitter.Component.DSL do
     quote generated: true do
       unquote(error)
 
-      def __skitter_checkpoint__(unquote(instance_arg)) do
-        import unquote(__MODULE__), only: [instance: 0, checkpoint!: 1]
+      def __skitter_checkpoint__(unquote(state_arg)) do
+        import unquote(__MODULE__), only: [state: 0, checkpoint!: 1]
         unquote(body)
         {:ok, var!(skitter_checkpoint)}
       end
@@ -865,7 +865,7 @@ defmodule Skitter.Component.DSL do
 
   This macro is almost identical to `init/3`. It accepts a checkpoint, provided
   by `checkpoint/2` as its only input argument. Just like `init/3`, it is
-  required to return an instance by using `instance = value`
+  required to return a valid instance by using `state = value`
   """
   defmacro restore(args, _meta, do: body) do
     body = transform_assigns(body)
@@ -873,17 +873,17 @@ defmodule Skitter.Component.DSL do
     error =
       use_or_error(
         body,
-        :instance!,
-        "A valid component instance needs to be assigned inside `restore`"
+        :state!,
+        "Restore should create a valid component instance state."
       )
 
     quote generated: true do
       unquote(error)
 
       def __skitter_restore__(unquote(args)) do
-        import unquote(__MODULE__), only: [instance!: 1, error: 1]
+        import unquote(__MODULE__), only: [state!: 1, error: 1]
         unquote(body)
-        {:ok, var!(skitter_instance)}
+        {:ok, var!(skitter_state)}
       end
     end
   end
@@ -921,18 +921,18 @@ defmodule Skitter.Component.DSL do
   For instance, if a component has two in ports: `foo`, and `bar`, the
   react of that component should start as follows: `react foo, bar do ...`
   The names of the parameters can be freely chosen and pattern matching is
-  possible. Elixir guards cannot be used though.
+  possible. Elixir guards cannot be used.
 
   Inside the body of react, `spit/2` can be used to send data to output ports,
-  `instance/0` can be used to obtain the value of the current instance. If the
-  component has an internal state, `instance = value` or
-  `instance.field = value` can be used to update the current instance.
+  `state/0` can be used to obtain the state of the current instance. If the
+  component has an internal state, `state = value` or
+  `state.field = value` can be used to update the state of the current instance.
   """
   defmacro react(args, meta, do: body) do
     body =
       body
       |> transform_spit()
-      |> transform_instance()
+      |> transform_state()
       |> transform_assigns()
       |> transform_field_assigns()
 
@@ -1035,10 +1035,10 @@ defmodule Skitter.Component.DSL do
   defmacro after_failure(do: body), do: body
 
   @doc """
-  Stop the execution of react, and return the current instance and spits.
+  Stop the execution of react, and return the current instance state and spits.
 
   Using this macro will automatically stop the execution of react. Unlike the
-  use of `error/1`, any changes made to the instance (through `instance!/1`)
+  use of `error/1`, any changes made to the instance state (through `state!/1`)
   and any values provided to `spit/2` will still be returned to the skitter
   runtime.
 
@@ -1047,12 +1047,12 @@ defmodule Skitter.Component.DSL do
   it can be used to only continue the execution of react if no effect occurred
   in the original call to react.
 
-  Do not call this manually, as the `instance` and `output` arguments are
+  Do not call this manually, as the `state` and `output` arguments are
   provided by macro expansion code in `react/3`.
   """
-  defmacro skip(instance, output) do
+  defmacro skip(state, output) do
     quote generated: true do
-      throw {:skitter_skip, unquote(instance), unquote(output)}
+      throw {:skitter_skip, unquote(state), unquote(output)}
     end
   end
 
@@ -1065,7 +1065,7 @@ defmodule Skitter.Component.DSL do
   # list of the function header if needed.
   defp create_react_body_and_arg(body) do
     {out_pre, out_post} = create_react_output(body)
-    {inst_arg, inst_pre, inst_post} = create_react_instance(body)
+    {state_arg, state_pre, state_post} = create_react_state(body)
 
     body =
       quote generated: true do
@@ -1073,23 +1073,23 @@ defmodule Skitter.Component.DSL do
           only: [
             spit: 2,
             skip: 2,
-            instance: 0,
-            instance!: 1,
-            instance_field!: 2,
+            state: 0,
+            state!: 1,
+            state_field!: 2,
             error: 1,
             after_failure: 1
           ]
 
-        unquote(inst_pre)
+        unquote(state_pre)
         unquote(out_pre)
         unquote(body)
-        {:ok, unquote(inst_post), unquote(out_post)}
+        {:ok, unquote(state_post), unquote(out_post)}
       end
 
-    body = add_skip_handler(body, inst_post, out_post)
+    body = add_skip_handler(body, state_post, out_post)
     body = add_skitter_error_handler(body)
 
-    {body, inst_arg}
+    {body, state_arg}
   end
 
   # Generate the ASTs for creating the initial value and reading the value
@@ -1111,38 +1111,38 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # Create the AST which manages the __skitter_instance__ variable throughout
+  # Create the AST which manages the __skitter_state__ variable throughout
   # the call to __skitter_react__ and __skitter_react_after_failure.
   # The following 3 ASTs are created:
   #   - The AST which will be injected into the react signature, this way, the
-  #     skitter instance can be ignored if it is not used.
-  #   - The AST which initializes the skitter instance variable.
+  #     skitter state can be ignored if it is not used.
+  #   - The AST which initializes the skitter state variable.
   #   - The AST which provides the value that will be returned to the skitter
   #     runtime.
-  defp create_react_instance(body) do
-    read_count = count_occurrences(:instance, body)
-    write_count = count_occurrences(:instance!, body)
-    field_count = count_occurrences(:instance_field!, body)
-    inst_var_required? = read_count > 0 or field_count > 0
-    inst_ret_required? = write_count > 0 or field_count > 0
+  defp create_react_state(body) do
+    read_count = count_occurrences(:state, body)
+    write_count = count_occurrences(:state!, body)
+    field_count = count_occurrences(:state_field!, body)
+    state_var_required? = read_count > 0 or field_count > 0
+    state_ret_required? = write_count > 0 or field_count > 0
 
     arg =
-      if inst_var_required? do
-        quote generated: true, do: var!(instance_arg)
+      if state_var_required? do
+        quote generated: true, do: var!(state_arg)
       else
-        quote generated: true, do: _instance_arg
+        quote generated: true, do: _state_arg
       end
 
     pre =
-      if inst_var_required? do
-        quote generated: true, do: var!(skitter_instance) = var!(instance_arg)
+      if state_var_required? do
+        quote generated: true, do: var!(skitter_state) = var!(state_arg)
       else
         nil
       end
 
     post =
-      if inst_ret_required? do
-        quote generated: true, do: var!(skitter_instance)
+      if state_ret_required? do
+        quote generated: true, do: var!(skitter_state)
       else
         nil
       end
@@ -1169,16 +1169,16 @@ defmodule Skitter.Component.DSL do
   # Add a handler for `skip`, if it is used. If it's not, this just returns the
   # body unchanged.
   # Skip is implemented through the use of a throw. It will simply throw the
-  # current values for skitter_instance and skitter_output and return them as
+  # current values for skitter_state and skitter_output and return them as
   # the result of the block as a whole.
-  # The quoted code for instance and output are provided by
+  # The quoted code for state and output are provided by
   # `create_react_body_and_arg` to avoid code duplication.
-  defp add_skip_handler(body, inst, out) do
+  defp add_skip_handler(body, state, out) do
     if count_occurrences(:skip, body) >= 1 do
       body =
         Macro.postwalk(body, fn
-          {:skip, env, []} -> {:skip, env, [inst, out]}
-          {:skip, env, atom} when is_atom(atom) -> {:skip, env, [inst, out]}
+          {:skip, env, []} -> {:skip, env, [state, out]}
+          {:skip, env, atom} when is_atom(atom) -> {:skip, env, [state, out]}
           any -> any
         end)
 
@@ -1186,7 +1186,7 @@ defmodule Skitter.Component.DSL do
         try do
           unquote(body)
         catch
-          {:skitter_skip, instance, output} -> {:ok, instance, output}
+          {:skitter_skip, state, output} -> {:ok, state, output}
         end
       end
     else
@@ -1238,10 +1238,10 @@ defmodule Skitter.Component.DSL do
           "`after_failure` only allowed when external_effect is present"
         )
 
-      # Ensure instance! is only used when there is an internal state
-      count_occurrences(:instance!, body) > 0 and
+      # Ensure state! is only used when the state can change.
+      count_occurrences(:state!, body) > 0 and
           !Keyword.has_key?(meta.effects, :state_change) ->
-        inject_error "Modifying `instance` is only allowed when the " <>
+        inject_error "Modifying instance state is only allowed when the " <>
                        "state_change effect is present"
 
       # Fallback case, no errors

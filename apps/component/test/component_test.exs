@@ -16,7 +16,7 @@ defmodule Skitter.ComponentTest do
     effect external_effect
 
     init _ do
-      instance = :init_works
+      state = :init_works
     end
 
     react _foo, _bar do
@@ -27,7 +27,7 @@ defmodule Skitter.ComponentTest do
     end
 
     restore _ do
-      instance = :restore_works
+      state = :restore_works
     end
   end
 
