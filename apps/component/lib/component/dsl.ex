@@ -373,11 +373,7 @@ defmodule Skitter.Component.DSL do
     }
 
     Enum.map(@default_callbacks, fn name ->
-      if count_occurrences(name, body) >= 1 do
-        nil
-      else
-        defaults[name].(meta)
-      end
+      if_occurrence(body, name, do: nil, else: defaults[name].(meta))
     end)
   end
 
@@ -486,7 +482,9 @@ defmodule Skitter.Component.DSL do
 
   # Ensure react is present in the component
   defp check_react(meta, body) do
-    unless count_occurrences(:react, body) >= 1 do
+    if_occurrence(body, :react) do
+      nil
+    else
       inject_error "Component `#{meta.name}` lacks a react implementation"
     end
   end
@@ -495,9 +493,9 @@ defmodule Skitter.Component.DSL do
   # internal state. If it does not, ensure they are not present.
   defp check_checkpoint(meta, body) do
     required = :hidden in Keyword.get(meta.effects, :state_change, [])
-    cp_present = count_occurrences(:create_checkpoint, body) >= 1
-    rt_present = count_occurrences(:restore_checkpoint, body) >= 1
-    cl_present = count_occurrences(:clean_checkpoint, body) >= 1
+    cp_present = count_occurrences(body, :create_checkpoint) >= 1
+    rt_present = count_occurrences(body, :restore_checkpoint) >= 1
+    cl_present = count_occurrences(body, :clean_checkpoint) >= 1
     either_present = cp_present or rt_present or cl_present
     both_present = cp_present and rt_present
 
@@ -705,9 +703,7 @@ defmodule Skitter.Component.DSL do
   # Generate the ASTs for creating the initial value and reading the value
   # of skitter_output.
   defp create_react_output(body) do
-    spit_use_count = count_occurrences(:spit, body)
-
-    if spit_use_count > 0 do
+    if_occurrence(body, :spit) do
       {
         quote generated: true do
           var!(skitter_output) = []
@@ -730,9 +726,9 @@ defmodule Skitter.Component.DSL do
   #   - The AST which provides the value that will be returned to the skitter
   #     runtime.
   defp create_react_state(body) do
-    read_count = count_occurrences(:state, body)
-    write_count = count_occurrences(:state!, body)
-    field_count = count_occurrences(:state_field!, body)
+    read_count = count_occurrences(body, :state)
+    write_count = count_occurrences(body, :state!)
+    field_count = count_occurrences(body, :state_field!)
     state_var_required? = read_count > 0 or field_count > 0
     state_ret_required? = write_count > 0 or field_count > 0
 
@@ -784,7 +780,7 @@ defmodule Skitter.Component.DSL do
   # The quoted code for state and output are provided by
   # `create_react_body_and_arg` to avoid code duplication.
   defp add_skip_handler(body, state, out) do
-    if count_occurrences(:skip, body) >= 1 do
+    if_occurrence(body, :skip) do
       body =
         Macro.postwalk(body, fn
           {:skip, env, []} -> {:skip, env, [state, out]}
@@ -842,14 +838,14 @@ defmodule Skitter.Component.DSL do
         inject_error "Port `#{p}` not in out_ports"
 
       # Ensure after_failure is only used when there are external effects
-      count_occurrences(:after_failure, body) > 0 and
+      count_occurrences(body, :after_failure) > 0 and
           !Keyword.has_key?(meta.effects, :external_effect) ->
         inject_error(
           "`after_failure` only allowed when external_effect is present"
         )
 
       # Ensure state! is only used when the state can change.
-      count_occurrences(:state!, body) > 0 and
+      count_occurrences(body, :state!) > 0 and
           !Keyword.has_key?(meta.effects, :state_change) ->
         inject_error "Modifying instance state is only allowed when the " <>
                        "state_change effect is present"
@@ -907,8 +903,8 @@ defmodule Skitter.Component.DSL do
   defmacro init(args, %{fields: fields}, do: body) do
     body = body |> transform_assigns() |> transform_field_assigns()
 
-    write_count = count_occurrences(:state!, body)
-    field_count = count_occurrences(:state_field!, body)
+    write_count = count_occurrences(body, :state!)
+    field_count = count_occurrences(body, :state_field!)
 
     error =
       unless write_count + field_count > 0 do
@@ -955,18 +951,7 @@ defmodule Skitter.Component.DSL do
   of the current instance is needed.
   """
   defmacro terminate(_meta, do: body) do
-    state_count = count_occurrences(:state, body)
-
-    state_arg =
-      if state_count >= 1 do
-        quote generated: true do
-          var!(skitter_state)
-        end
-      else
-        quote generated: true do
-          _
-        end
-      end
+    state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
 
     body =
       quote generated: true do
@@ -1000,18 +985,7 @@ defmodule Skitter.Component.DSL do
   using `checkpoint = value`.
   """
   defmacro create_checkpoint(_meta, do: body) do
-    state_count = count_occurrences(:state, body)
-
-    state_arg =
-      if state_count >= 1 do
-        quote generated: true do
-          var!(skitter_state)
-        end
-      else
-        quote generated: true do
-          _
-        end
-      end
+    state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
 
     body =
       body
@@ -1087,16 +1061,7 @@ defmodule Skitter.Component.DSL do
   with this particular checkpoint.
   """
   defmacro clean_checkpoint(args, _meta, do: body) do
-    state_arg =
-      if count_occurrences(:state, body) >= 1 do
-        quote do
-          var!(skitter_state)
-        end
-      else
-        quote do
-          _
-        end
-      end
+    state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
 
     quote generated: true do
       def __skitter_clean_checkpoint__(unquote(state_arg), unquote(args)) do
@@ -1225,7 +1190,7 @@ defmodule Skitter.Component.DSL do
 
   # Wrap a body with try/do if the `error/1` macro is used.
   defp add_skitter_error_handler(body) do
-    if count_occurrences(:error, body) >= 1 do
+    if_occurrence(body, :error) do
       quote generated: true do
         try do
           unquote(body)
@@ -1241,7 +1206,7 @@ defmodule Skitter.Component.DSL do
   end
 
   # Count the occurrences of a given symbol in an ast.
-  defp count_occurrences(symbol, ast) do
+  defp count_occurrences(ast, symbol) do
     {_, n} =
       Macro.postwalk(ast, 0, fn
         ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
@@ -1251,12 +1216,39 @@ defmodule Skitter.Component.DSL do
     n
   end
 
+  defp if_occurrence(body, atom, do: do_clause) do
+    if_occurrence(body, atom, do: do_clause, else: nil)
+  end
+
+  defp if_occurrence(body, atom, do: do_clause, else: else_clause) do
+    if count_occurrences(body, atom) >= 1, do: do_clause, else: else_clause
+  end
+
   # Inject an error if a certain symbol is not present in an AST.
   defp use_or_error(body, symbol, error) do
-    if count_occurrences(symbol, body) >= 1 do
-      nil
+    if_occurrence(body, symbol, do: nil, else: inject_error(error))
+  end
+
+  defp arg_name_if_occurs(body, symbol, name) do
+    arg_name_if_occurs(
+      body,
+      symbol,
+      name,
+      quote do
+        _
+      end
+    )
+  end
+
+  defp arg_name_if_occurs(body, symbol, name, alternative) do
+    if_occurrence(body, symbol) do
+      quote do
+        var!(unquote(name))
+      end
     else
-      inject_error error
+      quote do
+        unquote(alternative)
+      end
     end
   end
 end
