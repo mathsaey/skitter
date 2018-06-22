@@ -108,35 +108,18 @@ defmodule Skitter.Component.DSL do
 
   @valid_effects [state_change: [:hidden], external_effect: []]
 
-  # Transform the calls to the following callbacks
-  # See: transform_component_callbacks(body, meta)
-  # All of these callbacks are handled by the same function.
-  # However, arguments to these calls are handled slightly differently.
-  @component_callbacks_single_arg [
-    # Only accept a single argument, which should not be modified
+  @component_functions [
+    :react,
     :init,
-    :restore_checkpoint,
-    :clean_checkpoint
-  ]
-  @component_callbacks_arglst [
-    # Accept an arbitrary amount of arguments, which are wrapped in a list
-    :react
-  ]
-  @component_callbacks_no_args [
-    # Don't accept any arguments besides the function body
     :terminate,
+    :restore_checkpoint,
+    :clean_checkpoint,
     :create_checkpoint
   ]
 
   # Generate default implementations for the following callbacks.
   # See: generate_default_callbacks(meta, body)
-  @default_callbacks [
-    :init,
-    :terminate,
-    :create_checkpoint,
-    :restore_checkpoint,
-    :clean_checkpoint
-  ]
+  @default_callbacks List.delete(@component_functions, :react)
 
   # --------- #
   # Component #
@@ -155,10 +138,8 @@ defmodule Skitter.Component.DSL do
 
     # Extract metadata from body AST
     {body, desc} = extract_description(body)
-    {body, effects} = extract_effects(body)
-
-    # Generate the struct macros and extract the field names
     {body, fields} = extract_fields(body)
+    {body, effects} = extract_effects(body)
 
     # Generate moduledoc based on description
     moduledoc = generate_moduledoc(desc)
@@ -176,11 +157,12 @@ defmodule Skitter.Component.DSL do
     # Create metadata struct
     component_metadata = struct(Skitter.Component.Metadata, internal_metadata)
 
+    # Transform macro calls inside body AST
+    # body = transform_component_callbacks(body, internal_metadata)
+    body = body |> transform_helpers() |> transform_functions(internal_metadata)
+
     # Add default callbacks
     defaults = generate_default_callbacks(body, internal_metadata)
-
-    # Transform macro calls inside body AST
-    body = transform_component_callbacks(body, internal_metadata)
 
     # Check for errors
     errors = check_component_body(body, internal_metadata)
@@ -188,19 +170,19 @@ defmodule Skitter.Component.DSL do
     quote generated: true do
       defmodule unquote(name) do
         @behaviour unquote(Skitter.Component)
+        @moduledoc unquote(moduledoc)
+
         import unquote(Skitter.Component), only: []
 
         import unquote(__MODULE__),
           only: [
             react: 3,
             init: 3,
-            terminate: 2,
-            create_checkpoint: 2,
+            terminate: 3,
+            create_checkpoint: 3,
             restore_checkpoint: 3,
             clean_checkpoint: 3
           ]
-
-        @moduledoc unquote(moduledoc)
 
         def __skitter_metadata__, do: unquote(Macro.escape(component_metadata))
 
@@ -211,34 +193,44 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # AST Transformations
-  # -------------------
-  # Transformations applied to the body provided to component/3
+  # Transformation / Data extraction
+  # --------------------------------
 
-  # Extract effect declarations from the AST and add the effects to the effect
-  # list.
-  # Effects are specified as either:
-  #  effect effect_name property1, property2
-  #  effect effect_name
-  # In both cases, the full statement will be removed from the ast, and the
-  # effect will be added to the accumulator with its properties.
-  defp extract_effects(body) do
-    Macro.postwalk(body, [], fn
-      {:effect, _env, [effect]}, acc ->
-        {effect, properties} = Macro.decompose_call(effect)
-
-        properties =
-          Enum.map(properties, fn
-            {name, _env, _args} -> name
-            any -> {:error, any}
-          end)
-
-        {nil, Keyword.put(acc, effect, properties)}
-
-      any, acc ->
-        {any, acc}
-    end)
+  # Generate a readable string (i.e. a string with spaces) based on the name
+  # of a component.
+  defp module_name_to_snake_case(name) do
+    name = name |> Atom.to_string() |> String.split(".") |> Enum.at(-1)
+    rgxp = ~r/([[:upper:]]+(?=[[:upper:]]|$)|[[:upper:]][[:lower:]]*|\d+)/
+    rgxp |> Regex.replace(name, " \\0") |> String.trim()
   end
+
+  # Make it possible to not specify the out ports when there are none
+  defp read_ports(in: in_ports), do: read_ports(in: in_ports, out: [])
+
+  defp read_ports(in: in_ports, out: out_ports) do
+    {parse_port_names(in_ports), parse_port_names(out_ports)}
+  end
+
+  defp parse_port_names(lst) when is_list(lst) do
+    Enum.map(lst, &name_to_symbol/1)
+  end
+
+  # Allow a single port name to be specified outside a list
+  defp parse_port_names(el), do: parse_port_names([el])
+
+  # Retrieve the description from a component if it is present.
+  # A description is provided when the component body start with a string.
+  # Remove the string from the component body and return it as the description.
+  defp extract_description({:__block__, env, [str | r]}) when is_binary(str) do
+    {{:__block__, env, r}, str}
+  end
+
+  defp extract_description(str) when is_binary(str) do
+    {quote generated: true do
+     end, str}
+  end
+
+  defp extract_description(any), do: {any, ""}
 
   # Find field declarations in the AST and transform them into a defstruct.
   # Return the list of fields to the caller. If there are multiple field
@@ -267,68 +259,35 @@ defmodule Skitter.Component.DSL do
     end)
   end
 
-  # Inject the component metadata into all macro calls which are present in any
-  # of the component_callback attribute lists.
-  # Depending on the exact lists which a callback is in, the remainder of the
-  # arguments should be modified.
-  #
-  # This function is also responsible for modifying all calls to helper into
-  # calls to defp
-  defp transform_component_callbacks(body, meta) do
-    Macro.postwalk(body, fn
-      # Wrap an arbitrary amount of arguments into a list: `foo(a, b)` becomes
-      # `foo([a,b])`. This makes it possible to specify an arbitrary amount of
-      # arguments
-      {name, env, arg_lst} when name in @component_callbacks_arglst ->
-        {args, [block]} = Enum.split(arg_lst, -1)
-        {name, env, [args, meta, block]}
+  # Extract effect declarations from the AST and add the effects to the effect
+  # list.
+  # Effects are specified as either:
+  #  effect effect_name property1, property2
+  #  effect effect_name
+  # In both cases, the full statement will be removed from the ast, and the
+  # effect will be added to the accumulator with its properties.
+  defp extract_effects(body) do
+    Macro.postwalk(body, [], fn
+      {:effect, _env, [effect]}, acc ->
+        {effect, properties} = Macro.decompose_call(effect)
 
-      # Don't accept any args besides the body
-      {name, env, [block]} when name in @component_callbacks_no_args ->
-        {name, env, [meta, block]}
+        properties =
+          Enum.map(properties, fn
+            {name, _env, _args} -> name
+            any -> {:error, any}
+          end)
 
-      # Accept a single argument, which remains unchanged
-      {name, env, [arg, block]} when name in @component_callbacks_single_arg ->
-        {name, env, [arg, meta, block]}
+        {nil, Keyword.put(acc, effect, properties)}
 
-      {:helper, env, rest} ->
-        {:defp, env, rest}
-
-      any ->
-        any
+      any, acc ->
+        {any, acc}
     end)
   end
 
-  # Retrieve the description from a component if it is present.
-  # A description is provided when the component body start with a string.
-  # If this is the case, remove the string from the body and use it as the
-  # component description.
-  # If it is not the case, leave the component body untouched.
-  defp extract_description({:__block__, env, [str | r]}) when is_binary(str) do
-    {{:__block__, env, r}, str}
-  end
-
-  defp extract_description(str) when is_binary(str),
-    do:
-      {quote generated: true do
-       end, str}
-
-  defp extract_description(any), do: {any, ""}
-
-  # Utility Functions
-  # -----------------
-  # Functions used when expanding the component/3 macro
-
-  # Generate a readable string (i.e. a string with spaces) based on the name
-  # of a component.
-  defp module_name_to_snake_case(name) do
-    name = name |> Atom.to_string() |> String.split(".") |> Enum.at(-1)
-    rgxp = ~r/([[:upper:]]+(?=[[:upper:]]|$)|[[:upper:]][[:lower:]]*|\d+)/
-    rgxp |> Regex.replace(name, " \\0") |> String.trim()
-  end
-
+  # If no description is provided, set moduledoc to false
   defp generate_moduledoc(""), do: false
 
+  # Otherwise add some additional information to the moduledoc
   defp generate_moduledoc(desc) do
     """
       #{desc}
@@ -338,94 +297,40 @@ defmodule Skitter.Component.DSL do
     """
   end
 
-  # Parse the port lists, add an empty list for out ports if they are not
-  # provided
-  defp read_ports(in: in_ports), do: read_ports(in: in_ports, out: [])
+  # helper functions are defined as internal functions
+  defp transform_helpers(body) do
+    Macro.postwalk(body, fn
+      {:helper, env, rest} ->
+        {:defp, env, rest}
 
-  defp read_ports(in: in_ports, out: out_ports) do
-    {parse_port_names(in_ports), parse_port_names(out_ports)}
-  end
-
-  # Parse the various ports names encountered in the port list.
-  defp parse_port_names(lst) when is_list(lst) do
-    Enum.map(lst, &transform_port_name/1)
-  end
-
-  # Allow single names to be specified outside of a list
-  #   e.g. in: foo will become in: [foo]
-  # Leave the actual parsing up to the list variant of this function.
-  defp parse_port_names(el), do: parse_port_names([el])
-
-  # Default Generation
-  # ------------------
-
-  # Default implementations of various skitter functions
-  # We cannot use defoverridable, as the compiler will remove it before
-  # the init, react, ... macros are expanded.
-  defp generate_default_callbacks(body, meta) do
-    # We cannot store callbacks in attributes, so we store them in a map here.
-    defaults = %{
-      init: &default_init/1,
-      terminate: &default_terminate/1,
-      create_checkpoint: &default_create_checkpoint/1,
-      restore_checkpoint: &default_restore_checkpoint/1,
-      clean_checkpoint: &defaul_clean_checkpoint/1
-    }
-
-    Enum.map(@default_callbacks, fn name ->
-      if_occurrence(body, name, do: nil, else: defaults[name].(meta))
+      any ->
+        any
     end)
   end
 
-  defp default_init(%{fields: nil}) do
-    quote generated: true do
-      def __skitter_init__(_), do: {:ok, nil}
-    end
-  end
+  # Modify the calls to the macros which define the component functions.
+  # Wrap their arguments in a list (to allow an arbitrary amount of arguments
+  # when needed), and add the component metadata to the call.
+  defp transform_functions(body, meta) do
+    Macro.postwalk(body, fn
+      {name, env, arg_lst} when name in @component_functions ->
+        {args, [block]} = Enum.split(arg_lst, -1)
+        {name, env, [args, meta, block]}
 
-  defp default_init(_) do
-    quote generated: true do
-      def __skitter_init__(_), do: {:ok, %__MODULE__{}}
-    end
-  end
-
-  defp default_terminate(_) do
-    quote generated: true do
-      def __skitter_terminate__(_), do: :ok
-    end
-  end
-
-  defp default_create_checkpoint(_) do
-    quote generated: true do
-      def __skitter_create_checkpoint__(_), do: :nocheckpoint
-    end
-  end
-
-  defp default_restore_checkpoint(_) do
-    quote generated: true do
-      def __skitter_restore_checkpoint__(_), do: :nocheckpoint
-    end
-  end
-
-  defp defaul_clean_checkpoint(meta) do
-    required = :hidden in Keyword.get(meta.effects, :state_change, [])
-    res = if required, do: :ok, else: :nocheckpoint
-
-    quote generated: true do
-      def __skitter_clean_checkpoint__(_i, _c), do: unquote(res)
-    end
+      any ->
+        any
+    end)
   end
 
   # Error Checking
   # --------------
-  # Functions that check if the component as a whole is correct
 
   defp check_component_body(body, meta) do
     [
       check_fields(meta),
       check_effects(meta),
-      check_react(meta, body),
-      check_checkpoint(meta, body),
+      check_react(body, meta),
+      check_checkpoint(body, meta),
       check_port_names(meta.in_ports),
       check_port_names(meta.out_ports)
     ]
@@ -481,7 +386,7 @@ defmodule Skitter.Component.DSL do
   end
 
   # Ensure react is present in the component
-  defp check_react(meta, body) do
+  defp check_react(body, meta) do
     if_occurrence(body, :react) do
       nil
     else
@@ -491,7 +396,7 @@ defmodule Skitter.Component.DSL do
 
   # Ensure checkpoint and restore are present if the component manages its own
   # internal state. If it does not, ensure they are not present.
-  defp check_checkpoint(meta, body) do
+  defp check_checkpoint(body, meta) do
     required = :hidden in Keyword.get(meta.effects, :state_change, [])
     cp_present = count_occurrences(body, :create_checkpoint) >= 1
     rt_present = count_occurrences(body, :restore_checkpoint) >= 1
@@ -514,6 +419,65 @@ defmodule Skitter.Component.DSL do
         inject_error "`create_checkpoint`, `restore_checkpoint` and " <>
                        "`clean_checkpoint` are only allowed when the state " <>
                        "change is hidden"
+    end
+  end
+
+  # Default Generation
+  # ------------------
+
+  # Default implementations of various skitter functions
+  # We cannot use defoverridable, as the compiler will remove it before
+  # the init, react, ... macros are expanded.
+  defp generate_default_callbacks(body, meta) do
+    defaults = %{
+      init: &default_init/1,
+      terminate: &default_terminate/1,
+      create_checkpoint: &default_create_checkpoint/1,
+      restore_checkpoint: &default_restore_checkpoint/1,
+      clean_checkpoint: &defaul_clean_checkpoint/1
+    }
+
+    Enum.map(@default_callbacks, fn name ->
+      if_occurrence(body, name, do: nil, else: defaults[name].(meta))
+    end)
+  end
+
+  defp default_init(%{fields: nil}) do
+    quote generated: true do
+      def __skitter_init__(_), do: {:ok, nil}
+    end
+  end
+
+  defp default_init(_) do
+    quote generated: true do
+      def __skitter_init__(_), do: {:ok, %__MODULE__{}}
+    end
+  end
+
+  defp default_terminate(_) do
+    quote generated: true do
+      def __skitter_terminate__(_), do: :ok
+    end
+  end
+
+  defp default_create_checkpoint(_) do
+    quote generated: true do
+      def __skitter_create_checkpoint__(_), do: :nocheckpoint
+    end
+  end
+
+  defp default_restore_checkpoint(_) do
+    quote generated: true do
+      def __skitter_restore_checkpoint__(_), do: :nocheckpoint
+    end
+  end
+
+  defp defaul_clean_checkpoint(meta) do
+    required = :hidden in Keyword.get(meta.effects, :state_change, [])
+    res = if required, do: :ok, else: :nocheckpoint
+
+    quote generated: true do
+      def __skitter_clean_checkpoint__(_i, _c), do: unquote(res)
     end
   end
 
@@ -816,7 +780,7 @@ defmodule Skitter.Component.DSL do
   defp transform_spit(body) do
     Macro.postwalk(body, fn
       {:spit, env, [{:~>, _ae, [body, port = {_name, _pe, _pargs}]}]} ->
-        {:spit, env, [transform_port_name(port), body]}
+        {:spit, env, [name_to_symbol(port), body]}
 
       any ->
         any
@@ -900,7 +864,7 @@ defmodule Skitter.Component.DSL do
 
   Can be called as: `Skitter.Component.init(ComponentName, [1,2])`
   """
-  defmacro init(args, %{fields: fields}, do: body) do
+  defmacro init([arg], %{fields: fields}, do: body) do
     body = body |> transform_assigns() |> transform_field_assigns()
 
     write_count = count_occurrences(body, :state!)
@@ -937,7 +901,7 @@ defmodule Skitter.Component.DSL do
     quote generated: true do
       unquote(error)
 
-      def __skitter_init__(unquote(args)) do
+      def __skitter_init__(unquote(arg)) do
         unquote(body)
       end
     end
@@ -950,7 +914,7 @@ defmodule Skitter.Component.DSL do
   down. `state/0` can be used in the body of this macro if data from the state
   of the current instance is needed.
   """
-  defmacro terminate(_meta, do: body) do
+  defmacro terminate([], _meta, do: body) do
     state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
 
     body =
@@ -984,7 +948,7 @@ defmodule Skitter.Component.DSL do
   through the use of `state/0`. The body is required to return a checkpoint by
   using `checkpoint = value`.
   """
-  defmacro create_checkpoint(_meta, do: body) do
+  defmacro create_checkpoint([], _meta, do: body) do
     state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
 
     body =
@@ -1031,7 +995,7 @@ defmodule Skitter.Component.DSL do
   by `checkpoint/2` as its only input argument. Just like `init/3`, it is
   required to return a valid instance by using `state = value`
   """
-  defmacro restore_checkpoint(args, _meta, do: body) do
+  defmacro restore_checkpoint([arg], _meta, do: body) do
     body = transform_assigns(body)
 
     error =
@@ -1044,7 +1008,7 @@ defmodule Skitter.Component.DSL do
     quote generated: true do
       unquote(error)
 
-      def __skitter_restore_checkpoint__(unquote(args)) do
+      def __skitter_restore_checkpoint__(unquote(arg)) do
         import unquote(__MODULE__), only: [state!: 1, error: 1]
         unquote(body)
         {:ok, var!(skitter_state)}
@@ -1060,11 +1024,11 @@ defmodule Skitter.Component.DSL do
   The body of the macro is responsible for cleaning up any resources associated
   with this particular checkpoint.
   """
-  defmacro clean_checkpoint(args, _meta, do: body) do
+  defmacro clean_checkpoint([arg], _meta, do: body) do
     state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
 
     quote generated: true do
-      def __skitter_clean_checkpoint__(unquote(state_arg), unquote(args)) do
+      def __skitter_clean_checkpoint__(unquote(state_arg), unquote(arg)) do
         import unquote(__MODULE__), only: [state: 0]
         unquote(body)
         :ok
@@ -1137,8 +1101,8 @@ defmodule Skitter.Component.DSL do
   # Transform a port name (which is just a standard elixir name) into  a symbol
   # e.g foo becomes :foo
   # If the name is ill-formed, return an {:error, form} pair.
-  defp transform_port_name({name, _env, nil}), do: name
-  defp transform_port_name(any), do: {:error, any}
+  defp name_to_symbol({name, _env, nil}), do: name
+  defp name_to_symbol(any), do: {:error, any}
 
   # Transform all instances of 'state' into 'state()'
   # This is done to avoid ambiguous uses of state, which
