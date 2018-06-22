@@ -102,13 +102,9 @@ defmodule Skitter.Component.DSL do
 
   import Skitter.Component.DefinitionError
 
-  # ----------------- #
-  # Shared Macro Code #
-  # ----------------- #
-  # Code used by both `component/3` and various internal macros.
-
-  # Constants
-  # ---------
+  # --------- #
+  # Constants #
+  # --------- #
 
   @valid_effects [state_change: [:hidden], external_effect: []]
 
@@ -142,110 +138,9 @@ defmodule Skitter.Component.DSL do
     :clean_checkpoint
   ]
 
-  # AST Transformations
-  # -------------------
-
-  # Transform a port name (which is just a standard elixir name) into  a symbol
-  # e.g foo becomes :foo
-  # If the name is ill-formed, return an {:error, form} pair.
-  defp transform_port_name({name, _env, nil}), do: name
-  defp transform_port_name(any), do: {:error, any}
-
-  # Transform all instances of 'state' into 'state()'
-  # This is done to avoid ambiguous uses of state, which
-  # will cause elixir to show a warning.
-  defp transform_state(body) do
-    Macro.postwalk(body, fn
-      {:state, env, atom} when is_atom(atom) ->
-        {:state, env, []}
-
-      any ->
-        any
-    end)
-  end
-
-  # Generic function to transform the use of the match operator (`=`) into
-  # calls to macros that provide imperative-style behaviour to skitter.
-  # The binds argument contains a keyword list. Any key in this list that is
-  # found on the left hand side of a match operation will be transformed into a
-  # call to a function. The function name (without arity)should be provided as
-  # the value for the key.
-  defp transform_assigns(body, binds \\ [state: :state!]) do
-    Macro.postwalk(body, fn
-      ast = {:=, env, [{name, _venv, _atom}, expr]} when is_atom(name) ->
-        if Keyword.has_key?(binds, name) do
-          {Keyword.fetch!(binds, name), env, [expr]}
-        else
-          ast
-        end
-
-      any ->
-        any
-    end)
-  end
-
-  # Transform uses of `state.field = expr` into state(field, expr).
-  defp transform_field_assigns(body) do
-    Macro.postwalk(body, fn
-      {:=, env,
-       [
-         {{:., _dienv, [{:state, _ienv, _atom}, field]}, _doenv, []},
-         expr
-       ]} ->
-        {:state_field!, env, [field, expr]}
-
-      any ->
-        any
-    end)
-  end
-
-  # Wrap a body with try/do if the `error/1` macro is used.
-  defp add_skitter_error_handler(body) do
-    if count_occurrences(:error, body) >= 1 do
-      quote generated: true do
-        try do
-          unquote(body)
-        catch
-          {:skitter_error, reason} -> {:error, reason}
-        end
-      end
-    else
-      quote generated: true do
-        unquote(body)
-      end
-    end
-  end
-
-  # Utility Functions
-  # -----------------
-
-  # Count the occurrences of a given symbol in an ast.
-  defp count_occurrences(symbol, ast) do
-    {_, n} =
-      Macro.postwalk(ast, 0, fn
-        ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
-        ast, acc -> {ast, acc}
-      end)
-
-    n
-  end
-
-  # -------------- #
-  # Error Checking #
-  # -------------- #
-
-  # Inject an error if a certain symbol is not present in an AST.
-  defp use_or_error(body, symbol, error) do
-    if count_occurrences(symbol, body) >= 1 do
-      nil
-    else
-      inject_error error
-    end
-  end
-
-  # -------------------- #
-  # Component Generation #
-  # -------------------- #
+  # --------- #
+  # Component #
+  # --------- #
 
   @doc """
   Create a skitter component.
@@ -624,307 +519,9 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # ------------- #
-  # Shared Macros #
-  # ------------- #
-  # Macros which are usable inside multiple callbacks inside component.
-
-  @doc """
-  Fetch the current state of the component instance.
-
-  Usable inside `react/3`, `init/3`.
-  """
-  defmacro state do
-    quote generated: true do
-      var!(skitter_state)
-    end
-  end
-
-  @doc """
-  Modify the state of the component instance.
-
-  You should not use this macro directly, instead, you can use
-  `state = value`, which will be transformed into a call to this macro.
-
-  Usable inside `init/3`, and inside `react/3` iff the component is marked
-  with the `:state_change` effect.
-  """
-  defmacro state!(value) do
-    quote generated: true do
-      var!(skitter_state) = unquote(value)
-    end
-  end
-
-  @doc """
-  Modify a specific field of the component instance state.
-
-  You should not use this macro directly, instead, you can use
-  `state.field = value`, which will be transformed into a call to this macro.
-
-  Usable inside `init/3`, and inside `react/3` iff the component is marked
-  with the `:state_change` effect.
-  """
-  defmacro state_field!(field, value) do
-    quote generated: true do
-      var!(skitter_state) =
-        Map.replace!(var!(skitter_state), unquote(field), unquote(value))
-    end
-  end
-
-  @doc """
-  Stop the current callback and return with an error.
-
-  A reason should be provided as a string. In certain contexts (e.g. `init/3`),
-  the use of this macro will crash the entire workflow.
-  """
-  defmacro error(reason) do
-    quote generated: true do
-      throw {:skitter_error, unquote(reason)}
-    end
-  end
-
-  # --------------- #
-  # Init Generation #
-  # --------------- #
-
-  @doc """
-  Instantiate a skitter component.
-
-  This macro will generate the code that will instantiate the skitter component.
-  You should assign a value to `state` or `state.field` with `=` in this macro
-  to return a valid instance.
-
-  Besides the body, this callback accepts a single argument, which can be used
-  to pattern match on the user-provided input this callback will receive.
-
-  ## Example
-
-  ```
-  init [foo, bar] do
-    state = foo + bar
-  end
-  ```
-
-  Can be called as: `Skitter.Component.init(ComponentName, [1,2])`
-  """
-  defmacro init(args, %{fields: fields}, do: body) do
-    body = body |> transform_assigns() |> transform_field_assigns()
-
-    write_count = count_occurrences(:state!, body)
-    field_count = count_occurrences(:state_field!, body)
-
-    error =
-      unless write_count + field_count > 0 do
-        inject_error "`init` needs to modify the state of the component instance"
-      end
-
-    state =
-      if fields do
-        quote generated: true do
-          var!(skitter_state) = %__MODULE__{}
-        end
-      end
-
-    body =
-      quote generated: true do
-        import unquote(__MODULE__),
-          only: [
-            state!: 1,
-            state_field!: 2,
-            error: 1
-          ]
-
-        unquote(state)
-        unquote(body)
-        {:ok, var!(skitter_state)}
-      end
-
-    body = add_skitter_error_handler(body)
-
-    quote generated: true do
-      unquote(error)
-
-      def __skitter_init__(unquote(args)) do
-        unquote(body)
-      end
-    end
-  end
-
-  # -------------------- #
-  # Terminate Generation #
-  # -------------------- #
-
-  @doc """
-  Generate component cleanup code.
-
-  This macro can be used to cleanup any resources before a component is shut
-  down. `state/0` can be used in the body of this macro if data from the state
-  of the current instance is needed.
-  """
-  defmacro terminate(_meta, do: body) do
-    state_count = count_occurrences(:state, body)
-
-    state_arg =
-      if state_count >= 1 do
-        quote generated: true do
-          var!(skitter_state)
-        end
-      else
-        quote generated: true do
-          _
-        end
-      end
-
-    body =
-      quote generated: true do
-        import unquote(__MODULE__), only: [state: 0, error: 1]
-        unquote(body)
-        :ok
-      end
-
-    body = body |> transform_state() |> add_skitter_error_handler()
-
-    quote generated: true do
-      def __skitter_terminate__(unquote(state_arg)) do
-        unquote(body)
-      end
-    end
-  end
-
-  # --------------------- #
-  # Checkpoint Generation #
-  # --------------------- #
-
-  @doc """
-  Create a checkpoint.
-
-  _Use as `checkpoint do ... end`, `state/0` is usable inside the body of
-  this callback._
-
-  Use this macro to automatically generate the code for creating a checkpoint.
-  The state of the current instance can be obtained inside this checkpoint
-  through the use of `state/0`. The body is required to return a checkpoint by
-  using `checkpoint = value`.
-  """
-  defmacro create_checkpoint(_meta, do: body) do
-    state_count = count_occurrences(:state, body)
-
-    state_arg =
-      if state_count >= 1 do
-        quote generated: true do
-          var!(skitter_state)
-        end
-      else
-        quote generated: true do
-          _
-        end
-      end
-
-    body =
-      body
-      |> transform_state()
-      |> transform_assigns(checkpoint: :checkpoint!)
-
-    error =
-      use_or_error(
-        body,
-        :checkpoint!,
-        "A valid checkpoint needs to be assigned inside `checkpoint`"
-      )
-
-    quote generated: true do
-      unquote(error)
-
-      def __skitter_create_checkpoint__(unquote(state_arg)) do
-        import unquote(__MODULE__), only: [state: 0, checkpoint!: 1]
-        unquote(body)
-        {:ok, var!(skitter_checkpoint)}
-      end
-    end
-  end
-
-  @doc """
-  Update the current return value of checkpoint.
-
-  You should not use this macro directly, instead, you can use
-  `checkpoint = value`, which will be transformed into a call to this macro.
-
-  Using this macro multiple times will overwrite the previous value.
-  """
-  defmacro checkpoint!(value) do
-    quote generated: true do
-      var!(skitter_checkpoint) = unquote(value)
-    end
-  end
-
-  # ------------------ #
-  # Restore Generation #
-  # ------------------ #
-
-  @doc """
-  Restore a component instance from a checkpoint.
-
-  This macro is almost identical to `init/3`. It accepts a checkpoint, provided
-  by `checkpoint/2` as its only input argument. Just like `init/3`, it is
-  required to return a valid instance by using `state = value`
-  """
-  defmacro restore_checkpoint(args, _meta, do: body) do
-    body = transform_assigns(body)
-
-    error =
-      use_or_error(
-        body,
-        :state!,
-        "Restore should create a valid component instance state."
-      )
-
-    quote generated: true do
-      unquote(error)
-
-      def __skitter_restore_checkpoint__(unquote(args)) do
-        import unquote(__MODULE__), only: [state!: 1, error: 1]
-        unquote(body)
-        {:ok, var!(skitter_state)}
-      end
-    end
-  end
-
-  # --------------------------- #
-  # Clean Checkpoint Generation #
-  # --------------------------- #
-
-  @doc """
-  Clean up an existing checkpoint.
-
-  Skitter calls this macro when it will not use a certain checkpoint anymore.
-  This checkpoint is passed as the only input argument to the macro.
-  The body of the macro is responsible for cleaning up any resources associated
-  with this particular checkpoint.
-  """
-  defmacro clean_checkpoint(args, _meta, do: body) do
-    state_arg =
-      if count_occurrences(:state, body) >= 1 do
-        quote do
-          var!(skitter_state)
-        end
-      else
-        quote do
-          _
-        end
-      end
-
-    quote generated: true do
-      def __skitter_clean_checkpoint__(unquote(state_arg), unquote(args)) do
-        import unquote(__MODULE__), only: [state: 0]
-        unquote(body)
-        :ok
-      end
-    end
-  end
-
-  # ---------------- #
-  # React Generation #
-  # ---------------- #
+  # ----- #
+  # React #
+  # ----- #
 
   @doc """
   React to incoming data.
@@ -1281,5 +878,385 @@ defmodule Skitter.Component.DSL do
       end)
 
     port
+  end
+
+  # -------------- #
+  # Init/Terminate #
+  # -------------- #
+
+  @doc """
+  Instantiate a skitter component.
+
+  This macro will generate the code that will instantiate the skitter component.
+  You should assign a value to `state` or `state.field` with `=` in this macro
+  to return a valid instance.
+
+  Besides the body, this callback accepts a single argument, which can be used
+  to pattern match on the user-provided input this callback will receive.
+
+  ## Example
+
+  ```
+  init [foo, bar] do
+    state = foo + bar
+  end
+  ```
+
+  Can be called as: `Skitter.Component.init(ComponentName, [1,2])`
+  """
+  defmacro init(args, %{fields: fields}, do: body) do
+    body = body |> transform_assigns() |> transform_field_assigns()
+
+    write_count = count_occurrences(:state!, body)
+    field_count = count_occurrences(:state_field!, body)
+
+    error =
+      unless write_count + field_count > 0 do
+        inject_error "`init` needs to modify the state of the component instance"
+      end
+
+    state =
+      if fields do
+        quote generated: true do
+          var!(skitter_state) = %__MODULE__{}
+        end
+      end
+
+    body =
+      quote generated: true do
+        import unquote(__MODULE__),
+          only: [
+            state!: 1,
+            state_field!: 2,
+            error: 1
+          ]
+
+        unquote(state)
+        unquote(body)
+        {:ok, var!(skitter_state)}
+      end
+
+    body = add_skitter_error_handler(body)
+
+    quote generated: true do
+      unquote(error)
+
+      def __skitter_init__(unquote(args)) do
+        unquote(body)
+      end
+    end
+  end
+
+  @doc """
+  Generate component cleanup code.
+
+  This macro can be used to cleanup any resources before a component is shut
+  down. `state/0` can be used in the body of this macro if data from the state
+  of the current instance is needed.
+  """
+  defmacro terminate(_meta, do: body) do
+    state_count = count_occurrences(:state, body)
+
+    state_arg =
+      if state_count >= 1 do
+        quote generated: true do
+          var!(skitter_state)
+        end
+      else
+        quote generated: true do
+          _
+        end
+      end
+
+    body =
+      quote generated: true do
+        import unquote(__MODULE__), only: [state: 0, error: 1]
+        unquote(body)
+        :ok
+      end
+
+    body = body |> transform_state() |> add_skitter_error_handler()
+
+    quote generated: true do
+      def __skitter_terminate__(unquote(state_arg)) do
+        unquote(body)
+      end
+    end
+  end
+
+  # ----------- #
+  # Checkpoints #
+  # ----------- #
+
+  @doc """
+  Create a checkpoint.
+
+  _Use as `checkpoint do ... end`, `state/0` is usable inside the body of
+  this callback._
+
+  Use this macro to automatically generate the code for creating a checkpoint.
+  The state of the current instance can be obtained inside this checkpoint
+  through the use of `state/0`. The body is required to return a checkpoint by
+  using `checkpoint = value`.
+  """
+  defmacro create_checkpoint(_meta, do: body) do
+    state_count = count_occurrences(:state, body)
+
+    state_arg =
+      if state_count >= 1 do
+        quote generated: true do
+          var!(skitter_state)
+        end
+      else
+        quote generated: true do
+          _
+        end
+      end
+
+    body =
+      body
+      |> transform_state()
+      |> transform_assigns(checkpoint: :checkpoint!)
+
+    error =
+      use_or_error(
+        body,
+        :checkpoint!,
+        "A valid checkpoint needs to be assigned inside `checkpoint`"
+      )
+
+    quote generated: true do
+      unquote(error)
+
+      def __skitter_create_checkpoint__(unquote(state_arg)) do
+        import unquote(__MODULE__), only: [state: 0, checkpoint!: 1]
+        unquote(body)
+        {:ok, var!(skitter_checkpoint)}
+      end
+    end
+  end
+
+  @doc """
+  Update the current return value of checkpoint.
+
+  You should not use this macro directly, instead, you can use
+  `checkpoint = value`, which will be transformed into a call to this macro.
+
+  Using this macro multiple times will overwrite the previous value.
+  """
+  defmacro checkpoint!(value) do
+    quote generated: true do
+      var!(skitter_checkpoint) = unquote(value)
+    end
+  end
+
+  @doc """
+  Restore a component instance from a checkpoint.
+
+  This macro is almost identical to `init/3`. It accepts a checkpoint, provided
+  by `checkpoint/2` as its only input argument. Just like `init/3`, it is
+  required to return a valid instance by using `state = value`
+  """
+  defmacro restore_checkpoint(args, _meta, do: body) do
+    body = transform_assigns(body)
+
+    error =
+      use_or_error(
+        body,
+        :state!,
+        "Restore should create a valid component instance state."
+      )
+
+    quote generated: true do
+      unquote(error)
+
+      def __skitter_restore_checkpoint__(unquote(args)) do
+        import unquote(__MODULE__), only: [state!: 1, error: 1]
+        unquote(body)
+        {:ok, var!(skitter_state)}
+      end
+    end
+  end
+
+  @doc """
+  Clean up an existing checkpoint.
+
+  Skitter calls this macro when it will not use a certain checkpoint anymore.
+  This checkpoint is passed as the only input argument to the macro.
+  The body of the macro is responsible for cleaning up any resources associated
+  with this particular checkpoint.
+  """
+  defmacro clean_checkpoint(args, _meta, do: body) do
+    state_arg =
+      if count_occurrences(:state, body) >= 1 do
+        quote do
+          var!(skitter_state)
+        end
+      else
+        quote do
+          _
+        end
+      end
+
+    quote generated: true do
+      def __skitter_clean_checkpoint__(unquote(state_arg), unquote(args)) do
+        import unquote(__MODULE__), only: [state: 0]
+        unquote(body)
+        :ok
+      end
+    end
+  end
+
+  # ------------- #
+  # Shared Macros #
+  # ------------- #
+
+  @doc """
+  Fetch the current state of the component instance.
+
+  Usable inside `react/3`, `init/3`.
+  """
+  defmacro state do
+    quote generated: true do
+      var!(skitter_state)
+    end
+  end
+
+  @doc """
+  Modify the state of the component instance.
+
+  You should not use this macro directly, instead, you can use
+  `state = value`, which will be transformed into a call to this macro.
+
+  Usable inside `init/3`, and inside `react/3` iff the component is marked
+  with the `:state_change` effect.
+  """
+  defmacro state!(value) do
+    quote generated: true do
+      var!(skitter_state) = unquote(value)
+    end
+  end
+
+  @doc """
+  Modify a specific field of the component instance state.
+
+  You should not use this macro directly, instead, you can use
+  `state.field = value`, which will be transformed into a call to this macro.
+
+  Usable inside `init/3`, and inside `react/3` iff the component is marked
+  with the `:state_change` effect.
+  """
+  defmacro state_field!(field, value) do
+    quote generated: true do
+      var!(skitter_state) =
+        Map.replace!(var!(skitter_state), unquote(field), unquote(value))
+    end
+  end
+
+  @doc """
+  Stop the current callback and return with an error.
+
+  A reason should be provided as a string. In certain contexts (e.g. `init/3`),
+  the use of this macro will crash the entire workflow.
+  """
+  defmacro error(reason) do
+    quote generated: true do
+      throw {:skitter_error, unquote(reason)}
+    end
+  end
+
+  # --------- #
+  # Utilities #
+  # --------- #
+
+  # Transform a port name (which is just a standard elixir name) into  a symbol
+  # e.g foo becomes :foo
+  # If the name is ill-formed, return an {:error, form} pair.
+  defp transform_port_name({name, _env, nil}), do: name
+  defp transform_port_name(any), do: {:error, any}
+
+  # Transform all instances of 'state' into 'state()'
+  # This is done to avoid ambiguous uses of state, which
+  # will cause elixir to show a warning.
+  defp transform_state(body) do
+    Macro.postwalk(body, fn
+      {:state, env, atom} when is_atom(atom) ->
+        {:state, env, []}
+
+      any ->
+        any
+    end)
+  end
+
+  # Generic function to transform the use of the match operator (`=`) into
+  # calls to macros that provide imperative-style behaviour to skitter.
+  # The binds argument contains a keyword list. Any key in this list that is
+  # found on the left hand side of a match operation will be transformed into a
+  # call to a function. The function name (without arity)should be provided as
+  # the value for the key.
+  defp transform_assigns(body, binds \\ [state: :state!]) do
+    Macro.postwalk(body, fn
+      ast = {:=, env, [{name, _venv, _atom}, expr]} when is_atom(name) ->
+        if Keyword.has_key?(binds, name) do
+          {Keyword.fetch!(binds, name), env, [expr]}
+        else
+          ast
+        end
+
+      any ->
+        any
+    end)
+  end
+
+  # Transform uses of `state.field = expr` into state(field, expr).
+  defp transform_field_assigns(body) do
+    Macro.postwalk(body, fn
+      {:=, env,
+       [
+         {{:., _dienv, [{:state, _ienv, _atom}, field]}, _doenv, []},
+         expr
+       ]} ->
+        {:state_field!, env, [field, expr]}
+
+      any ->
+        any
+    end)
+  end
+
+  # Wrap a body with try/do if the `error/1` macro is used.
+  defp add_skitter_error_handler(body) do
+    if count_occurrences(:error, body) >= 1 do
+      quote generated: true do
+        try do
+          unquote(body)
+        catch
+          {:skitter_error, reason} -> {:error, reason}
+        end
+      end
+    else
+      quote generated: true do
+        unquote(body)
+      end
+    end
+  end
+
+  # Count the occurrences of a given symbol in an ast.
+  defp count_occurrences(symbol, ast) do
+    {_, n} =
+      Macro.postwalk(ast, 0, fn
+        ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
+        ast, acc -> {ast, acc}
+      end)
+
+    n
+  end
+
+  # Inject an error if a certain symbol is not present in an AST.
+  defp use_or_error(body, symbol, error) do
+    if count_occurrences(symbol, body) >= 1 do
+      nil
+    else
+      inject_error error
+    end
   end
 end
