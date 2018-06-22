@@ -121,6 +121,8 @@ defmodule Skitter.Component.DSL do
   # See: generate_default_callbacks(meta, body)
   @default_callbacks List.delete(@component_functions, :react)
 
+  @output_var :output
+
   # --------- #
   # Component #
   # --------- #
@@ -245,7 +247,7 @@ defmodule Skitter.Component.DSL do
           end)
 
         {
-          quote do
+          quote generated: true do
             defstruct unquote(fields)
           end,
           fields
@@ -542,10 +544,12 @@ defmodule Skitter.Component.DSL do
   Usable inside `react/3` iff the component has an output port.
   """
   defmacro spit(port, value) do
+    var = skitter_var(@output_var)
+
     quote generated: true do
-      var!(skitter_output) =
+      unquote(var) =
         Keyword.put(
-          var!(skitter_output),
+          unquote(var),
           unquote(port),
           unquote(value)
         )
@@ -670,10 +674,10 @@ defmodule Skitter.Component.DSL do
     if_occurrence(body, :spit) do
       {
         quote generated: true do
-          var!(skitter_output) = []
+          unquote(skitter_var(@output_var)) = []
         end,
         quote generated: true do
-          var!(skitter_output)
+          unquote(skitter_var(@output_var))
         end
       }
     else
@@ -1169,6 +1173,17 @@ defmodule Skitter.Component.DSL do
     end
   end
 
+  # Generate a variable which can only be accessed by skitter macros.
+  # We cannot use `Macro.var`, since we need to manually mark the variable as
+  # generated to avoid warnings.
+  defp skitter_var(name) do
+    var = {name, [generated: true], __MODULE__}
+
+    quote generated: true do
+      var!(unquote(var), unquote(__MODULE__))
+    end
+  end
+
   # Count the occurrences of a given symbol in an ast.
   defp count_occurrences(ast, symbol) do
     {_, n} =
@@ -1198,7 +1213,7 @@ defmodule Skitter.Component.DSL do
       body,
       symbol,
       name,
-      quote do
+      quote generated: true do
         _
       end
     )
@@ -1206,11 +1221,11 @@ defmodule Skitter.Component.DSL do
 
   defp arg_name_if_occurs(body, symbol, name, alternative) do
     if_occurrence(body, symbol) do
-      quote do
+      quote generated: true do
         var!(unquote(name))
       end
     else
-      quote do
+      quote generated: true do
         unquote(alternative)
       end
     end
