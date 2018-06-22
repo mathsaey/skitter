@@ -51,7 +51,7 @@ defmodule Skitter.ComponentTest do
     assert terminate(TestComponent2, nil) == :ok
     assert checkpoint(TestComponent2, nil) == {:ok, :checkpoint_works}
     assert restore(TestComponent2, nil) == {:ok, :restore_works}
-    assert clean_checkpoint(TestComponent2, nil) == :ok
+    assert clean_checkpoint(TestComponent2, nil, nil) == :ok
     assert react(TestComponent2, nil, [nil, nil]) == {:ok, nil, []}
 
     assert react_after_failure(TestComponent2, nil, [nil, nil]) ==

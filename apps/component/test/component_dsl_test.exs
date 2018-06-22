@@ -214,7 +214,7 @@ defmodule Skitter.ComponentDSLTest do
     assert chkp == :val
     assert rest == :val
 
-    assert CPTest.__skitter_clean_checkpoint__(chkp) == :ok
+    assert CPTest.__skitter_clean_checkpoint__(inst, chkp) == :ok
   end
 
   test "if defaults are generated correctly" do
@@ -227,7 +227,7 @@ defmodule Skitter.ComponentDSLTest do
     assert TestGenerated.__skitter_terminate__(nil) == :ok
     assert TestGenerated.__skitter_checkpoint__(nil) == :nocheckpoint
     assert TestGenerated.__skitter_restore__(nil) == :nocheckpoint
-    assert TestGenerated.__skitter_clean_checkpoint__(nil) == :nocheckpoint
+    assert TestGenerated.__skitter_clean_checkpoint__(nil, nil) == :nocheckpoint
   end
 
   test "if helpers work" do

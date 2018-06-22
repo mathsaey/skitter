@@ -521,7 +521,7 @@ defmodule Skitter.Component.DSL do
     res = if required, do: :ok, else: :nocheckpoint
 
     quote generated: true do
-      def __skitter_clean_checkpoint__(_), do: unquote(res)
+      def __skitter_clean_checkpoint__(_i, _c), do: unquote(res)
     end
   end
 
@@ -901,8 +901,20 @@ defmodule Skitter.Component.DSL do
   with this particular checkpoint.
   """
   defmacro clean_checkpoint(args, _meta, do: body) do
+    state_arg =
+      if count_occurrences(:state, body) >= 1 do
+        quote do
+          var!(skitter_state)
+        end
+      else
+        quote do
+          _
+        end
+      end
+
     quote generated: true do
-      def __skitter_clean_checkpoint__(unquote(args)) do
+      def __skitter_clean_checkpoint__(unquote(state_arg), unquote(args)) do
+        import unquote(__MODULE__), only: [state: 0]
         unquote(body)
         :ok
       end
