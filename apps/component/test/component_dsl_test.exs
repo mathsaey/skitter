@@ -111,11 +111,11 @@ defmodule Skitter.ComponentDSLTest do
       react do
       end
 
-      checkpoint do
+      create_checkpoint do
         checkpoint = nil
       end
 
-      restore _ do
+      restore_checkpoint _ do
         state = nil
       end
     end
@@ -184,7 +184,7 @@ defmodule Skitter.ComponentDSLTest do
     assert_received :used
   end
 
-  test "if checkpoint and restore work" do
+  test "if create_checkpoint and restore_checkpoint work" do
     component CPTest, in: [] do
       effect state_change hidden
 
@@ -195,11 +195,11 @@ defmodule Skitter.ComponentDSLTest do
         state = val
       end
 
-      checkpoint do
+      create_checkpoint do
         checkpoint = state
       end
 
-      restore val do
+      restore_checkpoint val do
         state = val
       end
 
@@ -208,8 +208,8 @@ defmodule Skitter.ComponentDSLTest do
     end
 
     assert {:ok, inst} = CPTest.__skitter_init__(:val)
-    assert {:ok, chkp} = CPTest.__skitter_checkpoint__(inst)
-    assert {:ok, rest} = CPTest.__skitter_restore__(chkp)
+    assert {:ok, chkp} = CPTest.__skitter_create_checkpoint__(inst)
+    assert {:ok, rest} = CPTest.__skitter_restore_checkpoint__(chkp)
 
     assert chkp == :val
     assert rest == :val
@@ -225,8 +225,8 @@ defmodule Skitter.ComponentDSLTest do
 
     assert TestGenerated.__skitter_init__([]) == {:ok, nil}
     assert TestGenerated.__skitter_terminate__(nil) == :ok
-    assert TestGenerated.__skitter_checkpoint__(nil) == :nocheckpoint
-    assert TestGenerated.__skitter_restore__(nil) == :nocheckpoint
+    assert TestGenerated.__skitter_create_checkpoint__(nil) == :nocheckpoint
+    assert TestGenerated.__skitter_restore_checkpoint__(nil) == :nocheckpoint
     assert TestGenerated.__skitter_clean_checkpoint__(nil, nil) == :nocheckpoint
   end
 
@@ -442,7 +442,7 @@ defmodule Skitter.ComponentDSLTest do
         react do
         end
 
-        restore _ do
+        restore_checkpoint _ do
           state = nil
         end
       end
@@ -455,7 +455,7 @@ defmodule Skitter.ComponentDSLTest do
         react do
         end
 
-        checkpoint do
+        create_checkpoint do
           checkpoint = nil
         end
       end
@@ -506,7 +506,7 @@ defmodule Skitter.ComponentDSLTest do
     end
   end
 
-  test "if a useless checkpoint/restore is reported" do
+  test "if a useless create/restore _checkpoint is reported" do
     assert_definition_error do
       component UselessCheckpoint, in: [] do
         effect state_change hidden
@@ -514,10 +514,10 @@ defmodule Skitter.ComponentDSLTest do
         react do
         end
 
-        checkpoint do
+        create_checkpoint do
         end
 
-        restore _ do
+        restore_checkpoint _ do
           state = nil
         end
       end
@@ -530,24 +530,24 @@ defmodule Skitter.ComponentDSLTest do
         react do
         end
 
-        checkpoint do
+        create_checkpoint do
           checkpoint = nil
         end
 
-        restore _ do
+        restore_checkpoint _ do
           nil
         end
       end
     end
   end
 
-  test "if incorrect use of checkpoint/restore is reported" do
+  test "if incorrect use of create/restore _checkpoint is reported" do
     assert_definition_error do
       component WrongCheckpoint, in: [] do
         react do
         end
 
-        checkpoint do
+        create_checkpoint do
           checkpoint = nil
         end
       end
@@ -558,7 +558,7 @@ defmodule Skitter.ComponentDSLTest do
         react do
         end
 
-        restore _ do
+        restore_checkpoint _ do
           state = nil
         end
       end

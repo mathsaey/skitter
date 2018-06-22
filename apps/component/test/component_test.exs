@@ -22,11 +22,11 @@ defmodule Skitter.ComponentTest do
     react _foo, _bar do
     end
 
-    checkpoint do
+    create_checkpoint do
       checkpoint = :checkpoint_works
     end
 
-    restore _ do
+    restore_checkpoint _ do
       state = :restore_works
     end
   end
@@ -49,8 +49,8 @@ defmodule Skitter.ComponentTest do
   test "if callbacks work" do
     assert init(TestComponent2, nil) == {:ok, :init_works}
     assert terminate(TestComponent2, nil) == :ok
-    assert checkpoint(TestComponent2, nil) == {:ok, :checkpoint_works}
-    assert restore(TestComponent2, nil) == {:ok, :restore_works}
+    assert create_checkpoint(TestComponent2, nil) == {:ok, :checkpoint_works}
+    assert restore_checkpoint(TestComponent2, nil) == {:ok, :restore_works}
     assert clean_checkpoint(TestComponent2, nil, nil) == :ok
     assert react(TestComponent2, nil, [nil, nil]) == {:ok, nil, []}
 

@@ -119,7 +119,7 @@ defmodule Skitter.Component.DSL do
   @component_callbacks_single_arg [
     # Only accept a single argument, which should not be modified
     :init,
-    :restore,
+    :restore_checkpoint,
     :clean_checkpoint
   ]
   @component_callbacks_arglst [
@@ -129,7 +129,7 @@ defmodule Skitter.Component.DSL do
   @component_callbacks_no_args [
     # Don't accept any arguments besides the function body
     :terminate,
-    :checkpoint
+    :create_checkpoint
   ]
 
   # Generate default implementations for the following callbacks.
@@ -137,8 +137,8 @@ defmodule Skitter.Component.DSL do
   @default_callbacks [
     :init,
     :terminate,
-    :checkpoint,
-    :restore,
+    :create_checkpoint,
+    :restore_checkpoint,
     :clean_checkpoint
   ]
 
@@ -300,8 +300,8 @@ defmodule Skitter.Component.DSL do
             react: 3,
             init: 3,
             terminate: 2,
-            checkpoint: 2,
-            restore: 3,
+            create_checkpoint: 2,
+            restore_checkpoint: 3,
             clean_checkpoint: 3
           ]
 
@@ -472,8 +472,8 @@ defmodule Skitter.Component.DSL do
     defaults = %{
       init: &default_init/1,
       terminate: &default_terminate/1,
-      checkpoint: &default_checkpoint/1,
-      restore: &default_restore/1,
+      create_checkpoint: &default_create_checkpoint/1,
+      restore_checkpoint: &default_restore_checkpoint/1,
       clean_checkpoint: &defaul_clean_checkpoint/1
     }
 
@@ -504,15 +504,15 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  defp default_checkpoint(_) do
+  defp default_create_checkpoint(_) do
     quote generated: true do
-      def __skitter_checkpoint__(_), do: :nocheckpoint
+      def __skitter_create_checkpoint__(_), do: :nocheckpoint
     end
   end
 
-  defp default_restore(_) do
+  defp default_restore_checkpoint(_) do
     quote generated: true do
-      def __skitter_restore__(_), do: :nocheckpoint
+      def __skitter_restore_checkpoint__(_), do: :nocheckpoint
     end
   end
 
@@ -600,8 +600,8 @@ defmodule Skitter.Component.DSL do
   # internal state. If it does not, ensure they are not present.
   defp check_checkpoint(meta, body) do
     required = :hidden in Keyword.get(meta.effects, :state_change, [])
-    cp_present = count_occurrences(:checkpoint, body) >= 1
-    rt_present = count_occurrences(:restore, body) >= 1
+    cp_present = count_occurrences(:create_checkpoint, body) >= 1
+    rt_present = count_occurrences(:restore_checkpoint, body) >= 1
     cl_present = count_occurrences(:clean_checkpoint, body) >= 1
     either_present = cp_present or rt_present or cl_present
     both_present = cp_present and rt_present
@@ -614,12 +614,13 @@ defmodule Skitter.Component.DSL do
         nil
 
       {true, _, false} ->
-        inject_error "`checkpoint` and `restore` are required when the " <>
-                       "state change is hidden"
+        inject_error "`create_checkpoint` and `restore_checkpoint` are " <>
+                       "required when the state change is hidden"
 
       {false, true, _} ->
-        inject_error "`checkpoint`, `restore` and `clean_checkpoint` are " <>
-                       "only allowed when the state change is hidden"
+        inject_error "`create_checkpoint`, `restore_checkpoint` and " <>
+                       "`clean_checkpoint` are only allowed when the state " <>
+                       "change is hidden"
     end
   end
 
@@ -805,7 +806,7 @@ defmodule Skitter.Component.DSL do
   through the use of `state/0`. The body is required to return a checkpoint by
   using `checkpoint = value`.
   """
-  defmacro checkpoint(_meta, do: body) do
+  defmacro create_checkpoint(_meta, do: body) do
     state_count = count_occurrences(:state, body)
 
     state_arg =
@@ -834,7 +835,7 @@ defmodule Skitter.Component.DSL do
     quote generated: true do
       unquote(error)
 
-      def __skitter_checkpoint__(unquote(state_arg)) do
+      def __skitter_create_checkpoint__(unquote(state_arg)) do
         import unquote(__MODULE__), only: [state: 0, checkpoint!: 1]
         unquote(body)
         {:ok, var!(skitter_checkpoint)}
@@ -867,7 +868,7 @@ defmodule Skitter.Component.DSL do
   by `checkpoint/2` as its only input argument. Just like `init/3`, it is
   required to return a valid instance by using `state = value`
   """
-  defmacro restore(args, _meta, do: body) do
+  defmacro restore_checkpoint(args, _meta, do: body) do
     body = transform_assigns(body)
 
     error =
@@ -880,7 +881,7 @@ defmodule Skitter.Component.DSL do
     quote generated: true do
       unquote(error)
 
-      def __skitter_restore__(unquote(args)) do
+      def __skitter_restore_checkpoint__(unquote(args)) do
         import unquote(__MODULE__), only: [state!: 1, error: 1]
         unquote(body)
         {:ok, var!(skitter_state)}

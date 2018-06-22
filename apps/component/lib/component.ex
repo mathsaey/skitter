@@ -113,11 +113,13 @@ defmodule Skitter.Component do
   @doc "Call the `c:__skitter_terminate__/1` callback of a component."
   def terminate(comp, inst), do: comp.__skitter_terminate__(inst)
 
-  @doc "Call the `c:__skitter_checkpoint__/1` callback of a component."
-  def checkpoint(comp, inst), do: comp.__skitter_checkpoint__(inst)
+  @doc "Call the `c:__skitter_create_checkpoint__/1` callback of a component."
+  def create_checkpoint(comp, inst),
+    do: comp.__skitter_create_checkpoint__(inst)
 
-  @doc "Call the `c:__skitter_restore__/1` callback of a component."
-  def restore(comp, checkpoint), do: comp.__skitter_restore__(checkpoint)
+  @doc "Call the `c:__skitter_restore_checkpoint__/1` callback of a component."
+  def restore_checkpoint(comp, checkpoint),
+    do: comp.__skitter_restore_checkpoint__(checkpoint)
 
   @doc "Call the `c:__skitter_clean_checkpoint__/2` callback of a component."
   def clean_checkpoint(comp, inst, checkpoint) do
@@ -213,7 +215,7 @@ defmodule Skitter.Component do
   This callback receives a component instance as an argument, and should return
   `{:ok, checkpoint}` when successful.
   """
-  @callback __skitter_checkpoint__(instance) ::
+  @callback __skitter_create_checkpoint__(instance) ::
               {:ok, checkpoint} | :nocheckpoint
 
   @doc """
@@ -222,7 +224,8 @@ defmodule Skitter.Component do
   This callback is the counterpart of `__skitter_checkpoint__/1`, it takes a
   checkpoint and recreates a component instance based on this checkpoint.
   """
-  @callback __skitter_restore__(checkpoint) :: {:ok, instance} | :nocheckpoint
+  @callback __skitter_restore_checkpoint__(checkpoint) ::
+              {:ok, instance} | :nocheckpoint
 
   @doc """
   Remove an old checkpoint.
