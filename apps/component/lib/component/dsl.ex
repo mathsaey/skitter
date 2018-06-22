@@ -160,7 +160,7 @@ defmodule Skitter.Component.DSL do
         {:state, env, []}
 
       any ->
-        state
+        any
     end)
   end
 
