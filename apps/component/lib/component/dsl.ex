@@ -22,82 +22,6 @@ defmodule Skitter.Component.DSL do
   - Finally, the DSL automatically generates default code for most of the
   required callbacks. Thus, using the DSL will drastically cut down on the
   amount of boilerplate code the programmer has to write.
-
-  To show how the DSL works, let's look at a component which separates numbers
-  based on whether or not they are greater or smaller than 5, or equal to it.
-
-  ```
-  component SmallerThan5, in: input, out: [greater, smaller, equal] do
-    "Verify if data is smaller or greater than 5, of it is equal to 5"
-
-    react value do
-      case value do
-        5 -> spit value ~> equal
-        x when x < 5 -> spit value ~> smaller
-        x when x > 5 -> spit value ~> greater
-      end
-    end
-  end
-  ```
-
-  This example shows the minimum of code a component developer should provide
-  to create a valid component. At the very least, the following should be
-  provided:
-
-  - A "header", which specifies the name of the component, as well as the ports
-    this component defines (`out` ports can be omitted if there are none).
-  - An implementation of `react/3`
-
-  Besides this, a developer can specify a description (shown in our example),
-  and the effects this component may have. Furthermore, the various macros
-  documented in this module can be used to implement various callbacks defined
-  in `Skitter.Component`. Both of these are described in the following sections.
-
-  ## Effects
-
-  effects are specified with the following syntax:
-  `effect effect_name [property1, property2]`. Properties are optional and can
-  be omitted, in that case effects are specified as: `effect effect_name`.
-  The component macro will provide an error if the effect is not correct.
-  Multiple effects can be specified for a single component.
-
-  The following list contains all valid effects:
-  - `effect state_change`
-  - `effect external_effect`
-
-  Furthermore, the `state_change` effect has one possible property:
-  `hidden`. This would be declared as: `effect state_change hidden`
-
-  ## Callbacks
-
-  This module defines macros that can automatically generate custom functions
-  which implement the callbacks defined in `Skitter.Component`. The use of
-  these callbacks is documented in their specific documentation section.
-
-  When reading these, be aware that `component/3` will perform a lot of
-  transformations on the component code which it receives, therefore it is
-  generally not possible to call these macros directly. Instead, the
-  documentation will specify how these macros can be used.
-
-  ## State structs
-
-  This module offers an abstraction over Elixir structs. This makes it possible
-  to predefine the layout of the state of a component instance.
-
-  ```
-  component StructExample, in: foo do
-    effect state_change
-    fields a, b, c
-
-    init val do
-      state.a = value
-    end
-
-    react foo do
-      state.b - value
-    end
-
-  ```
   """
 
   import Skitter.Component.DefinitionError
@@ -106,8 +30,10 @@ defmodule Skitter.Component.DSL do
   # Constants #
   # --------- #
 
+  # Effects which are accepted by skitter + their properties
   @valid_effects [state_change: [:hidden], external_effect: []]
 
+  # Functions components can implement
   @component_functions [
     :react,
     :init,
@@ -117,11 +43,12 @@ defmodule Skitter.Component.DSL do
     :create_checkpoint
   ]
 
-  # Generate default implementations for the following callbacks.
-  # See: generate_default_callbacks(meta, body)
+  # Functions for which a default is generated
   @default_callbacks List.delete(@component_functions, :react)
 
+  # Names of skitter variables which are injected into the user code
   @output_var :output
+  @state_var :state
 
   # --------- #
   # Component #
@@ -186,11 +113,13 @@ defmodule Skitter.Component.DSL do
             clean_checkpoint: 3
           ]
 
-        def __skitter_metadata__, do: unquote(Macro.escape(component_metadata))
+        unquote(errors)
+        defstruct unquote(fields)
 
         unquote(body)
-        unquote(errors)
         unquote(defaults)
+
+        def __skitter_metadata__, do: unquote(Macro.escape(component_metadata))
       end
     end
   end
@@ -234,24 +163,17 @@ defmodule Skitter.Component.DSL do
 
   defp extract_description(any), do: {any, ""}
 
-  # Find field declarations in the AST and transform them into a defstruct.
-  # Return the list of fields to the caller. If there are multiple field
-  # statements, add an error.
+  # Find and remove field declarations in the AST
   defp extract_fields(body) do
-    Macro.postwalk(body, nil, fn
-      {:fields, _env, fields}, nil ->
+    Macro.postwalk(body, [], fn
+      {:fields, _env, fields}, [] ->
         fields =
           Enum.map(fields, fn
             {name, _env, atom} when is_atom(atom) -> name
             any -> {:error, any}
           end)
 
-        {
-          quote generated: true do
-            defstruct unquote(fields)
-          end,
-          fields
-        }
+        {nil, fields}
 
       {:fields, _env, _args}, _fields ->
         {nil, :error}
@@ -389,9 +311,7 @@ defmodule Skitter.Component.DSL do
 
   # Ensure react is present in the component
   defp check_react(body, meta) do
-    if_occurrence(body, :react) do
-      nil
-    else
+    unless_occurrence(body, :react) do
       inject_error "Component `#{meta.name}` lacks a react implementation"
     end
   end
@@ -440,14 +360,8 @@ defmodule Skitter.Component.DSL do
     }
 
     Enum.map(@default_callbacks, fn name ->
-      if_occurrence(body, name, do: nil, else: defaults[name].(meta))
+      unless_occurrence(body, name, do: defaults[name].(meta))
     end)
-  end
-
-  defp default_init(%{fields: nil}) do
-    quote generated: true do
-      def __skitter_init__(_), do: {:ok, nil}
-    end
   end
 
   defp default_init(_) do
@@ -496,27 +410,17 @@ defmodule Skitter.Component.DSL do
   react of that component should start as follows: `react foo, bar do ...`
   The names of the parameters can be freely chosen and pattern matching is
   possible. Elixir guards cannot be used.
-
-  Inside the body of react, `spit/2` can be used to send data to output ports,
-  `state/0` can be used to obtain the state of the current instance. If the
-  component has an internal state, `state = value` or
-  `state.field = value` can be used to update the state of the current instance.
   """
   defmacro react(args, meta, do: body) do
-    body =
-      body
-      |> transform_spit()
-      |> transform_state()
-      |> transform_assigns()
-      |> transform_field_assigns()
+    body = transform_field_access(body, meta)
 
     errors = check_react_body(args, meta, body)
 
     react_body = remove_after_failure(body)
-    react_after_failure_body = build_react_after_failure_body(body, meta)
+    failure_body = build_react_after_failure_body(body, meta)
 
     {react_body, react_arg} = create_react_body_and_arg(react_body)
-    {fail_body, fail_arg} = create_react_body_and_arg(react_after_failure_body)
+    {fail_body, fail_arg} = create_react_body_and_arg(failure_body)
 
     quote generated: true do
       unquote(errors)
@@ -531,9 +435,6 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # Internal Macros
-  # ---------------
-
   @doc """
   Provide a value to the workflow on a given port.
 
@@ -541,18 +442,14 @@ defmodule Skitter.Component.DSL do
   the provided output port of the component.
   The value will be sent _after_ `react/3` has finished executing.
 
-  Usable inside `react/3` iff the component has an output port.
+  Usable inside `react/3` iff the component has at least one output port.
   """
-  defmacro spit(port, value) do
+  defmacro value ~> port do
+    port = name_to_symbol(port)
     var = skitter_var(@output_var)
 
     quote generated: true do
-      unquote(var) =
-        Keyword.put(
-          unquote(var),
-          unquote(port),
-          unquote(value)
-        )
+      unquote(var) = Keyword.put(unquote(var), unquote(port), unquote(value))
     end
   end
 
@@ -562,8 +459,7 @@ defmodule Skitter.Component.DSL do
   _Usable inside `react/3` iff the component has an external state._
 
   The code in this block will only be executed if `react/3` is triggered
-  after a failure occurred. Internally, this operation is a no-op. Post walks
-  will filter out calls to this macro when needed.
+  after a failure occurred. Otherwise, the code in this block will be ignored.
 
   This block is mainly meant to provide clean up code in case a component
   experiences some form of failure. For instance, if a call to react can
@@ -578,7 +474,7 @@ defmodule Skitter.Component.DSL do
   ```
   react val do
     write_to_db(val)
-    spit val ~> port
+    val ~> port
   end
   ```
 
@@ -593,13 +489,13 @@ defmodule Skitter.Component.DSL do
   react val do
     after_failure do
       if write_to_db_occurred?(val) do
-        spit val ~> port
+        val ~> port
         skip
       end
     end
 
     write_to_db(val)
-    spit val ~> port
+    val ~> port
   end
   ```
 
@@ -614,17 +510,17 @@ defmodule Skitter.Component.DSL do
   Stop the execution of react, and return the current instance state and spits.
 
   Using this macro will automatically stop the execution of react. Unlike the
-  use of `error/1`, any changes made to the instance state (through `state!/1`)
-  and any values provided to `spit/2` will still be returned to the skitter
-  runtime.
+  use of `error/1`, any changes made to the instance state and any values spit
+  with `~>/2` will still be returned to the skitter runtime.
 
   This macro is useful when the execution of react should only continue under
   certain conditions. It is especially useful in an `after_failure/1` body, as
   it can be used to only continue the execution of react if no effect occurred
   in the original call to react.
 
-  Do not call this manually, as the `state` and `output` arguments are
-  provided by macro expansion code in `react/3`.
+  Do not provide arguments when using this macro (i.e. just use `skip`), the
+  `state` and `output` arguments will automatically be provided by the macro
+  expansion of `react/3`
   """
   defmacro skip(state, output) do
     quote generated: true do
@@ -632,31 +528,47 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # AST Creation
-  # ------------
+  # AST Creation / Transformation
+  # -----------------------------
+
+  # Remove all `after_failure` blocks from the body
+  defp remove_after_failure(body) do
+    Macro.postwalk(body, fn
+      {:after_failure, _env, _args} -> nil
+      any -> any
+    end)
+  end
+
+  # Remove all occurrences of after_failure if the component has no external
+  # effects. Otherwise, leave the body as is.
+  defp build_react_after_failure_body(body, meta) do
+    if Keyword.has_key?(meta.effects, :external_effect) do
+      quote generated: true do
+        unquote(body)
+      end
+    else
+      remove_after_failure(body)
+    end
+  end
 
   # Create the AST which will become the body of react. Besides this, generate
   # the arguments for the react function header.
-  # This needs to happen to ensure that `var!` can be injected into the argument
-  # list of the function header if needed.
   defp create_react_body_and_arg(body) do
     {out_pre, out_post} = create_react_output(body)
-    {state_arg, state_pre, state_post} = create_react_state(body)
+    {state_arg, state_post} = create_react_state(body)
 
     body =
       quote generated: true do
         import unquote(__MODULE__),
           only: [
-            spit: 2,
+            ~>: 2,
             skip: 2,
-            state: 0,
-            state!: 1,
-            state_field!: 2,
             error: 1,
+            read_field: 1,
+            write_field: 2,
             after_failure: 1
           ]
 
-        unquote(state_pre)
         unquote(out_pre)
         unquote(body)
         {:ok, unquote(state_post), unquote(out_post)}
@@ -668,10 +580,10 @@ defmodule Skitter.Component.DSL do
     {body, state_arg}
   end
 
-  # Generate the ASTs for creating the initial value and reading the value
-  # of skitter_output.
+  # Generate the ASTs which create the initial value of the output, and which
+  # return it to the runtime.
   defp create_react_output(body) do
-    if_occurrence(body, :spit) do
+    if_occurrence(body, :~>) do
       {
         quote generated: true do
           unquote(skitter_var(@output_var)) = []
@@ -685,59 +597,21 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # Create the AST which manages the __skitter_state__ variable throughout
-  # the call to __skitter_react__ and __skitter_react_after_failure.
-  # The following 3 ASTs are created:
-  #   - The AST which will be injected into the react signature, this way, the
-  #     skitter state can be ignored if it is not used.
-  #   - The AST which initializes the skitter state variable.
-  #   - The AST which provides the value that will be returned to the skitter
-  #     runtime.
+  # Generate the ASTs which accept the state argument, and which return it to
+  # the runtime
   defp create_react_state(body) do
-    read_count = count_occurrences(body, :state)
-    write_count = count_occurrences(body, :state!)
-    field_count = count_occurrences(body, :state_field!)
-    state_var_required? = read_count > 0 or field_count > 0
-    state_ret_required? = write_count > 0 or field_count > 0
-
-    arg =
-      if state_var_required? do
-        quote generated: true, do: var!(state_arg)
+    {
+      if_occurrence(body, :read_field) do
+        quote generated: true, do: unquote(skitter_var(@state_var))
       else
-        quote generated: true, do: _state_arg
-      end
-
-    pre =
-      if state_var_required? do
-        quote generated: true, do: var!(skitter_state) = var!(state_arg)
+        quote generated: true, do: _state
+      end,
+      if_occurrence(body, :write_field) do
+        quote generated: true, do: unquote(skitter_var(@state_var))
       else
         nil
       end
-
-    post =
-      if state_ret_required? do
-        quote generated: true, do: var!(skitter_state)
-      else
-        nil
-      end
-
-    {arg, pre, post}
-  end
-
-  # Create the body of __skitter_react_after_failure based on the effects of
-  # the component.
-  #   - If the component has external effects, include the after_failure body
-  #   - If the component has no external effects, generated the same code as
-  #     in __skitter_react__. This makes it possible to simplify the skitter
-  #     runtime code.
-  defp build_react_after_failure_body(body, meta) do
-    if Keyword.has_key?(meta.effects, :external_effect) do
-      quote generated: true do
-        unquote(body)
-      end
-    else
-      remove_after_failure(body)
-    end
+    }
   end
 
   # Add a handler for `skip`, if it is used. If it's not, this just returns the
@@ -745,8 +619,6 @@ defmodule Skitter.Component.DSL do
   # Skip is implemented through the use of a throw. It will simply throw the
   # current values for skitter_state and skitter_output and return them as
   # the result of the block as a whole.
-  # The quoted code for state and output are provided by
-  # `create_react_body_and_arg` to avoid code duplication.
   defp add_skip_handler(body, state, out) do
     if_occurrence(body, :skip) do
       body =
@@ -766,29 +638,6 @@ defmodule Skitter.Component.DSL do
     else
       body
     end
-  end
-
-  # AST Transformations
-  # -------------------
-
-  # Remove all `after_failure` blocks from the body
-  defp remove_after_failure(body) do
-    Macro.postwalk(body, fn
-      {:after_failure, _env, _args} -> nil
-      any -> any
-    end)
-  end
-
-  # Transform all spit calls in the body:
-  #   spit 5 + 2 -> port becomes spit :port, 5 + 2
-  defp transform_spit(body) do
-    Macro.postwalk(body, fn
-      {:spit, env, [{:~>, _ae, [body, port = {_name, _pe, _pargs}]}]} ->
-        {:spit, env, [name_to_symbol(port), body]}
-
-      any ->
-        any
-    end)
   end
 
   # Error Checking
@@ -813,7 +662,7 @@ defmodule Skitter.Component.DSL do
         )
 
       # Ensure state! is only used when the state can change.
-      count_occurrences(body, :state!) > 0 and
+      count_occurrences(body, :write_field) > 0 and
           !Keyword.has_key?(meta.effects, :state_change) ->
         inject_error "Modifying instance state is only allowed when the " <>
                        "state_change effect is present"
@@ -824,18 +673,13 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # Check the spits in the body of react through `port_check_postwalk/2`
-  # Verify that:
-  #   - no errors occured when parsing port names
-  #   - The output port is present in the output port list
+  # Verify all spits have an existing out port
   defp check_spits(ports, body) do
-    {_, {_ports, port}} =
-      Macro.postwalk(body, {ports, nil}, fn
-        ast = {:spit, _env, [{:error, port}, _val]}, {ports, nil} ->
-          {ast, {ports, port}}
-
-        ast = {:spit, _env, [port, _val]}, {ports, nil} ->
-          if port in ports, do: {ast, {ports, nil}}, else: {ast, {ports, port}}
+    {_, port} =
+      Macro.postwalk(body, nil, fn
+        ast = {:~>, _env, [_val, port]}, nil ->
+          port = name_to_symbol(port)
+          {ast, unless(port in ports, do: port)}
 
         ast, acc ->
           {ast, acc}
@@ -850,61 +694,27 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Instantiate a skitter component.
-
-  This macro will generate the code that will instantiate the skitter component.
-  You should assign a value to `state` or `state.field` with `=` in this macro
-  to return a valid instance.
-
-  Besides the body, this callback accepts a single argument, which can be used
-  to pattern match on the user-provided input this callback will receive.
-
-  ## Example
-
-  ```
-  init [foo, bar] do
-    state = foo + bar
-  end
-  ```
-
-  Can be called as: `Skitter.Component.init(ComponentName, [1,2])`
   """
-  defmacro init([arg], %{fields: fields}, do: body) do
-    body = body |> transform_assigns() |> transform_field_assigns()
-
-    write_count = count_occurrences(body, :state!)
-    field_count = count_occurrences(body, :state_field!)
-
-    error =
-      unless write_count + field_count > 0 do
-        inject_error "`init` needs to modify the state of the component instance"
-      end
-
-    state =
-      if fields do
-        quote generated: true do
-          var!(skitter_state) = %__MODULE__{}
-        end
-      end
+  defmacro init([arg], meta, do: body) do
+    body = transform_field_access(body, meta)
 
     body =
       quote generated: true do
         import unquote(__MODULE__),
           only: [
-            state!: 1,
-            state_field!: 2,
-            error: 1
+            error: 1,
+            read_field: 1,
+            write_field: 2
           ]
 
-        unquote(state)
+        unquote(skitter_var(@state_var)) = %__MODULE__{}
         unquote(body)
-        {:ok, var!(skitter_state)}
+        {:ok, unquote(skitter_var(@state_var))}
       end
 
     body = add_skitter_error_handler(body)
 
     quote generated: true do
-      unquote(error)
-
       def __skitter_init__(unquote(arg)) do
         unquote(body)
       end
@@ -912,23 +722,23 @@ defmodule Skitter.Component.DSL do
   end
 
   @doc """
-  Generate component cleanup code.
+  Generate component clean up code.
 
-  This macro can be used to cleanup any resources before a component is shut
-  down. `state/0` can be used in the body of this macro if data from the state
-  of the current instance is needed.
+  This macro can be used to clean up any resources before a component instance
+  is shut down.
   """
-  defmacro terminate([], _meta, do: body) do
-    state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
+  defmacro terminate([], meta, do: body) do
+    body = transform_field_reads(body, meta)
+    state_arg = arg_name_if_occurs(body, :read_field, @state_var)
 
     body =
       quote generated: true do
-        import unquote(__MODULE__), only: [state: 0, error: 1]
+        import unquote(__MODULE__), only: [error: 1, read_field: 1]
         unquote(body)
         :ok
       end
 
-    body = body |> transform_state() |> add_skitter_error_handler()
+    body = add_skitter_error_handler(body)
 
     quote generated: true do
       def __skitter_terminate__(unquote(state_arg)) do
@@ -943,79 +753,39 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Create a checkpoint.
-
-  _Use as `checkpoint do ... end`, `state/0` is usable inside the body of
-  this callback._
-
-  Use this macro to automatically generate the code for creating a checkpoint.
-  The state of the current instance can be obtained inside this checkpoint
-  through the use of `state/0`. The body is required to return a checkpoint by
-  using `checkpoint = value`.
   """
-  defmacro create_checkpoint([], _meta, do: body) do
-    state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
-
-    body =
-      body
-      |> transform_state()
-      |> transform_assigns(checkpoint: :checkpoint!)
-
-    error =
-      use_or_error(
-        body,
-        :checkpoint!,
-        "A valid checkpoint needs to be assigned inside `checkpoint`"
-      )
+  defmacro create_checkpoint([], meta, do: body) do
+    body = transform_field_reads(body, meta)
+    state_arg = arg_name_if_occurs(body, :read_field, @state_var)
+    var = skitter_var(:checkpoint)
 
     quote generated: true do
-      unquote(error)
-
       def __skitter_create_checkpoint__(unquote(state_arg)) do
-        import unquote(__MODULE__), only: [state: 0, checkpoint!: 1]
-        unquote(body)
-        {:ok, var!(skitter_checkpoint)}
+        import unquote(__MODULE__), only: [read_field: 1]
+        unquote(var) = unquote(body)
+        {:ok, unquote(var)}
       end
     end
   end
 
   @doc """
-  Update the current return value of checkpoint.
-
-  You should not use this macro directly, instead, you can use
-  `checkpoint = value`, which will be transformed into a call to this macro.
-
-  Using this macro multiple times will overwrite the previous value.
-  """
-  defmacro checkpoint!(value) do
-    quote generated: true do
-      var!(skitter_checkpoint) = unquote(value)
-    end
-  end
-
-  @doc """
   Restore a component instance from a checkpoint.
-
-  This macro is almost identical to `init/3`. It accepts a checkpoint, provided
-  by `checkpoint/2` as its only input argument. Just like `init/3`, it is
-  required to return a valid instance by using `state = value`
   """
-  defmacro restore_checkpoint([arg], _meta, do: body) do
-    body = transform_assigns(body)
-
-    error =
-      use_or_error(
-        body,
-        :state!,
-        "Restore should create a valid component instance state."
-      )
+  defmacro restore_checkpoint([arg], meta, do: body) do
+    body = transform_field_access(body, meta)
 
     quote generated: true do
-      unquote(error)
-
       def __skitter_restore_checkpoint__(unquote(arg)) do
-        import unquote(__MODULE__), only: [state!: 1, error: 1]
+        import unquote(__MODULE__),
+          only: [
+            read_field: 1,
+            write_field: 2,
+            error: 1
+          ]
+
+        unquote(skitter_var(@state_var)) = %__MODULE__{}
         unquote(body)
-        {:ok, var!(skitter_state)}
+        {:ok, unquote(skitter_var(@state_var))}
       end
     end
   end
@@ -1023,17 +793,18 @@ defmodule Skitter.Component.DSL do
   @doc """
   Clean up an existing checkpoint.
 
-  Skitter calls this macro when it will not use a certain checkpoint anymore.
+  Skitter calls this macro when it will not use a certain checkpoint any more.
   This checkpoint is passed as the only input argument to the macro.
   The body of the macro is responsible for cleaning up any resources associated
   with this particular checkpoint.
   """
-  defmacro clean_checkpoint([arg], _meta, do: body) do
-    state_arg = arg_name_if_occurs(body, :state, quote(do: skitter_state))
+  defmacro clean_checkpoint([arg], meta, do: body) do
+    body = transform_field_reads(body, meta)
+    state_arg = arg_name_if_occurs(body, :read_field, @state_var)
 
     quote generated: true do
       def __skitter_clean_checkpoint__(unquote(state_arg), unquote(arg)) do
-        import unquote(__MODULE__), only: [state: 0]
+        import unquote(__MODULE__), only: [read_field: 1]
         unquote(body)
         :ok
       end
@@ -1044,45 +815,19 @@ defmodule Skitter.Component.DSL do
   # Shared Macros #
   # ------------- #
 
-  @doc """
-  Fetch the current state of the component instance.
-
-  Usable inside `react/3`, `init/3`.
-  """
-  defmacro state do
+  @doc false
+  defmacro read_field(field) do
     quote generated: true do
-      var!(skitter_state)
+      unquote(skitter_var(@state_var)).unquote(field)
     end
   end
 
-  @doc """
-  Modify the state of the component instance.
+  @doc false
+  defmacro write_field(field, value) do
+    var = skitter_var(@state_var)
 
-  You should not use this macro directly, instead, you can use
-  `state = value`, which will be transformed into a call to this macro.
-
-  Usable inside `init/3`, and inside `react/3` iff the component is marked
-  with the `:state_change` effect.
-  """
-  defmacro state!(value) do
     quote generated: true do
-      var!(skitter_state) = unquote(value)
-    end
-  end
-
-  @doc """
-  Modify a specific field of the component instance state.
-
-  You should not use this macro directly, instead, you can use
-  `state.field = value`, which will be transformed into a call to this macro.
-
-  Usable inside `init/3`, and inside `react/3` iff the component is marked
-  with the `:state_change` effect.
-  """
-  defmacro state_field!(field, value) do
-    quote generated: true do
-      var!(skitter_state) =
-        Map.replace!(var!(skitter_state), unquote(field), unquote(value))
+      unquote(var) = Map.replace!(unquote(var), unquote(field), unquote(value))
     end
   end
 
@@ -1108,54 +853,6 @@ defmodule Skitter.Component.DSL do
   defp name_to_symbol({name, _env, nil}), do: name
   defp name_to_symbol(any), do: {:error, any}
 
-  # Transform all instances of 'state' into 'state()'
-  # This is done to avoid ambiguous uses of state, which
-  # will cause elixir to show a warning.
-  defp transform_state(body) do
-    Macro.postwalk(body, fn
-      {:state, env, atom} when is_atom(atom) ->
-        {:state, env, []}
-
-      any ->
-        any
-    end)
-  end
-
-  # Generic function to transform the use of the match operator (`=`) into
-  # calls to macros that provide imperative-style behaviour to skitter.
-  # The binds argument contains a keyword list. Any key in this list that is
-  # found on the left hand side of a match operation will be transformed into a
-  # call to a function. The function name (without arity)should be provided as
-  # the value for the key.
-  defp transform_assigns(body, binds \\ [state: :state!]) do
-    Macro.postwalk(body, fn
-      ast = {:=, env, [{name, _venv, _atom}, expr]} when is_atom(name) ->
-        if Keyword.has_key?(binds, name) do
-          {Keyword.fetch!(binds, name), env, [expr]}
-        else
-          ast
-        end
-
-      any ->
-        any
-    end)
-  end
-
-  # Transform uses of `state.field = expr` into state(field, expr).
-  defp transform_field_assigns(body) do
-    Macro.postwalk(body, fn
-      {:=, env,
-       [
-         {{:., _dienv, [{:state, _ienv, _atom}, field]}, _doenv, []},
-         expr
-       ]} ->
-        {:state_field!, env, [field, expr]}
-
-      any ->
-        any
-    end)
-  end
-
   # Wrap a body with try/do if the `error/1` macro is used.
   defp add_skitter_error_handler(body) do
     if_occurrence(body, :error) do
@@ -1173,10 +870,40 @@ defmodule Skitter.Component.DSL do
     end
   end
 
+  # Transform reads and writes to fields in the correct order
+  defp transform_field_access(body, meta) do
+    body |> transform_field_writes(meta) |> transform_field_reads(meta)
+  end
+
+  # Transform any use of a field name into a call to `read_field`
+  defp transform_field_reads(body, %{fields: fields}) do
+    Macro.postwalk(body, fn
+      {name, env, atom} when is_atom(atom) ->
+        if name in fields do
+          quote generated: true, do: read_field(unquote(name))
+        else
+          {name, env, atom}
+        end
+
+      any ->
+        any
+    end)
+  end
+
+  # Transform `name <~ value` into calls to `write_field`
+  defp transform_field_writes(body, _) do
+    Macro.postwalk(body, fn
+      {:<~, _a, [{name, _n, atom}, value]} when is_atom(atom) ->
+        quote generated: true, do: write_field(unquote(name), unquote(value))
+
+      any ->
+        any
+    end)
+  end
+
   # Generate a variable which can only be accessed by skitter macros.
-  # We cannot use `Macro.var`, since we need to manually mark the variable as
-  # generated to avoid warnings.
   defp skitter_var(name) do
+    # Don't use Macro.var to avoid warnings
     var = {name, [generated: true], __MODULE__}
 
     quote generated: true do
@@ -1195,38 +922,27 @@ defmodule Skitter.Component.DSL do
     n
   end
 
-  defp if_occurrence(body, atom, do: do_clause) do
-    if_occurrence(body, atom, do: do_clause, else: nil)
-  end
-
+  # Conditional structure which only get triggered when a certain symbol is
+  # present in the AST
   defp if_occurrence(body, atom, do: do_clause, else: else_clause) do
     if count_occurrences(body, atom) >= 1, do: do_clause, else: else_clause
   end
 
-  # Inject an error if a certain symbol is not present in an AST.
-  defp use_or_error(body, symbol, error) do
-    if_occurrence(body, symbol, do: nil, else: inject_error(error))
+  # Conditional which only gets triggered if a symbol is not present in the AST
+  defp unless_occurrence(body, symbol, do: err_clause) do
+    if_occurrence(body, symbol, do: nil, else: err_clause)
   end
 
+  # Generate a parameter named `name` if a certain symbol is used in the body.
+  # If it is not, use _ instead.
   defp arg_name_if_occurs(body, symbol, name) do
-    arg_name_if_occurs(
-      body,
-      symbol,
-      name,
-      quote generated: true do
-        _
-      end
-    )
-  end
-
-  defp arg_name_if_occurs(body, symbol, name, alternative) do
     if_occurrence(body, symbol) do
       quote generated: true do
-        var!(unquote(name))
+        unquote(skitter_var(name))
       end
     else
       quote generated: true do
-        unquote(alternative)
+        _
       end
     end
   end

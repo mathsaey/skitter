@@ -72,22 +72,6 @@ defmodule Skitter.ComponentDSLTest do
     assert String.trim(MultilineD.__skitter_metadata__().description) == "D"
   end
 
-  test "if structs are generated correctly" do
-    component WithStruct, in: foo do
-      fields a, b, c
-
-      react _ do
-      end
-    end
-
-    # Structs don't want to work in the scope of the test for whatever reason
-    defmodule T1 do
-      assert Map.from_struct(%WithStruct{}) == %{a: nil, b: nil, c: nil}
-      assert Map.from_struct(%WithStruct{a: 1}) == %{a: 1, b: nil, c: nil}
-      assert Map.from_struct(%WithStruct{b: 2}) == %{a: nil, b: 2, c: nil}
-    end
-  end
-
   test "If correct ports are accepted" do
     # Should not raise
     component CorrectPorts, in: [foo, bar], out: test do
@@ -112,11 +96,10 @@ defmodule Skitter.ComponentDSLTest do
       end
 
       create_checkpoint do
-        checkpoint = nil
+        nil
       end
 
       restore_checkpoint _ do
-        state = nil
       end
     end
 
@@ -130,197 +113,85 @@ defmodule Skitter.ComponentDSLTest do
            |> Keyword.get(:state_change) == [:hidden]
   end
 
-  test "if init works" do
-    component TestInit1, in: [] do
-      init {a, b} do
-        state = a * b
-      end
-
-      react do
-      end
-    end
-
-    component TestInit2, in: [] do
+  test "if structs are generated correctly" do
+    component WithStruct, in: foo do
       fields a, b, c
 
-      init {a, b} do
-        state.a = a
-        state.b = b
+      react _ do
+      end
+    end
+
+    defmodule Structs do
+      assert Map.from_struct(%WithStruct{}) == %{a: nil, b: nil, c: nil}
+      assert Map.from_struct(%WithStruct{a: 1}) == %{a: 1, b: nil, c: nil}
+      assert Map.from_struct(%WithStruct{b: 2}) == %{a: nil, b: 2, c: nil}
+    end
+  end
+
+  test "if init works" do
+    component TestInit, in: [] do
+      fields x, y
+
+      init a do
+        x <~ a
       end
 
       react do
       end
     end
 
-    # Structs don't want to work in the scope of the test for whatever reason
-    defmodule T2 do
-      assert TestInit1.__skitter_init__({3, 4}) == {:ok, 3 * 4}
-
-      assert TestInit2.__skitter_init__({3, 4}) ==
-               {:ok, %TestInit2{a: 3, b: 4, c: nil}}
+    defmodule Init do
+      assert TestInit.__skitter_init__(3) == {:ok, %TestInit{x: 3, y: nil}}
     end
   end
 
   test "if terminate works" do
-    component TestTerminateNoInst, in: [] do
+    component TestTerminate, in: [] do
+      fields a
+
       react do
       end
 
       terminate do
+        send(self(), :hello)
       end
     end
 
-    component TestTerminateInst, in: [] do
-      react do
-      end
-
-      terminate do
-        send(self(), state)
-      end
-    end
-
-    assert TestTerminateNoInst.__skitter_terminate__(:not_used) == :ok
-    assert TestTerminateInst.__skitter_terminate__(:used) == :ok
-    assert_received :used
-  end
-
-  test "if create_checkpoint and restore_checkpoint work" do
-    component CPTest, in: [] do
-      effect state_change hidden
-
-      react do
-      end
-
-      init val do
-        state = val
-      end
-
-      create_checkpoint do
-        checkpoint = state
-      end
-
-      restore_checkpoint val do
-        state = val
-      end
-
-      clean_checkpoint _ do
-      end
-    end
-
-    assert {:ok, inst} = CPTest.__skitter_init__(:val)
-    assert {:ok, chkp} = CPTest.__skitter_create_checkpoint__(inst)
-    assert {:ok, rest} = CPTest.__skitter_restore_checkpoint__(chkp)
-
-    assert chkp == :val
-    assert rest == :val
-
-    assert CPTest.__skitter_clean_checkpoint__(inst, chkp) == :ok
-  end
-
-  test "if defaults are generated correctly" do
-    component TestGenerated, in: [] do
-      react do
-      end
-    end
-
-    assert TestGenerated.__skitter_init__([]) == {:ok, nil}
-    assert TestGenerated.__skitter_terminate__(nil) == :ok
-    assert TestGenerated.__skitter_create_checkpoint__(nil) == :nocheckpoint
-    assert TestGenerated.__skitter_restore_checkpoint__(nil) == :nocheckpoint
-    assert TestGenerated.__skitter_clean_checkpoint__(nil, nil) == :nocheckpoint
-  end
-
-  test "if helpers work" do
-    component TestHelper, in: [] do
-      init _ do
-        state = worker()
-      end
-
-      helper worker do
-        :from_helper
-      end
-
-      react do
-      end
-    end
-
-    assert TestHelper.__skitter_init__([]) == {:ok, :from_helper}
+    assert TestTerminate.__skitter_terminate__(nil) == :ok
+    assert_received :hello
   end
 
   test "if react works" do
     component TestSpit, in: [foo], out: out do
       react foo do
-        spit foo ~> out
+        foo ~> out
       end
     end
 
     assert TestSpit.__skitter_react__(nil, [10]) == {:ok, nil, [out: 10]}
   end
 
-  test "if pattern matching works" do
-    component Patterns, in: input, out: out do
-      init :foo do
-        state = :foo
-      end
-
-      init :bar do
-        state = :bar
-      end
-
-      react :foo do
-        spit :foo ~> out
-      end
-
-      react :bar do
-        spit :bar ~> out
-      end
-    end
-
-    assert Patterns.__skitter_init__(:foo) == {:ok, :foo}
-    assert Patterns.__skitter_init__(:bar) == {:ok, :bar}
-    assert Patterns.__skitter_react__(nil, [:foo]) == {:ok, nil, [out: :foo]}
-    assert Patterns.__skitter_react__(nil, [:bar]) == {:ok, nil, [out: :bar]}
-  end
-
   test "if state works correctly" do
-    component TestState, in: [foo] do
+    component Total, in: [foo] do
       effect state_change
+      fields total
 
-      init arg do
-        state = arg
+      init _ do
+        total <~ 0
       end
 
-      react foo do
-        state = state + foo
+      react val do
+        total <~ (total + val)
       end
     end
 
-    {:ok, inst} = TestState.__skitter_init__(10)
-    assert inst == 10
-
-    {:ok, inst, []} = TestState.__skitter_react__(inst, [5])
-    assert inst == 15
-  end
-
-  test "if state structs work correctly" do
-    component TestStructState, in: [foo] do
-      effect state_change
-      fields a, b, c
-
-      init arg do
-        state.a = arg
-      end
-
-      react foo do
-        state.b = foo
-      end
-    end
-
-    defmodule T3 do
-      {:ok, inst} = TestStructState.__skitter_init__(10)
-      assert inst == %TestStructState{a: 10, b: nil, c: nil}
-      {:ok, inst, []} = TestStructState.__skitter_react__(inst, [15])
-      assert inst == %TestStructState{a: 10, b: 15, c: nil}
+    defmodule State do
+      {:ok, inst} = Total.__skitter_init__(nil)
+      assert inst == %Total{total: 0}
+      {:ok, inst, []} = Total.__skitter_react__(inst, [5])
+      assert inst == %Total{total: 5}
+      {:ok, inst, []} = Total.__skitter_react__(inst, [3])
+      assert inst == %Total{total: 8}
     end
   end
 
@@ -346,9 +217,9 @@ defmodule Skitter.ComponentDSLTest do
   test "if spit works" do
     component TestSkip, in: [bool], out: [inner, outer] do
       react bool do
-        spit :foo ~> inner
+        :foo ~> inner
         if bool, do: skip
-        spit :foo ~> outer
+        :foo ~> outer
       end
     end
 
@@ -359,10 +230,86 @@ defmodule Skitter.ComponentDSLTest do
              {:ok, nil, [outer: :foo, inner: :foo]}
   end
 
+  test "if create_checkpoint and restore_checkpoint work" do
+    component CPTest, in: [] do
+      effect state_change hidden
+      fields a
+
+      react do
+      end
+
+      init val do
+        a <~ val
+      end
+
+      create_checkpoint do
+        a
+      end
+
+      restore_checkpoint val do
+        a <~ val
+      end
+
+      clean_checkpoint _ do
+      end
+    end
+
+    assert {:ok, inst} = CPTest.__skitter_init__(:val)
+    assert {:ok, chkp} = CPTest.__skitter_create_checkpoint__(inst)
+    assert {:ok, rest} = CPTest.__skitter_restore_checkpoint__(chkp)
+
+    assert inst == rest
+
+    assert CPTest.__skitter_clean_checkpoint__(inst, chkp) == :ok
+  end
+
+  test "if defaults are generated correctly" do
+    component TestGen, in: [] do
+      react do
+      end
+    end
+
+    defmodule TDefaults do
+      assert TestGen.__skitter_init__([]) == {:ok, %TestGen{}}
+      assert TestGen.__skitter_terminate__(nil) == :ok
+      assert TestGen.__skitter_create_checkpoint__(nil) == :nocheckpoint
+      assert TestGen.__skitter_restore_checkpoint__(nil) == :nocheckpoint
+      assert TestGen.__skitter_clean_checkpoint__(nil, nil) == :nocheckpoint
+    end
+  end
+
+  test "if helpers work" do
+    component TestHelper, in: [], out: res do
+      react do
+        worker() ~> res
+      end
+
+      helper worker do
+        :help
+      end
+    end
+
+    assert TestHelper.__skitter_react__(nil, []) == {:ok, nil, [res: :help]}
+  end
+
+  test "if pattern matching works" do
+    component Patterns, in: input, out: out do
+      react :foo do
+        :foo ~> out
+      end
+
+      react :bar do
+        :bar ~> out
+      end
+    end
+
+    assert Patterns.__skitter_react__(nil, [:foo]) == {:ok, nil, [out: :foo]}
+    assert Patterns.__skitter_react__(nil, [:bar]) == {:ok, nil, [out: :bar]}
+  end
+
   test "if errors work" do
     component ErrorsEverywhere, in: [] do
       init _ do
-        state = :not_used
         error "error!"
       end
 
@@ -380,12 +327,25 @@ defmodule Skitter.ComponentDSLTest do
     assert ErrorsEverywhere.__skitter_terminate__(nil) == {:error, "error!"}
   end
 
+  test "if hygiene can be violated" do
+    component Hygiene, in: [], out: p do
+      @compile :nowarn_unused_vars
+
+      react do
+        5 ~> p
+        output = :foo
+      end
+    end
+
+    assert Hygiene.__skitter_react__(nil, []) == {:ok, nil, [p: 5]}
+  end
+
   test "if a warning is shown when modifying names inside catch/if/..." do
     component CaseComp, in: val, out: [gt, lt] do
       react val do
         case val do
-          x when x > 5 -> spit x ~> gt
-          x when x < 5 -> spit x ~> lt
+          x when x > 5 -> x ~> gt
+          x when x < 5 -> x ~> lt
         end
       end
     end
@@ -438,12 +398,13 @@ defmodule Skitter.ComponentDSLTest do
     assert_definition_error do
       component MissingCheckpoint, in: [] do
         effect state_change hidden
+        fields state
 
         react do
         end
 
         restore_checkpoint _ do
-          state = nil
+          state <~ nil
         end
       end
     end
@@ -456,7 +417,6 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         create_checkpoint do
-          checkpoint = nil
         end
       end
     end
@@ -493,54 +453,6 @@ defmodule Skitter.ComponentDSLTest do
     end
   end
 
-  test "if a useless init is reported" do
-    assert_definition_error do
-      component UselessInit, in: [] do
-        init _ do
-          :does_nothing
-        end
-
-        react do
-        end
-      end
-    end
-  end
-
-  test "if a useless create/restore _checkpoint is reported" do
-    assert_definition_error do
-      component UselessCheckpoint, in: [] do
-        effect state_change hidden
-
-        react do
-        end
-
-        create_checkpoint do
-        end
-
-        restore_checkpoint _ do
-          state = nil
-        end
-      end
-    end
-
-    assert_definition_error do
-      component UselessRestore, in: [] do
-        effect state_change hidden
-
-        react do
-        end
-
-        create_checkpoint do
-          checkpoint = nil
-        end
-
-        restore_checkpoint _ do
-          nil
-        end
-      end
-    end
-  end
-
   test "if incorrect use of create/restore _checkpoint is reported" do
     assert_definition_error do
       component WrongCheckpoint, in: [] do
@@ -548,28 +460,32 @@ defmodule Skitter.ComponentDSLTest do
         end
 
         create_checkpoint do
-          checkpoint = nil
+          nil
         end
       end
     end
 
     assert_definition_error do
       component WrongRestore, in: [] do
+        fields state
+
         react do
         end
 
         restore_checkpoint _ do
-          state = nil
+          state <~ nil
         end
       end
     end
   end
 
-  test "if incorrect use of `state =` is reported" do
+  test "if incorrect use of `<~` is reported" do
     assert_definition_error do
       component WrongState, in: [] do
+        fields state
+
         react do
-          state = 30
+          state <~ 30
         end
       end
     end
@@ -584,7 +500,7 @@ defmodule Skitter.ComponentDSLTest do
     assert_definition_error do
       component SymbolInSpit, in: [], out: [:foo] do
         react do
-          spit 42 ~> :foo
+          42 ~> :foo
         end
       end
     end
@@ -603,7 +519,7 @@ defmodule Skitter.ComponentDSLTest do
     assert_definition_error do
       component WrongSpit, in: [], out: [:foo] do
         react do
-          spit 42 ~> bar
+          42 ~> bar
         end
       end
     end
