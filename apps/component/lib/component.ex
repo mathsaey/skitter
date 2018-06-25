@@ -160,10 +160,10 @@ defmodule Skitter.Component do
   @typedoc """
   Component instance representation
 
-  Components are free to choose the exact representation of an instance.
-  Therefore, an instance is represented by the `any()` type.
+  The required fields of an instance are specified in the
+  `t:Skitter.Component.Instance.t/0` type.
   """
-  @type instance :: String.t()
+  @type instance :: Skitter.Component.Instance.t()
 
   @typedoc """
   Type of the "reason" added to an error.

@@ -1,6 +1,7 @@
 defmodule Skitter.ComponentTest do
   use ExUnit.Case, async: true
   import Skitter.Component
+  import Skitter.Component.Instance, only: [create: 2]
 
   doctest Skitter.Component
 
@@ -15,21 +16,21 @@ defmodule Skitter.ComponentTest do
     effect state_change hidden
     effect external_effect
 
-    fields field
+    fields f
 
     init _ do
-      field <~ :init_works
+      f <~ :init
     end
 
     react _foo, _bar do
     end
 
     create_checkpoint do
-      :checkpoint_works
+      :checkpoint
     end
 
     restore_checkpoint _ do
-      field <~ :restore_works
+      f <~ :restore
     end
   end
 
@@ -54,10 +55,10 @@ defmodule Skitter.ComponentTest do
   end
 
   test "if callbacks work" do
-    assert init(T2, nil) == {:ok, %T2{field: :init_works}}
+    assert init(T2, nil) == {:ok, create(T2, %T2{f: :init})}
     assert terminate(T2, nil) == :ok
-    assert create_checkpoint(T2, nil) == {:ok, :checkpoint_works}
-    assert restore_checkpoint(T2, nil) == {:ok, %T2{field: :restore_works}}
+    assert create_checkpoint(T2, nil) == {:ok, :checkpoint}
+    assert restore_checkpoint(T2, nil) == {:ok, create(T2, %T2{f: :restore})}
     assert clean_checkpoint(T2, nil, nil) == :ok
     assert react(T2, nil, [nil, nil]) == {:ok, nil, []}
     assert react_after_failure(T2, nil, [nil, nil]) == {:ok, nil, []}

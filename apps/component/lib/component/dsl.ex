@@ -64,6 +64,8 @@ defmodule Skitter.Component.DSL do
 
   A description can be provided as the first line of a component. It simply
   serves as documentation for the component.
+
+  Effects 
   """
 
   import Skitter.Component.DefinitionError
@@ -90,7 +92,7 @@ defmodule Skitter.Component.DSL do
 
   # Names of skitter variables which are injected into the user code
   @output_var :output
-  @state_var :state
+  @instance_var :instance
 
   # --------- #
   # Component #
@@ -405,7 +407,9 @@ defmodule Skitter.Component.DSL do
 
   defp default_init(_) do
     quote generated: true do
-      def __skitter_init__(_), do: {:ok, %__MODULE__{}}
+      def __skitter_init__(_) do
+        {:ok, unquote(create_instance())}
+      end
     end
   end
 
@@ -641,12 +645,12 @@ defmodule Skitter.Component.DSL do
   defp create_react_state(body) do
     {
       if_occurrence(body, :read_field) do
-        quote generated: true, do: unquote(skitter_var(@state_var))
+        quote generated: true, do: unquote(skitter_var(@instance_var))
       else
         quote generated: true, do: _state
       end,
       if_occurrence(body, :write_field) do
-        quote generated: true, do: unquote(skitter_var(@state_var))
+        quote generated: true, do: unquote(skitter_var(@instance_var))
       else
         nil
       end
@@ -746,9 +750,9 @@ defmodule Skitter.Component.DSL do
             write_field: 2
           ]
 
-        unquote(skitter_var(@state_var)) = %__MODULE__{}
+        unquote(skitter_var(@instance_var)) = unquote(create_instance())
         unquote(body)
-        {:ok, unquote(skitter_var(@state_var))}
+        {:ok, unquote(skitter_var(@instance_var))}
       end
 
     body = add_skitter_error_handler(body)
@@ -768,7 +772,7 @@ defmodule Skitter.Component.DSL do
   """
   defmacro terminate([], meta, do: body) do
     body = transform_field_reads(body, meta)
-    state_arg = arg_name_if_occurs(body, :read_field, @state_var)
+    state_arg = arg_name_if_occurs(body, :read_field, @instance_var)
 
     body =
       quote generated: true do
@@ -795,7 +799,7 @@ defmodule Skitter.Component.DSL do
   """
   defmacro create_checkpoint([], meta, do: body) do
     body = transform_field_reads(body, meta)
-    state_arg = arg_name_if_occurs(body, :read_field, @state_var)
+    state_arg = arg_name_if_occurs(body, :read_field, @instance_var)
     var = skitter_var(:checkpoint)
 
     quote generated: true do
@@ -822,9 +826,9 @@ defmodule Skitter.Component.DSL do
             error: 1
           ]
 
-        unquote(skitter_var(@state_var)) = %__MODULE__{}
+        unquote(skitter_var(@instance_var)) = unquote(create_instance())
         unquote(body)
-        {:ok, unquote(skitter_var(@state_var))}
+        {:ok, unquote(skitter_var(@instance_var))}
       end
     end
   end
@@ -839,7 +843,7 @@ defmodule Skitter.Component.DSL do
   """
   defmacro clean_checkpoint([arg], meta, do: body) do
     body = transform_field_reads(body, meta)
-    state_arg = arg_name_if_occurs(body, :read_field, @state_var)
+    state_arg = arg_name_if_occurs(body, :read_field, @instance_var)
 
     quote generated: true do
       def __skitter_clean_checkpoint__(unquote(state_arg), unquote(arg)) do
@@ -856,17 +860,28 @@ defmodule Skitter.Component.DSL do
 
   @doc false
   defmacro read_field(field) do
+    prefix = Skitter.Component.Instance
+
     quote generated: true do
-      unquote(skitter_var(@state_var)).unquote(field)
+      unquote(prefix).state(unquote(skitter_var(@instance_var))).unquote(field)
     end
   end
 
   @doc false
   defmacro write_field(field, value) do
-    var = skitter_var(@state_var)
+    var = skitter_var(@instance_var)
+    prefix = Skitter.Component.Instance
 
     quote generated: true do
-      unquote(var) = Map.replace!(unquote(var), unquote(field), unquote(value))
+      unquote(var) = %{
+        unquote(var)
+        | state:
+            Map.replace!(
+              unquote(prefix).state(unquote(var)),
+              unquote(field),
+              unquote(value)
+            )
+      }
     end
   end
 
@@ -947,6 +962,18 @@ defmodule Skitter.Component.DSL do
 
     quote generated: true do
       var!(unquote(var), unquote(__MODULE__))
+    end
+  end
+
+  # Create a skitter instance with an empty state.
+  defp create_instance() do
+    create_instance(quote generated: true, do: %__MODULE__{})
+  end
+
+  # Create a skitter instance from a given state.
+  defp create_instance(state) do
+    quote generated: true do
+      Skitter.Component.Instance.create(__MODULE__, unquote(state))
     end
   end
 
