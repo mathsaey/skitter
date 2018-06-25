@@ -13,7 +13,7 @@ defmodule Skitter.Component.Metadata do
   This type defines a struct which should contain all the keys specified in
   this type.
   """
-  @type t :: %Skitter.Component.Metadata{
+  @type t :: %__MODULE__{
           name: String.t(),
           description: String.t(),
           effects: [keyword()],
