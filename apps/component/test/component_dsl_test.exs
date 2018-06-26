@@ -142,10 +142,10 @@ defmodule Skitter.ComponentDSLTest do
     end
 
     defmodule AssertInit do
-      import Skitter.Component.Instance, only: [create: 2]
+      alias Skitter.Component.Instance
 
       assert Init.__skitter_init__(3) ==
-               {:ok, create(Init, %Init{x: 3, y: nil})}
+               {:ok, %Instance{component: Init, state: %Init{x: 3, y: nil}}}
     end
   end
 
@@ -190,13 +190,14 @@ defmodule Skitter.ComponentDSLTest do
     end
 
     defmodule State do
-      import Skitter.Component.Instance, only: [create: 2]
+      alias Skitter.Component.Instance
+
       {:ok, inst} = Total.__skitter_init__(nil)
-      assert inst == create(Total, %Total{total: 0})
+      assert inst == %Instance{component: Total, state: %Total{total: 0}}
       {:ok, inst, []} = Total.__skitter_react__(inst, [5])
-      assert inst == create(Total, %Total{total: 5})
+      assert inst == %Instance{component: Total, state: %Total{total: 5}}
       {:ok, inst, []} = Total.__skitter_react__(inst, [3])
-      assert inst == create(Total, %Total{total: 8})
+      assert inst == %Instance{component: Total, state: %Total{total: 8}}
     end
   end
 
@@ -275,8 +276,11 @@ defmodule Skitter.ComponentDSLTest do
     end
 
     defmodule TDefaults do
-      import Skitter.Component.Instance, only: [create: 2]
-      assert TestGen.__skitter_init__([]) == {:ok, create(TestGen, %TestGen{})}
+      alias Skitter.Component.Instance
+
+      assert TestGen.__skitter_init__([]) ==
+               {:ok, %Instance{component: TestGen, state: %TestGen{}}}
+
       assert TestGen.__skitter_terminate__(nil) == :ok
       assert TestGen.__skitter_create_checkpoint__(nil) == :nocheckpoint
       assert TestGen.__skitter_restore_checkpoint__(nil) == :nocheckpoint

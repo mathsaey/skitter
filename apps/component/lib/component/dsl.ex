@@ -54,10 +54,10 @@ defmodule Skitter.Component.DSL do
   _in_ ports provide a way for the component to _receive_ values.
   A component instance automatically _reacts_ to data when it has an input
   value on each of its input ports. _out_ ports allow a component to publish
-  data while _react_ to incoming data. Any data published on an out port will
-  be automatically forwarded to any component instance which is connected to
+  data while _reacting_ to incoming data. Any data published on an out port will
+  automatically be forwarded to any component instance which is connected to
   this out port. A component must always specify its in ports, out ports do not
-  need to be specified, in which case the component cannot publish any data.
+  need to be specified in which case the component cannot publish any data.
   As a syntactic convenience, a component can leave out the list notation when
   only one port is present, e.g. `in: foo, out: bar` is automatically
   transformed into `in: [foo], out: [bar]`
@@ -65,7 +65,13 @@ defmodule Skitter.Component.DSL do
   A description can be provided as the first line of a component. It simply
   serves as documentation for the component.
 
-  Effects 
+  Effects modify how the skitter runtime will handle the execution of a
+  component. Currently, skitter supports the following effects:
+
+  | Name              | Properties |
+  | ----------------- | ---------- |
+  | _state_change_    | _hidden_   |
+  | _external_effect_ |            |
   """
 
   import Skitter.Component.DefinitionError
@@ -100,6 +106,8 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Create a skitter component.
+
+  This macro serves as the entry point of the component DSL.
   """
   defmacro component(name, ports, do: body) do
     # Get metadata from header
@@ -139,7 +147,7 @@ defmodule Skitter.Component.DSL do
 
     quote generated: true do
       defmodule unquote(name) do
-        @behaviour unquote(Skitter.Component)
+        @behaviour unquote(Skitter.Component.Behaviour)
         @moduledoc unquote(moduledoc)
 
         import unquote(Skitter.Component), only: []
@@ -860,24 +868,21 @@ defmodule Skitter.Component.DSL do
 
   @doc false
   defmacro read_field(field) do
-    prefix = Skitter.Component.Instance
-
     quote generated: true do
-      unquote(prefix).state(unquote(skitter_var(@instance_var))).unquote(field)
+      unquote(skitter_var(@instance_var)).state.unquote(field)
     end
   end
 
   @doc false
   defmacro write_field(field, value) do
     var = skitter_var(@instance_var)
-    prefix = Skitter.Component.Instance
 
     quote generated: true do
       unquote(var) = %{
         unquote(var)
         | state:
             Map.replace!(
-              unquote(prefix).state(unquote(var)),
+              unquote(var).state,
               unquote(field),
               unquote(value)
             )
@@ -967,13 +972,8 @@ defmodule Skitter.Component.DSL do
 
   # Create a skitter instance with an empty state.
   defp create_instance() do
-    create_instance(quote generated: true, do: %__MODULE__{})
-  end
-
-  # Create a skitter instance from a given state.
-  defp create_instance(state) do
     quote generated: true do
-      Skitter.Component.Instance.create(__MODULE__, unquote(state))
+      %Skitter.Component.Instance{component: __MODULE__, state: %__MODULE__{}}
     end
   end
 
