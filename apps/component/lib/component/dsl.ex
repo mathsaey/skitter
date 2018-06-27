@@ -107,7 +107,71 @@ defmodule Skitter.Component.DSL do
   @doc """
   Create a skitter component.
 
-  This macro serves as the entry point of the component DSL.
+  This macro serves as the entry point of the component DSL. _Don't call any
+  other macro in this module outside the body of `component/3`_; they rely on
+  AST transformation to work properly.
+
+  This macro will generate a skitter component, which is implemented as an
+  elixir module with a set of predefined functions. The `name` argument to this
+  function will be used as the name of the module. The `ports` argument is used
+  to define the ports of the component, the `body` should implement the
+  functionality of the component.
+
+  ## Ports
+
+  Ports are provided to the component as a keyword list with two valid keys:
+  `in:`, and `out:`, representing the in and out ports respectively. In ports
+  should always be provided while out ports may be omitted. Ports are specified
+  as a list of Elixir _names_. As a syntactic convenience, the list notation can
+  be omitted if only a single port exists.
+
+  The following are all valid port specifications:
+
+  - `in: foo, out: bar`
+  - `in: foo`
+  - `in: [foo, bar]`
+  - `in: foo, out: [bar, baz]`
+
+  The following port specifications will not be accepted by the component:
+
+  - `out: foo`
+  - `in: :foo`
+
+  ## Body
+
+  The following code is allowed inside the body of `component/3`:
+  - An `effect` statement, which declares an _effect_ of the component.
+  - A `field` statement, which specifies the data layout of the state of the
+  component.
+  - A call to the `react/3` macro, **this is required**.
+  - A call to `init/3` or `terminate/3`
+  - A call to `create_checkpoint/3` or `restore_checkpoint/3`, **this is
+  required if the component has the hidden state_change effect**.
+  - A call to `clean_checkpoint/3`; **this is allowed, but not required when
+  component has the hidden state_change effect**.
+  - The definition of a _helper function_.
+
+  Besides this, a _description_ may be provided by providing a string as the
+  first statement in the component body.
+
+  ## Example
+
+  ```
+  component Average, in: value, out: average do
+    "Track the average of all received values"
+
+    effect state_change
+    fields total, counter
+
+    init _ do
+      # implementation goes here...
+    end
+
+    react value do
+      # implementation goes here...
+    end
+  end
+  ```
   """
   defmacro component(name, ports, do: body) do
     # Get metadata from header
@@ -455,12 +519,44 @@ defmodule Skitter.Component.DSL do
   @doc """
   React to incoming data.
 
-  React to incoming data from the in ports. Every in port of the component
-  should have a matching parameter in the "header" of react.
-  For instance, if a component has two in ports: `foo`, and `bar`, the
-  react of that component should start as follows: `react foo, bar do ...`
-  The names of the parameters can be freely chosen and pattern matching is
-  possible. Elixir guards cannot be used.
+  Implement the behaviour of the component when it receives data from the in
+  ports. Do not call this macro manually as it relies on AST transformations
+  to work, instead use the macro with the following syntax:
+  ```
+  react arg_1, arg_2, ..., arg_n do
+    # Body goes here
+    end
+  ```
+
+  The amount of arguments in the arguments list of react should correspond to
+  the amount of in ports of the component. When the component instance needs
+  to react, every argument will be bound to the value provided to its
+  corresponding in port. While reacting, the `~>` operator can be used to _spit_
+  data to any out port; `<~` can be used to update the state of the component
+  instance _if and only if_ the component has the `state_change` effect.
+  `after_failure/1` can be used inside `react/3` _if and only if_ the component
+  has the `external_effect` effect.
+
+  The return value of `react/3` is silently ignored. However, any "spits" or
+  state updates performed during the execution of `react/3` will be provided to
+  the skitter runtime.
+
+  ## Spits
+
+  While a component instance is reacting, it may _spit_ a value to an out port
+  with the following syntax: `value ~> port`. The given value will be sent to
+  any in_port that is connected to the out port in question. The values will
+  only be sent after the "current" react is finished. Thus, if `error/1` is
+  called after `~>`, the value will never be sent to the connected ports.
+
+  ## State Updates
+
+  A component with the _state_change_ effect may update any _field_ of the state
+  (defined by using `fields` inside `component/3`) with the following syntax:
+  `field <~ value`. The component instance will immediately be updated to
+  reflect these changes. This implies that later uses of `field` will contain
+  the new state of the modified field. In spite of this, the skitter runtime
+  will only see these changes once the "current" react is finished.
   """
   defmacro react(args, meta, do: body) do
     body = transform_field_access(body, meta)
@@ -486,15 +582,7 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  @doc """
-  Provide a value to the workflow on a given port.
-
-  The given value will be sent to every other component that is connected to
-  the provided output port of the component.
-  The value will be sent _after_ `react/3` has finished executing.
-
-  Usable inside `react/3` iff the component has at least one output port.
-  """
+  @doc false
   defmacro value ~> port do
     port = name_to_symbol(port)
     var = skitter_var(@output_var)
@@ -561,17 +649,16 @@ defmodule Skitter.Component.DSL do
   Stop the execution of react, and return the current instance state and spits.
 
   Using this macro will automatically stop the execution of react. Unlike the
-  use of `error/1`, any changes made to the instance state and any values spit
-  with `~>/2` will still be returned to the skitter runtime.
+  use of `error/1`, any state changes and spit values will still be provided
+  to the skitter runtime.
 
   This macro is useful when the execution of react should only continue under
-  certain conditions. It is especially useful in an `after_failure/1` body, as
+  certain conditions. It is especially useful in an `after_failure/1` block, as
   it can be used to only continue the execution of react if no effect occurred
   in the original call to react.
 
   Do not provide arguments when using this macro (i.e. just use `skip`), the
-  `state` and `output` arguments will automatically be provided by the macro
-  expansion of `react/3`
+  `state` and `output` arguments will automatically be injected by `react/3`.
   """
   defmacro skip(state, output) do
     quote generated: true do
@@ -745,6 +832,20 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Instantiate a skitter component.
+
+  Set up the initial state of the component based on a single argument provided
+  by the workflow. Do not call this macro manually, as it relies on AST
+  transformations to work. Instead, use the following syntax:
+
+  ```
+  init arg do
+    # Body goes here
+  end
+  ```
+
+  Init always accepts a single argument, pattern matching can be used to
+  deconstruct complex arguments which may be provided. Inside init,
+  `field <~ value` may be used to set initial values for the state fields.
   """
   defmacro init([arg], meta, do: body) do
     body = transform_field_access(body, meta)
@@ -776,7 +877,14 @@ defmodule Skitter.Component.DSL do
   Generate component clean up code.
 
   This macro can be used to clean up any resources before a component instance
-  is shut down.
+  is shut down. Do not call this macro manually as it relies on AST
+  transformations to work. Use the following syntax:
+
+  ```
+  terminate do
+    # body
+  end
+  ```
   """
   defmacro terminate([], meta, do: body) do
     body = transform_field_reads(body, meta)
@@ -843,11 +951,6 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Clean up an existing checkpoint.
-
-  Skitter calls this macro when it will not use a certain checkpoint any more.
-  This checkpoint is passed as the only input argument to the macro.
-  The body of the macro is responsible for cleaning up any resources associated
-  with this particular checkpoint.
   """
   defmacro clean_checkpoint([arg], meta, do: body) do
     body = transform_field_reads(body, meta)
@@ -894,7 +997,9 @@ defmodule Skitter.Component.DSL do
   Stop the current callback and return with an error.
 
   A reason should be provided as a string. In certain contexts (e.g. `init/3`),
-  the use of this macro will crash the entire workflow.
+  the use of this macro will crash the entire workflow. Any spits or state
+  updates that may have occurred prior to the invocation of this macro will be
+  lost.
   """
   defmacro error(reason) do
     quote generated: true do
