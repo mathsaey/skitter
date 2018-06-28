@@ -72,6 +72,42 @@ defmodule Skitter.Component.DSL do
   | ----------------- | ---------- |
   | _state_change_    | _hidden_   |
   | _external_effect_ |            |
+
+  The `state_change` effect has to be specified when a component may modify its
+  internal state when reacting to incoming data. Setting this effect will allow
+  the modification of state in react. Furthermore, the skitter runtime will
+  ensure that there are no concurrent modifications to this state when a
+  workflow is executed on a distributed system. Finally, the skitter runtime
+  will also guarantee that the state can be recovered if failure occurs.
+  Skitter may not always be able to "see" the entire state of a component
+  instance; this can be the case if the component relies on an external process
+  to do most of the processing. In this case, a `state_change` effect can be
+  annotated with the `hidden` property. When this is done, skitter will rely on
+  custom implementations of checkpoint functionality to ensure the state remains
+  recoverable in the case of partial failure.
+
+  The `external_effect` effect has to be specified when a component may trigger
+  external effects (i.e. I/O) when reacting. When this effect is specified,
+  the `after_failure/1` macro may be used inside `react/3`. This block enables
+  the component developer to ensure that a side effect occurs only once.
+
+  ## Functions
+
+  Various functions can be implemented inside the body of `component/3`.
+  This can be done by using one of the macros defined and documented inside
+  this module.
+
+  ## Fields
+
+  Fields can be specified inside the body of `component/3` with the following
+  syntax: `fields field1, field2`. These fields can be used to store _state_
+  inside a component instance. Values can be assigned to fields inside both
+  `init/3` and `restore_checkpoint/3` with the following syntax:
+  `field1 <~ value`. These values can be obtained from the component instance
+  inside every other component function (`react/3`, `terminate/3`,
+  `create_checkpoint/3` and `clean_checkpoint/3`) by using the field name.
+  when the `state_change` effect is present, fields may be modified inside
+  the body of `react/3`.
   """
 
   import Skitter.Component.DefinitionError
@@ -912,6 +948,19 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Create a checkpoint.
+
+  This macro should be used to create a checkpoint based on a component
+  instance. Do not call this macro directly as it relies on AST transformations.
+  Use the following syntax instead:
+
+  ```
+  checkpoint do
+  # body
+  end
+  ```
+
+  The return value (i.e. the value of the last statement in the body) is
+  returned as the checkpoint to the skitter runtime.
   """
   defmacro create_checkpoint([], meta, do: body) do
     body = transform_field_reads(body, meta)
@@ -929,6 +978,21 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Restore a component instance from a checkpoint.
+
+  Similar to `init/3`; set up the initial state of the component based on a
+  checkpoint argument. Do not call this macro manually, as it relies on AST
+  transformations to work. Instead, use the following syntax:
+
+  ```
+  restore_checkpoint arg do
+    # Recreate state here
+  end
+  ```
+
+  restore_checkpoint always accepts a single argument, which is a checkpoint as
+  returned by `create_checkpoint/3`. The body of `restore_checkpoint/3` is
+  responsible for reconstructing the component state (using the
+  `field <~ value` syntax) to set correct values for the state fields.
   """
   defmacro restore_checkpoint([arg], meta, do: body) do
     body = transform_field_access(body, meta)
@@ -951,6 +1015,19 @@ defmodule Skitter.Component.DSL do
 
   @doc """
   Clean up an existing checkpoint.
+
+  Clean up a checkpoint that will no longer be used by the skitter runtime.
+  Do not call this macro manually, as it relies on AST transformations to work;
+  use the following syntax instead:
+
+  ```
+  clean_checkpoint arg do
+    # Clean up here
+  end
+  ```
+
+  `clean_checkpoint/3` always accepts a single argument, which is the checkpoint
+  that should be removed.
   """
   defmacro clean_checkpoint([arg], meta, do: body) do
     body = transform_field_reads(body, meta)
