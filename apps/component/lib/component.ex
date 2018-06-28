@@ -19,6 +19,35 @@ defmodule Skitter.Component do
   modules defines the `component/3` macro which can be used to define a
   component.
 
+  ## Functions
+
+  This module defines two types of functions: functions which access the
+  metadata of a component and functions which activate a function of a
+  component. All metadata functions work on both components and instances,
+  the other functions only work on the component or its instance. The following
+  table provides a short overview of the functions in this module and the
+  arguments they accept.
+
+  | Function                 | Component / Instance |
+  | ------------------------ | -------------------- |
+  | `is_component?/1`        | _both_               |
+  | `is_instance?/1`         | _both_               |
+  | `name/1`                 | _both_               |
+  | `description/1`          | _both_               |
+  | `in_ports/1`             | _both_               |
+  | `out_ports/1`            | _both_               |
+  | `effects/1`              | _both_               |
+  | `state_change?/1`        | _both_               |
+  | `hidden_state_change?/1` | _both_               |
+  | `external_effect?/1`     | _both_               |
+  | `init/2`                 | component            |
+  | `terminate/1`            | instance             |
+  | `react/2`                | instance             |
+  | `react_after_failure/2`  | instance             |
+  | `create_checkpoint/1`    | instance             |
+  | `clean_checkpoint/2`     | instance             |
+  | `restore_checkpoint/2`   | component            |
+
   ## A note on doctests
 
   Since this module works on components and their instances, all code examples
@@ -34,7 +63,7 @@ defmodule Skitter.Component do
   end
 
   component Features, in: [foo, bar] do
-    "Doesn't do anything useful, but allows us to show all component aspects."
+    "Doesn' t do anything useful, but allows us to show all component aspects."
 
     effect state_change hidden
     effect external_effect
@@ -165,15 +194,16 @@ defmodule Skitter.Component do
   The ports of a component are used to connect a component instance to other
   component instances in a given workflow. A component instance can send data
   to its own out ports while it is reacting to data. In turn, the skitter
+  runtime will send this data to any ports connected to this out port.
 
-   ## Examples
+  ## Examples
 
-        iex> out_ports(Identity)
-        [:value]
-        iex> out_ports(example_instance())
-        [:value]
-        iex> out_ports(Features)
-        []
+      iex> out_ports(Identity)
+      [:value]
+      iex> out_ports(example_instance())
+      [:value]
+      iex> out_ports(Features)
+      []
   """
   def out_ports(%Instance{component: comp}), do: out_ports(comp)
   def out_ports(comp), do: comp.__skitter_metadata__.out_ports
@@ -281,8 +311,8 @@ defmodule Skitter.Component do
 
   ## Examples
 
-    iex> init(Identity, nil)
-    {:ok, %Skitter.Component.Instance{component: Identity, state: %Identity{}}}
+      iex> init(Identity, nil)
+      {:ok, %Skitter.Component.Instance{component: Identity, state: %Identity{}}}
   """
   def init(comp, args), do: comp.__skitter_init__(args)
 
@@ -362,8 +392,8 @@ defmodule Skitter.Component do
 
   ## Examples
 
-    iex> restore_checkpoint(Features, 10)
-    {:ok, %Skitter.Component.Instance{component: Features, state: %Features{f: 10}}}
+      iex> restore_checkpoint(Features, 10)
+      {:ok, %Skitter.Component.Instance{component: Features, state: %Features{f: 10}}}
   """
   def restore_checkpoint(comp, checkpoint),
     do: comp.__skitter_restore_checkpoint__(checkpoint)
