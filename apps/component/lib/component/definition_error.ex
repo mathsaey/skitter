@@ -5,11 +5,7 @@ defmodule Skitter.Component.DefinitionError do
   defexception [:message]
   def exception(val), do: %__MODULE__{message: val}
 
-  @doc """
-  Return a quoted raise statement which can be injected by a macro.
-
-  When activated, the statement will raise a DefinitionError with `reason`.
-  """
+  @doc false
   def inject_error(reason) do
     quote do
       import unquote(__MODULE__)

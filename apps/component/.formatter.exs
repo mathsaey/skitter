@@ -8,7 +8,7 @@
     error: :*,
     effect: :*,
     fields: :*,
-    instance: :*,
+    state: :*,
     component: :*,
     inject_error: :*,
     state_change: :*,
