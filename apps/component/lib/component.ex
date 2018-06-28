@@ -1,89 +1,276 @@
 defmodule Skitter.Component do
   @moduledoc """
-  Behaviour module and interface for skitter components.
+  Tools to interact with skitter components.
 
-  A component is the foundation of a skitter workflow. A skitter component can
-  be plugged into a workflow, after which is it responsible for processing
-  any data it receives.
+  A component is a collection of function implementations and metadata.
+  Components can be _instantiated_ by embedding them inside a workflow.
+  When this is done, the component instance is responsible for _reacting_ to
+  any data it receives from the skitter runtime. The functions which are a
+  part of the component definition define how the component instance responds
+  to the incoming data. The metadata that makes up the other part of the
+  component definition defines how a component can be embedded inside a
+  workflow, how the skitter runtime should handle this component and provides
+  documentation about the component. Various instances of the same component
+  share the same metadata and function implementations, but cannot share any
+  state.
 
-  This module defines two main facilities to work with skitter components:
-  - An interface which can be used to work with existing components
-  - A behaviour which any skitter component must implement.
+  This module defines an interface that can be used to access the metadata and
+  functionality offered by a component and its instances. Besides this, this
+  modules defines the `component/3` macro which can be used to define a
+  component.
 
-  Developers who want to create their own components should look into the
-  `Skitter.Component.DSL` module, which provides abstractions that greatly
-  facilitate the implementation of skitter components.
+  ## Functions
+
+  This module defines two types of functions: functions which access the
+  metadata of a component and functions which activate a function of a
+  component. All metadata functions work on both components and instances,
+  the other functions only work on the component or its instance. The following
+  table provides a short overview of the functions in this module and the
+  arguments they accept.
+
+  | Function                 | Component / Instance |
+  | ------------------------ | -------------------- |
+  | `is_component?/1`        | _both_               |
+  | `is_instance?/1`         | _both_               |
+  | `name/1`                 | _both_               |
+  | `description/1`          | _both_               |
+  | `in_ports/1`             | _both_               |
+  | `out_ports/1`            | _both_               |
+  | `effects/1`              | _both_               |
+  | `state_change?/1`        | _both_               |
+  | `hidden_state_change?/1` | _both_               |
+  | `external_effect?/1`     | _both_               |
+  | `init/2`                 | component            |
+  | `terminate/1`            | instance             |
+  | `react/2`                | instance             |
+  | `react_after_failure/2`  | instance             |
+  | `create_checkpoint/1`    | instance             |
+  | `clean_checkpoint/2`     | instance             |
+  | `restore_checkpoint/2`   | component            |
+
+  ## A note on doctests
+
+  Since this module works on components and their instances, all code examples
+  in the docs of this module assume the following components have been defined.
+  More information about these definitions can be found in the
+  `Skitter.Component.DSL` docs.
+
+  ```
+  component Identity, in: value, out: value do
+    react value do
+      value ~> value
+    end
+  end
+
+  component Features, in: [foo, bar] do
+    "Doesn' t do anything useful, but allows us to show all component aspects."
+
+    effect state_change hidden
+    effect external_effect
+
+    fields f
+
+    init {a, b} do
+      f <~ a + b
+    end
+
+    react _foo, _bar do
+    end
+
+    create_checkpoint do
+      f
+    end
+
+    restore_checkpoint v do
+      f <~ v
+    end
+  end
+  ```
+
+  Besides this, an example instance is provided by a function:
+
+  ```
+  def example_instance() do
+    {:ok, inst} = init(Identity, nil)
+    inst
+  end
+  ```
   """
+
+  alias Skitter.Component.Instance
+  alias Skitter.Component.Metadata
 
   # --------- #
   # Interface #
   # --------- #
 
-  @doc "Get the name of a component."
+  @doc """
+  Verify if something is a component
+
+  ## Examples
+
+      iex> is_component?(5)
+      false
+      iex> is_component?(Enum)
+      false
+      iex> is_component?(Identity)
+      true
+  """
+  def is_component?(mod) when is_atom(mod) do
+    function_exported?(mod, :__skitter_metadata__, 0) and
+      match?(%Metadata{}, mod.__skitter_metadata__)
+  end
+
+  def is_component?(_), do: false
+
+  @doc """
+  Verify if something is a component instance
+
+  ## Examples
+
+      iex> is_instance?(:foo)
+      false
+      iex> is_instance?(example_instance())
+      true
+  """
+  def is_instance?(%Instance{}), do: true
+  def is_instance?(_), do: false
+
+  @doc """
+  Get the name of a component (instance)
+
+  ## Examples
+
+      iex> name(Identity)
+      "Identity"
+      iex> name(example_instance())
+      "Identity"
+  """
+  def name(%Instance{component: comp}), do: name(comp)
   def name(comp), do: comp.__skitter_metadata__.name
 
   @doc """
-  Get the description of a component.
+  Get the description of a component (instance)
 
   An empty string is returned if no documentation is present.
+
+  ## Examples
+
+      iex> description(Identity)
+      ""
+      iex> description(example_instance())
+      ""
+      iex> description(Features)
+      "Doesn't do anything useful, but allows us to show all component aspects."
   """
+  def description(%Instance{component: comp}), do: description(comp)
   def description(comp), do: comp.__skitter_metadata__.description
 
   @doc """
-  Get the in ports of a component.
+  Get the in ports of a component (instance)
 
-  The ports of a component are used to connect a component to other components
-  in a given workflow. The skitter runtime can use the in ports of a component
-  to provide the data that the component will react to.
-  In other words, data sent to an in port of a component will be provided as
-  an argument to the `c:__skitter_react__/2` callback of a component.
+  The ports of a component are used to connect a component instance to other
+  component instances in a given workflow. The skitter runtime use the in ports
+  of a component to provide the data that the component instance will react to.
+
+  In other words, data sent to an in port of a component instance will be
+  provided as an argument to the `react` function of a component.
+
+  ## Examples
+
+      iex> in_ports(Identity)
+      [:value]
+      iex> in_ports(example_instance())
+      [:value]
+      iex> in_ports(Features)
+      [:foo, :bar]
   """
+  def in_ports(%Instance{component: comp}), do: in_ports(comp)
   def in_ports(comp), do: comp.__skitter_metadata__.in_ports
 
   @doc """
-  Get the out ports of a component.
+  Get the out ports of a component (instance)
 
-  The ports of a component are used to connect a component to other components
-  in a given workflow. A component can send data to its own out ports while it
-  reacts to data. In turn, the skitter runtime will send this data to any ports
-  which are connected to this out port.
+  The ports of a component are used to connect a component instance to other
+  component instances in a given workflow. A component instance can send data
+  to its own out ports while it is reacting to data. In turn, the skitter
+  runtime will send this data to any ports connected to this out port.
+
+  ## Examples
+
+      iex> out_ports(Identity)
+      [:value]
+      iex> out_ports(example_instance())
+      [:value]
+      iex> out_ports(Features)
+      []
   """
+  def out_ports(%Instance{component: comp}), do: out_ports(comp)
   def out_ports(comp), do: comp.__skitter_metadata__.out_ports
 
   @doc """
-  Get the effects of a component.
+  Get the effects of a component (instance).
 
-  The effects of a component describe the effects that a component may trigger
-  when it reacts to incoming data. These effects are used by the skitter
-  runtime to determine how to handle distribution and fault tolerance.
+  The effects of a component describe the effects that an instance of this
+  component may trigger when it is reacting to incoming data. These effects
+  are used by the skitter runtime to determine how to handle distribution and
+  fault tolerance.
 
   Calling this function directly is generally not required, instead, rely on
   more specific functions such as `state_change?/1`, `external_effect?/1`,
   etc.
+
+  ## Examples
+
+      iex> effects(Identity)
+      []
+      iex> effects(example_instance())
+      []
+      iex> effects(Features)
+      [external_effect: [], state_change: [:hidden]]
   """
+  def effects(%Instance{component: comp}), do: effects(comp)
   def effects(comp), do: comp.__skitter_metadata__.effects
 
   @doc """
-  Verify if a component can update its state.
+  Verify if a component (instance) can update its state.
 
   A component can update its state if it has the `state_change` effect.
-  This effect signifies that every call to `c:__skitter_react__/2` needs to
-  access a shared state which may be modified.
+  This effect signifies that every call to react needs to access a shared
+  state which may be modified.
+
+  ## Examples
+
+      iex> state_change?(Identity)
+      false
+      iex> state_change?(example_instance())
+      false
+      iex> state_change?(Features)
+      true
   """
   def state_change?(comp) do
     comp |> effects() |> Keyword.has_key?(:state_change)
   end
 
   @doc """
-  Verify if a component can change its state without explicitly passing a new
-  state.
+  Verify if a component (instance) can change its state without explicitly
+  passing a new state.
 
   A component has a hidden state if it has the `state_change` effect with the
   `hidden` property. Components with a hidden state change manage their own
-  state and do not hand it over to skitter every time `c:__skitter_react__/2`
-  is called. Instead, these components return a _reference_ to their internal
-  state. Furthermore, these components are required to implement the
-  `c:__skitter_checkpoint__/1` and `c:__skitter_restore__/1` callbacks.
+  state and do not hand it over to skitter every time `react` is called. To
+  ensure that this hidden state is recoverable in the case of failure, these
+  components are required to implement the `create_checkpoint` and
+  `restore_checkpoint` callbacks.
+
+  ## Examples
+
+      iex> hidden_state_change?(Identity)
+      false
+      iex> hidden_state_change?(example_instance())
+      false
+      iex> hidden_state_change?(Features)
+      true
   """
   def hidden_state_change?(comp) do
     lst = comp |> effects() |> Keyword.get(:state_change, [])
@@ -95,190 +282,151 @@ defmodule Skitter.Component do
 
   A component has external effects if it provides the `external_effect` effect.
   A component with this effect specifies that the execution of
-  `c:__skitter_react__/2` may lead to side effects beyond the scope of the
-  component (e.g. I/O).
+  `react` may lead to side effects (e.g I/O).
 
-  When the execution of a component with this effect fails, the skitter runtime
-  will re-execute it by calling `c:__skitter_react_after_failure__/2`. This
-  makes it possible to clean up any external effects a previous, failed, call
-  may have had.
+  When the execution of a component instance with this effect fails, the
+  skitter runtime will re-execute `react` including its `after_failure` blocks.
+  This makes it possible to clean up any external effects a previous, failed
+  call to react (or react_after_failure) may have had.
+
+  ## Examples
+
+      iex> external_effect?(Identity)
+      false
+      iex> external_effect?(example_instance())
+      false
+      iex> external_effect?(Features)
+      true
   """
   def external_effect?(comp) do
     comp |> effects() |> Keyword.has_key?(:external_effect)
   end
 
-  @doc "Call the `c:__skitter_init__/1` callback of a component."
+  @doc """
+  Create a component instance.
+
+  Instantiate a component based on the component definition and initialization
+  arguments. The `args` value provided to this function will be passed to the
+  `init` function of the component.
+
+  ## Examples
+
+      iex> init(Identity, nil)
+      {:ok, %Skitter.Component.Instance{component: Identity, state: %Identity{}}}
+  """
   def init(comp, args), do: comp.__skitter_init__(args)
 
-  @doc "Call the `c:__skitter_terminate__/1` callback of a component."
-  def terminate(comp, inst), do: comp.__skitter_terminate__(inst)
+  @doc """
+  Ask a component instance to clean up its resources.
 
-  @doc "Call the `c:__skitter_checkpoint__/1` callback of a component."
-  def checkpoint(comp, inst), do: comp.__skitter_checkpoint__(inst)
+  This function will call the `terminate` function of the component instance.
+  The terminate function of the component is used by the component instance to
+  clean up any resources it may have opened.
+  ## Examples
 
-  @doc "Call the `c:__skitter_restore__/1` callback of a component."
-  def restore(comp, checkpoint), do: comp.__skitter_restore__(checkpoint)
-
-  @doc "Call the `c:__skitter_clean_checkpoint__/1` callback of a component."
-  def clean_checkpoint(comp, checkpoint) do
-    comp.__skitter_clean_checkpoint__(checkpoint)
+      iex> terminate(example_instance())
+      :ok
+      iex> terminate(Identity)
+      ** (FunctionClauseError) no function clause matching in Skitter.Component.terminate/1
+  """
+  def terminate(inst = %Instance{component: comp}) do
+    comp.__skitter_terminate__(inst)
   end
 
-  @doc "Call the `c:__skitter_react__/2` callback of a component."
-  def react(comp, inst, args), do: comp.__skitter_react__(inst, args)
+  @doc """
+  Make the component instance react to data.
 
-  @doc "Call the `c:__skitter_react_after_failure__/2` callback of a component."
-  def react_after_failure(comp, inst, args) do
+  This function will cause the react function of the component to be activated.
+  The arguments that should be passed to this react function should be wrapped
+  inside a list which will be automatically deconstructed by the react function.
+
+  ## Examples
+
+      iex> react(example_instance(), [20])
+      {:ok, nil, [value: 20]}
+  """
+  def react(inst = %Instance{component: comp}, args) do
+    comp.__skitter_react__(inst, args)
+  end
+
+  @doc """
+  Make the component instance react to incoming data after a previous attempt to
+  do so failed.
+
+  This function performs the same job as `react/2`. However, it will trigger any
+  code defined in an after failure block inside the component instance.
+
+  ## Examples
+
+      iex> react_after_failure(example_instance(), [20])
+      {:ok, nil, [value: 20]}
+  """
+  def react_after_failure(inst = %Instance{component: comp}, args) do
     comp.__skitter_react_after_failure__(inst, args)
   end
 
-  # ------------------- #
-  # Component Callbacks #
-  # ------------------- #
+  @doc """
+  Ask a component instance to create a checkpoint.
 
-  @typedoc "Internal representation of a component."
-  @type component :: module()
+  This will call the checkpoint function of the component instance. This
+  function should return a valid checkpoint which can be used to restore the
+  component instance if the component fails later.
 
-  @typedoc """
-  Skitter checkpoint representation.
+  ## Examples
 
-  Components are free to choose the exact representation of a checkpoint.
-  Therefore, a checkpoint is represented by the `any()` type.
+      iex> create_checkpoint(example_instance())
+      :nocheckpoint
+      iex> create_checkpoint(Identity)
+      ** (FunctionClauseError) no function clause matching in Skitter.Component.create_checkpoint/1
   """
-  @type checkpoint :: any()
-
-  @typedoc """
-  Component instance representation
-
-  Components are free to choose the exact representation of an instance.
-  Therefore, an instance is represented by the `any()` type.
-  """
-  @type instance :: String.t()
-
-  @typedoc """
-  Type of the "reason" added to an error.
-
-  The reason of an error should be represented as a string.
-  """
-  @type reason :: any()
+  def create_checkpoint(inst = %Instance{component: comp}) do
+    comp.__skitter_create_checkpoint__(inst)
+  end
 
   @doc """
-  Provide the metadata of the component.
+  Restore a component instance based on a checkpoint.
 
-  The required fields are specified in the documentation of the
-  `t:Skitter.Component.Metadata.t/0` type.
+  This function will create a new component instance and use the
+  `restore_checkpoint` function of that component to restore the state of that
+  instance based on a checkpoint.
+
+  ## Examples
+
+      iex> restore_checkpoint(Features, 10)
+      {:ok, %Skitter.Component.Instance{component: Features, state: %Features{f: 10}}}
   """
-  @callback __skitter_metadata__ :: Skitter.Component.Metadata.t()
+  def restore_checkpoint(comp, checkpoint),
+    do: comp.__skitter_restore_checkpoint__(checkpoint)
 
   @doc """
-  Initialize an instance of the component.
+    Remove an old checkpoint of a component instance.
 
-  This callback should return `{:ok, instance}`, where the instance can be used
-  by `c:__skitter_react__/2` to react to incoming data. If something goes
-  wrong, `{:error, reason}` can be returned instead. `reason` should be a
-  string, which will be returned to the user.
+    This function calls the `clean_checkpoint` function of a component instance.
+    This function is responsible for removing any resources associated with a
+    checkpoint which will not be used anymore.
 
-  This callback accepts a single argument. This argument contains user-provided
-  data which will contain the necessary parameters to initialize the component.
+  ## Examples
+
+      iex> {:ok, inst} = restore_checkpoint(Features, 10)
+      iex> clean_checkpoint(inst, 10)
+      :ok
+      iex> clean_checkpoint(Features, 10)
+      ** (FunctionClauseError) no function clause matching in Skitter.Component.clean_checkpoint/2
   """
-  @callback __skitter_init__(any()) :: {:ok, instance} | {:error, reason}
-
-  @doc """
-  Clean up resources associated with the instance of a component.
-
-  This callback is called by the skitter runtime before it shuts down a
-  component instance, which is passed to this callback as an argument.
-  This callback should clean up any resources associated with the component
-  instance.
-
-  If the callback is successful, it should return `:ok`, otherwise, return an
-  `{:error, reason}` tuple.
-  """
-  @callback __skitter_terminate__(instance) :: :ok | {:error, reason}
-
-  @doc """
-  Return a reference to a checkpoint of the internal state.
-
-  This callback is designed for components which manage their own internal
-  state. Other components should simply return `:nocheckpoint`.
-
-  Skitter automatically checkpoints the internal state which it receives from
-  the invocation of react. However, if a component manages its own state (as
-  specified by the `hidden` property of the `:state_change` effect), skitter
-  cannot access this data. Therefore, skitter can use this callback to
-  explicitly request a checkpoint to be made. In turn, this callback should
-  return a checkpoint which it can use to reconstruct the current internal
-  state later on.
-
-  This callback receives a component instance as an argument, and should return
-  `{:ok, checkpoint}` when successful.
-  """
-  @callback __skitter_checkpoint__(instance) ::
-              {:ok, checkpoint} | :nocheckpoint
-
-  @doc """
-  Reconstruct a component instance based on a checkpoint.
-
-  This callback is the counterpart of `__skitter_checkpoint__/1`, it takes a
-  checkpoint and recreates a component instance based on this checkpoint.
-  """
-  @callback __skitter_restore__(checkpoint) :: {:ok, instance} | :nocheckpoint
-
-  @doc """
-  Remove an old checkpoint.
-
-  This callback is called by the skitter runtime to indicate that a checkpoint,
-  created by `c:__skitter_checkpoint__/1`, is no longer needed.
-  This gives the component the ability to clean old checkpoint data when needed.
-  """
-  @callback __skitter_clean_checkpoint__(checkpoint) :: :ok | :nocheckpoint
-
-  @doc """
-  React to incoming data.
-
-  This callback is the bread and butter of a skitter component. It accepts
-  a component instance and a list of arguments. The instance is provided by
-  `__skitter_init__/1`, and the components are retrieved from the `in_ports`
-  of the component.
-
-  Use this callback to process any incoming data. When the processing is
-  successful, the component should return `{:ok, instance, kwlist}`.
-  `instance` represents the current instance of the component; if the component
-  has the `state_change` effect, this instance may be different from the
-  `instance` argument. The `kwlist` should be a keyword list which specifies
-  the value should be sent to the which output port.
-
-  If the execution fails, `{:error, reason}` can be returned.
-  """
-  @callback __skitter_react__(instance, []) ::
-              {:ok, instance, [keyword()]} | {:error, reason}
-
-  @doc """
-  React to incoming data after a failure.
-
-  The inner working of this callback is identical to `c:__skitter_react__/2`,
-  however, this callback is only called by the skitter runtime if a previous
-  call to `c:__skitter_react__/2` failed. Therefore, this callback can be used
-  to clean up any external effect which may have occurred during the call to
-  `c:__skitter_react__/2`.
-
-  This callback should be identical to `c:__skitter_react__/2` if the component
-  has no external effects.
-  """
-  @callback __skitter_react_after_failure__(instance, []) ::
-              {:ok, instance, [keyword()]} | {:error, reason}
+  def clean_checkpoint(inst = %Instance{component: comp}, checkpoint) do
+    comp.__skitter_clean_checkpoint__(inst, checkpoint)
+  end
 
   # ------ #
   # Macros #
   # ------ #
 
   @doc """
-  Shorthand for `Skitter.Component.DSL.component/3`
+  Create a component.
 
-  This macro simply requires the `Skitter.Component.DSL` module, and calls
-  `Skitter.Component.DSL.component/3` with the provided arguments.
-  Refer to the documentation of `Skitter.Component.DSL.component/3` for
-  additional information.
+  This macro is a shorthand for accessing the
+  `Skitter.Component.DSL.component/3` macro, which enables the creation of
+  skitter components.
   """
   defmacro component(name, ports, do: body) do
     quote do
