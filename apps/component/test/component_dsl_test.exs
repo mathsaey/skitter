@@ -339,11 +339,11 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if hygiene can be violated" do
     component Hygiene, in: [], out: p do
-      @compile :nowarn_unused_vars
-
       react do
         5 ~> p
         output = :foo
+        # Suppress unused variables warning
+        _ = output
       end
     end
 
