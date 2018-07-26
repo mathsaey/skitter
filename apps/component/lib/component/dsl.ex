@@ -797,7 +797,6 @@ defmodule Skitter.Component.DSL do
     if_occurrence(body, :skip) do
       body =
         Macro.postwalk(body, fn
-          {:skip, env, []} -> {:skip, env, [state, out]}
           {:skip, env, atom} when is_atom(atom) -> {:skip, env, [state, out]}
           any -> any
         end)
