@@ -1,6 +1,23 @@
 # Common imports
 import Skitter.Component
 
+component Average, in: val, out: current_average do
+  fields total, counter
+  effect state_change
+
+  init _ do
+    total <~ 0
+    counter <~ 0
+  end
+
+  react val do
+    total <~ total + val
+    counter <~ counter + 1
+
+    total / counter ~> current_average
+  end
+end
+
 # Debugging tools
 defmodule SkDebug do
   # Expand everything we encounter except `defmodule`, `def`, and `defp`
