@@ -61,7 +61,7 @@ defmodule Skitter.Workflow.DSL do
       validate_ports(body, __CALLER__)
 
       quote generated: true do
-        alias Skitter.Workflow.Primitive.Source
+        alias Skitter.Workflow.Source
         unquote(requires)
         unquote(body)
       end
