@@ -1,8 +1,11 @@
 defmodule Skitter.WorkflowDSLTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
+  import ExUnit.CaptureIO
 
   import Skitter.Workflow.DSL
   import Skitter.Component
+
+  alias Skitter.Workflow.Primitive.Source
 
   # ---------------- #
   # Extra Assertions #
@@ -14,12 +17,24 @@ defmodule Skitter.WorkflowDSLTest do
     end
   end
 
+  defmacro assert_warning(do: body) do
+    quote do
+      capture = capture_io(:stderr, fn -> unquote(body) end)
+      assert String.contains?(capture, "warning")
+    end
+  end
+
   # -------------- #
   # Test Component #
   # -------------- #
 
-  component Foo, in: [a, b, c], out: [d, e, f] do
-    react _a, _b, _c do
+  component NoPorts, in: [], out: [] do
+    react do
+    end
+  end
+
+  component Foo, in: [a, b], out: [c, d] do
+    react _a, _b do
     end
   end
 
@@ -30,44 +45,58 @@ defmodule Skitter.WorkflowDSLTest do
   doctest Skitter.Workflow.DSL
 
   test "if blocks and single statements are handled correctly" do
-    t1 = workflow(do: i1 = {Foo, nil})
+    t1 = workflow(do: i1 = {NoPorts, nil})
 
     t2 =
       workflow do
-        i1 = {Foo, nil}
-        i2 = {Foo, nil}
+        i1 = {NoPorts, nil}
+        i2 = {NoPorts, nil}
       end
 
-    assert t1 == [{0, Foo, nil, []}]
-    assert t2 == [{0, Foo, nil, []}, {1, Foo, nil, []}]
+    assert t1 == [{0, NoPorts, nil, []}]
+    assert t2 == [{0, NoPorts, nil, []}, {1, NoPorts, nil, []}]
   end
 
   test "if both triple and double element tuples are handled correctly" do
     t =
       workflow do
         double = {Foo, nil}
-        triple = {Foo, nil, e ~> double.a}
+        triple = {Source, nil, data ~> double.a, data ~> double.b}
       end
 
-    assert t == [{0, Foo, nil, []}, {1, Foo, nil, [e: [{0, :a}]]}]
+    assert t == [
+             {0, Foo, nil, []},
+             {1, Source, nil, [data: [{0, :a}, {0, :b}]]}
+           ]
   end
 
   test "if links and names are parsed correctly" do
     t =
       workflow do
-        i1 = {Foo, nil, d ~> i2.a, d ~> i2.b, e ~> i2.c}
-        i2 = {Foo, nil}
+        i1 = {Source, nil, data ~> i2.a, data ~> i2.b}
+        i2 = {Foo, nil, c ~> i3.a, d ~> i3.b}
+        i3 = {Foo, nil}
       end
 
     assert t == [
-             {0, Foo, nil, [d: [{1, :a}, {1, :b}], e: [{1, :c}]]},
-             {1, Foo, nil, []}
+             {0, Source, nil, [data: [{1, :a}, {1, :b}]]},
+             {1, Foo, nil, [c: [{2, :a}], d: [{2, :b}]]},
+             {2, Foo, nil, []}
            ]
   end
 
   test "if underscores are transformed correctly" do
-    t1 = workflow(do: i = {Foo, _})
-    t2 = workflow(do: i = {Foo, nil})
+    t1 =
+      workflow do
+        _ = {Source, _, data ~> i.a, data ~> i.b}
+        i = {Foo, _}
+      end
+
+    t2 =
+      workflow do
+        _ = {Source, _, data ~> i.a, data ~> i.b}
+        i = {Foo, nil}
+      end
 
     assert t1 == t2
   end
@@ -84,8 +113,8 @@ defmodule Skitter.WorkflowDSLTest do
   test "if duplicate names are reported" do
     assert_definition_error do
       workflow do
-        i = {Foo, nil}
-        i = {Foo, nil}
+        i = {NoPorts, nil}
+        i = {NoPorts, nil}
       end
     end
   end
@@ -93,12 +122,12 @@ defmodule Skitter.WorkflowDSLTest do
   test "if links to unknown names are reported" do
     assert_definition_error do
       workflow do
-        i = {Foo, nil, d ~> does_not_exist.a}
+        i = {Foo, nil, c ~> does_not_exist.a}
       end
     end
   end
 
-  test "if links to wrong ports are reported" do
+  test "if links to wrong in ports are reported" do
     assert_definition_error do
       workflow do
         i1 = {Foo, nil, d ~> i2.does_not_exist}
@@ -126,6 +155,15 @@ defmodule Skitter.WorkflowDSLTest do
     assert_definition_error do
       workflow do
         i = {Enum, nil}
+      end
+    end
+  end
+
+  test "if warnings are produced when in ports are not connected" do
+    assert_warning do
+      workflow do
+        _ = {Source, _, data ~> i.a}
+        i = {Foo, _}
       end
     end
   end
