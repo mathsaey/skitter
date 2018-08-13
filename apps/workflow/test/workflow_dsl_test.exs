@@ -107,7 +107,16 @@ defmodule Skitter.WorkflowDSLTest do
     end
   end
 
-  test "if incorrect componets are reported" do
+  test "if links to wrong out ports are reported" do
+    assert_definition_error do
+      workflow do
+        i1 = {Foo, nil, does_not_exist ~> i2.a}
+        i2 = {Foo, nil}
+      end
+    end
+  end
+
+  test "if incorrect components are reported" do
     assert_definition_error do
       workflow do
         i = {DoesNotExist, nil}
