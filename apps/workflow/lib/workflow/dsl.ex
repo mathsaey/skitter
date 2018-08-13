@@ -84,6 +84,9 @@ defmodule Skitter.Workflow.DSL do
       {:error, :invalid_port, type, port, cmp} ->
         type = Atom.to_string(type)
         inject_error "`#{port}` is not a valid #{type} port of `#{cmp}`"
+
+      {:error, :unused_port, _} ->
+        inject_warning("Unused in ports present in workflow")
     end
   end
 
@@ -262,23 +265,39 @@ defmodule Skitter.Workflow.DSL do
     end)
   end
 
-  # Ensure the destination port is an in port of the component it's linking to
+  # Ensure the destination port of every link exists, and ensure each in port is
+  # connected to an out port.
   defp validate_in_ports(body, env) do
+    # Gather a map with all components and their id's
     binds =
-      Enum.reduce(body, Map.new(), fn {:{}, _env, [id, cmp, _init, _links]},
-                                      acc ->
+      Enum.reduce(body, Map.new(), fn {:{}, _env, [id, cmp, _i, _l]}, acc ->
         cmp = Macro.expand(cmp, env)
         Map.put(acc, id, cmp)
       end)
 
-    Enum.map(body, fn {:{}, _env, [_id, _cmp, _init, links]} ->
-      Enum.map(links, fn {_, lst} ->
-        Enum.map(lst, fn {id, port} ->
-          unless port in in_ports(binds[id]) do
-            throw {:error, :invalid_port, :in, port, binds[id]}
-          end
-        end)
+    # Gather a list with all connections
+    links =
+      Enum.flat_map(body, fn {:{}, _env, [_id, _cmp, _init, links]} ->
+        Enum.flat_map(links, fn {_, lst} -> lst end)
       end)
+
+    # Verify if all in ports exist
+    Enum.map(links, fn {id, port} ->
+      unless port in in_ports(binds[id]) do
+        throw {:error, :invalid_port, :in, port, binds[id]}
+      end
     end)
+
+    # Make a list with all usable in ports
+    usable =
+      Enum.flat_map(Map.to_list(binds), fn {id, cmp} ->
+        Enum.map(in_ports(cmp), fn port -> {id, port} end)
+      end)
+
+    diff = MapSet.difference(MapSet.new(usable), MapSet.new(links))
+
+    unless MapSet.size(diff) == 0 do
+      throw {:error, :unused_port, MapSet.to_list(diff)}
+    end
   end
 end
