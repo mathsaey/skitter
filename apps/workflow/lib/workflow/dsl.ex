@@ -47,23 +47,20 @@ defmodule Skitter.Workflow.DSL do
   """
   defmacro workflow(do: body) do
     try do
-      body =
+      workflow =
         body
         |> transform_block_to_list()
         |> transform_assigns!()
         |> transform_links()
         |> transform_underscores()
-        |> transform_binds!()
+        |> transform_to_map(__CALLER__)
 
-      requires = body |> extract_modules() |> build_requires()
-
-      validate_components(body, __CALLER__)
-      validate_ports(body, __CALLER__)
+      validate_components(workflow)
+      validate_ports(workflow)
 
       quote generated: true do
         alias Skitter.Workflow.Source
-        unquote(requires)
-        unquote(body)
+        unquote(Macro.escape(workflow))
       end
     catch
       {:error, :invalid_syntax, other} ->
@@ -159,71 +156,12 @@ defmodule Skitter.Workflow.DSL do
     end)
   end
 
-  # Replace all component instance names, and any references to them with
-  # indices.
-  defp transform_binds!(body) do
-    {body, binds} = bind!(body)
-    resolve!(body, binds)
-  end
-
-  # Replace all component instance names with an index, return the new AST,
-  # alongside a map which contains the bindings between names and indices.
-  defp bind!(body) do
-    {body, binds} =
-      body
-      |> Enum.with_index()
-      |> Enum.map(fn {{:{}, env, [name, mod, init, links]}, idx} ->
-        {{:{}, env, [idx, mod, init, links]}, {name, idx}}
+  # Transform the AST into a map of component instances
+  defp transform_to_map(body, env) do
+    Enum.reduce(body, Map.new(), fn {:{}, _e, [id, mod, init, links]}, map ->
+      Map.update(map, id, {Macro.expand(mod, env), init, links}, fn _ ->
+        throw({:error, :duplicate_name, id})
       end)
-      |> Enum.unzip()
-
-    binds =
-      Enum.reduce(binds, Map.new(), fn {name, idx}, map ->
-        Map.update(map, name, idx, fn _ ->
-          throw({:error, :duplicate_name, name})
-        end)
-      end)
-
-    {body, binds}
-  end
-
-  # Replace all references to component instance names with indices.
-  defp resolve!(body, binds) do
-    Enum.map(body, fn {:{}, env, [name, mod, init, links]} ->
-      links = resolve_links!(links, binds)
-      {:{}, env, [name, mod, init, links]}
-    end)
-  end
-
-  # Same as `resolve`, but for a specific list of links
-  defp resolve_links!(links, binds) do
-    Enum.map(links, fn {out_port, lst} ->
-      {
-        out_port,
-        Enum.map(lst, fn {name, port} -> {resolve_link!(name, binds), port} end)
-      }
-    end)
-  end
-
-  # Same as `resolve`, but for a specific link
-  defp resolve_link!(name, binds) do
-    Map.get_lazy(binds, name, fn -> throw({:error, :unknown_name, name}) end)
-  end
-
-  # Extract all the module names
-  defp extract_modules(body) do
-    Enum.reduce(body, MapSet.new(), fn {:{}, _env, [_name, mod, _init, _links]},
-                                       acc ->
-      MapSet.put(acc, mod)
-    end)
-  end
-
-  # Generate `require` statements for a list of (quoted) modules
-  defp build_requires(modules) do
-    Enum.map(modules, fn mod ->
-      quote do
-        require unquote(mod)
-      end
     end)
   end
 
@@ -232,31 +170,27 @@ defmodule Skitter.Workflow.DSL do
   # ---------- #
 
   # Ensure the provided modules exist and are a skitter component
-  defp validate_components(body, env) do
-    Enum.map(body, fn {:{}, _env, [_id, mod, _init, _links]} ->
-      mod = Macro.expand(mod, env)
-
-      unless Code.ensure_loaded?(mod) do
-        throw {:error, :unknown_module, mod}
+  defp validate_components(workflow) do
+    Enum.map(Map.values(workflow), fn {cmp, _init, _links} ->
+      unless Code.ensure_loaded?(cmp) do
+        throw {:error, :unknown_module, cmp}
       end
 
-      unless is_component?(mod) do
-        throw {:error, :no_component, mod}
+      unless is_component?(cmp) do
+        throw {:error, :no_component, cmp}
       end
     end)
   end
 
   # Ensure all the used ports are valid
-  defp validate_ports(body, env) do
-    validate_out_ports(body, env)
-    validate_in_ports(body, env)
+  defp validate_ports(workflow) do
+    validate_out_ports(workflow)
+    validate_in_ports(workflow)
   end
 
   # Ensure the source port is an out port of the component it's linking from
-  defp validate_out_ports(body, env) do
-    Enum.map(body, fn {:{}, _env, [_id, cmp, _init, links]} ->
-      cmp = Macro.expand(cmp, env)
-
+  defp validate_out_ports(workflow) do
+    Enum.map(Map.values(workflow), fn {cmp, _, links} ->
       Enum.map(links, fn {out, _} ->
         unless out in out_ports(cmp) do
           throw {:error, :invalid_port, :out, out, cmp}
@@ -267,30 +201,30 @@ defmodule Skitter.Workflow.DSL do
 
   # Ensure the destination port of every link exists, and ensure each in port is
   # connected to an out port.
-  defp validate_in_ports(body, env) do
-    # Gather a map with all components and their id's
-    binds =
-      Enum.reduce(body, Map.new(), fn {:{}, _env, [id, cmp, _i, _l]}, acc ->
-        cmp = Macro.expand(cmp, env)
-        Map.put(acc, id, cmp)
-      end)
-
+  defp validate_in_ports(workflow) do
     # Gather a list with all connections
     links =
-      Enum.flat_map(body, fn {:{}, _env, [_id, _cmp, _init, links]} ->
+      Enum.flat_map(Map.values(workflow), fn {_cmp, _init, links} ->
         Enum.flat_map(links, fn {_, lst} -> lst end)
       end)
 
     # Verify if all in ports exist
     Enum.map(links, fn {id, port} ->
-      unless port in in_ports(binds[id]) do
-        throw {:error, :invalid_port, :in, port, binds[id]}
+      unless Map.has_key?(workflow, id) do
+        throw({:error, :unknown_name, id})
+      end
+
+      {cmp, _init, _links} = workflow[id]
+
+      unless port in in_ports(cmp) do
+        throw {:error, :invalid_port, :in, port, cmp}
       end
     end)
 
     # Make a list with all usable in ports
     usable =
-      Enum.flat_map(Map.to_list(binds), fn {id, cmp} ->
+      Enum.flat_map(Map.keys(workflow), fn id ->
+        {cmp, _init, _links} = workflow[id]
         Enum.map(in_ports(cmp), fn port -> {id, port} end)
       end)
 

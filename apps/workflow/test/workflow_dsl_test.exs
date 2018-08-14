@@ -1,5 +1,5 @@
 defmodule Skitter.WorkflowDSLTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import Skitter.Workflow.DSL
   import Skitter.Component
@@ -52,8 +52,8 @@ defmodule Skitter.WorkflowDSLTest do
         i2 = {NoPorts, nil}
       end
 
-    assert t1 == [{0, NoPorts, nil, []}]
-    assert t2 == [{0, NoPorts, nil, []}, {1, NoPorts, nil, []}]
+    assert t1 == %{i1: {NoPorts, nil, []}}
+    assert t2 == %{i1: {NoPorts, nil, []}, i2: {NoPorts, nil, []}}
   end
 
   test "if both triple and double element tuples are handled correctly" do
@@ -63,10 +63,10 @@ defmodule Skitter.WorkflowDSLTest do
         triple = {Source, nil, data ~> double.a, data ~> double.b}
       end
 
-    assert t == [
-             {0, Foo, nil, []},
-             {1, Source, nil, [data: [{0, :a}, {0, :b}]]}
-           ]
+    assert t == %{
+             double: {Foo, nil, []},
+             triple: {Source, nil, [data: [{:double, :a}, {:double, :b}]]}
+           }
   end
 
   test "if links and names are parsed correctly" do
@@ -77,11 +77,11 @@ defmodule Skitter.WorkflowDSLTest do
         i3 = {Foo, nil}
       end
 
-    assert t == [
-             {0, Source, nil, [data: [{1, :a}, {1, :b}]]},
-             {1, Foo, nil, [c: [{2, :a}], d: [{2, :b}]]},
-             {2, Foo, nil, []}
-           ]
+    assert t == %{
+             i1: {Source, nil, [data: [{:i2, :a}, {:i2, :b}]]},
+             i2: {Foo, nil, [c: [{:i3, :a}], d: [{:i3, :b}]]},
+             i3: {Foo, nil, []}
+           }
   end
 
   test "if underscores are transformed correctly" do
