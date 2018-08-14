@@ -59,7 +59,7 @@ defmodule Skitter.Workflow.DSL do
       validate_ports(workflow)
 
       quote generated: true do
-        alias Skitter.Workflow.Source
+        alias Skitter.Source
         unquote(Macro.escape(workflow))
       end
     catch

@@ -4,7 +4,7 @@ defmodule Skitter.WorkflowDSLTest do
   import Skitter.Workflow.DSL
   import Skitter.Component
 
-  alias Skitter.Workflow.Source
+  alias Skitter.Source
 
   # ---------------- #
   # Extra Assertions #
