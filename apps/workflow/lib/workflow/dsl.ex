@@ -86,7 +86,7 @@ defmodule Skitter.Workflow.DSL do
         inject_error "`#{port}` is not a valid #{type} port of `#{cmp}`"
 
       {:error, :unused_port, _} ->
-        inject_warning("Unused in ports present in workflow")
+        inject_error("Unused in ports present in workflow")
     end
   end
 

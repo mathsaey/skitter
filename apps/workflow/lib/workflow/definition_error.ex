@@ -15,15 +15,4 @@ defmodule Skitter.Workflow.DefinitionError do
       raise Skitter.Workflow.DefinitionError, unquote(reason)
     end
   end
-
-  @doc """
-  Return a quoted IO.warn statement which can be injected by a macro.
-
-  When activated, the statement will issues a warning with `reason` and `trace`.
-  """
-  def inject_warning(reason) do
-    quote do
-      IO.warn(unquote(reason))
-    end
-  end
 end

@@ -1,6 +1,5 @@
 defmodule Skitter.WorkflowDSLTest do
   use ExUnit.Case, async: false
-  import ExUnit.CaptureIO
 
   import Skitter.Workflow.DSL
   import Skitter.Component
@@ -11,16 +10,16 @@ defmodule Skitter.WorkflowDSLTest do
   # Extra Assertions #
   # ---------------- #
 
-  defmacro assert_definition_error(do: body) do
+  defmacro assert_definition_error(
+             msg \\ quote do
+               ~r/.*/
+             end,
+             do: body
+           ) do
     quote do
-      assert_raise Skitter.Workflow.DefinitionError, fn -> unquote(body) end
-    end
-  end
-
-  defmacro assert_warning(do: body) do
-    quote do
-      capture = capture_io(:stderr, fn -> unquote(body) end)
-      assert String.contains?(capture, "warning")
+      assert_raise Skitter.Workflow.DefinitionError, unquote(msg), fn ->
+        unquote(body)
+      end
     end
   end
 
@@ -105,13 +104,13 @@ defmodule Skitter.WorkflowDSLTest do
   # ---------------
 
   test "if incorrect syntax is reported" do
-    assert_definition_error do
-      workflow(do: {Foo, nil})
+    assert_definition_error ~r/Invalid workflow syntax: .*/ do
+      workflow(do: {Source, nil})
     end
   end
 
   test "if duplicate names are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/Duplicate component instance name: .*/ do
       workflow do
         i = {NoPorts, nil}
         i = {NoPorts, nil}
@@ -120,16 +119,20 @@ defmodule Skitter.WorkflowDSLTest do
   end
 
   test "if links to unknown names are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/Unknown component instance name: .*/ do
       workflow do
+        _ = {Source, nil, data ~> i.a, data ~> i.b}
         i = {Foo, nil, c ~> does_not_exist.a}
       end
     end
   end
 
   test "if links to wrong in ports are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/`.*` is not a valid in port of `.*`/ do
       workflow do
+        _ =
+          {Source, nil, data ~> i1.a, data ~> i1.b, data ~> i2.a, data ~> i2.b}
+
         i1 = {Foo, nil, d ~> i2.does_not_exist}
         i2 = {Foo, nil}
       end
@@ -137,8 +140,11 @@ defmodule Skitter.WorkflowDSLTest do
   end
 
   test "if links to wrong out ports are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/`.*` is not a valid out port of `.*`/ do
       workflow do
+        _ =
+          {Source, nil, data ~> i1.a, data ~> i1.b, data ~> i2.a, data ~> i2.b}
+
         i1 = {Foo, nil, does_not_exist ~> i2.a}
         i2 = {Foo, nil}
       end
@@ -146,21 +152,23 @@ defmodule Skitter.WorkflowDSLTest do
   end
 
   test "if incorrect components are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/`.*` does not exist or is not loaded/ do
       workflow do
+        _ = {Source, nil}
         i = {DoesNotExist, nil}
       end
     end
 
-    assert_definition_error do
+    assert_definition_error ~r/`.*` is not a valid skitter component/ do
       workflow do
+        _ = {Source, nil}
         i = {Enum, nil}
       end
     end
   end
 
-  test "if warnings are produced when in ports are not connected" do
-    assert_warning do
+  test "if unconnected in ports are reported" do
+    assert_definition_error "Unused in ports present in workflow" do
       workflow do
         _ = {Source, _, data ~> i.a}
         i = {Foo, _}
