@@ -229,7 +229,8 @@ defmodule Skitter.Component.DSL do
       fields: fields,
       effects: effects,
       in_ports: in_ports,
-      out_ports: out_ports
+      out_ports: out_ports,
+      in_ports_size: length(in_ports)
     }
 
     # Create metadata struct
