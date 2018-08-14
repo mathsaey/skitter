@@ -1,5 +1,6 @@
 # Common imports
 import Skitter.Component
+import Skitter.Workflow.DSL
 
 component Average, in: val, out: current_average do
   fields total, counter
