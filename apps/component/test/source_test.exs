@@ -4,15 +4,9 @@ defmodule Skitter.SourceTest do
   import Skitter.Component
   alias Skitter.Source
 
-  test "Use the state struct to make exunit coverage happy" do
-    _ = %Skitter.Source{}
-  end
-
   test "if metadata is generated correctly" do
-    assert is_component?(Source)
-    assert name(Source) == "Source"
     assert effects(Source) == []
-    assert in_ports(Source) == []
+    assert in_ports(Source) == [:__PRIVATE__]
     assert out_ports(Source) == [:data]
     assert in_ports_size(Source) == 1
   end

@@ -225,7 +225,11 @@ defmodule Skitter.Workflow.DSL do
     usable =
       Enum.flat_map(Map.keys(workflow), fn id ->
         {cmp, _init, _links} = workflow[id]
-        Enum.map(in_ports(cmp), fn port -> {id, port} end)
+
+        case cmp do
+          Skitter.Source -> []
+          _ -> Enum.map(in_ports(cmp), fn port -> {id, port} end)
+        end
       end)
 
     diff = MapSet.difference(MapSet.new(usable), MapSet.new(links))
