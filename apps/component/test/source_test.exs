@@ -8,7 +8,6 @@ defmodule Skitter.SourceTest do
     assert effects(Source) == []
     assert in_ports(Source) == [:__PRIVATE__]
     assert out_ports(Source) == [:data]
-    assert in_ports_size(Source) == 1
   end
 
   test "if init, react, and terminate work as they should" do

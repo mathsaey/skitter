@@ -189,21 +189,6 @@ defmodule Skitter.Component do
   def in_ports(comp), do: comp.__skitter_metadata__.in_ports
 
   @doc """
-  Get the amount of in ports a component (instance) has
-
-  ## Examples
-
-      iex> in_ports_size(Identity)
-      1
-      iex> in_ports_size(example_instance())
-      1
-      iex> in_ports_size(Features)
-      2
-  """
-  def in_ports_size(%Instance{component: comp}), do: in_ports_size(comp)
-  def in_ports_size(comp), do: comp.__skitter_metadata__.in_ports_size
-
-  @doc """
   Get the out ports of a component (instance)
 
   The ports of a component are used to connect a component instance to other
