@@ -14,9 +14,9 @@ defmodule Skitter.MixProject do
     [
       # Dev tools
       {:distillery, "~> 2.0", runtime: false},
-      {:ex_doc, "~> 0.16", only: :dev, runtime: false},
-      {:credo, "~> 0.9.1", only: [:dev], runtime: false},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
+      {:ex_doc, "~> 0.19.0", only: :dev, runtime: false},
+      {:credo, "~> 0.10.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 0.5", only: :dev, runtime: false}
     ]
   end
 end
