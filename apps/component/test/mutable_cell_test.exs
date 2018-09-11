@@ -16,4 +16,15 @@ defmodule Skitter.Internal.MutableCellTest do
 
     assert catch_error(read(cell, :foo))
   end
+
+  test "if tables are converted to keyword lists correctly" do
+    cell = create()
+
+    assert to_keyword_list(cell) == []
+
+    write(cell, :foo, 42)
+    write(cell, :bar, "test")
+
+    assert to_keyword_list(cell) == [foo: 42, bar: "test"]
+  end
 end

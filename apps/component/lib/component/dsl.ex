@@ -624,7 +624,11 @@ defmodule Skitter.Component.DSL do
     var = skitter_var(@output_var)
 
     quote do
-      unquote(var) = Keyword.put(unquote(var), unquote(port), unquote(value))
+      Skitter.Internal.MutableCell.write(
+        unquote(var),
+        unquote(port),
+        unquote(value)
+      )
     end
   end
 
@@ -760,10 +764,14 @@ defmodule Skitter.Component.DSL do
     if_occurrence(body, :~>) do
       {
         quote do
-          unquote(skitter_var(@output_var)) = []
+          alias Skitter.Internal.MutableCell
+          unquote(skitter_var(@output_var)) = MutableCell.create()
         end,
         quote do
-          unquote(skitter_var(@output_var))
+          alias Skitter.Internal.MutableCell
+          res = MutableCell.to_keyword_list(unquote(skitter_var(@output_var)))
+          MutableCell.destroy(unquote(skitter_var(@output_var)))
+          res
         end
       }
     else

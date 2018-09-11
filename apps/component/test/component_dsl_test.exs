@@ -360,7 +360,40 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert CaseSpit.__skitter_react__(nil, [10]) == {:ok, nil, [gt: 5]}
+    assert CaseSpit.__skitter_react__(nil, [10]) == {:ok, nil, [gt: 10]}
+
+    component CaseState, in: val do
+      effect state_change
+      fields my_field
+
+      init _ do
+        my_field <~ nil
+      end
+
+      react val do
+        case val do
+          :update ->
+            my_field <~ val
+
+          _ ->
+            nil
+        end
+      end
+    end
+
+    defmodule CaseState do
+      {:ok, inst} = CaseState.__skitter_init__(nil)
+      assert CaseState.__skiter_react__(inst, [:foo]) == {:ok, inst, []}
+
+      assert CaseState.__skiter_react__(inst, [:update]) == {
+               :ok,
+               %Instance{
+                 component: CaseState,
+                 state: %CaseState{my_field: :update}
+               },
+               []
+             }
+    end
   end
 
   # Error Reporting
