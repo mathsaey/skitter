@@ -350,8 +350,8 @@ defmodule Skitter.ComponentDSLTest do
     assert Hygiene.__skitter_react__(nil, []) == {:ok, nil, [p: 5]}
   end
 
-  test "if a warning is shown when modifying names inside catch/if/..." do
-    component CaseComp, in: val, out: [gt, lt] do
+  test "If imperative spiting/updating is possible" do
+    component CaseSpit, in: val, out: [gt, lt] do
       react val do
         case val do
           x when x > 5 -> x ~> gt
@@ -359,6 +359,8 @@ defmodule Skitter.ComponentDSLTest do
         end
       end
     end
+
+    assert CaseSpit.__skitter_react__(nil, [10]) == {:ok, nil, [gt: 5]}
   end
 
   # Error Reporting
