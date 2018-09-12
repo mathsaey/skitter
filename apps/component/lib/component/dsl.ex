@@ -1049,9 +1049,46 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # ------------- #
-  # Shared Macros #
-  # ------------- #
+  # ----------- #
+  # Shared Code #
+  # ----------- #
+
+  # Error Handling
+  # --------------
+
+  @doc """
+  Stop the current callback and return with an error.
+
+  A reason should be provided as a string. In certain contexts (e.g. `init/3`),
+  the use of this macro will crash the entire workflow. Any spits or state
+  updates that may have occurred prior to the invocation of this macro will be
+  lost.
+  """
+  defmacro error(reason) do
+    quote do
+      throw {:skitter_error, unquote(reason)}
+    end
+  end
+
+  # Wrap a body with try/do if the `error/1` macro is used.
+  defp add_skitter_error_handler(body) do
+    if_occurrence(body, :error) do
+      quote do
+        try do
+          unquote(body)
+        catch
+          {:skitter_error, reason} -> {:error, reason}
+        end
+      end
+    else
+      quote do
+        unquote(body)
+      end
+    end
+  end
+
+  # Field reading / writing
+  # -----------------------
 
   @doc false
   defmacro read_field(field) do
@@ -1074,47 +1111,6 @@ defmodule Skitter.Component.DSL do
               unquote(value)
             )
       }
-    end
-  end
-
-  @doc """
-  Stop the current callback and return with an error.
-
-  A reason should be provided as a string. In certain contexts (e.g. `init/3`),
-  the use of this macro will crash the entire workflow. Any spits or state
-  updates that may have occurred prior to the invocation of this macro will be
-  lost.
-  """
-  defmacro error(reason) do
-    quote do
-      throw {:skitter_error, unquote(reason)}
-    end
-  end
-
-  # --------- #
-  # Utilities #
-  # --------- #
-
-  # Transform a port name (which is just a standard elixir name) into  a symbol
-  # e.g foo becomes :foo
-  # If the name is ill-formed, return an {:error, form} pair.
-  defp name_to_symbol({name, _env, nil}), do: name
-  defp name_to_symbol(any), do: {:error, any}
-
-  # Wrap a body with try/do if the `error/1` macro is used.
-  defp add_skitter_error_handler(body) do
-    if_occurrence(body, :error) do
-      quote do
-        try do
-          unquote(body)
-        catch
-          {:skitter_error, reason} -> {:error, reason}
-        end
-      end
-    else
-      quote do
-        unquote(body)
-      end
     end
   end
 
@@ -1148,6 +1144,15 @@ defmodule Skitter.Component.DSL do
         any
     end)
   end
+
+  # Utilities
+  # ---------
+
+  # Transform a port name (which is just a standard elixir name) into  a symbol
+  # e.g foo becomes :foo
+  # If the name is ill-formed, return an {:error, form} pair.
+  defp name_to_symbol({name, _env, nil}), do: name
+  defp name_to_symbol(any), do: {:error, any}
 
   # Generate a variable which can only be accessed by skitter macros.
   defp skitter_var(name) do
