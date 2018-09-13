@@ -133,6 +133,7 @@ defmodule Skitter.Component.DSL do
   @default_callbacks List.delete(@component_functions, :react)
 
   # Names of skitter variables which are injected into the user code
+  @state_var :state
   @output_var :output
   @instance_var :instance
 
@@ -210,66 +211,68 @@ defmodule Skitter.Component.DSL do
   ```
   """
   defmacro component(name, ports, do: body) do
-    # Get metadata from header
-    full_name = module_name_to_snake_case(Macro.expand(name, __CALLER__))
-    {in_ports, out_ports} = read_ports(ports)
+    try do
+      # Get metadata from header
+      full_name = module_name_to_snake_case(Macro.expand(name, __CALLER__))
+      {in_ports, out_ports} = read_ports(ports)
 
-    # Extract metadata from body AST
-    {body, desc} = extract_description(body)
-    {body, fields} = extract_fields(body)
-    {body, effects} = extract_effects(body)
+      # Extract metadata from body AST
+      {body, desc} = extract_description(body)
+      {body, fields} = extract_fields(body)
+      {body, effects} = extract_effects(body)
 
-    # Generate moduledoc based on description
-    moduledoc = generate_moduledoc(desc)
+      # Generate moduledoc based on description
+      moduledoc = generate_moduledoc(desc)
 
-    # Gather metadata
-    internal_metadata = %{
-      name: full_name,
-      description: desc,
-      fields: fields,
-      effects: effects,
-      in_ports: in_ports,
-      out_ports: out_ports
-    }
+      # Gather metadata
+      internal_metadata = %{
+        name: full_name,
+        description: desc,
+        fields: fields,
+        effects: effects,
+        in_ports: in_ports,
+        out_ports: out_ports
+      }
 
-    # Create metadata struct
-    component_metadata = struct(Skitter.Component.Metadata, internal_metadata)
+      # Create metadata struct
+      component_metadata = struct(Skitter.Component.Metadata, internal_metadata)
 
-    # Transform macro calls inside body AST
-    # body = transform_component_callbacks(body, internal_metadata)
-    body = body |> transform_helpers() |> transform_functions(internal_metadata)
+      # Transform macro calls inside body AST
+      # body = transform_component_callbacks(body, internal_metadata)
+      body =
+        body |> transform_helpers() |> transform_functions(internal_metadata)
 
-    # Add default callbacks
-    defaults = generate_default_callbacks(body, internal_metadata)
+      # Add default callbacks
+      defaults = generate_default_callbacks(body, internal_metadata)
 
-    # Check for errors
-    errors = check_component_body(body, internal_metadata)
+      # Check for errors
+      check_component_body(body, internal_metadata)
 
-    quote do
-      defmodule unquote(name) do
-        @behaviour unquote(Skitter.Component.Behaviour)
-        @moduledoc unquote(moduledoc)
+      quote do
+        defmodule unquote(name) do
+          @behaviour unquote(Skitter.Component.Behaviour)
+          @moduledoc unquote(moduledoc)
 
-        import unquote(Skitter.Component), only: []
+          import unquote(__MODULE__),
+            only: [
+              react: 3,
+              init: 3,
+              terminate: 3,
+              create_checkpoint: 3,
+              restore_checkpoint: 3,
+              clean_checkpoint: 3
+            ]
 
-        import unquote(__MODULE__),
-          only: [
-            react: 3,
-            init: 3,
-            terminate: 3,
-            create_checkpoint: 3,
-            restore_checkpoint: 3,
-            clean_checkpoint: 3
-          ]
+          unquote(body)
+          unquote(defaults)
 
-        unquote(errors)
-        defstruct unquote(fields)
-
-        unquote(body)
-        unquote(defaults)
-
-        def __skitter_metadata__, do: unquote(Macro.escape(component_metadata))
+          def __skitter_metadata__ do
+            unquote(Macro.escape(component_metadata))
+          end
+        end
       end
+    catch
+      err -> handle_error(err)
     end
   end
 
@@ -319,13 +322,13 @@ defmodule Skitter.Component.DSL do
         fields =
           Enum.map(fields, fn
             {name, _env, atom} when is_atom(atom) -> name
-            any -> {:error, any}
+            any -> throw {:error, :component, :invalid_field, any}
           end)
 
         {nil, fields}
 
       {:fields, _env, _args}, _fields ->
-        {nil, :error}
+        throw {:error, :component, :duplicate_fields}
 
       any, acc ->
         {any, acc}
@@ -347,7 +350,7 @@ defmodule Skitter.Component.DSL do
         properties =
           Enum.map(properties, fn
             {name, _env, _args} -> name
-            any -> {:error, any}
+            any -> throw {:error, :component, :invalid_property, any}
           end)
 
         {nil, Keyword.put(acc, effect, properties)}
@@ -400,25 +403,10 @@ defmodule Skitter.Component.DSL do
 
   defp check_component_body(body, meta) do
     [
-      check_fields(meta),
       check_effects(meta),
       check_react(body, meta),
-      check_checkpoint(body, meta),
-      check_port_names(meta.in_ports),
-      check_port_names(meta.out_ports)
+      check_checkpoint(body, meta)
     ]
-  end
-
-  # Ensure all ports are valid.
-  # Errors are already flagged by the port names parser, just extract them here.
-  defp check_port_names(list) do
-    case Enum.find(list, &match?({:error, _}, &1)) do
-      {:error, val} ->
-        inject_error "`#{val}` is not a valid port"
-
-      nil ->
-        nil
-    end
   end
 
   # Check if the specified effects are valid.
@@ -430,38 +418,18 @@ defmodule Skitter.Component.DSL do
         nil
       else
         nil ->
-          inject_error "Effect `#{effect}` is not valid"
-
-        [{:error, prop} | _] ->
-          inject_error "`#{prop}` is not a valid property"
+          throw {:error, :component, :invalid_effect, effect}
 
         [prop | _] ->
-          inject_error "`#{prop}` is not a valid property of `#{effect}`"
+          throw {:error, :component, :invalid_effect_property, prop, effect}
       end
     end
   end
 
-  # Handle the errors returned by `extract_fields/1`
-  defp check_fields(metadata) do
-    case metadata.fields do
-      nil ->
-        nil
-
-      :error ->
-        inject_error "Fields can only be defined once."
-
-      lst when is_list(lst) ->
-        Enum.map(lst, fn
-          {:error, any} -> inject_error "`#{any}` is not a valid field"
-          _ -> nil
-        end)
-    end
-  end
-
   # Ensure react is present in the component
-  defp check_react(body, meta) do
-    unless_occurrence(body, :react) do
-      inject_error "Component `#{meta.name}` lacks a react implementation"
+  defp check_react(body, _meta) do
+    if count_occurrences(body, :react) == 0 do
+      throw {:error, :component, :no_react}
     end
   end
 
@@ -472,24 +440,16 @@ defmodule Skitter.Component.DSL do
     cp_present = count_occurrences(body, :create_checkpoint) >= 1
     rt_present = count_occurrences(body, :restore_checkpoint) >= 1
     cl_present = count_occurrences(body, :clean_checkpoint) >= 1
-    either_present = cp_present or rt_present or cl_present
-    both_present = cp_present and rt_present
 
-    case {required, either_present, both_present} do
-      {true, _, true} ->
-        nil
+    any_present = cp_present or rt_present or cl_present
+    all_present = cp_present and rt_present and cl_present
 
-      {false, false, _} ->
-        nil
+    if required and not all_present do
+      throw {:error, :component, :no_checkpoint}
+    end
 
-      {true, _, false} ->
-        inject_error "`create_checkpoint` and `restore_checkpoint` are " <>
-                       "required when the state change is hidden"
-
-      {false, true, _} ->
-        inject_error "`create_checkpoint`, `restore_checkpoint` and " <>
-                       "`clean_checkpoint` are only allowed when the state " <>
-                       "change is hidden"
+    if any_present and not required do
+      throw {:error, :component, :wrong_checkpoint}
     end
   end
 
@@ -505,7 +465,7 @@ defmodule Skitter.Component.DSL do
       terminate: &default_terminate/1,
       create_checkpoint: &default_create_checkpoint/1,
       restore_checkpoint: &default_restore_checkpoint/1,
-      clean_checkpoint: &defaul_clean_checkpoint/1
+      clean_checkpoint: &default_clean_checkpoint/1
     }
 
     Enum.map(@default_callbacks, fn name ->
@@ -513,10 +473,10 @@ defmodule Skitter.Component.DSL do
     end)
   end
 
-  defp default_init(_) do
+  defp default_init(meta) do
     quote do
       def __skitter_init__(_) do
-        {:ok, unquote(create_instance())}
+        {:ok, unquote(create_instance(meta))}
       end
     end
   end
@@ -539,7 +499,7 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  defp defaul_clean_checkpoint(meta) do
+  defp default_clean_checkpoint(meta) do
     required = :hidden in Keyword.get(meta.effects, :state_change, [])
     res = if required, do: :ok, else: :nocheckpoint
 
@@ -595,26 +555,26 @@ defmodule Skitter.Component.DSL do
   will only see these changes once the "current" react is finished.
   """
   defmacro react(args, meta, do: body) do
-    body = transform_field_access(body, meta)
+    try do
+      check_react_body(args, meta, body)
 
-    errors = check_react_body(args, meta, body)
+      react_body = remove_after_failure(body)
+      failure_body = build_react_after_failure_body(body, meta)
 
-    react_body = remove_after_failure(body)
-    failure_body = build_react_after_failure_body(body, meta)
+      {react_body, react_arg} = create_react_body_and_arg(react_body, meta)
+      {fail_body, fail_arg} = create_react_body_and_arg(failure_body, meta)
 
-    {react_body, react_arg} = create_react_body_and_arg(react_body)
-    {fail_body, fail_arg} = create_react_body_and_arg(failure_body)
+      quote do
+        def __skitter_react__(unquote(react_arg), unquote(args)) do
+          unquote(react_body)
+        end
 
-    quote do
-      unquote(errors)
-
-      def __skitter_react__(unquote(react_arg), unquote(args)) do
-        unquote(react_body)
+        def __skitter_react_after_failure__(unquote(fail_arg), unquote(args)) do
+          unquote(fail_body)
+        end
       end
-
-      def __skitter_react_after_failure__(unquote(fail_arg), unquote(args)) do
-        unquote(fail_body)
-      end
+    catch
+      err -> handle_error(err)
     end
   end
 
@@ -731,9 +691,11 @@ defmodule Skitter.Component.DSL do
 
   # Create the AST which will become the body of react. Besides this, generate
   # the arguments for the react function header.
-  defp create_react_body_and_arg(body) do
-    {out_pre, out_post} = create_react_output(body)
-    {state_arg, state_post} = create_react_state(body)
+  defp create_react_body_and_arg(body, meta) do
+    {out_init, out_ret} = create_react_output(body)
+
+    {body, inst_arg, state_init, inst_ret} =
+      create_field_access_write(body, meta, :arg)
 
     body =
       quote do
@@ -742,20 +704,21 @@ defmodule Skitter.Component.DSL do
             ~>: 2,
             skip: 2,
             error: 1,
-            read_field: 1,
+            read_field: 2,
             write_field: 2,
             after_failure: 1
           ]
 
-        unquote(out_pre)
+        unquote(out_init)
+        unquote(state_init)
         unquote(body)
-        {:ok, unquote(state_post), unquote(out_post)}
+        {:ok, unquote(inst_ret), unquote(out_ret)}
       end
 
-    body = add_skip_handler(body, state_post, out_post)
+    body = add_skip_handler(body, inst_ret, out_ret)
     body = add_skitter_error_handler(body)
 
-    {body, state_arg}
+    {body, inst_arg}
   end
 
   # Generate the ASTs which create the initial value of the output, and which
@@ -777,23 +740,6 @@ defmodule Skitter.Component.DSL do
     else
       {nil, []}
     end
-  end
-
-  # Generate the ASTs which accept the state argument, and which return it to
-  # the runtime
-  defp create_react_state(body) do
-    {
-      if_occurrence(body, :read_field) do
-        quote do: unquote(skitter_var(@instance_var))
-      else
-        quote do: _state
-      end,
-      if_occurrence(body, :write_field) do
-        quote do: unquote(skitter_var(@instance_var))
-      else
-        nil
-      end
-    }
   end
 
   # Add a handler for `skip`, if it is used. If it's not, this just returns the
@@ -826,29 +772,24 @@ defmodule Skitter.Component.DSL do
 
   # Check the body of react for some common errors.
   defp check_react_body(args, meta, body) do
+    # Ensure all spits are valid
+    check_spits(meta.out_ports, body)
+
     cond do
       # Ensure the inputs can map to the provided argument list
       length(args) != length(meta.in_ports) ->
-        inject_error "Different amount of arguments and in_ports"
-
-      # Ensure all spits are valid
-      (p = check_spits(meta.out_ports, body)) != nil ->
-        inject_error "Port `#{p}` not in out_ports"
+        throw {:error, :react, :port_neq_arg}
 
       # Ensure after_failure is only used when there are external effects
       count_occurrences(body, :after_failure) > 0 and
           !Keyword.has_key?(meta.effects, :external_effect) ->
-        inject_error(
-          "`after_failure` only allowed when external_effect is present"
-        )
+        throw {:error, :react, :after_failure_no_effects}
 
       # Ensure state! is only used when the state can change.
-      count_occurrences(body, :write_field) > 0 and
+      count_occurrences(body, :<~) > 0 and
           !Keyword.has_key?(meta.effects, :state_change) ->
-        inject_error "Modifying instance state is only allowed when the " <>
-                       "state_change effect is present"
+        throw {:error, :react, :illegal_state_change}
 
-      # Fallback case, no errors
       true ->
         nil
     end
@@ -856,17 +797,17 @@ defmodule Skitter.Component.DSL do
 
   # Verify all spits have an existing out port
   defp check_spits(ports, body) do
-    {_, port} =
-      Macro.postwalk(body, nil, fn
-        ast = {:~>, _env, [_val, port]}, nil ->
-          port = name_to_symbol(port)
-          {ast, unless(port in ports, do: port)}
+    Macro.postwalk(body, fn
+      {:~>, _env, [_val, port]} ->
+        port = name_to_symbol(port)
 
-        ast, acc ->
-          {ast, acc}
-      end)
+        unless port in ports do
+          throw {:error, :react, :invalid_spit, port}
+        end
 
-    port
+      ast ->
+        ast
+    end)
   end
 
   # -------------- #
@@ -891,20 +832,20 @@ defmodule Skitter.Component.DSL do
   `field <~ value` may be used to set initial values for the state fields.
   """
   defmacro init([arg], meta, do: body) do
-    body = transform_field_access(body, meta)
+    {body, inst_init, inst_ret} = create_field_access_write(body, meta, :new)
 
     body =
       quote do
         import unquote(__MODULE__),
           only: [
             error: 1,
-            read_field: 1,
+            read_field: 2,
             write_field: 2
           ]
 
-        unquote(skitter_var(@instance_var)) = unquote(create_instance())
+        unquote(inst_init)
         unquote(body)
-        {:ok, unquote(skitter_var(@instance_var))}
+        {:ok, unquote(inst_ret)}
       end
 
     body = add_skitter_error_handler(body)
@@ -930,22 +871,25 @@ defmodule Skitter.Component.DSL do
   ```
   """
   defmacro terminate([], meta, do: body) do
-    body = transform_field_reads(body, meta)
-    state_arg = arg_name_if_occurs(body, :read_field, @instance_var)
+    try do
+      {body, inst_arg} = create_field_access_read(body, meta)
 
-    body =
+      body =
+        quote do
+          import unquote(__MODULE__), only: [error: 1, read_field: 2]
+          unquote(body)
+          :ok
+        end
+
+      body = add_skitter_error_handler(body)
+
       quote do
-        import unquote(__MODULE__), only: [error: 1, read_field: 1]
-        unquote(body)
-        :ok
+        def __skitter_terminate__(unquote(inst_arg)) do
+          unquote(body)
+        end
       end
-
-    body = add_skitter_error_handler(body)
-
-    quote do
-      def __skitter_terminate__(unquote(state_arg)) do
-        unquote(body)
-      end
+    catch
+      err -> handle_error(err)
     end
   end
 
@@ -970,16 +914,25 @@ defmodule Skitter.Component.DSL do
   returned as the checkpoint to the skitter runtime.
   """
   defmacro create_checkpoint([], meta, do: body) do
-    body = transform_field_reads(body, meta)
-    state_arg = arg_name_if_occurs(body, :read_field, @instance_var)
-    var = skitter_var(:checkpoint)
+    try do
+      {body, inst_arg} = create_field_access_read(body, meta)
 
-    quote do
-      def __skitter_create_checkpoint__(unquote(state_arg)) do
-        import unquote(__MODULE__), only: [read_field: 1]
-        unquote(var) = unquote(body)
-        {:ok, unquote(var)}
+      body =
+        quote do
+          import unquote(__MODULE__), only: [read_field: 2, error: 1]
+          checkpoint = unquote(body)
+          {:ok, checkpoint}
+        end
+
+      body = add_skitter_error_handler(body)
+
+      quote do
+        def __skitter_create_checkpoint__(unquote(inst_arg)) do
+          unquote(body)
+        end
       end
+    catch
+      err -> handle_error(err)
     end
   end
 
@@ -1002,20 +955,27 @@ defmodule Skitter.Component.DSL do
   `field <~ value` syntax) to set correct values for the state fields.
   """
   defmacro restore_checkpoint([arg], meta, do: body) do
-    body = transform_field_access(body, meta)
+    {body, inst_init, inst_ret} = create_field_access_write(body, meta, :new)
 
-    quote do
-      def __skitter_restore_checkpoint__(unquote(arg)) do
+    body =
+      quote do
         import unquote(__MODULE__),
           only: [
-            read_field: 1,
+            read_field: 2,
             write_field: 2,
             error: 1
           ]
 
-        unquote(skitter_var(@instance_var)) = unquote(create_instance())
+        unquote(inst_init)
         unquote(body)
-        {:ok, unquote(skitter_var(@instance_var))}
+        {:ok, unquote(inst_ret)}
+      end
+
+    body = add_skitter_error_handler(body)
+
+    quote do
+      def __skitter_restore_checkpoint__(unquote(arg)) do
+        unquote(body)
       end
     end
   end
@@ -1037,15 +997,25 @@ defmodule Skitter.Component.DSL do
   that should be removed.
   """
   defmacro clean_checkpoint([arg], meta, do: body) do
-    body = transform_field_reads(body, meta)
-    state_arg = arg_name_if_occurs(body, :read_field, @instance_var)
+    try do
+      {body, inst_arg} = create_field_access_read(body, meta)
 
-    quote do
-      def __skitter_clean_checkpoint__(unquote(state_arg), unquote(arg)) do
-        import unquote(__MODULE__), only: [read_field: 1]
-        unquote(body)
-        :ok
+      body =
+        quote do
+          import unquote(__MODULE__), only: [read_field: 2, error: 1]
+          unquote(body)
+          :ok
+        end
+
+      body = add_skitter_error_handler(body)
+
+      quote do
+        def __skitter_clean_checkpoint__(unquote(inst_arg), unquote(arg)) do
+          unquote(body)
+        end
       end
+    catch
+      err -> handle_error(err)
     end
   end
 
@@ -1087,46 +1057,122 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # Field reading / writing
-  # -----------------------
+  # Field Access
+  # ------------
 
   @doc false
-  defmacro read_field(field) do
+  # Read the value of a field which is never modified in the body.
+  # In this case, we simply read out the relevant field from the state variable.
+  defmacro read_field(field, :immutable) do
     quote do
-      unquote(skitter_var(@instance_var)).state.unquote(field)
+      Keyword.get(unquote(skitter_var(@instance_var)).state, unquote(field))
     end
   end
 
   @doc false
+  # Read the value of a field which is modified in the body.
+  # In this case, we read out the current value from a mutable cell.
+  defmacro read_field(field, :mutable) do
+    quote do
+      Skitter.Internal.MutableCell.read(
+        unquote(skitter_var(@state_var)),
+        unquote(field)
+      )
+    end
+  end
+
+  @doc false
+  # Modify the value of a field in a mutable cell
   defmacro write_field(field, value) do
-    var = skitter_var(@instance_var)
-
     quote do
-      unquote(var) = %{
-        unquote(var)
-        | state:
-            Map.replace!(
-              unquote(var).state,
-              unquote(field),
-              unquote(value)
-            )
-      }
+      Skitter.Internal.MutableCell.write(
+        unquote(skitter_var(@state_var)),
+        unquote(field),
+        unquote(value)
+      )
     end
   end
 
-  # Transform reads and writes to fields in the correct order
-  defp transform_field_access(body, meta) do
-    body |> transform_field_writes(meta) |> transform_field_reads(meta)
+  # Return a modified body that makes it possible to read the current component
+  # state, a variable to be put in the function header, and an ast which
+  # produces an error if the <~ operator has been used.
+  defp create_field_access_read(body, meta) do
+    body = transform_field_reads(body, meta, :immutable)
+
+    arg =
+      if_occurrence(body, :read_field) do
+        skitter_var(@instance_var)
+      else
+        skitter_var(:_instance)
+      end
+
+    if count_occurrences(body, :<~) > 0 do
+      throw {:error, :invalid_write}
+    end
+
+    {body, arg}
   end
 
-  # Transform any use of a field name into a call to `read_field`
-  defp transform_field_reads(body, %{fields: fields}) do
+  # Return a modified body and the needed asts that makes it possible to read
+  # and modify the fields of a newly created component instance.
+  # Returned:
+  #   - body
+  #   - ast to initialize the state
+  #   - ast to return the new instance
+  defp create_field_access_write(body, meta, :new) do
+    body = transform_field_read_writes(body, meta)
+
+    {
+      body,
+      quote do
+        unquote(skitter_var(@instance_var)) = unquote(create_instance(meta))
+        unquote(create_state_init(body))
+      end,
+      create_state_return(body)
+    }
+  end
+
+  # Return a modified body and the needed asts that makes it possible to read
+  # and modify the fields of an existing component instance passed as an
+  # argument.
+  # Returned:
+  #   - body
+  #   - argument ast to be put in function header
+  #   - ast to initialize the state
+  #   - ast to return the modified instance
+  defp create_field_access_write(body, meta, :arg) do
+    body = transform_field_read_writes(body, meta)
+
+    {
+      body,
+      skitter_var(@instance_var),
+      create_state_init(body),
+      create_state_return(body)
+    }
+  end
+
+  # Transform fields access and modification statements
+  defp transform_field_read_writes(body, meta) do
+    # Writes should be transformed before reads due to the way
+    # transform_field_reads works
+    body = transform_field_writes(body, meta)
+
+    # If we don't mutate the fields, we act as if they are immutable
+    if_occurrence(body, :write_field) do
+      transform_field_reads(body, meta, :mutable)
+    else
+      transform_field_reads(body, meta, :immutable)
+    end
+  end
+
+  # Transform any use of a field name into a call to `read_field(name, mode)`
+  defp transform_field_reads(body, %{fields: fields}, mode) do
     Macro.postwalk(body, fn
-      {name, env, atom} when is_atom(atom) ->
+      node = {name, _env, atom} when is_atom(atom) ->
         if name in fields do
-          quote do: read_field(unquote(name))
+          quote do: read_field(unquote(name), unquote(mode))
         else
-          {name, env, atom}
+          node
         end
 
       any ->
@@ -1145,6 +1191,38 @@ defmodule Skitter.Component.DSL do
     end)
   end
 
+  defp create_state_init(body) do
+    instance = skitter_var(@instance_var)
+    state = skitter_var(@state_var)
+
+    if_occurrence(body, :write_field) do
+      quote do
+        unquote(state) =
+          Skitter.Internal.MutableCell.from_keyword_list(
+            unquote(instance).state
+          )
+      end
+    else
+      nil
+    end
+  end
+
+  defp create_state_return(body) do
+    instance = skitter_var(@instance_var)
+    state = skitter_var(@state_var)
+
+    if_occurrence(body, :write_field) do
+      quote do
+        alias Skitter.Internal.MutableCell
+        new_state = MutableCell.to_keyword_list(unquote(state))
+        MutableCell.destroy(unquote(state))
+        %{unquote(instance) | state: new_state}
+      end
+    else
+      instance
+    end
+  end
+
   # Utilities
   # ---------
 
@@ -1152,7 +1230,7 @@ defmodule Skitter.Component.DSL do
   # e.g foo becomes :foo
   # If the name is ill-formed, return an {:error, form} pair.
   defp name_to_symbol({name, _env, nil}), do: name
-  defp name_to_symbol(any), do: {:error, any}
+  defp name_to_symbol(any), do: throw({:error, :component, :invalid_port, any})
 
   # Generate a variable which can only be accessed by skitter macros.
   defp skitter_var(name) do
@@ -1163,10 +1241,12 @@ defmodule Skitter.Component.DSL do
     end
   end
 
-  # Create a skitter instance with an empty state.
-  defp create_instance() do
+  # Create a skitter instance with an initial, empty, state.
+  defp create_instance(%{fields: fields}) do
+    fields = Enum.map(fields, fn key -> {key, nil} end)
+
     quote do
-      %Skitter.Component.Instance{component: __MODULE__, state: %__MODULE__{}}
+      %Skitter.Component.Instance{component: __MODULE__, state: unquote(fields)}
     end
   end
 
@@ -1181,28 +1261,88 @@ defmodule Skitter.Component.DSL do
     n
   end
 
-  # Conditional structure which only get triggered when a certain symbol is
-  # present in the AST
+  # Return one of two asts based on whether or not a certain symbol is present
+  # in the provided body.
+  # NOTE: Since this is not a macro, both branches will always be evaluated.
   defp if_occurrence(body, atom, do: do_clause, else: else_clause) do
     if count_occurrences(body, atom) >= 1, do: do_clause, else: else_clause
   end
 
-  # Conditional which only gets triggered if a symbol is not present in the AST
+  # Return nil if a certain symbol is present in the provided body, otherwise,
+  # return the provided ast.
+  # NOTE: Since this is not a macro, both branches will always be evaluated.
   defp unless_occurrence(body, symbol, do: err_clause) do
     if_occurrence(body, symbol, do: nil, else: err_clause)
   end
 
-  # Generate a parameter named `name` if a certain symbol is used in the body.
-  # If it is not, use _ instead.
-  defp arg_name_if_occurs(body, symbol, name) do
-    if_occurrence(body, symbol) do
-      quote do
-        unquote(skitter_var(name))
-      end
-    else
-      quote do
-        _
-      end
-    end
+  # ------ #
+  # Errors #
+  # ------ #
+
+  defp handle_error({:error, :invalid_write}) do
+    inject_error "`<~` can not be used in this context"
+  end
+
+  # Component Errors
+  # ----------------
+
+  defp handle_error({:error, :component, :invalid_port, val}) do
+    inject_error "`#{val}` is not a valid port"
+  end
+
+  defp handle_error({:error, :component, :invalid_effect, val}) do
+    inject_error "Effect `#{val}` is not valid"
+  end
+
+  defp handle_error({:error, :component, :invalid_property, val}) do
+    inject_error "`#{val}` is not a valid property"
+  end
+
+  defp handle_error({:error, :component, :invalid_effect_property, p, e}) do
+    inject_error "`#{p}` is not a valid property of #{e}"
+  end
+
+  defp handle_error({:error, :component, :duplicate_fields}) do
+    inject_error "Fields can only be defined once"
+  end
+
+  defp handle_error({:error, :component, :invalid_field, val}) do
+    inject_error "`#{val}` is not a valid field"
+  end
+
+  defp handle_error({:error, :component, :no_react}) do
+    inject_error "Missing react implementation"
+  end
+
+  defp handle_error({:error, :component, :no_checkpoint}) do
+    inject_error "`create_checkpoint`, `clean_checkpoint` and " <>
+                   " `restore_checkpoint` are required when the state " <>
+                   " change is hidden"
+  end
+
+  defp handle_error({:error, :component, :wrong_checkpoint}) do
+    inject_error "`create_checkpoint`, `clean_checkpoint` and " <>
+                   " `restore_checkpoint` are only allowed when the state " <>
+                   " change is hidden"
+  end
+
+  # React Errors
+  # ------------
+
+  defp handle_error({:error, :react, :port_neq_arg}) do
+    inject_error "Different amount of arguments and in_ports"
+  end
+
+  defp handle_error({:error, :react, :invalid_spit, p}) do
+    inject_error "Port `#{p}` not in out_ports"
+  end
+
+  defp handle_error({:error, :react, :after_failure_no_effects}) do
+    inject_error "`after_failure` only allowed when external_effect is present"
+  end
+
+  defp handle_error({:error, :react, :illegal_state_change}) do
+    inject_error "Modifying instance state is only allowed when the " <>
+                   "state_change effect is present"
   end
 end

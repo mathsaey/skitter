@@ -2,6 +2,7 @@ defmodule Skitter.ComponentDSLTest do
   use ExUnit.Case, async: true
 
   import Skitter.Component.DSL
+  alias Skitter.Component.Instance
 
   # ---------------- #
   # Extra Assertions #
@@ -11,6 +12,15 @@ defmodule Skitter.ComponentDSLTest do
     quote do
       assert_raise Skitter.Component.DefinitionError, fn -> unquote(body) end
     end
+  end
+
+  # Needed to compare instances with a non-trivial state
+  defp assert_instance_equals(
+         %Instance{component: c1, state: s1},
+         %Instance{component: c2, state: s2}
+       ) do
+    assert c1 == c2
+    assert Keyword.equal?(s1, s2)
   end
 
   # ----- #
@@ -100,6 +110,9 @@ defmodule Skitter.ComponentDSLTest do
         nil
       end
 
+      clean_checkpoint _ do
+      end
+
       restore_checkpoint _ do
       end
     end
@@ -114,21 +127,6 @@ defmodule Skitter.ComponentDSLTest do
            |> Keyword.get(:state_change) == [:hidden]
   end
 
-  test "if structs are generated correctly" do
-    component WithStruct, in: foo do
-      fields a, b, c
-
-      react _ do
-      end
-    end
-
-    defmodule Structs do
-      assert Map.from_struct(%WithStruct{}) == %{a: nil, b: nil, c: nil}
-      assert Map.from_struct(%WithStruct{a: 1}) == %{a: 1, b: nil, c: nil}
-      assert Map.from_struct(%WithStruct{b: 2}) == %{a: nil, b: 2, c: nil}
-    end
-  end
-
   test "if init works" do
     component Init, in: [] do
       fields x, y
@@ -141,12 +139,12 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    defmodule AssertInit do
-      alias Skitter.Component.Instance
+    {:ok, inst} = Init.__skitter_init__(3)
 
-      assert Init.__skitter_init__(3) ==
-               {:ok, %Instance{component: Init, state: %Init{x: 3, y: nil}}}
-    end
+    assert_instance_equals(
+      inst,
+      %Instance{component: Init, state: [x: 3, y: nil]}
+    )
   end
 
   test "if terminate works" do
@@ -189,16 +187,12 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    defmodule State do
-      alias Skitter.Component.Instance
-
-      {:ok, inst} = Total.__skitter_init__(nil)
-      assert inst == %Instance{component: Total, state: %Total{total: 0}}
-      {:ok, inst, []} = Total.__skitter_react__(inst, [5])
-      assert inst == %Instance{component: Total, state: %Total{total: 5}}
-      {:ok, inst, []} = Total.__skitter_react__(inst, [3])
-      assert inst == %Instance{component: Total, state: %Total{total: 8}}
-    end
+    {:ok, inst} = Total.__skitter_init__(nil)
+    assert inst == %Instance{component: Total, state: [total: 0]}
+    {:ok, inst, []} = Total.__skitter_react__(inst, [5])
+    assert inst == %Instance{component: Total, state: [total: 5]}
+    {:ok, inst, []} = Total.__skitter_react__(inst, [3])
+    assert inst == %Instance{component: Total, state: [total: 8]}
   end
 
   test "if after_failure works as it should" do
@@ -220,7 +214,7 @@ defmodule Skitter.ComponentDSLTest do
     end
   end
 
-  test "if spit works" do
+  test "if skip works" do
     component TestSkip, in: [bool], out: [inner, outer] do
       react bool do
         :foo ~> inner
@@ -236,7 +230,7 @@ defmodule Skitter.ComponentDSLTest do
              {:ok, nil, [outer: :foo, inner: :foo]}
   end
 
-  test "if create_checkpoint and restore_checkpoint work" do
+  test "if create_checkpoint, clean_checkpoint and restore_checkpoint work" do
     component CPTest, in: [] do
       effect state_change hidden
       fields a
@@ -275,17 +269,13 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    defmodule TDefaults do
-      alias Skitter.Component.Instance
+    assert TestGen.__skitter_init__([]) ==
+             {:ok, %Instance{component: TestGen, state: []}}
 
-      assert TestGen.__skitter_init__([]) ==
-               {:ok, %Instance{component: TestGen, state: %TestGen{}}}
-
-      assert TestGen.__skitter_terminate__(nil) == :ok
-      assert TestGen.__skitter_create_checkpoint__(nil) == :nocheckpoint
-      assert TestGen.__skitter_restore_checkpoint__(nil) == :nocheckpoint
-      assert TestGen.__skitter_clean_checkpoint__(nil, nil) == :nocheckpoint
-    end
+    assert TestGen.__skitter_terminate__(nil) == :ok
+    assert TestGen.__skitter_create_checkpoint__(nil) == :nocheckpoint
+    assert TestGen.__skitter_restore_checkpoint__(nil) == :nocheckpoint
+    assert TestGen.__skitter_clean_checkpoint__(nil, nil) == :nocheckpoint
   end
 
   test "if helpers work" do
@@ -319,6 +309,8 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if errors work" do
     component ErrorsEverywhere, in: [] do
+      effect state_change hidden
+
       init _ do
         error "error!"
       end
@@ -330,11 +322,32 @@ defmodule Skitter.ComponentDSLTest do
       terminate do
         error "error!"
       end
+
+      create_checkpoint do
+        error "error!"
+      end
+
+      restore_checkpoint _ do
+        error "error!"
+      end
+
+      clean_checkpoint _ do
+        error "error!"
+      end
     end
 
     assert ErrorsEverywhere.__skitter_init__([]) == {:error, "error!"}
     assert ErrorsEverywhere.__skitter_react__(nil, []) == {:error, "error!"}
     assert ErrorsEverywhere.__skitter_terminate__(nil) == {:error, "error!"}
+
+    assert ErrorsEverywhere.__skitter_create_checkpoint__(nil) ==
+             {:error, "error!"}
+
+    assert ErrorsEverywhere.__skitter_restore_checkpoint__(nil) ==
+             {:error, "error!"}
+
+    assert ErrorsEverywhere.__skitter_clean_checkpoint__(nil, nil) ==
+             {:error, "error!"}
   end
 
   test "if hygiene can be violated" do
@@ -381,19 +394,14 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    defmodule CaseState do
-      {:ok, inst} = CaseState.__skitter_init__(nil)
-      assert CaseState.__skiter_react__(inst, [:foo]) == {:ok, inst, []}
+    {:ok, inst} = CaseState.__skitter_init__(nil)
+    assert CaseState.__skitter_react__(inst, [:foo]) == {:ok, inst, []}
 
-      assert CaseState.__skiter_react__(inst, [:update]) == {
-               :ok,
-               %Instance{
-                 component: CaseState,
-                 state: %CaseState{my_field: :update}
-               },
-               []
-             }
-    end
+    assert CaseState.__skitter_react__(inst, [:update]) == {
+             :ok,
+             %Instance{component: CaseState, state: [my_field: :update]},
+             []
+           }
   end
 
   # Error Reporting
@@ -524,9 +532,63 @@ defmodule Skitter.ComponentDSLTest do
     end
   end
 
-  test "if incorrect use of `<~` is reported" do
+  test "if incorrect uses of `<~` are reported" do
     assert_definition_error do
-      component WrongState, in: [] do
+      component MutableTerminate, in: [] do
+        fields state
+
+        react do
+        end
+
+        terminate do
+          state <~ 5
+        end
+      end
+    end
+
+    assert_definition_error do
+      component MutableCheckpoint1, in: [] do
+        effect state_change hidden
+        fields state
+
+        react do
+        end
+
+        create_checkpoint do
+          state <~ 5
+        end
+
+        restore_checkpoint _ do
+        end
+
+        clean_checkpoint _ do
+        end
+      end
+    end
+
+    assert_definition_error do
+      component MutableCheckpoint2, in: [] do
+        effect state_change hidden
+        fields state
+
+        react do
+        end
+
+        create_checkpoint do
+          5
+        end
+
+        restore_checkpoint _ do
+        end
+
+        clean_checkpoint _ do
+          state <~ 5
+        end
+      end
+    end
+
+    assert_definition_error do
+      component ImmutableState, in: [] do
         fields state
 
         react do
@@ -553,7 +615,7 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if a wrong react signature is reported" do
     assert_definition_error do
-      component WrongInPorts, in: [:a, :b, :c] do
+      component WrongInPorts, in: [a, b, c] do
         react a, b do
         end
       end
@@ -562,7 +624,7 @@ defmodule Skitter.ComponentDSLTest do
 
   test "if incorrect port use in react is reported" do
     assert_definition_error do
-      component WrongSpit, in: [], out: [:foo] do
+      component WrongSpit, in: [], out: [foo] do
         react do
           42 ~> bar
         end

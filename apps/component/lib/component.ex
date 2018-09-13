@@ -312,7 +312,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> init(Identity, nil)
-      {:ok, %Skitter.Component.Instance{component: Identity, state: %Identity{}}}
+      {:ok, %Instance{component: Identity, state: []}}
   """
   def init(comp, args), do: comp.__skitter_init__(args)
 
@@ -343,7 +343,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> react(example_instance(), [20])
-      {:ok, nil, [value: 20]}
+      {:ok, %Instance{component: Identity, state: []}, [value: 20]}
   """
   def react(inst = %Instance{component: comp}, args) do
     comp.__skitter_react__(inst, args)
@@ -359,7 +359,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> react_after_failure(example_instance(), [20])
-      {:ok, nil, [value: 20]}
+      {:ok, %Instance{component: Identity, state: []}, [value: 20]}
   """
   def react_after_failure(inst = %Instance{component: comp}, args) do
     comp.__skitter_react_after_failure__(inst, args)
@@ -393,7 +393,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> restore_checkpoint(Features, 10)
-      {:ok, %Skitter.Component.Instance{component: Features, state: %Features{f: 10}}}
+      {:ok, %Skitter.Component.Instance{component: Features, state: [f: 10]}}
   """
   def restore_checkpoint(comp, checkpoint),
     do: comp.__skitter_restore_checkpoint__(checkpoint)

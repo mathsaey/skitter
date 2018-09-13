@@ -2,6 +2,8 @@ defmodule Skitter.SourceTest do
   use ExUnit.Case, async: true
 
   import Skitter.Component
+
+  alias Skitter.Component.Instance
   alias Skitter.Source
 
   test "if metadata is generated correctly" do
@@ -15,8 +17,11 @@ defmodule Skitter.SourceTest do
     assert is_instance?(inst)
     assert :ok == terminate(inst)
 
-    assert {:ok, nil, [data: 42]} == react(inst, [42])
-    assert {:ok, nil, [data: 42]} == react_after_failure(inst, [42])
+    assert {:ok, %Instance{component: Skitter.Source, state: []}, [data: 42]} ==
+             react(inst, [42])
+
+    assert {:ok, %Instance{component: Skitter.Source, state: []}, [data: 42]} ==
+             react_after_failure(inst, [42])
   end
 
   test "if checkpoint functions are properly disabled" do

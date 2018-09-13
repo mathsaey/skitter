@@ -27,4 +27,11 @@ defmodule Skitter.Internal.MutableCellTest do
 
     assert to_keyword_list(cell) == [foo: 42, bar: "test"]
   end
+
+  test "if keyword lists are converted to tables correctly" do
+    cell = from_keyword_list(foo: 42, bar: "test")
+
+    assert read(cell, :foo) == 42
+    assert read(cell, :bar) == "test"
+  end
 end

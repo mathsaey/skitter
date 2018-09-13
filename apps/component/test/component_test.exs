@@ -1,6 +1,8 @@
 defmodule Skitter.ComponentTest do
   use ExUnit.Case, async: true
+
   import Skitter.Component
+  alias Skitter.Component.Instance
 
   component Identity, in: value, out: value do
     react value do
@@ -25,6 +27,9 @@ defmodule Skitter.ComponentTest do
 
     create_checkpoint do
       f
+    end
+
+    clean_checkpoint _ do
     end
 
     restore_checkpoint v do
