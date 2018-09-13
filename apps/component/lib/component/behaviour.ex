@@ -11,11 +11,11 @@ defmodule Skitter.Component.Behaviour do
   @callback __skitter_init__(any()) :: {:ok, instance} | {:error, reason}
   @callback __skitter_terminate__(instance) :: :ok | {:error, reason}
 
-  @callback __skitter_react__(instance, []) ::
+  @callback __skitter_react__(instance, [any()]) ::
               {:ok, instance, [keyword()]}
               | {:ok, nil, [keyword()]}
               | {:error, reason}
-  @callback __skitter_react_after_failure__(instance, []) ::
+  @callback __skitter_react_after_failure__(instance, [any()]) ::
               {:ok, instance, [keyword()]}
               | {:ok, nil, [keyword()]}
               | {:error, reason}

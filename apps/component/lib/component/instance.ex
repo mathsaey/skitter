@@ -4,7 +4,7 @@ defmodule Skitter.Component.Instance do
   @data [:state, :component]
 
   @type t :: %__MODULE__{
-          state: struct(),
+          state: [{atom(), any()}],
           component: module()
         }
 
