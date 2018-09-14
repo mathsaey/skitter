@@ -442,7 +442,7 @@ defmodule Skitter.Component.DSL do
     cl_present = count_occurrences(body, :clean_checkpoint) >= 1
 
     any_present = cp_present or rt_present or cl_present
-    all_present = cp_present and rt_present and cl_present
+    all_present = cp_present and rt_present
 
     if required and not all_present do
       throw {:error, :component, :no_checkpoint}
@@ -489,22 +489,27 @@ defmodule Skitter.Component.DSL do
 
   defp default_create_checkpoint(_) do
     quote do
-      def __skitter_create_checkpoint__(_), do: :nocheckpoint
+      alias Skitter.Component.Instance
+
+      def __skitter_create_checkpoint__(%Instance{state: state}) do
+        {:ok, state}
+      end
     end
   end
 
   defp default_restore_checkpoint(_) do
     quote do
-      def __skitter_restore_checkpoint__(_), do: :nocheckpoint
+      alias Skitter.Component.Instance
+
+      def __skitter_restore_checkpoint__(checkpoint) do
+        {:ok, %Instance{component: __MODULE__, state: checkpoint}}
+      end
     end
   end
 
-  defp default_clean_checkpoint(meta) do
-    required = :hidden in Keyword.get(meta.effects, :state_change, [])
-    res = if required, do: :ok, else: :nocheckpoint
-
+  defp default_clean_checkpoint(_) do
     quote do
-      def __skitter_clean_checkpoint__(_i, _c), do: unquote(res)
+      def __skitter_clean_checkpoint__(_i, _c), do: :ok
     end
   end
 
@@ -1315,9 +1320,8 @@ defmodule Skitter.Component.DSL do
   end
 
   defp handle_error({:error, :component, :no_checkpoint}) do
-    inject_error "`create_checkpoint`, `clean_checkpoint` and " <>
-                   " `restore_checkpoint` are required when the state " <>
-                   " change is hidden"
+    inject_error "`create_checkpoint` and `restore_checkpoint` are " <>
+                   " required when the state  change is hidden"
   end
 
   defp handle_error({:error, :component, :wrong_checkpoint}) do

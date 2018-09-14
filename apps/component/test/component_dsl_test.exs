@@ -269,13 +269,13 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert TestGen.__skitter_init__([]) ==
-             {:ok, %Instance{component: TestGen, state: []}}
+    {:ok, inst} = TestGen.__skitter_init__([])
 
-    assert TestGen.__skitter_terminate__(nil) == :ok
-    assert TestGen.__skitter_create_checkpoint__(nil) == :nocheckpoint
-    assert TestGen.__skitter_restore_checkpoint__(nil) == :nocheckpoint
-    assert TestGen.__skitter_clean_checkpoint__(nil, nil) == :nocheckpoint
+    assert inst == %Instance{component: TestGen, state: []}
+    assert TestGen.__skitter_terminate__(inst) == :ok
+    assert TestGen.__skitter_create_checkpoint__(inst) == {:ok, []}
+    assert TestGen.__skitter_restore_checkpoint__([]) == {:ok, inst}
+    assert TestGen.__skitter_clean_checkpoint__(nil, nil) == :ok
   end
 
   test "if helpers work" do

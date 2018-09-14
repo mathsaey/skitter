@@ -374,10 +374,10 @@ defmodule Skitter.Component do
 
   ## Examples
 
-      iex> create_checkpoint(example_instance())
-      :nocheckpoint
-      iex> create_checkpoint(Identity)
-      ** (FunctionClauseError) no function clause matching in Skitter.Component.create_checkpoint/1
+      iex> {:ok, inst} = init(Features, {3, 4})
+      {:ok, %Instance{component: Features, state: [f: 7]}}
+      iex> create_checkpoint(inst)
+      {:ok, 7}
   """
   def create_checkpoint(inst = %Instance{component: comp}) do
     comp.__skitter_create_checkpoint__(inst)
@@ -392,8 +392,8 @@ defmodule Skitter.Component do
 
   ## Examples
 
-      iex> restore_checkpoint(Features, 10)
-      {:ok, %Skitter.Component.Instance{component: Features, state: [f: 10]}}
+      iex> restore_checkpoint(Features, 7)
+      {:ok, %Skitter.Component.Instance{component: Features, state: [f: 7]}}
   """
   def restore_checkpoint(comp, checkpoint),
     do: comp.__skitter_restore_checkpoint__(checkpoint)

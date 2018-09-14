@@ -20,10 +20,7 @@ defmodule Skitter.Component.Behaviour do
               | {:ok, nil, [keyword()]}
               | {:error, reason}
 
-  @callback __skitter_create_checkpoint__(instance) ::
-              {:ok, checkpoint} | :nocheckpoint
-  @callback __skitter_restore_checkpoint__(checkpoint) ::
-              {:ok, instance} | :nocheckpoint
-  @callback __skitter_clean_checkpoint__(instance, checkpoint) ::
-              :ok | :nocheckpoint
+  @callback __skitter_create_checkpoint__(instance) :: {:ok, checkpoint}
+  @callback __skitter_restore_checkpoint__(checkpoint) :: {:ok, instance}
+  @callback __skitter_clean_checkpoint__(instance, checkpoint) :: :ok
 end
