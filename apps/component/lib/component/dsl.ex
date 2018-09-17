@@ -1321,13 +1321,13 @@ defmodule Skitter.Component.DSL do
 
   defp handle_error({:error, :component, :no_checkpoint}) do
     inject_error "`create_checkpoint` and `restore_checkpoint` are " <>
-                   " required when the state  change is hidden"
+                   " required when the state change is hidden"
   end
 
   defp handle_error({:error, :component, :wrong_checkpoint}) do
     inject_error "`create_checkpoint`, `clean_checkpoint` and " <>
                    " `restore_checkpoint` are only allowed when the state " <>
-                   " change is hidden"
+                   "change is hidden"
   end
 
   # React Errors

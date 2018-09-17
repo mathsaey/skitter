@@ -8,9 +8,16 @@ defmodule Skitter.ComponentDSLTest do
   # Extra Assertions #
   # ---------------- #
 
-  defmacro assert_definition_error(do: body) do
+  defmacro assert_definition_error(
+             msg \\ quote do
+               ~r/.*/
+             end,
+             do: body
+           ) do
     quote do
-      assert_raise Skitter.Component.DefinitionError, fn -> unquote(body) end
+      assert_raise Skitter.Component.DefinitionError, unquote(msg), fn ->
+        unquote(body)
+      end
     end
   end
 
@@ -408,7 +415,7 @@ defmodule Skitter.ComponentDSLTest do
   # ---------------
 
   test "if incorrect effects are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/Effect .* is not valid/ do
       component WrongEffects, in: [] do
         effect does_not_exist
 
@@ -419,7 +426,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if incorrect fields are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/.* is not a valid field/ do
       component WrongFields, in: [] do
         fields :a, :b
 
@@ -428,7 +435,7 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert_definition_error do
+    assert_definition_error "Fields can only be defined once" do
       component MultipleFields, in: [] do
         fields a
         fields b
@@ -440,7 +447,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if a missing react is reported" do
-    assert_definition_error do
+    assert_definition_error "Missing react implementation" do
       component MissingReact, in: [] do
         # No react should cause an error
       end
@@ -448,7 +455,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if missing checkpoints are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/.* required when the state change is hidden/ do
       component MissingCheckpoint, in: [] do
         effect state_change hidden
         fields state
@@ -462,7 +469,7 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert_definition_error do
+    assert_definition_error ~r/.* required when the state change is hidden/ do
       component MissingRestore, in: [] do
         effect state_change hidden
 
@@ -476,7 +483,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if incorrect effect properties are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/.* is not a valid property/ do
       component WrongPropertySyntax, in: [] do
         effect state_change 5
 
@@ -485,7 +492,7 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert_definition_error do
+    assert_definition_error ~r/.* is not a valid property of .*/ do
       component WrongEffectProperties, in: [] do
         effect state_change foo
 
@@ -496,7 +503,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if incorrect use of react after_failure is reported" do
-    assert_definition_error do
+    assert_definition_error ~r/.* allowed when external_effect is present/ do
       component WrongAfterFailure, in: [val] do
         react val do
           after_failure do
@@ -507,7 +514,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if incorrect use of create/restore _checkpoint is reported" do
-    assert_definition_error do
+    assert_definition_error ~r/.* allowed when the state change is hidden/ do
       component WrongCheckpoint, in: [] do
         react do
         end
@@ -518,7 +525,7 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert_definition_error do
+    assert_definition_error ~r/.* allowed when the state change is hidden/ do
       component WrongRestore, in: [] do
         fields state
 
@@ -533,7 +540,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if incorrect uses of `<~` are reported" do
-    assert_definition_error do
+    assert_definition_error "`<~` can not be used in this context" do
       component MutableTerminate, in: [] do
         fields state
 
@@ -546,7 +553,7 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert_definition_error do
+    assert_definition_error "`<~` can not be used in this context" do
       component MutableCheckpoint1, in: [] do
         effect state_change hidden
         fields state
@@ -566,7 +573,7 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert_definition_error do
+    assert_definition_error "`<~` can not be used in this context" do
       component MutableCheckpoint2, in: [] do
         effect state_change hidden
         fields state
@@ -587,7 +594,7 @@ defmodule Skitter.ComponentDSLTest do
       end
     end
 
-    assert_definition_error do
+    assert_definition_error ~r/.* when the state_change effect is present/ do
       component ImmutableState, in: [] do
         fields state
 
@@ -599,12 +606,12 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if incorrectly named ports are reported" do
-    assert_definition_error do
+    assert_definition_error ~r/.* is not a valid port/ do
       component SymbolPorts, in: [:foo, :bar] do
       end
     end
 
-    assert_definition_error do
+    assert_definition_error ~r/.* is not a valid port/ do
       component SymbolInSpit, in: [], out: [:foo] do
         react do
           42 ~> :foo
@@ -614,7 +621,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if a wrong react signature is reported" do
-    assert_definition_error do
+    assert_definition_error "Different amount of arguments and in_ports" do
       component WrongInPorts, in: [a, b, c] do
         react a, b do
         end
@@ -623,7 +630,7 @@ defmodule Skitter.ComponentDSLTest do
   end
 
   test "if incorrect port use in react is reported" do
-    assert_definition_error do
+    assert_definition_error ~r/.* not in out_ports/ do
       component WrongSpit, in: [], out: [foo] do
         react do
           42 ~> bar
