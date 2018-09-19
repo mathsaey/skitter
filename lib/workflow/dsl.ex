@@ -36,7 +36,7 @@ defmodule Skitter.Workflow.DSL do
   input port.
   """
 
-  import Skitter.Workflow.DefinitionError
+  import Skitter.DefinitionError
   import Skitter.Component
 
   @doc """
@@ -59,7 +59,7 @@ defmodule Skitter.Workflow.DSL do
       validate_ports(workflow)
 
       quote generated: true do
-        alias Skitter.Source
+        alias Skitter.Workflow.Source
         unquote(Macro.escape(workflow))
       end
     catch
@@ -227,7 +227,7 @@ defmodule Skitter.Workflow.DSL do
         {cmp, _init, _links} = workflow[id]
 
         case cmp do
-          Skitter.Source -> []
+          Skitter.Workflow.Source -> []
           _ -> Enum.map(in_ports(cmp), fn port -> {id, port} end)
         end
       end)

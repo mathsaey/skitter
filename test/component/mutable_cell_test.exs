@@ -1,7 +1,7 @@
 defmodule Skitter.Internal.MutableCellTest do
   use ExUnit.Case, async: true
 
-  import Skitter.Internal.MutableCell
+  import Skitter.Component.MutableCell
 
   test "if creation, reading, and writing works" do
     cell = create()

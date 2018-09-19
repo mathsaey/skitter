@@ -1,4 +1,4 @@
-defmodule Skitter.Internal.MutableCell do
+defmodule Skitter.Component.MutableCell do
   @moduledoc false
 
   def create, do: :ets.new(__MODULE__, [:private])

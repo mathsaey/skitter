@@ -1,6 +1,6 @@
-defmodule Skitter.Workflow.DefinitionError do
+defmodule Skitter.DefinitionError do
   @moduledoc """
-  This error is raised when a workflow definition is invalid.
+  This error is raised when a definition is invalid.
   """
   defexception [:message]
 
@@ -12,7 +12,7 @@ defmodule Skitter.Workflow.DefinitionError do
   def inject_error(reason) do
     quote do
       import unquote(__MODULE__)
-      raise Skitter.Workflow.DefinitionError, unquote(reason)
+      raise Skitter.DefinitionError, unquote(reason)
     end
   end
 end

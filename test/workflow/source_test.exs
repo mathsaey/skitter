@@ -3,8 +3,8 @@ defmodule Skitter.SourceTest do
 
   import Skitter.Component
 
+  alias Skitter.Workflow.Source
   alias Skitter.Component.Instance
-  alias Skitter.Source
 
   test "if metadata is generated correctly" do
     assert effects(Source) == []
@@ -17,10 +17,10 @@ defmodule Skitter.SourceTest do
     assert is_instance?(inst)
     assert :ok == terminate(inst)
 
-    assert {:ok, %Instance{component: Skitter.Source, state: []}, [data: 42]} ==
+    assert {:ok, %Instance{component: Source, state: []}, [data: 42]} ==
              react(inst, [42])
 
-    assert {:ok, %Instance{component: Skitter.Source, state: []}, [data: 42]} ==
+    assert {:ok, %Instance{component: Source, state: []}, [data: 42]} ==
              react_after_failure(inst, [42])
   end
 end

@@ -110,7 +110,7 @@ defmodule Skitter.Component.DSL do
   the body of `react/3`.
   """
 
-  import Skitter.Component.DefinitionError
+  import Skitter.DefinitionError
 
   # --------- #
   # Constants #
@@ -589,7 +589,7 @@ defmodule Skitter.Component.DSL do
     var = skitter_var(@output_var)
 
     quote do
-      Skitter.Internal.MutableCell.write(
+      Skitter.Component.MutableCell.write(
         unquote(var),
         unquote(port),
         unquote(value)
@@ -732,11 +732,11 @@ defmodule Skitter.Component.DSL do
     if_occurrence(body, :~>) do
       {
         quote do
-          alias Skitter.Internal.MutableCell
+          alias Skitter.Component.MutableCell
           unquote(skitter_var(@output_var)) = MutableCell.create()
         end,
         quote do
-          alias Skitter.Internal.MutableCell
+          alias Skitter.Component.MutableCell
           res = MutableCell.to_keyword_list(unquote(skitter_var(@output_var)))
           MutableCell.destroy(unquote(skitter_var(@output_var)))
           res
@@ -1079,7 +1079,7 @@ defmodule Skitter.Component.DSL do
   # In this case, we read out the current value from a mutable cell.
   defmacro read_field(field, :mutable) do
     quote do
-      Skitter.Internal.MutableCell.read(
+      Skitter.Component.MutableCell.read(
         unquote(skitter_var(@state_var)),
         unquote(field)
       )
@@ -1090,7 +1090,7 @@ defmodule Skitter.Component.DSL do
   # Modify the value of a field in a mutable cell
   defmacro write_field(field, value) do
     quote do
-      Skitter.Internal.MutableCell.write(
+      Skitter.Component.MutableCell.write(
         unquote(skitter_var(@state_var)),
         unquote(field),
         unquote(value)
@@ -1203,7 +1203,7 @@ defmodule Skitter.Component.DSL do
     if_occurrence(body, :write_field) do
       quote do
         unquote(state) =
-          Skitter.Internal.MutableCell.from_keyword_list(
+          Skitter.Component.MutableCell.from_keyword_list(
             unquote(instance).state
           )
       end
@@ -1218,7 +1218,7 @@ defmodule Skitter.Component.DSL do
 
     if_occurrence(body, :write_field) do
       quote do
-        alias Skitter.Internal.MutableCell
+        alias Skitter.Component.MutableCell
         new_state = MutableCell.to_keyword_list(unquote(state))
         MutableCell.destroy(unquote(state))
         %{unquote(instance) | state: new_state}

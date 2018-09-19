@@ -1,25 +1,14 @@
-defmodule Skitter.ComponentDSLTest do
+defmodule Skitter.Component.DSLTest do
   use ExUnit.Case, async: true
 
+  import Skitter.Assertions
   import Skitter.Component.DSL
+
   alias Skitter.Component.Instance
 
   # ---------------- #
   # Extra Assertions #
   # ---------------- #
-
-  defmacro assert_definition_error(
-             msg \\ quote do
-               ~r/.*/
-             end,
-             do: body
-           ) do
-    quote do
-      assert_raise Skitter.Component.DefinitionError, unquote(msg), fn ->
-        unquote(body)
-      end
-    end
-  end
 
   # Needed to compare instances with a non-trivial state
   defp assert_instance_equals(

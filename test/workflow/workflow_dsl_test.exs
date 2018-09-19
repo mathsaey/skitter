@@ -1,27 +1,11 @@
 defmodule Skitter.WorkflowDSLTest do
   use ExUnit.Case, async: true
 
-  import Skitter.Workflow.DSL
   import Skitter.Component
+  import Skitter.Assertions
+  import Skitter.Workflow.DSL
 
-  alias Skitter.Source
-
-  # ---------------- #
-  # Extra Assertions #
-  # ---------------- #
-
-  defmacro assert_definition_error(
-             msg \\ quote do
-               ~r/.*/
-             end,
-             do: body
-           ) do
-    quote do
-      assert_raise Skitter.Workflow.DefinitionError, unquote(msg), fn ->
-        unquote(body)
-      end
-    end
-  end
+  alias Skitter.Workflow.Source
 
   # -------------- #
   # Test Component #
@@ -40,8 +24,6 @@ defmodule Skitter.WorkflowDSLTest do
   # ----- #
   # Tests #
   # ----- #
-
-  doctest Skitter.Workflow.DSL
 
   test "if blocks and single statements are handled correctly" do
     t1 = workflow(do: i1 = {NoPorts, nil})
