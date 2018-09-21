@@ -65,7 +65,7 @@ defmodule Skitter.Workflow.DSL do
       validate_components(workflow)
       validate_ports(workflow)
 
-      Macro.escape(workflow)
+      Macro.escape(%Workflow{map: workflow})
 
     catch
       {:error, :invalid_syntax, other} ->

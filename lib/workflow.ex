@@ -9,6 +9,20 @@ defmodule Workflow do
   Documentation for Workflow.
   """
 
+  @enforce_keys [:map]
+  defstruct [:map]
+
+  @behaviour Access
+  def fetch(%Workflow{map: m}, key), do: Map.fetch(m, key)
+
+  def get_and_update(%Workflow{map: _m}, _key, _function) do
+    raise ArgumentError, "Modifying a workflow is not supported"
+  end
+
+  def pop(%Workflow{map: _m}, _key) do
+    raise ArgumentError, "Modifying a workflow is not supported"
+  end
+
   @doc """
   Hello world.
 

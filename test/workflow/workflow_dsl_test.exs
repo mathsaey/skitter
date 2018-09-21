@@ -11,6 +11,7 @@ defmodule Skitter.WorkflowDSLTest do
   import Skitter.Assertions
   import Skitter.Workflow.DSL
 
+  alias Workflow, as: WF
   alias Skitter.Workflow.Source, as: SrcAlias
 
   # -------------- #
@@ -40,8 +41,8 @@ defmodule Skitter.WorkflowDSLTest do
         i = {NoPorts, nil}
       end
 
-    assert t1 == %{_: {SrcAlias, nil, []}}
-    assert t2 == %{_: {SrcAlias, nil, []}, i: {NoPorts, nil, []}}
+    assert t1 == %WF{map: %{_: {SrcAlias, nil, []}}}
+    assert t2 == %WF{map: %{_: {SrcAlias, nil, []}, i: {NoPorts, nil, []}}}
   end
 
   test "if both triple and double element tuples are handled correctly" do
@@ -51,10 +52,10 @@ defmodule Skitter.WorkflowDSLTest do
         triple = {Foo, nil, c ~> triple.a, d ~> triple.b}
       end
 
-    assert t == %{
+    assert t == %WF{map: %{
              _: {SrcAlias, nil, []},
              triple: {Foo, nil, [c: [{:triple, :a}], d: [{:triple, :b}]]}
-           }
+           }}
   end
 
   test "if links and names are parsed correctly" do
@@ -65,11 +66,11 @@ defmodule Skitter.WorkflowDSLTest do
         i2 = {Foo, nil}
       end
 
-    assert t == %{
+    assert t == %WF{map: %{
              _: {SrcAlias, nil, [data: [{:i1, :a}, {:i1, :b}]]},
              i1: {Foo, nil, [c: [{:i2, :a}], d: [{:i2, :b}]]},
              i2: {Foo, nil, []}
-           }
+           }}
   end
 
   test "if underscores are transformed correctly" do
