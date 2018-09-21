@@ -6,5 +6,34 @@
 
 defmodule WorkflowTest do
   use ExUnit.Case
+
+  import Skitter.Workflow
+  import Skitter.Component
+
+  component Identity, in: value, out: value do
+    react value do
+      value ~> value
+    end
+  end
+
+  def example_workflow do
+    workflow do
+      _ = {Source, _, data ~> i.value}
+      i = {Identity, _}
+    end
+  end
+
+  test "if the access behaviour works as it should" do
+    assert example_workflow()[:i] == {Identity, nil, []}
+
+    assert_raise ArgumentError, fn ->
+      get_and_update(example_workflow(), :i, fn x -> x end)
+    end
+
+    assert_raise ArgumentError, fn ->
+      pop(example_workflow(), :i)
+    end
+  end
+
   doctest Skitter.Workflow
 end

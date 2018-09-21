@@ -30,15 +30,38 @@ defmodule Skitter.Workflow do
     end
   end
 
+  @doc """
+
+  ## Examples
+
+    iex> get_component(example_workflow(), :i)
+    Identity
+    iex> get_component(example_workflow(), :does_not_exist)
+    ** (KeyError) Key `:does_not_exist` not found in workflow
+  """
   def get_component(workflow, key) do
     get_item(workflow, key, 0)
   end
 
+  @doc """
+
+  ## Examples
+
+    iex> get_init(example_workflow(), :i)
+    nil
+  """
   def get_init(workflow, key) do
     get_item(workflow, key, 1)
   end
 
-  def get_link(workflow, key) do
+  @doc """
+
+  ## Examples
+
+    iex> get_links(example_workflow(), :i)
+    []
+  """
+  def get_links(workflow, key) do
     get_item(workflow, key, 2)
   end
 
