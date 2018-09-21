@@ -11,7 +11,7 @@ defmodule Skitter.WorkflowDSLTest do
   import Skitter.Assertions
   import Skitter.Workflow.DSL
 
-  alias Workflow, as: WF
+  alias Skitter.Workflow, as: WF
   alias Skitter.Workflow.Source, as: SrcAlias
 
   # -------------- #

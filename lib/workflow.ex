@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Workflow do
+defmodule Skitter.Workflow do
   @moduledoc """
   Documentation for Workflow.
   """
@@ -13,26 +13,49 @@ defmodule Workflow do
   defstruct [:map]
 
   @behaviour Access
-  def fetch(%Workflow{map: m}, key), do: Map.fetch(m, key)
+  def fetch(%__MODULE__{map: m}, key), do: Map.fetch(m, key)
 
-  def get_and_update(%Workflow{map: _m}, _key, _function) do
+  def get_and_update(%__MODULE__{map: _m}, _key, _function) do
     raise ArgumentError, "Modifying a workflow is not supported"
   end
 
-  def pop(%Workflow{map: _m}, _key) do
+  def pop(%__MODULE__{map: _m}, _key) do
     raise ArgumentError, "Modifying a workflow is not supported"
   end
+
+  defp get_item(workflow, key, idx) do
+    case workflow[key] do
+      nil -> raise KeyError, "Key `#{inspect(key)}` not found in workflow"
+      tup -> elem(tup, idx)
+    end
+  end
+
+  def get_component(workflow, key) do
+    get_item(workflow, key, 0)
+  end
+
+  def get_init(workflow, key) do
+    get_item(workflow, key, 1)
+  end
+
+  def get_link(workflow, key) do
+    get_item(workflow, key, 2)
+  end
+
+  # ------ #
+  # Macros #
+  # ------ #
 
   @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Workflow.hello
-      :world
-
+  Create a workflow.
   """
-  def hello do
-    :world
+  defmacro workflow(do: body) do
+    quote do
+      require Skitter.Workflow.DSL
+
+      Skitter.Workflow.DSL.workflow do
+        unquote(body)
+      end
+    end
   end
 end
