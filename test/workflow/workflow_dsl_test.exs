@@ -11,7 +11,7 @@ defmodule Skitter.WorkflowDSLTest do
   import Skitter.Assertions
   import Skitter.Workflow.DSL
 
-  alias Skitter.Workflow.Source
+  alias Skitter.Workflow.Source, as: SrcAlias
 
   # -------------- #
   # Test Component #
@@ -32,43 +32,43 @@ defmodule Skitter.WorkflowDSLTest do
   # ----- #
 
   test "if blocks and single statements are handled correctly" do
-    t1 = workflow(do: i1 = {NoPorts, nil})
+    t1 = workflow(do: _ = {Source, nil})
 
     t2 =
       workflow do
-        i1 = {NoPorts, nil}
-        i2 = {NoPorts, nil}
+        _ = {Source, nil}
+        i = {NoPorts, nil}
       end
 
-    assert t1 == %{i1: {NoPorts, nil, []}}
-    assert t2 == %{i1: {NoPorts, nil, []}, i2: {NoPorts, nil, []}}
+    assert t1 == %{_: {SrcAlias, nil, []}}
+    assert t2 == %{_: {SrcAlias, nil, []}, i: {NoPorts, nil, []}}
   end
 
   test "if both triple and double element tuples are handled correctly" do
     t =
       workflow do
-        double = {Foo, nil}
-        triple = {Source, nil, data ~> double.a, data ~> double.b}
+        _ = {Source, nil}
+        triple = {Foo, nil, c ~> triple.a, d ~> triple.b}
       end
 
     assert t == %{
-             double: {Foo, nil, []},
-             triple: {Source, nil, [data: [{:double, :a}, {:double, :b}]]}
+             _: {SrcAlias, nil, []},
+             triple: {Foo, nil, [c: [{:triple, :a}], d: [{:triple, :b}]]}
            }
   end
 
   test "if links and names are parsed correctly" do
     t =
       workflow do
-        i1 = {Source, nil, data ~> i2.a, data ~> i2.b}
-        i2 = {Foo, nil, c ~> i3.a, d ~> i3.b}
-        i3 = {Foo, nil}
+        _ = {Source, nil, data ~> i1.a, data ~> i1.b}
+        i1 = {Foo, nil, c ~> i2.a, d ~> i2.b}
+        i2 = {Foo, nil}
       end
 
     assert t == %{
-             i1: {Source, nil, [data: [{:i2, :a}, {:i2, :b}]]},
-             i2: {Foo, nil, [c: [{:i3, :a}], d: [{:i3, :b}]]},
-             i3: {Foo, nil, []}
+             _: {SrcAlias, nil, [data: [{:i1, :a}, {:i1, :b}]]},
+             i1: {Foo, nil, [c: [{:i2, :a}], d: [{:i2, :b}]]},
+             i2: {Foo, nil, []}
            }
   end
 
@@ -83,6 +83,20 @@ defmodule Skitter.WorkflowDSLTest do
       workflow do
         _ = {Source, _, data ~> i.a, data ~> i.b}
         i = {Foo, nil}
+      end
+
+    assert t1 == t2
+  end
+
+  test "if both uses of source are valid" do
+    t1 =
+      workflow do
+        _ = {Source, _}
+      end
+
+    t2 =
+      workflow do
+        _ = {Skitter.Workflow.Source, _}
       end
 
     assert t1 == t2
@@ -160,6 +174,22 @@ defmodule Skitter.WorkflowDSLTest do
       workflow do
         _ = {Source, _, data ~> i.a}
         i = {Foo, _}
+      end
+    end
+  end
+
+  test "if a missing source is reported" do
+    assert_definition_error ~r/Each workflow must contain a `Source` with .*/ do
+      workflow do
+        i = {NoPorts, nil}
+      end
+    end
+  end
+
+  test "if an incorrect source is reported" do
+    assert_definition_error ~r/`.*` is not a valid workflow source/ do
+      workflow do
+        _ = {Foo, _}
       end
     end
   end

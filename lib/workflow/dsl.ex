@@ -60,14 +60,13 @@ defmodule Skitter.Workflow.DSL do
         |> transform_links()
         |> transform_underscores()
         |> transform_to_map(__CALLER__)
+        |> transform_source()
 
       validate_components(workflow)
       validate_ports(workflow)
 
-      quote generated: true do
-        alias Skitter.Workflow.Source
-        unquote(Macro.escape(workflow))
-      end
+      Macro.escape(workflow)
+
     catch
       {:error, :invalid_syntax, other} ->
         inject_error "Invalid workflow syntax: `#{Macro.to_string(other)}`"
@@ -89,7 +88,13 @@ defmodule Skitter.Workflow.DSL do
         inject_error "`#{port}` is not a valid #{type} port of `#{cmp}`"
 
       {:error, :unused_port, _} ->
-        inject_error("Unused in ports present in workflow")
+        inject_error "Unused in ports present in workflow"
+
+      {:error, :missing_} ->
+        inject_error "Each workflow must contain a `Source` with identifier `_`"
+
+      {:error, :wrong_source, any} ->
+        inject_error "`#{inspect any}` is not a valid workflow source"
     end
   end
 
@@ -168,6 +173,20 @@ defmodule Skitter.Workflow.DSL do
       Map.update(map, id, {Macro.expand(mod, env), init, links}, fn _ ->
         throw({:error, :duplicate_name, id})
       end)
+    end)
+  end
+
+  # Expand the `Source` module to `Skitter.Workflow.Source`. This is a dirty
+  # hack but there does not seem to be a better way.
+  defp transform_source(map) do
+    unless Map.has_key?(map, :_) do
+      throw({:error, :missing_})
+    end
+
+    Map.update(map, :_, nil, fn
+      {Skitter.Workflow.Source, i, l} -> {Skitter.Workflow.Source, i, l}
+      {Source, init, links} -> {Skitter.Workflow.Source, init, links}
+      {any, _init, _links} -> throw({:error, :wrong_source, any})
     end)
   end
 
