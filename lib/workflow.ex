@@ -9,26 +9,21 @@ defmodule Skitter.Workflow do
   Documentation for Workflow.
   """
 
-  @enforce_keys [:map]
-  defstruct [:map]
+  @enforce_keys [:instances, :sources]
+  defstruct [:instances, :sources]
 
-  @behaviour Access
-  def fetch(%__MODULE__{map: m}, key), do: Map.fetch(m, key)
-
-  def get_and_update(%__MODULE__{map: _m}, _key, _function) do
-    raise ArgumentError, "Modifying a workflow is not supported"
-  end
-
-  def pop(%__MODULE__{map: _m}, _key) do
-    raise ArgumentError, "Modifying a workflow is not supported"
-  end
-
-  defp get_item(workflow, key, idx) do
-    case workflow[key] do
-      nil -> raise KeyError, "Key `#{inspect(key)}` not found in workflow"
-      tup -> elem(tup, idx)
+  defp get_instance!(workflow, key) do
+    case Map.fetch(workflow.instances, key) do
+      :error -> raise KeyError, "Key `#{inspect(key)}` not found in workflow"
+      {:ok, any} -> any
     end
   end
+
+  defp get_instance!(workflow, key, idx) do
+    elem(get_instance!(workflow, key), idx)
+  end
+
+  # TODO: init met idx
 
   @doc """
 
@@ -40,7 +35,7 @@ defmodule Skitter.Workflow do
     ** (KeyError) Key `:does_not_exist` not found in workflow
   """
   def get_component(workflow, key) do
-    get_item(workflow, key, 0)
+    get_instance!(workflow, key, 0)
   end
 
   @doc """
@@ -51,7 +46,7 @@ defmodule Skitter.Workflow do
     nil
   """
   def get_init(workflow, key) do
-    get_item(workflow, key, 1)
+    get_instance!(workflow, key, 1)
   end
 
   @doc """
@@ -62,7 +57,7 @@ defmodule Skitter.Workflow do
     []
   """
   def get_links(workflow, key) do
-    get_item(workflow, key, 2)
+    get_instance!(workflow, key, 2)
   end
 
   # ------ #
