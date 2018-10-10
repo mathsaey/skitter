@@ -11,10 +11,13 @@ defmodule Skitter.MixProject do
     [
       app: :skitter,
       name: "Skitter",
-      version: "0.1.0",
+      version: "0.1.0-dev",
+      source_url: "https://github.com/mathsaey/skitter/",
+      homepage_url: "https://soft.vub.ac.be/~mathsaey/skitter/",
       elixir: "~> 1.7",
-      start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      docs: docs(),
+      start_permanent: Mix.env() == :prod
     ]
   end
 
@@ -29,6 +32,19 @@ defmodule Skitter.MixProject do
       {:ex_doc, "~> 0.19.0", only: :dev, runtime: false},
       {:credo, "~> 0.10.0", only: :dev, runtime: false},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false}
+    ]
+  end
+
+  defp docs do
+    [
+      source_ref: "develop",
+      groups_for_modules: [
+        "Domain Specific Languages": [
+          Skitter.Component.DSL,
+          Skitter.Workflow.DSL
+        ],
+        Querying: [Skitter.Component, Skitter.Workflow]
+      ]
     ]
   end
 end

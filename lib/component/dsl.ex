@@ -9,9 +9,10 @@ defmodule Skitter.Component.DSL do
   DSL to define skitter components.
 
   This module offers a DSL to implement components. The entry point of this DSL
-  is the `component/3` macro.  Besides this, this module offers a set of macros
-  which can be used inside the body of `component/3`.  These macros cannot be
-  used outside `component/3`, as they rely on AST transformations to work.
+  is the `component/3` macro, which is also exported by the `Skitter.Component`
+  module.  Besides this, this module offers a set of macros which can be used
+  inside the body of `component/3`.  These macros cannot be used outside
+  `component/3`, as they rely on AST transformations to work.
 
   A component consists of a collection of metadata alongside the implementation
   of a set of functions. Metadata is provided in both the _header_ of the
@@ -25,6 +26,8 @@ defmodule Skitter.Component.DSL do
   A component which stores a running average is provided here as an example:
 
   ```
+  import Skitter.Component
+
   component Average, in: value, out: average do
     "Track the average of all received values"
 

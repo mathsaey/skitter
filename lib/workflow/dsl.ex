@@ -8,38 +8,85 @@ defmodule Skitter.Workflow.DSL do
   @moduledoc """
   DSL to define skitter workflows.
 
-  This module offers the `workflow/1` macro, which should be used if you plan
-  to write a workflow by hand. If you want to automatically generate a workflow
-  (e.g. based on the input to some graphical tool), you can use this format or
-  the layout described in `Skitter.Component`. Internally, the macro will
-  compile its input to the same representation. Additionally, this macro will
-  ensure that the workflow does not contain some common errors.
+  This module defines the `workflow/1` macro, which can be used to create a
+  Skitter workflow. This macro is also exported by the `Skitter.Workflow`
+  module.
 
-  A workflow definition is a list of component instances with a unique name.
-  The following syntax is used:
-  `instance_name = {component_module, initialization_arguments, links}`.
-  For instance, if we have a component `Foo`, with in ports `a, b, c` and out
-  ports: `d, e` we can define the following workflow:
+  A Skitter workflow is defined by a set of uniquely named _proto-instances_ and
+  _sources_. Proto-instances define the components that will process the data
+  flowing through a workflow, while sources determine how data that enters the
+  workflow is sent to the proto-instances.
+
+  As an example, let's look at a workflow which uses the components `Foo` and
+  `Bar`. `Foo` has in ports `a` and `b`, and out ports `x` and `y`; `Bar` only
+  has a single in port: `val`.
 
   ```
+  import Skitter.Workflow
+
   workflow do
-    instance = {
-      Foo, _,
-      d ~> other.a,
-      d ~> other.b,
-      e ~> other.c
-    }
-    other = {Foo, _}
+    source s ~> {f1.a, f1.b}
+
+    f1 = {Foo, {:some_atom, 5}, x ~> f2.a, y ~> f2.b}
+    f2 = {Foo, {:some_atom, 4}, y ~> bar.val}
+
+    bar = {Bar, _}
   end
   ```
 
-  This workflow consists of multiple instances of the same component (`Foo`).
-  Foo does not take any initialisation arguments (which is why `_` is used).
-  The first instance of `Foo` (`instance`) is linked to the second instance of
-  `Foo` (`other`) through the use of the link syntax:
-  `out_port ~> instance.in_port`. As shown in the example, multiple links can
-  start from the same out port, however, only one incoming link is allowed per
-  input port.
+  This workflow consists of two proto-instances of the same component: `Foo`,
+  a proto-instance of the component `Bar` and a single source `s` which links to
+  `Foo`.
+
+  ## Sources
+
+  Sources connect a workflow to the external world and are defined with the
+  following syntax:
+
+  ```
+  source <name> ~> {<instance identifier>.<port>, <instance identifier>.<port>}
+
+  ```
+
+  Thus, a source definition consists of two parts: a name and a list of
+  destinations. A destination is specified as the combination of a
+  proto-instance identifier and the name of a valid in port of this
+  proto-instance. When a source only links to a single destination, the curly
+  braces may be omitted: `source s ~> foo.bar`.
+
+  A workflow may have multiple  sources.
+
+  TODO: Provide additional info when runtime documentation is ready
+
+
+  ## Proto-instances
+
+  A proto-instance is a tuple which contains all the data that is needed to
+  initialize a proper component instance. A proto-instance is defined with the
+  following syntax:
+
+  ```
+  <name> = {
+    <Component>,
+    <init argument>,
+    <out_port> ~> <instance identifier>.<port>,
+    <out_port> ~> <instance identifier>.<port>
+  }
+  ```
+
+  A proto-instance is defined by a Skitter component, its initialization
+  argument and by its links:
+
+  - The component determines the component that will be instantiated inside
+  the workflow.
+  - The initialization argument will be passed to the `Skitter.Component.init/2`
+  function alongside the component to initialize the component instance.
+  It can be used to configure the component before it is initialized.
+  `_` can be used when no arguments need to be passed.
+  - The links determine to which proto-instances this proto-instance is
+  connected. A link is specified as a combination of an out port on the
+  proto-instance that is being defined, a proto-instance identifier and a valid
+  in port on this proto-instance.
   """
 
   import Skitter.DefinitionError
