@@ -7,7 +7,8 @@
 defmodule Skitter.Component.Instance do
   @moduledoc false
 
-  @data [:state, :component]
+  @enforce_keys [:state, :component]
+  defstruct [:state, :component]
 
   @typep state :: [{atom(), any()}]
 
@@ -15,7 +16,4 @@ defmodule Skitter.Component.Instance do
           state: state(),
           component: Skitter.Component.t()
         }
-
-  @enforce_keys @data
-  defstruct @data
 end
