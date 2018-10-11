@@ -187,6 +187,7 @@ defmodule Skitter.Workflow.DSL do
 
   # Ensure an AST starts with a given keyword.
   defp remove_keyword({kw, _, [args]}, kw), do: args
+  defp remove_keyword(n, _), do: throw {:error, :invalid_syntax, n}
 
   # Extra the lhs and rhs of an operator and return as a tuple
   defp transform_operator({op, _, [l, r]}, op), do: {l, r}
