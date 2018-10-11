@@ -18,8 +18,12 @@ defmodule WorkflowTest do
 
   def example_workflow do
     workflow do
-      source s ~> i.value
-      i = {Identity, _}
+      source s1 ~> i1.value
+      source s2 ~> i2.value
+
+      i1 = {Identity, _, value ~> i3.value}
+      i2 = {Identity, _}
+      i3 = {Identity, _}
     end
   end
 
