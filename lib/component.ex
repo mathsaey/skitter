@@ -106,6 +106,48 @@ defmodule Skitter.Component do
   alias Skitter.Component.Instance
   alias Skitter.Component.Metadata
 
+  # ----- #
+  # Types #
+  # ----- #
+
+  @typedoc """
+  Skitter component definition.
+
+  A skitter component is represented by the elixir module which implements its
+  functionality. This module should provide a `__skitter_metadata__/0` function.
+  """
+  @type t :: module()
+
+  @typedoc """
+  Component instance representation.
+
+  A component instance contains a reference to its component along with some
+  other data which is used by skitter's runtime. As this data can change between
+  different versions of skitter, it is not documented here.
+  """
+  @opaque instance :: Skitter.Component.instance()
+
+  @typedoc """
+  Skitter port type.
+
+  A port is simply defined by its name, which is represented as an atom.
+  """
+  @type port_name :: atom()
+
+  @typedoc "Skitter effects"
+  @type effect :: :external_effect | :state_change
+
+  @typedoc "Possible properties of the `t:state_change` effect."
+  @type state_change_properties :: [:hidden]
+  @typedoc "Possible properties of the `t:external_effect` effect."
+  @type external_effect_properties :: []
+
+  @typedoc "Representation of component checkpoints"
+  @type checkpoint :: any()
+
+  @typedoc "type of the errors components can throw at runtime."
+  @type runtime_error :: {:error, String.t()}
+
   # --------- #
   # Interface #
   # --------- #
@@ -122,6 +164,9 @@ defmodule Skitter.Component do
       iex> is_component?(Identity)
       true
   """
+  @spec is_component?(any()) :: boolean()
+  def is_component?(any)
+
   def is_component?(mod) when is_atom(mod) do
     function_exported?(mod, :__skitter_metadata__, 0) and
       match?(%Metadata{}, mod.__skitter_metadata__)
@@ -139,6 +184,9 @@ defmodule Skitter.Component do
       iex> is_instance?(example_instance())
       true
   """
+  @spec is_instance?(any()) :: true | false
+  def is_instance?(any)
+
   def is_instance?(%Instance{}), do: true
   def is_instance?(_), do: false
 
@@ -152,6 +200,7 @@ defmodule Skitter.Component do
       iex> name(example_instance())
       "Identity"
   """
+  @spec name(t() | instance()) :: String.t()
   def name(%Instance{component: comp}), do: name(comp)
   def name(comp), do: comp.__skitter_metadata__.name
 
@@ -169,6 +218,7 @@ defmodule Skitter.Component do
       iex> description(Features)
       "Doesn't do anything useful, but allows us to show all component aspects."
   """
+  @spec description(t() | instance()) :: String.t()
   def description(%Instance{component: comp}), do: description(comp)
   def description(comp), do: comp.__skitter_metadata__.description
 
@@ -191,6 +241,7 @@ defmodule Skitter.Component do
       iex> in_ports(Features)
       [:foo, :bar]
   """
+  @spec in_ports(t() | instance()) :: [port_name(), ...]
   def in_ports(%Instance{component: comp}), do: in_ports(comp)
   def in_ports(comp), do: comp.__skitter_metadata__.in_ports
 
@@ -211,6 +262,7 @@ defmodule Skitter.Component do
       iex> out_ports(Features)
       []
   """
+  @spec out_ports(t() | instance()) :: [port_name()]
   def out_ports(%Instance{component: comp}), do: out_ports(comp)
   def out_ports(comp), do: comp.__skitter_metadata__.out_ports
 
@@ -235,6 +287,9 @@ defmodule Skitter.Component do
       iex> effects(Features)
       [external_effect: [], state_change: [:hidden]]
   """
+  @spec effects(t() | instance()) :: [
+          {effect(), state_change_properties() | external_effect_properties()}
+        ]
   def effects(%Instance{component: comp}), do: effects(comp)
   def effects(comp), do: comp.__skitter_metadata__.effects
 
@@ -254,6 +309,7 @@ defmodule Skitter.Component do
       iex> state_change?(Features)
       true
   """
+  @spec state_change?(t() | instance()) :: boolean()
   def state_change?(comp) do
     comp |> effects() |> Keyword.has_key?(:state_change)
   end
@@ -278,6 +334,7 @@ defmodule Skitter.Component do
       iex> hidden_state_change?(Features)
       true
   """
+  @spec hidden_state_change?(t() | instance()) :: boolean()
   def hidden_state_change?(comp) do
     lst = comp |> effects() |> Keyword.get(:state_change, [])
     :hidden in lst
@@ -304,6 +361,7 @@ defmodule Skitter.Component do
       iex> external_effect?(Features)
       true
   """
+  @spec external_effect?(t() | instance()) :: boolean()
   def external_effect?(comp) do
     comp |> effects() |> Keyword.has_key?(:external_effect)
   end
@@ -320,6 +378,7 @@ defmodule Skitter.Component do
       iex> init(Identity, nil)
       {:ok, %Instance{component: Identity, state: []}}
   """
+  @spec init(t(), any()) :: {:ok, instance()} | runtime_error()
   def init(comp, args), do: comp.__skitter_init__(args)
 
   @doc """
@@ -335,6 +394,7 @@ defmodule Skitter.Component do
       iex> terminate(Identity)
       ** (FunctionClauseError) no function clause matching in Skitter.Component.terminate/1
   """
+  @spec terminate(instance()) :: :ok | runtime_error()
   def terminate(inst = %Instance{component: comp}) do
     comp.__skitter_terminate__(inst)
   end
@@ -351,6 +411,9 @@ defmodule Skitter.Component do
       iex> react(example_instance(), [20])
       {:ok, %Instance{component: Identity, state: []}, [value: 20]}
   """
+  @spec react(instance(), [any(), ...]) ::
+          {:ok, instance(), [{port_name(), any()}]}
+          | runtime_error()
   def react(inst = %Instance{component: comp}, args) do
     comp.__skitter_react__(inst, args)
   end
@@ -367,6 +430,9 @@ defmodule Skitter.Component do
       iex> react_after_failure(example_instance(), [20])
       {:ok, %Instance{component: Identity, state: []}, [value: 20]}
   """
+  @spec react_after_failure(instance(), [any(), ...]) ::
+          {:ok, instance(), [{port_name(), any()}]}
+          | runtime_error()
   def react_after_failure(inst = %Instance{component: comp}, args) do
     comp.__skitter_react_after_failure__(inst, args)
   end
@@ -385,6 +451,7 @@ defmodule Skitter.Component do
       iex> create_checkpoint(inst)
       {:ok, 7}
   """
+  @spec create_checkpoint(instance()) :: {:ok, checkpoint()} | runtime_error()
   def create_checkpoint(inst = %Instance{component: comp}) do
     comp.__skitter_create_checkpoint__(inst)
   end
@@ -401,6 +468,8 @@ defmodule Skitter.Component do
       iex> restore_checkpoint(Features, 7)
       {:ok, %Skitter.Component.Instance{component: Features, state: [f: 7]}}
   """
+  @spec restore_checkpoint(t(), checkpoint()) ::
+          {:ok, instance()} | runtime_error()
   def restore_checkpoint(comp, checkpoint),
     do: comp.__skitter_restore_checkpoint__(checkpoint)
 
@@ -419,6 +488,7 @@ defmodule Skitter.Component do
       iex> clean_checkpoint(Features, 10)
       ** (FunctionClauseError) no function clause matching in Skitter.Component.clean_checkpoint/2
   """
+  @spec clean_checkpoint(instance(), checkpoint()) :: :ok | runtime_error()
   def clean_checkpoint(inst = %Instance{component: comp}, checkpoint) do
     comp.__skitter_clean_checkpoint__(inst, checkpoint)
   end

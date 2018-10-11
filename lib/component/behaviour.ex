@@ -7,26 +7,26 @@
 defmodule Skitter.Component.Behaviour do
   @moduledoc false
 
-  @type component :: module()
-  @type checkpoint :: any()
-  @type instance :: Skitter.Component.Instance.t()
-  @type reason :: String.t()
+  @typep instance :: Skitter.Component.Instance.t()
+  @typep checkpoint :: Skitter.Component.checkpoint()
+  @typep runtime_error :: Skitter.Component.runtime_error()
 
   @callback __skitter_metadata__ :: Skitter.Component.Metadata.t()
 
-  @callback __skitter_init__(any()) :: {:ok, instance} | {:error, reason}
-  @callback __skitter_terminate__(instance) :: :ok | {:error, reason}
+  @callback __skitter_init__(any()) :: {:ok, instance} | runtime_error()
+  @callback __skitter_terminate__(instance) :: :ok | runtime_error()
 
   @callback __skitter_react__(instance, [any()]) ::
               {:ok, instance, [keyword()]}
-              | {:ok, nil, [keyword()]}
-              | {:error, reason}
+              | runtime_error()
   @callback __skitter_react_after_failure__(instance, [any()]) ::
               {:ok, instance, [keyword()]}
-              | {:ok, nil, [keyword()]}
-              | {:error, reason}
+              | runtime_error()
 
-  @callback __skitter_create_checkpoint__(instance) :: {:ok, checkpoint}
-  @callback __skitter_restore_checkpoint__(checkpoint) :: {:ok, instance}
-  @callback __skitter_clean_checkpoint__(instance, checkpoint) :: :ok
+  @callback __skitter_create_checkpoint__(instance) ::
+              {:ok, checkpoint} | runtime_error()
+  @callback __skitter_restore_checkpoint__(checkpoint) ::
+              {:ok, instance} | runtime_error()
+  @callback __skitter_clean_checkpoint__(instance, checkpoint) ::
+              :ok | runtime_error()
 end

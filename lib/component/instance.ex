@@ -9,9 +9,11 @@ defmodule Skitter.Component.Instance do
 
   @data [:state, :component]
 
+  @typep state :: [{atom(), any()}]
+
   @type t :: %__MODULE__{
-          state: [{atom(), any()}],
-          component: module()
+          state: state(),
+          component: Skitter.Component.t()
         }
 
   @enforce_keys @data
