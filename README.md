@@ -1,3 +1,5 @@
+![Skitter][assets/logo.png]
+
 # Skitter
 
 Skitter is a component agnostic, reactive workflow system.
