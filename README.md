@@ -1,4 +1,4 @@
-![Skitter][assets/logo.png]
+![skitter logo](https://raw.githubusercontent.com/mathsaey/skitter/develop/assets/logo.png)
 
 # Skitter
 
