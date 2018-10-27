@@ -6,14 +6,15 @@
 
 defmodule Skitter.Component.Metadata do
   @moduledoc false
-  @data [:name, :description, :effects, :in_ports, :out_ports]
+  @data [:name, :description, :effects, :in_ports, :out_ports, :arity]
 
   @type t :: %__MODULE__{
           name: String.t(),
           description: String.t(),
           effects: [keyword()],
           in_ports: [atom()],
-          out_ports: [atom()]
+          out_ports: [atom()],
+          arity: pos_integer()
         }
 
   @enforce_keys @data

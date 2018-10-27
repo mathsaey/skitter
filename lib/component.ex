@@ -267,6 +267,25 @@ defmodule Skitter.Component do
   def out_ports(comp), do: comp.__skitter_metadata__.out_ports
 
   @doc """
+  Get the arity of a component (instance)
+
+  The arity of a component is equal to the amount of in ports the component has.
+  See `in_ports/1` for more information.
+
+  ## Examples
+
+      iex> arity(Identity)
+      1
+      iex> arity(example_instance())
+      1
+      iex> arity(Features)
+      2
+  """
+  @spec arity(t() | instance()) :: pos_integer()
+  def arity(%Instance{component: comp}), do: arity(comp)
+  def arity(comp), do: comp.__skitter_metadata__.arity
+
+  @doc """
   Get the effects of a component (instance).
 
   The effects of a component describe the effects that an instance of this
