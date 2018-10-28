@@ -7,33 +7,49 @@
 defmodule Skitter.Runtime.InstanceServer do
   @moduledoc false
 
-  @doc "Start an InstanceServer for a given component."
-  @spec start_link(Skitter.Component.t(), any()) :: {:ok, pid()}
-  def start_link(comp, init) do
-    GenServer.start_link(__MODULE__.Server, {comp, init})
+  def start_link(comp, init, id \\ nil) do
+    GenServer.start_link(__MODULE__.Server, {comp, init, id})
   end
 
-  @doc "Make an InstanceServer react to data"
-  @spec react(pid(), [any(), ...], timeout()) ::
-          {:ok, [{Skitter.Component.port_name(), any()}]}
   def react(srv, args, timeout \\ :infinity) do
     GenServer.call(srv, {:react, args}, timeout)
   end
 
   defmodule Server do
     @moduledoc false
+
+    require Logger
     use GenServer
 
-    def init({comp, init}), do: {:ok, nil, {:continue, {comp, init}}}
+    def init({comp, init, id}) do
+      setup_logger(comp, id)
+      Logger.info "Started instance server"
+      {:ok, nil, {:continue, {comp, init}}}
+    end
 
     def handle_continue({comp, init}, nil) do
       {:ok, instance} = Skitter.Component.init(comp, init)
+      Logger.debug "Finished initialization", state: inspect(instance.state)
       {:noreply, instance}
     end
 
     def handle_call({:react, args}, _, instance) do
+      Logger.debug "React", args: inspect(args), state: inspect(instance.state)
       {:ok, instance, spits} = Skitter.Component.react(instance, args)
+      Logger.debug "Finished reacting", state: inspect(instance.state)
       {:reply, {:ok, spits}, instance}
+    end
+
+    defp setup_logger(comp, id) do
+      metadata = [
+        identifier: id,
+        component: comp,
+      ]
+
+      keys = [:pid] ++ Keyword.keys(metadata) ++ [:state, :args]
+
+      Logger.metadata(metadata)
+      Logger.configure_backend(:console, metadata: keys)
     end
   end
 end

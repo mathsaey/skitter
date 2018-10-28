@@ -16,5 +16,10 @@
     component: :*,
     state_change: :*,
     external_effect: :*,
+    # Logger
+    info: :*,
+    debug: :*,
+    warn: :*,
+    error: :*
   ]
 ]

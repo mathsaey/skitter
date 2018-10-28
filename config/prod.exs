@@ -6,5 +6,7 @@
 
 use Mix.Config
 
-# Remove all logging except warnings and errors in production
-config :logger, compile_time_purge_level: :warn
+config :logger,
+  compile_time_purge_matching: [
+    [level_lower_than: :warn]
+  ]
