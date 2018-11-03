@@ -18,6 +18,10 @@ defmodule Skitter.Runtime.Matcher do
   @spec new :: t()
   def new, do: Map.new()
 
+  @spec empty?(t()) :: boolean()
+  def empty?(%{}), do: true
+  def empty?(_), do: false
+
   @spec add(
           t(),
           {Workflow.workflow_identifier(), Component.port_name()},
