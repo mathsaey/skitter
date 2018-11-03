@@ -14,5 +14,5 @@ config :logger, :console,
   format: "\n[$time][$level$levelpad] $message\n+> $metadata\n",
   metadata: [
     :registered_name,
-    :pid,
+    :pid
   ]
