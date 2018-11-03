@@ -33,10 +33,6 @@ defmodule Skitter.Workflow do
   """
   @type outgoing_links :: [{Skitter.Component.port_name(), [destination]}]
 
-  # TODO: move once 3 "runtime" functions have been moved
-  @typedoc "Data record with a destination."
-  @type token :: {any(), destination()}
-
   @typedoc """
   Proto-instance type.
 
@@ -63,12 +59,70 @@ defmodule Skitter.Workflow do
   @enforce_keys [:instances, :sources]
   defstruct [:instances, :sources]
 
-  defp get_source!(workflow, key) do
+  # Sources
+  # -------
+
+  @doc """
+  Obtain the destinations of a source based on its name.
+
+  ## Examples
+
+      iex> get_source!(example_workflow(), :s1)
+      [i1: :value]
+      iex> get_source!(example_workflow(), :foo)
+      ** (KeyError) Key `:foo` not found in workflow
+  """
+  @spec get_source!(t(), workflow_identifier()) :: [destination()] | no_return
+  def get_source!(workflow, key) do
     case Map.fetch(workflow.sources, key) do
       :error -> raise KeyError, "Key `#{inspect(key)}` not found in workflow"
       {:ok, any} -> any
     end
   end
+
+  @doc """
+  List the sources of a component.
+
+  ## Examples
+
+      iex> get_sources(example_workflow())
+      [:s1, :s2]
+
+  """
+  @spec get_sources(t()) :: [workflow_identifier()]
+  def get_sources(workflow), do: Map.keys(workflow.sources)
+
+  @doc """
+  Check if a keyword lists matches with the sources of a workflow.
+
+  This means that the keys of the keyword list and source names should be
+  identical. Ordering is not taken into account.
+
+  ## Examples
+
+      iex> sources_match?(example_workflow(), s1: 3, s2: 4)
+      true
+      iex> sources_match?(example_workflow(), s1: 3, s1: 4)
+      false
+      iex> sources_match?(example_workflow(), s1: 3)
+      false
+  """
+  def sources_match?(workflow, kw_list) do
+    kw_keys =
+      Enum.reduce_while(kw_list, MapSet.new(), fn
+        {key, _}, set ->
+          if MapSet.member?(set, key) do
+            {:halt, false}
+          else
+            {:cont, MapSet.put(set, key)}
+          end
+      end)
+
+    kw_keys && MapSet.equal?(kw_keys, MapSet.new(Map.keys(workflow.sources)))
+  end
+
+  # Instances
+  # ---------
 
   defp get_instance!(workflow, key) do
     case Map.fetch(workflow.instances, key) do
@@ -128,89 +182,16 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> init_proto_instance(example_workflow(), :i1)
+      iex> init_proto_instance!(example_workflow(), :i1)
       {:ok, %Skitter.Component.Instance{component: WorkflowTest.Identity, state: []}}
   """
-  @spec init_proto_instance(t(), workflow_identifier()) ::
+  @spec init_proto_instance!(t(), workflow_identifier()) ::
           {:ok, Skitter.Component.instance()}
           | Skitter.Component.runtime_error()
           | no_return
-  def init_proto_instance(workflow, key) do
+  def init_proto_instance!(workflow, key) do
     {comp, args, _} = get_instance!(workflow, key)
     Skitter.Component.init(comp, args)
-  end
-
-  # TODO: Move all of these to a runtime specific module later
-
-  @doc """
-  Create a list of tagged tokens based on the outputs of a component instance.
-
-  Spits is the data that the component produced while reacting; they are
-  represented as a keyword list where a key is an out port while the value is
-  the data spit to that output port.
-
-  Tokens are data records that will be sent to other components in the workflow.
-  Each token is tagged with its destination.
-
-  This function receives a list of spits, along with the list of outgoing links
-  of a component instance. Based on these, it creates a list of tagged tokens.
-
-  ## Examples
-
-      iex> links = get_links!(example_workflow(), :i1)
-      [value: [i3: :value]]
-      iex> spits_to_tokens(links, [value: 20])
-      [{20, {:i3, :value}}]
-  """
-  @spec spits_to_tokens(outgoing_links(), [
-          {Skitter.Component.port_name(), any()}
-        ]) :: [token()]
-  def spits_to_tokens(links, spits) do
-    Enum.flat_map(spits, fn {port, val} ->
-      Enum.map(Keyword.get(links, port, []), fn dest -> {val, dest} end)
-    end)
-  end
-
-  @doc """
-  Generate tokens from spits like `spits_to_tokens/2`, but fetch the links.
-
-  Identical to `spits_to_tokens/2`, but fetches the links from a workflow first.
-
-  ## Examples
-
-      iex> spits_to_tokens!(example_workflow(), :i1, [value: 20])
-      [{20, {:i3, :value}}]
-  """
-  @spec spits_to_tokens!(t(), workflow_identifier(), [
-          {Skitter.Component.port_name(), any()}
-        ]) :: [token()]
-  def spits_to_tokens!(workflow, key, spits) do
-    links = get_links!(workflow, key)
-    spits_to_tokens(links, spits)
-  end
-
-  @doc """
-  Generate tokens out of the initial data for a workflow.
-
-  The initial data is provided as a keyword list, where the keys are source
-  names and the values are values to be sent to the sources. There should be a
-  value for each source; this is currently not verified.
-
-  ## Examples
-
-      iex> source_data_to_tokens!(example_workflow(), [s1: 20, s2: 22])
-      [{20, {:i1, :value}}, {22, {:i2, :value}}]
-      iex> source_data_to_tokens!(example_workflow(), [does_not_exist: 20])
-      ** (KeyError) Key `:does_not_exist` not found in workflow
-  """
-  @spec source_data_to_tokens!(t(), [{workflow_identifier(), any()}]) :: [
-          token()
-        ]
-  def source_data_to_tokens!(workflow, source_data) do
-    Enum.flat_map(source_data, fn
-      {source, val} ->
-        Enum.map(get_source!(workflow, source), fn dest -> {val, dest} end)
-    end)
   end
 
   # ------ #
