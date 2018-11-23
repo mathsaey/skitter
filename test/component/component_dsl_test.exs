@@ -7,8 +7,8 @@
 defmodule Skitter.Component.DSLTest do
   use ExUnit.Case, async: true
 
-  import Skitter.Assertions
   import Skitter.Component.DSL
+  import Skitter.Test.Assertions
 
   alias Skitter.Component.Instance
 

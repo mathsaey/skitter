@@ -8,8 +8,8 @@ defmodule Skitter.WorkflowDSLTest do
   use ExUnit.Case, async: true
 
   import Skitter.Component
-  import Skitter.Assertions
   import Skitter.Workflow.DSL
+  import Skitter.Test.Assertions
 
   # -------------- #
   # Test Component #

@@ -17,7 +17,9 @@ defmodule Skitter.MixProject do
       elixir: "~> 1.7",
       deps: deps(),
       docs: docs(),
-      start_permanent: Mix.env() == :prod
+      aliases: aliases(),
+      start_permanent: Mix.env() == :prod,
+      elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
 
@@ -51,4 +53,17 @@ defmodule Skitter.MixProject do
       ]
     ]
   end
+
+  defp aliases do
+    [test: &test_alias/1]
+  end
+
+  defp test_alias(args) do
+    unless Node.alive?(), do: Node.start(:skitter_test, :shortnames)
+    Application.put_env(:skitter, :mode, :master, persistent: true)
+    Mix.Tasks.Test.run(args)
+  end
+
+  defp elixirc_paths(:test), do: ["lib", "test/utils"]
+  defp elixirc_paths(_), do: ["lib"]
 end
