@@ -9,12 +9,7 @@ defmodule Skitter.Application do
   use Application
 
   def start(type, []) do
-    start(type, Application.get_env(:skitter, :mode, nil))
-  end
-
-  def start(type, nil) do
-    IO.warn("No mode provided, defaulting to master.")
-    start(type, :master)
+    start(type, Application.get_env(:skitter, :mode, :master))
   end
 
   def start(_type, :worker) do

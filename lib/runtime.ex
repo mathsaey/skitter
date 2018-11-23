@@ -53,6 +53,8 @@ defmodule Skitter.Runtime do
     {:noreply, List.delete(nodes, node)}
   end
 
+  defp connect([]), do: []
+
   defp connect(nodes) when is_list(nodes) do
     if Node.alive?() do
       nodes
