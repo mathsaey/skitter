@@ -49,7 +49,7 @@ defmodule Skitter.Runtime do
   end
 
   def handle_cast({:remove_node, node}, nodes) do
-    Logger.info("Removing worker: #{node}")
+    Logger.info "Removing worker: #{node}"
     {:noreply, List.delete(nodes, node)}
   end
 
@@ -68,7 +68,7 @@ defmodule Skitter.Runtime do
          true <- Skitter.Runtime.Worker.verify_node(node),
          :ok <- Skitter.Runtime.Worker.register_master(node, Node.self()),
          {:ok, _p} <- Skitter.Runtime.NodeMonitorSupervisor.start_monitor(node) do
-      Logger.info("Registered new worker: #{node}")
+      Logger.info "Registered new worker: #{node}"
       true
     else
       :not_connected -> {:not_connected, node}

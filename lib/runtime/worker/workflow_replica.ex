@@ -36,12 +36,10 @@ defmodule Skitter.Runtime.Worker.WorkflowReplica do
   # Verify the sources and start the replica server
   def init({workflow, tokens}) do
     setup_logger(workflow)
-    Logger.debug "Created workflow replica"
 
     if Workflow.sources_match?(workflow, tokens) do
       {:ok, {workflow, Matcher.new(), 0}, {:continue, tokens}}
     else
-      Logger.error "Initialized with invalid tokens", tokens: inspect(tokens)
       {:stop, "Invalid tokens"}
     end
   end
@@ -57,7 +55,6 @@ defmodule Skitter.Runtime.Worker.WorkflowReplica do
         end)
     end)
 
-    Logger.debug "Finished initialization"
     {:noreply, {workflow, matcher, pending}}
   end
 
@@ -79,7 +76,6 @@ defmodule Skitter.Runtime.Worker.WorkflowReplica do
       Logger.error "Unused tokens in workflow", matcher: inspect(matcher)
     end
 
-    Logger.debug "Stopping workflow replica"
     {:stop, :normal, {workflow, matcher, 0}}
   end
 

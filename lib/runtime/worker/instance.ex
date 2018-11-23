@@ -8,7 +8,6 @@ defmodule Skitter.Runtime.Worker.Instance do
   @moduledoc false
 
   use GenServer
-  require Logger
 
   # --- #
   # API #
@@ -27,33 +26,16 @@ defmodule Skitter.Runtime.Worker.Instance do
   # ------ #
 
   def init({comp, init, id}) do
-    setup_logger(comp, id)
-    Logger.debug "Started instance server"
     {:ok, nil, {:continue, {comp, init}}}
   end
 
   def handle_continue({comp, init}, nil) do
     {:ok, instance} = Skitter.Component.init(comp, init)
-    Logger.debug "Finished initialization", state: inspect(instance.state)
     {:noreply, instance}
   end
 
-  defp setup_logger(comp, id) do
-    metadata = [
-      identifier: id,
-      component: comp,
-    ]
-
-    keys = [:pid] ++ Keyword.keys(metadata) ++ [:state, :args]
-
-    Logger.metadata(metadata)
-    Logger.configure_backend(:console, metadata: keys)
-  end
-
   def handle_call({:react, args}, _, instance) do
-    Logger.debug "React", args: inspect(args), state: inspect(instance.state)
     {:ok, instance, spits} = Skitter.Component.react(instance, args)
-    Logger.debug "Finished reacting", state: inspect(instance.state)
     {:reply, {:ok, spits}, instance}
   end
 end
