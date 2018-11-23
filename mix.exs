@@ -31,10 +31,10 @@ defmodule Skitter.MixProject do
   defp deps do
     [
       # Dev tools
-      {:distillery, "~> 2.0", runtime: false},
-      {:ex_doc, "~> 0.19.0", only: :dev, runtime: false},
+      {:remix, "~> 0.0.1", only: :dev},
       {:credo, "~> 0.10.0", only: :dev, runtime: false},
-      {:dialyxir, "~> 0.5", only: :dev, runtime: false}
+      {:dialyxir, "~> 0.5", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.19.0", only: :dev, runtime: false}
     ]
   end
 
