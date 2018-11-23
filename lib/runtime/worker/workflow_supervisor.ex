@@ -4,23 +4,24 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.LocalWorkflowManager do
+defmodule Skitter.Runtime.Worker.WorkflowSupervisor do
   @moduledoc false
-  use DynamicSupervisor
+  use Supervisor
 
   def start_link(workflow) do
-    DynamicSupervisor.start_link(__MODULE__, workflow)
+    Supervisor.start_link(__MODULE__, workflow)
   end
 
   def init(workflow) do
-    DynamicSupervisor.init(
+    children = [
+      {Skitter.Runtime.Local.WorkflowReplicaSupervisor, workflow},
+      Skitter.Runtime.Local.InstanceSupervisor
+    ]
+
+    Supervisor.init(
+      children,
       strategy: :one_for_one,
       extra_arguments: [workflow]
     )
-  end
-
-  def react(sup, tokens) do
-    spec = {Skitter.Runtime.WorkflowReplica, tokens}
-    DynamicSupervisor.start_child(sup, spec)
   end
 end

@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.WorkflowReplica do
+defmodule Skitter.Runtime.Worker.WorkflowReplica do
   @moduledoc false
 
   use GenServer
@@ -12,7 +12,6 @@ defmodule Skitter.Runtime.WorkflowReplica do
 
   alias Skitter.Workflow
   alias Skitter.Runtime.Matcher
-  alias Skitter.Runtime.WorkflowReplica, as: Interface
 
   # --- #
   # API #
@@ -54,7 +53,7 @@ defmodule Skitter.Runtime.WorkflowReplica do
         destinations = Workflow.get_source!(workflow, source)
 
         Enum.each(destinations, fn destination ->
-          Interface.add_token(self(), value, destination)
+          add_token(self(), value, destination)
         end)
     end)
 

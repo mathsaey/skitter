@@ -4,11 +4,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.InstanceServerTest do
+defmodule Skitter.InstanceTest do
   use ExUnit.Case, async: true
 
   import Skitter.Component, only: [component: 3]
-  alias Skitter.Runtime.InstanceServer
+  alias Skitter.Runtime.Worker.Instance
 
   component TestComponent, in: val, out: current do
     effect state_change
@@ -25,11 +25,9 @@ defmodule Skitter.InstanceServerTest do
   end
 
   test "If the server works" do
-    {:ok, pid} = InstanceServer.start_link(TestComponent, 5)
-    {:ok, spits} = InstanceServer.react(pid, [:foo])
+    {:ok, pid} = Instance.start_link(TestComponent, 5)
+    {:ok, spits} = Instance.react(pid, [:foo])
 
     assert spits == [current: 6]
   end
-
-  doctest Skitter.Runtime.InstanceServer
 end
