@@ -23,6 +23,7 @@ defmodule Skitter.MixProject do
 
   def application do
     [
+      mod: {Skitter.Application, []},
       extra_applications: [:logger]
     ]
   end
