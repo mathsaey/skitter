@@ -31,6 +31,7 @@ defmodule Skitter.Application do
     nodes = Application.get_env(:skitter, :worker_nodes, [])
 
     children = [
+      {Skitter.Runtime.NodeMonitorSupervisor, []},
       {Skitter.Runtime, nodes}
     ]
 

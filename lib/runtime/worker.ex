@@ -19,7 +19,7 @@ defmodule Skitter.Runtime.Worker do
   # Remote API #
   # ---------- #
 
-  def verify_worker(node) do
+  def verify_node(node) do
     # Ensure node is connected
     if node in Node.list(:connected) do
 
@@ -30,7 +30,7 @@ defmodule Skitter.Runtime.Worker do
       pid = Node.spawn_link(node, __MODULE__, :verify_local_worker, [self()])
       res = receive do
         bool when is_boolean(bool) -> bool
-        {:EXIT, _, {:undef, _}} -> false
+        {:EXIT, _, {:undef, _}} -> :invalid
       end
 
       # Shut down process and catch exit signal
@@ -43,7 +43,7 @@ defmodule Skitter.Runtime.Worker do
       Process.flag(:trap_exit, prev)
       res
     else
-      false
+      :not_connected
     end
   end
 

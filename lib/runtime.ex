@@ -24,6 +24,7 @@ defmodule Skitter.Runtime do
 
     case rejected do
       [] -> {:ok, nodes}
+      :not_distributed -> {:stop, :not_distributed}
       lst -> {:stop, {:invalid_nodes, lst}}
     end
   end
@@ -32,14 +33,25 @@ defmodule Skitter.Runtime do
   # -----
 
   defp connect(nodes) when is_list(nodes) do
-    nodes
-    |> Enum.map(&connect/1)
-    |> Enum.zip(nodes)
-    |> Enum.map(fn {bool, el} -> if bool, do: bool, else: el end)
-    |> Enum.reject(&(&1 == true))
+    if Node.alive?() do
+      nodes
+      |> Enum.map(&connect/1)
+      |> Enum.reject(&(&1 == true))
+    else
+      :not_distributed
+    end
   end
 
   defp connect(node) when is_atom(node) do
-    Node.connect(node) && Skitter.Runtime.Worker.verify_worker(node)
+    with true <- Node.connect(node),
+         true <- Skitter.Runtime.Worker.verify_node(node),
+         {:ok, _p} <- Skitter.Runtime.NodeMonitorSupervisor.start_monitor(node) do
+      true
+    else
+      :not_connected -> {:not_connected, node}
+      :invalid -> {:no_skitter_worker, node}
+      false -> {:not_connected, node}
+      any -> {:error, any, node}
+    end
   end
 end
