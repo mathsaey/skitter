@@ -36,11 +36,13 @@ defmodule Skitter.Runtime.NodeMonitor do
 
   def handle_info({:DOWN, _ref, :process, _pid, :normal}, node) do
     Logger.info("Normal exit of monitored Skitter Worker")
+    Skitter.Runtime.remove_node(node)
     {:stop, :normal, node}
   end
 
   def handle_info({:DOWN, _ref, :process, _pid, reason}, node) do
     Logger.warn("Skitter worker failed with #{reason}")
+    Skitter.Runtime.remove_node(node)
     {:stop, :normal, node}
   end
 

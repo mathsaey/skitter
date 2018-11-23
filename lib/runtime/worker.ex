@@ -7,6 +7,8 @@
 defmodule Skitter.Runtime.Worker do
   use GenServer
 
+  require Logger
+
   # --- #
   # API #
   # --- #
@@ -18,6 +20,10 @@ defmodule Skitter.Runtime.Worker do
   # ---------- #
   # Remote API #
   # ---------- #
+
+  def register_master(node, master) do
+    GenServer.cast({__MODULE__, node}, {:master, master})
+  end
 
   def verify_node(node) do
     # Ensure node is connected
@@ -56,6 +62,11 @@ defmodule Skitter.Runtime.Worker do
   # ------ #
 
   def init(_) do
-    {:ok, nil}
+    {:ok, []}
+  end
+
+  def handle_cast({:master, master}, masters) do
+    Logger.info "Registered new master: #{master}"
+    {:noreply, [master | masters]}
   end
 end

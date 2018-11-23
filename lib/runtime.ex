@@ -6,6 +6,7 @@
 
 defmodule Skitter.Runtime do
   use GenServer
+  require Logger
 
   # --- #
   # API #
@@ -13,6 +14,14 @@ defmodule Skitter.Runtime do
 
   def start_link(nodes) do
     GenServer.start_link(__MODULE__, nodes, name: __MODULE__)
+  end
+
+  def add_node(node) do
+    GenServer.call(__MODULE__, {:add_node, node}, :infinity)
+  end
+
+  def remove_node(node) do
+    GenServer.cast(__MODULE__, {:remove_node, node})
   end
 
   # ------ #
@@ -32,6 +41,18 @@ defmodule Skitter.Runtime do
   # Nodes
   # -----
 
+  def handle_call({:add_node, node}, _from, nodes) do
+    case connect(node) do
+      true -> {:reply, true, [node | nodes]}
+      any -> {:reply, any, nodes}
+    end
+  end
+
+  def handle_cast({:remove_node, node}, nodes) do
+    Logger.info("Removing worker: #{node}")
+    {:noreply, List.delete(nodes, node)}
+  end
+
   defp connect(nodes) when is_list(nodes) do
     if Node.alive?() do
       nodes
@@ -45,7 +66,9 @@ defmodule Skitter.Runtime do
   defp connect(node) when is_atom(node) do
     with true <- Node.connect(node),
          true <- Skitter.Runtime.Worker.verify_node(node),
+         :ok <- Skitter.Runtime.Worker.register_master(node, Node.self()),
          {:ok, _p} <- Skitter.Runtime.NodeMonitorSupervisor.start_monitor(node) do
+      Logger.info("Registered new worker: #{node}")
       true
     else
       :not_connected -> {:not_connected, node}
