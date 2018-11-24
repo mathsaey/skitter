@@ -5,12 +5,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Mix.Tasks.Skitter.Boot do
-  @moduledoc """
-  Skitter bootup functionality.
+  @moduledoc false
 
-  This module collects the code which is used by the various mix tasks which
-  start Skitter in a given mode.
-  """
   def boot(mode) do
     Application.put_env(:skitter, :mode, mode, persistent: true)
     start_with_default_name(mode)

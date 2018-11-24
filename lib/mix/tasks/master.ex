@@ -27,7 +27,7 @@ defmodule Mix.Tasks.Skitter.Master do
     Mix.Tasks.Skitter.Boot.boot(:master)
   end
 
-  def read_nodes(args) do
+  defp read_nodes(args) do
     nodes = Enum.map(args, &String.to_atom/1)
     Application.put_env(:skitter, :worker_nodes, nodes, persistent: true)
   end

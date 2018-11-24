@@ -27,7 +27,7 @@ defmodule Skitter.Application do
 
     children = [
       {Skitter.Runtime.NodeMonitorSupervisor, []},
-      {Skitter.Runtime, nodes}
+      {Skitter.Runtime.Server, nodes}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
