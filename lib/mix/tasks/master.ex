@@ -18,7 +18,7 @@ defmodule Mix.Tasks.Skitter.Master do
   Furthermore, using this task implicitly passes the `--no-halt` option to mix.
 
   If you wish to pass any arguments to the underlying elixir runtime, this task
-  can be started as follows: `elixir --arg1 --arg2 -S skitter.master`
+  can be started as follows: `elixir --arg1 --arg2 -S mix skitter.master`
   """
 
   @shortdoc "Start a Skitter master node for the current project."

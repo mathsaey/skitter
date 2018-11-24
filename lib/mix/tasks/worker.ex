@@ -17,7 +17,7 @@ defmodule Mix.Tasks.Skitter.Worker do
   distributed. If no name is specified, `worker` is used.
 
   If you wish to pass any arguments to the underlying elixir runtime, this task
-  can be started as follows: `elixir --arg1 --arg2 -S skitter.worker`
+  can be started as follows: `elixir --arg1 --arg2 -S mix skitter.worker`
   """
 
   @shortdoc "Start a Skitter worker node for the current project."
