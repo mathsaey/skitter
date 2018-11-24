@@ -18,10 +18,6 @@ defmodule Skitter.Runtime.Worker.WorkflowSupervisor do
       Skitter.Runtime.Local.InstanceSupervisor
     ]
 
-    Supervisor.init(
-      children,
-      strategy: :one_for_one,
-      extra_arguments: [workflow]
-    )
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end
