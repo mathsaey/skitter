@@ -21,5 +21,7 @@ defmodule Mix.Tasks.Skitter.Worker do
   """
 
   @shortdoc "Start a Skitter worker node for the current project."
+
+  @doc false
   def run(_args), do: Mix.Tasks.Skitter.Boot.boot(:worker)
 end

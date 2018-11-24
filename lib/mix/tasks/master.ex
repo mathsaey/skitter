@@ -22,6 +22,8 @@ defmodule Mix.Tasks.Skitter.Master do
   """
 
   @shortdoc "Start a Skitter master node for the current project."
+
+  @doc false
   def run(args) do
     read_nodes(args)
     Mix.Tasks.Skitter.Boot.boot(:master)
