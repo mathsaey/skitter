@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.NodeMonitor do
+defmodule Skitter.Runtime.Master.NodeMonitor do
   @moduledoc false
 
   require Logger
@@ -45,14 +45,14 @@ defmodule Skitter.Runtime.NodeMonitor do
 
   def handle_info({:DOWN, _, :process, _, :normal}, {node, subscribers}) do
     Logger.info "Normal exit of monitored Skitter Worker"
-    Skitter.Runtime.remove_node(node)
+    Skitter.Runtime.Master.remove_node(node)
     notify(subscribers, node, :normal)
     {:stop, :normal, {node, subscribers}}
   end
 
   def handle_info({:DOWN, _, :process, _, reason}, {node, subscribers}) do
     Logger.warn "Skitter worker failed with #{reason}"
-    Skitter.Runtime.remove_node(node)
+    Skitter.Runtime.Master.remove_node(node)
     notify(subscribers, node, reason)
     {:stop, :normal, {node, subscribers}}
   end

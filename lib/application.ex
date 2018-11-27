@@ -8,14 +8,17 @@ defmodule Skitter.Application do
   @moduledoc false
   use Application
 
+  alias Skitter.Runtime.Worker
+  alias Skitter.Runtime.Master
+
   def start(type, []) do
     start(type, Application.get_env(:skitter, :mode, :master))
   end
 
   def start(_type, :worker) do
     children = [
-      Skitter.Runtime.Worker,
-      Skitter.Runtime.Worker.DynamicWorkflowSupervisor
+      Worker,
+      Worker.DynamicWorkflowSupervisor
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
@@ -26,8 +29,8 @@ defmodule Skitter.Application do
     nodes = Application.get_env(:skitter, :worker_nodes, [])
 
     children = [
-      {Skitter.Runtime.NodeMonitorSupervisor, []},
-      {Skitter.Runtime.Server, nodes}
+      {Master.NodeMonitorSupervisor, []},
+      {Master, nodes}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)

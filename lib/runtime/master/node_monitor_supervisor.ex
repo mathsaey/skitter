@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.NodeMonitorSupervisor do
+defmodule Skitter.Runtime.Master.NodeMonitorSupervisor do
   @moduledoc false
   use DynamicSupervisor
 
@@ -17,7 +17,7 @@ defmodule Skitter.Runtime.NodeMonitorSupervisor do
   end
 
   def start_monitor(node) do
-    spec = {Skitter.Runtime.NodeMonitor, node}
+    spec = {Skitter.Runtime.Master.NodeMonitor, node}
     DynamicSupervisor.start_child(__MODULE__, spec)
   end
 
