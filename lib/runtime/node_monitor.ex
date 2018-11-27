@@ -15,9 +15,10 @@ defmodule Skitter.Runtime.NodeMonitor do
   # API #
   # --- #
 
-  def start_link(node) do
-    GenServer.start_link(__MODULE__, node)
-  end
+  def start_link(node), do: GenServer.start_link(__MODULE__, node)
+
+  def subscribe(server, pid), do: GenServer.cast(server, {:subscribe, pid})
+  def unsubscribe(server, pid), do: GenServer.cast(server, {:unsubscribe, pid})
 
   # ------ #
   # Server #
@@ -26,7 +27,7 @@ defmodule Skitter.Runtime.NodeMonitor do
   def init(node) do
     setup_logger(node)
     Process.monitor({Skitter.Runtime.Worker, node})
-    {:ok, node}
+    {:ok, {node, []}}
   end
 
   defp setup_logger(node) do
@@ -34,20 +35,36 @@ defmodule Skitter.Runtime.NodeMonitor do
     Logger.configure_backend(:console, metadata: [:node])
   end
 
-  def handle_info({:DOWN, _ref, :process, _pid, :normal}, node) do
+  def handle_cast({:subscribe, pid}, {node, subscribers}) do
+    {:noreply, {node, [pid | subscribers]}}
+  end
+
+  def handle_cast({:unsubscribe, pid}, {node, subscribers}) do
+    {:noreply, {node, List.delete(subscribers, pid)}}
+  end
+
+  def handle_info({:DOWN, _, :process, _, :normal}, {node, subscribers}) do
     Logger.info "Normal exit of monitored Skitter Worker"
     Skitter.Runtime.remove_node(node)
-    {:stop, :normal, node}
+    notify(subscribers, node, :normal)
+    {:stop, :normal, {node, subscribers}}
   end
 
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, node) do
+  def handle_info({:DOWN, _, :process, _, reason}, {node, subscribers}) do
     Logger.warn "Skitter worker failed with #{reason}"
     Skitter.Runtime.remove_node(node)
-    {:stop, :normal, node}
+    notify(subscribers, node, reason)
+    {:stop, :normal, {node, subscribers}}
   end
 
-  def handle_info(msg, node) do
+  def handle_info(msg, {node, subscribers}) do
     Logger.debug "Received abnormal message: #{inspect msg}"
-    {:noreply, node}
+    {:noreply, {node, subscribers}}
   end
+
+  defp notify(pids, node, reason) when is_list(pids) do
+    Enum.each(pids, &notify(&1, node, reason))
+  end
+
+  defp notify(pid, node, reason), do: send(pid, {:node_down, node, reason})
 end
