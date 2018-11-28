@@ -24,7 +24,11 @@ defmodule Skitter.Runtime.Worker do
   # ---------- #
 
   def register_master(node, master) do
-    GenServer.cast({__MODULE__, node}, {:master, master})
+    GenServer.call({__MODULE__, node}, {:add_master, master}, :infinity)
+  end
+
+  def unregister_master(node, master) do
+    GenServer.cast({__MODULE__, node}, {:remove_master, master})
   end
 
   def verify_node(node) do
@@ -67,8 +71,17 @@ defmodule Skitter.Runtime.Worker do
     {:ok, []}
   end
 
-  def handle_cast({:master, master}, masters) do
-    Logger.info "Registered new master: #{master}"
-    {:noreply, [master | masters]}
+  def handle_call({:add_master, master}, _from, masters) do
+    if master in masters do
+      {:reply, :already_connected, masters}
+    else
+      Logger.info "Registered new master: #{master}"
+      {:reply, :ok, [master | masters]}
+    end
+  end
+
+  def handle_cast({:remove_master, master}, masters) do
+    Logger.info "Removing master: #{master}"
+    {:noreply, List.delete(masters, master)}
   end
 end

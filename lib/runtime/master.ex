@@ -35,10 +35,10 @@ defmodule Skitter.Runtime.Master do
   end
 
   def init(nodes) do
-    rejected = connect(nodes)
+    conn = connect(nodes)
 
-    case rejected do
-      [] -> {:ok, nodes}
+    case conn do
+      true -> {:ok, nil}
       :not_distributed -> {:stop, :not_distributed}
       lst -> {:stop, {:invalid_nodes, lst}}
     end
@@ -47,43 +47,18 @@ defmodule Skitter.Runtime.Master do
   # Nodes
   # -----
 
-  def handle_call({:add_node, node}, _from, nodes) do
+  def handle_call({:add_node, node}, _from, nil) do
     case connect(node) do
-      true -> {:reply, true, [node | nodes]}
-      any -> {:reply, any, nodes}
+      true -> {:reply, true, nil}
+      any -> {:reply, any, nil}
     end
   end
 
-  def handle_cast({:remove_node, node}, nodes) do
-    Logger.info "Removing worker: #{node}"
-    {:noreply, List.delete(nodes, node)}
+  def handle_cast({:remove_node, node}, nil) do
+    Master.Nodes.remove(node)
+    {:noreply, nil}
   end
 
-  defp connect([]), do: []
-
-  defp connect(nodes) when is_list(nodes) do
-    if Node.alive?() do
-      nodes
-      |> Enum.map(&connect/1)
-      |> Enum.reject(&(&1 == true))
-    else
-      :not_distributed
-    end
-  end
-
-  defp connect(node) when is_atom(node) do
-    with true <- Node.connect(node),
-         true <- Worker.verify_node(node),
-         :ok <- Worker.register_master(node, Node.self()),
-         {:ok, _p} <- Master.NodeMonitorSupervisor.start_monitor(node) do
-      Logger.info "Registered new worker: #{node}"
-      true
-    else
-      :not_connected -> {:not_connected, node}
-      :invalid -> {:no_skitter_worker, node}
-      false -> {:not_connected, node}
-      any -> {:error, any, node}
-    end
-  end
+  defp connect(node), do: Master.Nodes.add(node)
 end
 

@@ -4,18 +4,22 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Master.NodeMonitor do
+defmodule Skitter.Runtime.Master.Nodes.Monitor do
   @moduledoc false
 
   require Logger
 
   use GenServer, restart: :transient
 
+  alias Skitter.Runtime.Master.Nodes.Registry
+
   # --- #
   # API #
   # --- #
 
   def start_link(node), do: GenServer.start_link(__MODULE__, node)
+
+  def remove(server), do: GenServer.cast(server, :remove)
 
   def subscribe(server, pid), do: GenServer.cast(server, {:subscribe, pid})
   def unsubscribe(server, pid), do: GenServer.cast(server, {:unsubscribe, pid})
@@ -27,6 +31,8 @@ defmodule Skitter.Runtime.Master.NodeMonitor do
   def init(node) do
     setup_logger(node)
     Process.monitor({Skitter.Runtime.Worker, node})
+    :ok = Registry.register(node, self())
+    Logger.info("Registered new worker: #{node}")
     {:ok, {node, []}}
   end
 
@@ -43,23 +49,30 @@ defmodule Skitter.Runtime.Master.NodeMonitor do
     {:noreply, {node, List.delete(subscribers, pid)}}
   end
 
+  def handle_cast(:remove, {node, subscribers}) do
+    Logger.debug "Removing #{node}"
+    cleanup(subscribers, node, :normal)
+  end
+
   def handle_info({:DOWN, _, :process, _, :normal}, {node, subscribers}) do
     Logger.info "Normal exit of monitored Skitter Worker"
-    Skitter.Runtime.Master.remove_node(node)
-    notify(subscribers, node, :normal)
-    {:stop, :normal, {node, subscribers}}
+    cleanup(subscribers, node, :normal)
   end
 
   def handle_info({:DOWN, _, :process, _, reason}, {node, subscribers}) do
     Logger.warn "Skitter worker failed with #{reason}"
-    Skitter.Runtime.Master.remove_node(node)
-    notify(subscribers, node, reason)
-    {:stop, :normal, {node, subscribers}}
+    cleanup(subscribers, node, reason)
   end
 
   def handle_info(msg, {node, subscribers}) do
     Logger.debug "Received abnormal message: #{inspect msg}"
     {:noreply, {node, subscribers}}
+  end
+
+  defp cleanup(subscribers, node, reason) do
+    Registry.unregister(node)
+    notify(subscribers, node, reason)
+    {:stop, :normal, {node, subscribers}}
   end
 
   defp notify(pids, node, reason) when is_list(pids) do
