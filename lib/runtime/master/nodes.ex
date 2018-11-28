@@ -7,6 +7,8 @@
 defmodule Skitter.Runtime.Master.Nodes do
   @moduledoc false
 
+  require Logger
+
   alias Skitter.Runtime.Worker
   alias Skitter.Runtime.Master.Nodes
 
@@ -76,7 +78,9 @@ defmodule Skitter.Runtime.Master.Nodes do
     with true <- Node.connect(node),
          true <- Worker.verify_node(node),
          :ok <- Worker.register_master(node, Node.self()),
-         {:ok, _p} <- Nodes.MonitorSupervisor.start_monitor(node) do
+         {:ok, pid} <- Nodes.MonitorSupervisor.start_monitor(node),
+         :ok <- Nodes.Registry.register(node, pid) do
+      Logger.info("Registered new worker: #{node}")
       :ok
     else
       :already_connected -> {:already_connected, node}

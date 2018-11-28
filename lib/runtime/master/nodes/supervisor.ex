@@ -20,6 +20,6 @@ defmodule Skitter.Runtime.Master.Nodes.Supervisor do
       Nodes.MonitorSupervisor
     ]
 
-    Supervisor.init(children, strategy: :one_for_all)
+    Supervisor.init(children, strategy: :one_for_all, max_restarts: 0)
   end
 end

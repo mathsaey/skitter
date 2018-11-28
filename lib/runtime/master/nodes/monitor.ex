@@ -7,9 +7,9 @@
 defmodule Skitter.Runtime.Master.Nodes.Monitor do
   @moduledoc false
 
-  require Logger
-
   use GenServer, restart: :transient
+
+  require Logger
 
   alias Skitter.Runtime.Master.Nodes.Registry
 
@@ -28,11 +28,10 @@ defmodule Skitter.Runtime.Master.Nodes.Monitor do
   # Server #
   # ------ #
 
+  @impl true
   def init(node) do
     setup_logger(node)
     Process.monitor({Skitter.Runtime.Worker, node})
-    :ok = Registry.register(node, self())
-    Logger.info("Registered new worker: #{node}")
     {:ok, {node, []}}
   end
 
@@ -41,6 +40,7 @@ defmodule Skitter.Runtime.Master.Nodes.Monitor do
     Logger.configure_backend(:console, metadata: [:node])
   end
 
+  @impl
   def handle_cast({:subscribe, pid}, {node, subscribers}) do
     {:noreply, {node, [pid | subscribers]}}
   end
@@ -50,7 +50,7 @@ defmodule Skitter.Runtime.Master.Nodes.Monitor do
   end
 
   def handle_cast(:remove, {node, subscribers}) do
-    Logger.debug "Removing #{node}"
+    Logger.info "Removing #{node}"
     cleanup(subscribers, node, :normal)
   end
 

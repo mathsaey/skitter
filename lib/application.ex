@@ -33,7 +33,7 @@ defmodule Skitter.Application do
       {Master, nodes}
     ]
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
+    Supervisor.start_link(children, strategy: :one_for_all, name: __MODULE__)
   end
 
   defp banner_if_iex do
