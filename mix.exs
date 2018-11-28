@@ -18,7 +18,8 @@ defmodule Skitter.MixProject do
       deps: deps(),
       docs: docs(),
       start_permanent: Mix.env() == :prod,
-      elixirc_paths: elixirc_paths(Mix.env())
+      elixirc_paths: elixirc_paths(Mix.env()),
+      dialyzer: dialyzer()
     ]
   end
 
@@ -55,4 +56,6 @@ defmodule Skitter.MixProject do
 
   defp elixirc_paths(:test), do: ["lib", "test/utils"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp dialyzer, do: [plt_add_apps: [:mix, :iex]]
 end
