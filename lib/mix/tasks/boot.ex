@@ -21,11 +21,5 @@ defmodule Mix.Tasks.Skitter.Boot do
     args_no_halt()
   end
 
-  defp args_no_halt do
-    if Code.ensure_loaded(IEx) && IEx.started?() do
-      []
-    else
-      ["--no-halt"]
-    end
-  end
+  defp args_no_halt, do: if IEx.started?(), do: [], else: ["--no-halt"]
 end

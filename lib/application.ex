@@ -37,9 +37,7 @@ defmodule Skitter.Application do
   end
 
   defp banner_if_iex do
-    if Code.ensure_loaded(IEx) && IEx.started?() do
-      IO.puts(banner())
-    end
+    if IEx.started?(), do: IO.puts(banner())
   end
 
   defp banner do
