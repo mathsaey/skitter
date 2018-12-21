@@ -36,6 +36,9 @@ defmodule Skitter.Application do
     Supervisor.start_link(children, strategy: :one_for_all, name: __MODULE__)
   end
 
+  # TODO: add "local" mode
+  # TODO: add "client" mode
+
   defp banner_if_iex do
     if IEx.started?(), do: IO.puts(banner())
   end

@@ -40,30 +40,35 @@ defmodule Skitter.Runtime.Master.Nodes.Monitor do
     Logger.configure_backend(:console, metadata: [:node])
   end
 
-  @impl
+  @impl true
   def handle_cast({:subscribe, pid}, {node, subscribers}) do
     {:noreply, {node, [pid | subscribers]}}
   end
 
+  @impl true
   def handle_cast({:unsubscribe, pid}, {node, subscribers}) do
     {:noreply, {node, List.delete(subscribers, pid)}}
   end
 
+  @impl true
   def handle_cast(:remove, {node, subscribers}) do
     Logger.info "Removing #{node}"
     cleanup(subscribers, node, :normal)
   end
 
+  @impl true
   def handle_info({:DOWN, _, :process, _, :normal}, {node, subscribers}) do
     Logger.info "Normal exit of monitored Skitter Worker"
     cleanup(subscribers, node, :normal)
   end
 
+  @impl true
   def handle_info({:DOWN, _, :process, _, reason}, {node, subscribers}) do
     Logger.warn "Skitter worker failed with #{reason}"
     cleanup(subscribers, node, reason)
   end
 
+  @impl true
   def handle_info(msg, {node, subscribers}) do
     Logger.debug "Received abnormal message: #{inspect msg}"
     {:noreply, {node, subscribers}}

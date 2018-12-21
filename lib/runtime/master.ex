@@ -11,7 +11,6 @@ defmodule Skitter.Runtime.Master do
 
   require Logger
 
-  alias Skitter.Runtime.Worker
   alias Skitter.Runtime.Master
 
   # --- #

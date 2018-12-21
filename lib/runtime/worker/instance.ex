@@ -13,8 +13,8 @@ defmodule Skitter.Runtime.Worker.Instance do
   # API #
   # --- #
 
-  def start_link(comp, init, id \\ nil) do
-    GenServer.start_link(__MODULE__, {comp, init, id})
+  def start_link(comp, init) do
+    GenServer.start_link(__MODULE__, {comp, init})
   end
 
   def react(srv, args, timeout \\ :infinity) do
@@ -25,7 +25,7 @@ defmodule Skitter.Runtime.Worker.Instance do
   # Server #
   # ------ #
 
-  def init({comp, init, id}) do
+  def init({comp, init}) do
     {:ok, nil, {:continue, {comp, init}}}
   end
 
