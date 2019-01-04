@@ -8,7 +8,7 @@ defmodule Skitter.InstanceTest do
   use ExUnit.Case, async: true
 
   import Skitter.Component, only: [component: 3]
-  alias Skitter.Runtime.Worker.Instance
+  alias Skitter.Runtime.Instance
 
   component TestComponent, in: val, out: current do
     effect state_change
@@ -24,10 +24,36 @@ defmodule Skitter.InstanceTest do
     end
   end
 
-  test "If the server works" do
-    {:ok, pid} = Instance.start_link(TestComponent, 5)
+  test "if the supervisor can be started correctly" do
+    assert {:ok, pid} = start_supervised(Instance.supervisor())
+    assert Process.alive?(pid)
+  end
+
+  test "if the server can be started as a part of a supervisor" do
+    {:ok, sup} = start_supervised(Instance.supervisor())
+    {:ok, pid} = Instance.start_supervised_instance(sup, :id, TestComponent, 5)
+    assert Process.alive?(pid)
+  end
+
+  test "if the server can be started unsupervised" do
+    {:ok, pid} = Instance.start_linked_instance(:id, TestComponent, 5)
+    assert Process.alive?(pid)
+  end
+
+  test "if initialization works correctly" do
+    {:ok, pid} = Instance.start_linked_instance(:id, TestComponent, 5)
+    assert Instance.id(pid) == :id
+
+    {instance, _id} = :sys.get_state(pid)
+    assert instance.state == [ctr: 5]
+  end
+
+  test "if reacting works" do
+    {:ok, pid} = Instance.start_linked_instance(:id, TestComponent, 5)
     {:ok, spits} = Instance.react(pid, [:foo])
 
+    {instance, _id} = :sys.get_state(pid)
+    assert instance.state == [ctr: 6]
     assert spits == [current: 6]
   end
 end
