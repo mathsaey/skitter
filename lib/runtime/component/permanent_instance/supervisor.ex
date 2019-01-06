@@ -4,12 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Instance.Supervisor do
+defmodule Skitter.Runtime.Component.PermanentInstance.Supervisor do
   @moduledoc false
   use DynamicSupervisor
 
   def start_link(opts) do
-    DynamicSupervisor.start_link(__MODULE__, opts)
+    DynamicSupervisor.start_link(__MODULE__, [], [name: __MODULE__] ++ opts)
   end
 
   @impl true
