@@ -4,19 +4,19 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Worker do
+defmodule Skitter.Runtime.Nodes.LoadBalancer do
   @moduledoc false
 
-  alias __MODULE__
   alias Skitter.Runtime.Nodes
 
-  def supervisor, do: Worker.Supervisor
+  # TODO: something less naive here, at the very least cache the registered
+  # nodes and use round robin.
 
-  def verify_worker(node) do
-    Nodes.on(node, __MODULE__, :verify_worker, [])
+  def select_permanent() do
+    Enum.random(Nodes.Registry.all())
   end
 
-  def verify_local_worker() do
-    !is_nil(GenServer.whereis(__MODULE__.SuperVisor))
+  def select_transient() do
+    Enum.random(Nodes.Registry.all())
   end
 end

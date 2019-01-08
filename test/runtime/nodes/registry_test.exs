@@ -9,8 +9,12 @@ defmodule Skitter.NodeRegistryTest do
   alias Skitter.Runtime.Nodes.Registry
 
   setup do
-    start_supervised(Registry)
-    :ok
+    on_exit fn ->
+      Supervisor.restart_child(
+        Skitter.Runtime.Nodes.MasterSupervisor,
+        Skitter.Runtime.Nodes.Registry
+      )
+    end
   end
 
   test "if adding and removing nodes works" do

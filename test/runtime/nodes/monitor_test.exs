@@ -9,7 +9,7 @@ defmodule Skitter.NodeMonitorTest do
   @moduletag :distributed
 
   alias Skitter.Test.Cluster
-  alias Skitter.Runtime.Nodes.{Monitor, Registry}
+  alias Skitter.Runtime.Nodes.Monitor
 
   setup_all do
     Cluster.become_master()
@@ -17,20 +17,17 @@ defmodule Skitter.NodeMonitorTest do
     [worker: w]
   end
 
-  setup do
-    start_supervised(Registry)
-    {:ok, pid} = start_supervised(Monitor.Supervisor)
-    [sup: pid]
+  test "if the supervisor can be started correctly" do
+    Monitor.Supervisor
+    |> GenServer.whereis()
+    |> Process.alive?()
+    |> assert()
   end
 
-  test "if the supervisor can be started correctly", %{sup: sup} do
-    assert Process.alive?(sup)
-  end
-
-  test "if monitors are started under a supervisor", %{sup: s, worker: w} do
+  test "if monitors are started under a supervisor", %{worker: w} do
     {:ok, pid} = Monitor.start_monitor(w)
 
-    children = DynamicSupervisor.which_children(s)
+    children = DynamicSupervisor.which_children(Monitor.Supervisor)
     child = {:undefined, pid, :worker, [Monitor.Server]}
     assert child in children
   end

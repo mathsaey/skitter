@@ -1,4 +1,4 @@
-# Copyright 2018, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018, 2019 Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -8,36 +8,43 @@ defmodule Skitter.Application do
   @moduledoc false
   use Application
 
-  alias Skitter.Runtime.Worker
-  alias Skitter.Runtime.Master
+  alias Skitter.Runtime
 
-  def start(type, []) do
-    start(type, Application.get_env(:skitter, :mode, :master))
+  def start(_type, []) do
+    if check_vm_features() do
+      mode = Application.get_env(:skitter, :mode, :local)
+
+      pre_load(mode)
+      children = children(mode)
+
+      Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
+    else
+      {:error, "Erlang/OTP version mismatch"}
+    end
   end
 
-  def start(_type, :worker) do
-    children = [
-      Worker,
-      Worker.DynamicWorkflowSupervisor
-    ]
+  defp pre_load(:master), do: banner_if_iex()
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
-  end
-
-  def start(_type, :master) do
+  defp pre_load(:local) do
+    Application.put_env(:skitter, :worker_nodes, [Node.self()])
     banner_if_iex()
-    nodes = Application.get_env(:skitter, :worker_nodes, [])
-
-    children = [
-      {Master.Nodes.Supervisor, []},
-      {Master, nodes}
-    ]
-
-    Supervisor.start_link(children, strategy: :one_for_all, name: __MODULE__)
   end
 
-  # TODO: add "local" mode
-  # TODO: add "client" mode
+  defp pre_load(_), do: nil
+
+  defp children(:worker), do: [Runtime.Worker.supervisor()]
+  defp children(:master), do: [Runtime.Master.supervisor()]
+  defp children(:local), do: children(:worker) ++ children(:master)
+
+  defp check_vm_features do
+    Enum.all?(
+      [
+        :persistent_term,
+        :ets
+      ],
+      &Code.ensure_loaded?(&1)
+    )
+  end
 
   defp banner_if_iex do
     if IEx.started?(), do: IO.puts(banner())
