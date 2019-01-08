@@ -30,6 +30,9 @@ defmodule Skitter.Test.Cluster do
 
   def rpc(n, mod, func, args \\ []), do: :rpc.block_call(n, mod, func, args)
 
+  def become_master, do: become(:master)
+  def become_worker, do: become(:worker)
+
   # Local Setup
   # -----------
 
@@ -40,6 +43,14 @@ defmodule Skitter.Test.Cluster do
 
   defp cluster_ready?, do: Node.alive?() and Node.self() == @fullname
   defp ensure_distributed, do: unless cluster_ready?(), do: distribute_local()
+
+  defp become(mode) do
+    unless Application.get_env(:skitter, :mode, :local) == mode do
+      Application.stop(:skitter)
+      Application.put_env(:skitter, :mode, mode)
+      Application.ensure_all_started(:skitter)
+    end
+  end
 
   # Remote setup
   # ------------
