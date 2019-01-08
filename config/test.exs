@@ -8,5 +8,5 @@ use Mix.Config
 
 config :logger,
   compile_time_purge_matching: [
-    [level_lower_than: :error]
+    [level_lower_than: :warn]
   ]
