@@ -5,6 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime.Component do
+  @moduledoc false
   alias Skitter.Runtime.Component.{InstanceType, Supervisor}
 
   def supervisor(_), do: Supervisor
