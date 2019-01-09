@@ -21,4 +21,11 @@ defmodule Skitter.Runtime.Master.Server do
       lst -> {:stop, {:invalid_nodes, lst}}
     end
   end
+
+  def handle_call({:add_node, node}, _, nil) do
+    case Nodes.connect(node) do
+      true -> {:reply, true, nil}
+      any -> {:reply, {:error, any}, nil}
+    end
+  end
 end

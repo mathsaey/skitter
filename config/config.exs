@@ -12,7 +12,4 @@ import_config "#{Mix.env()}.exs"
 # We use a unified logging output for every skitter application.
 config :logger, :console,
   format: "\n[$time][$level$levelpad] $message\n+> $metadata\n",
-  metadata: [
-    :registered_name,
-    :pid
-  ]
+  metadata: :all

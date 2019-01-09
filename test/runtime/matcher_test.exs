@@ -25,12 +25,12 @@ defmodule Skitter.MatcherTest do
   end
 
   test "If adding tokens works" do
-    {:ok, map} = add(new(), {:c1, :x}, :foo, wf())
-    {:ok, map} = add(map, {:c2, :y}, :bar, wf())
+    {:ok, map} = add(new(), {:c1, :x, :foo}, wf())
+    {:ok, map} = add(map, {:c2, :y, :bar}, wf())
 
     assert map == %{c1: {%{x: :foo}, 2}, c2: {%{y: :bar}, 2}}
 
-    {:ready, map, id, entry} = add(map, {:c1, :y}, :baz, wf())
+    {:ready, map, id, entry} = add(map, {:c1, :y, :baz}, wf())
     assert map == %{c2: {%{y: :bar}, 2}}
     assert entry == [:foo, :baz]
     assert id == :c1

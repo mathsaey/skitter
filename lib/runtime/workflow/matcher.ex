@@ -24,14 +24,13 @@ defmodule Skitter.Runtime.Matcher do
 
   @spec add(
           t(),
-          {Workflow.workflow_identifier(), Component.port_name()},
-          any(),
+          {Workflow.workflow_identifier(), Component.port_name(), any()},
           Workflow.t()
         ) ::
           {:ok, t()}
           | {:ready, t(), Workflow.workflow_identifier(), [any(), ...]}
 
-  def add(matcher, {id, port}, data, workflow) do
+  def add(matcher, {id, port, data}, workflow) do
     {entry, arity} =
       case Map.get(matcher, id) do
         nil ->
