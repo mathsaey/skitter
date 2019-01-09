@@ -8,34 +8,38 @@ defmodule Skitter.Application do
   @moduledoc false
 
   use Application
-  import Application, only: [get_env: 3, put_env: 3]
-
   alias Skitter.Runtime
 
   def start(_type, []) do
     if check_vm_features() do
-      mode = get_env(:skitter, :mode, :local)
+      mode = Application.get_env(:skitter, :mode, :local)
+      nodes = Application.get_env(:skitter, :worker_nodes, [])
 
-      pre_load(mode)
-      children = children(mode)
+      pre_load(mode, nodes)
+      children = children(mode, nodes)
       Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
     else
       {:error, "Erlang/OTP version mismatch"}
     end
   end
 
-  defp pre_load(:master), do: banner_if_iex()
-  defp pre_load(:local) do
-    put_env(:skitter, :worker_nodes, Node.self())
+  defp pre_load(:master, _), do: banner_if_iex()
+
+  defp pre_load(:local, nodes) do
     banner_if_iex()
+
+    if not Enum.empty?(nodes) do
+      IO.warn("Worker nodes are ignored in local mode")
+    end
   end
-  defp pre_load(_), do: nil
 
-  defp children(:worker), do: [Runtime.Worker.supervisor()]
-  defp children(:local), do: children(:worker) ++ children(:master)
+  defp pre_load(_, _), do: nil
 
-  defp children(:master) do
-    [Runtime.Master.supervisor(get_env(:skitter, :worker_nodes, []))]
+  defp children(:worker, _), do: [Runtime.Worker.supervisor()]
+  defp children(:master, nodes), do: [Runtime.Master.supervisor(nodes)]
+
+  defp children(:local, _) do
+    children(:worker, []) ++ children(:master, Node.self())
   end
 
   defp check_vm_features do

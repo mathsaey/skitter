@@ -15,14 +15,17 @@ defmodule Skitter.Runtime.Worker.Server do
   end
 
   def init(_) do
-    {:ok, nil}
+    {:ok, []}
   end
 
-  def handle_cast({:master, master}, nil) do
+  def handle_cast({:add_master, master}, lst) do
     Logger.info("Registering master: #{master}")
-    {:noreply, master}
+    {:noreply, [master | lst]}
   end
 
-  # TODO: automatically shut down when master quits?
+  def handle_cast({:remove_master, master}, lst) do
+    Logger.info("Removing master: #{master}")
+    {:noreply, List.delete(lst, master)}
+  end
 end
 

@@ -13,7 +13,11 @@ defmodule Skitter.Runtime.Worker do
   def supervisor, do: Worker.Supervisor
 
   def register_master(node) do
-    GenServer.cast({Worker.Server, node}, {:master, Node.self()})
+    GenServer.cast({Worker.Server, node}, {:add_master, Node.self()})
+  end
+
+  def remove_master(node) do
+    GenServer.cast({Worker.Server, node}, {:remove_master, Node.self()})
   end
 
   def verify_worker(node) do
