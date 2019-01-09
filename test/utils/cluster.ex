@@ -1,10 +1,12 @@
-# Copyright 2018, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018, 2019 Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Test.Cluster do
+  require Logger
+
   @hostname "127.0.0.1"
   @nodename "skitter_test_node"
   @fullname :"#{@nodename}@#{@hostname}"
@@ -17,21 +19,30 @@ defmodule Skitter.Test.Cluster do
   """
 
   def spawn_master(name \\ :test_master, workers \\ []) do
-    ensure_distributed()
     spawn_node(name, :master, worker_nodes: workers)
   end
 
-  def spawn_worker(name \\ :test_worker) do
-    ensure_distributed()
-    spawn_node(name, :worker, [])
+  def spawn_workers(lst) do
+    lst
+    |> Enum.map(&({&1, :worker, []}))
+    |> spawn_nodes()
   end
 
   def kill_node(node), do: :slave.stop(node)
 
   def rpc(n, mod, func, args \\ []), do: :rpc.block_call(n, mod, func, args)
 
-  def become_master, do: become(:master)
-  def become_worker, do: become(:worker)
+  def become(mode) do
+    unless mode == Application.get_env(:skitter, mode, nil) do
+      level = Logger.level()
+      Logger.configure(level: :warn)
+      Application.stop(:skitter)
+      Logger.configure(level: level)
+      Node.stop()
+      Application.put_env(:skitter, :mode, mode)
+      Application.ensure_all_started(:skitter)
+    end
+  end
 
   # Local Setup
   # -----------
@@ -44,18 +55,18 @@ defmodule Skitter.Test.Cluster do
   defp cluster_ready?, do: Node.alive?() and Node.self() == @fullname
   defp ensure_distributed, do: unless cluster_ready?(), do: distribute_local()
 
-  defp become(mode) do
-    unless Application.get_env(:skitter, :mode, :local) == mode do
-      Application.stop(:skitter)
-      Application.put_env(:skitter, :mode, mode)
-      Application.ensure_all_started(:skitter)
-    end
-  end
-
   # Remote setup
   # ------------
 
-  defp spawn_node(name, mode, extra_opts) do
+  defp spawn_nodes(list) do
+    list
+    |> Enum.map(fn {n, m, o} -> Task.async(fn -> spawn_node(n, m, o) end) end)
+    |> Enum.map(&Task.await(&1))
+  end
+
+  def spawn_node(name, mode, extra_opts) do
+    ensure_distributed()
+
     {:ok, node} = :slave.start(@hostname_charlst, name, spawn_args())
 
     add_code_paths(node)

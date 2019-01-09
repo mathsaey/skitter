@@ -21,22 +21,12 @@ defmodule Skitter.Runtime.Nodes.Notifier.Server do
   end
 
   def handle_cast({:subscribe, pid, topic}, state) when topic in @topics do
-    state = Map.update(state, topic, MapSet.new(), &MapSet.put(&1, pid))
-    {:noreply, state}
-  end
-
-  def handle_cast({:subscribe, pid, topic}, state) do
-    Logger.error "#{pid} attempting to subscribe to invalid topic `#{topic}`"
+    state = Map.update(state, topic, MapSet.new([pid]), &MapSet.put(&1, pid))
     {:noreply, state}
   end
 
   def handle_cast({:unsubscribe, pid, topic}, state) when topic in @topics do
     state = Map.update(state, topic, MapSet.new(), &MapSet.delete(&1, pid))
-    {:noreply, state}
-  end
-
-  def handle_cast({:unsubscribe, pid, topic}, state) do
-    Logger.error "#{pid} unsubscribe from invalid topic `#{topic}`"
     {:noreply, state}
   end
 
