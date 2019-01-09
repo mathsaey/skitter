@@ -6,10 +6,9 @@
 
 defmodule Skitter.Runtime.Nodes.LoadBalancer.Server do
   @moduledoc false
-
   use GenServer
 
-  alias Skitter.Runtime.Nodes.{Notifier, Registry}
+  alias Skitter.Runtime.Nodes.Notifier
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)

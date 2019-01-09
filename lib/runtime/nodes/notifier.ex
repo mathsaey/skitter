@@ -6,7 +6,6 @@
 
 defmodule Skitter.Runtime.Nodes.Notifier do
   @moduledoc false
-  @topics [:add, :remove, :node_down]
 
   alias __MODULE__.Server
 
