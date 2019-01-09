@@ -8,12 +8,12 @@ defmodule Skitter.Runtime.Component.PermanentInstance.Supervisor do
   @moduledoc false
   use DynamicSupervisor
 
-  def start_link(opts) do
-    DynamicSupervisor.start_link(__MODULE__, [], [name: __MODULE__] ++ opts)
+  def start_link(_) do
+    DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   @impl true
-  def init([]) do
+  def init(_) do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 end

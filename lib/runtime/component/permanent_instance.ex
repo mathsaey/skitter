@@ -5,22 +5,22 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime.Component.PermanentInstance do
-  @behaviour Skitter.Runtime.Component.RuntimeInstanceType
+  @behaviour Skitter.Runtime.Component.InstanceType
   @moduledoc false
 
+  alias Skitter.Runtime.Nodes
   alias Skitter.Runtime.Component.PermanentInstance.{Server, Supervisor}
 
   @impl true
   def supervisor(), do: Supervisor
 
   @impl true
-  def load_method, do: :one
+  def load(ref, comp, init) do
+    Nodes.on_permanent(__MODULE__, :load_local, [ref, comp, init])
+  end
 
-  @impl true
-  def load(supervisor, component, init_args) do
-    DynamicSupervisor.start_child(
-      supervisor, {Server, {component, init_args}}
-    )
+  def load_local(ref, comp, init) do
+    DynamicSupervisor.start_child(Supervisor, {Server, {ref, comp, init}})
   end
 
   @impl true

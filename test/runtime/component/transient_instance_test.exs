@@ -18,29 +18,37 @@ defmodule Skitter.TransientInstanceTest do
     end
 
     react val do
+      # Sleep so we can do something while the process is reacting
+      Process.sleep(10)
       val + x ~> out
     end
   end
 
-  setup do
-    {:ok, pid} = start_supervised(TransientInstance.supervisor())
-    [sup: pid]
+  test "if the supervisor is started correctly" do
+    TransientInstance.Supervisor
+    |> GenServer.whereis()
+    |> Process.alive?()
+    |> assert()
   end
 
-  test "if the supervisor is started correctly", c do
-    assert Process.alive?(c[:sup])
-  end
-
-  test "if loading works correctly", c do
-    {:ok, {ref, sup}} = TransientInstance.load(c[:sup], AddX, 10)
+  test "if loading works correctly" do
+    {:ok, ref} = TransientInstance.load(make_ref(), AddX, 10)
     term = :persistent_term.get({TransientInstance, ref})
     {:ok, inst} = Skitter.Component.init(AddX, 10)
     assert term == inst
-    assert sup == c[:sup]
   end
 
-  test "if reacting works", c do
-    {:ok, arg} = TransientInstance.load(c[:sup], AddX, 10)
+  test "if reacting happens as a part of a supervisor" do
+    {:ok, arg} = TransientInstance.load(make_ref(), AddX, 10)
+    {:ok, pid, _} = TransientInstance.react(arg, [100])
+
+    children = DynamicSupervisor.which_children(TransientInstance.Supervisor)
+    child = {:undefined, pid, :worker, [TransientInstance.Server]}
+    assert child in children
+  end
+
+  test "if reacting works" do
+    {:ok, arg} = TransientInstance.load(make_ref(), AddX, 10)
     {:ok, _, ref} = TransientInstance.react(arg, [100])
     assert_receive {:react_finished, ^ref, [out: 110]}
   end

@@ -4,23 +4,27 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Component do
-  alias Skitter.Runtime.Component.{InstanceType, Supervisor}
+defmodule Skitter.Runtime.Component.InstanceType do
+  @moduledoc false
 
-  def supervisor(_), do: Supervisor
+  alias Skitter.Runtime.Component
+
+  @doc """
+  Return a module supervisor which can supervise the current instance type.
+  """
+  @callback supervisor() :: module()
 
   @doc """
   Load the runtime version of the component instance.
 
-  `comp` and `init_args` will be passed to `Skitter.Component.init/2`.
-  This callback will return `{:ok, some_data}` when successful, `some_data` can
-  be passed as an argument to `react/2`
+  The `reference()` argument is a unique reference which identifies the
+  instance to be loaded.  The `component` and `init_arguments` which are passed
+  to this callback will be passed to `Skitter.Component.init/2`.
+
+  This callback should initialize the component and provide some reference to
+  the component which can be used by `react/2`
   """
-  def load(comp, init_args) do
-    mod = InstanceType.select(comp)
-    {:ok, res} = mod.load(make_ref(), comp, init_args)
-    {:ok, {mod, res}}
-  end
+  @callback load(reference(), Skitter.Component.t(), any()) :: any()
 
   @doc """
   Ask the component instance to react to incoming data.
@@ -36,7 +40,13 @@ defmodule Skitter.Runtime.Component do
   where ref is the reference that was returned from the function, while spits
   contains the spits produced by the invocation of react.
   """
-  def react({mod, ref}, args) do
-    mod.react(ref, args)
+  @callback react(any(), [any(), ...]) :: {:ok, pid(), reference()}
+
+  def select(comp) do
+    if Skitter.Component.state_change?(comp) do
+      Component.PermanentInstance
+    else
+      Component.TransientInstance
+    end
   end
 end

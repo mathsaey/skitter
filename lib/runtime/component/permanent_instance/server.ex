@@ -11,17 +11,17 @@ defmodule Skitter.Runtime.Component.PermanentInstance.Server do
 
   defstruct [:id, :instance]
 
-  def start_link({comp, init}) do
-    GenServer.start_link(__MODULE__, {comp, init})
+  def start_link({ref, comp, init}) do
+    GenServer.start_link(__MODULE__, {ref, comp, init})
   end
 
-  def init({comp, init}) do
-    {:ok, nil, {:continue, {comp, init}}}
+  def init({ref, comp, init}) do
+    {:ok, nil, {:continue, {ref, comp, init}}}
   end
 
-  def handle_continue({comp, init}, nil) do
+  def handle_continue({ref, comp, init}, nil) do
     {:ok, instance} = Skitter.Component.init(comp, init)
-    state = %__MODULE__{id: make_ref(), instance: instance}
+    state = %__MODULE__{id: ref, instance: instance}
     {:noreply, state}
   end
 

@@ -4,16 +4,22 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Component.TransientInstance.Supervisor do
+defmodule Skitter.Runtime.Component.Supervisor do
   @moduledoc false
-  use DynamicSupervisor
+  use Supervisor
+
+  alias Skitter.Runtime.Component
 
   def start_link(_) do
-    DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
+    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  @impl true
   def init(_) do
-    DynamicSupervisor.init(strategy: :one_for_one)
+    children = [
+      Component.PermanentInstance.supervisor(),
+      Component.TransientInstance.supervisor()
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end

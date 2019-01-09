@@ -24,41 +24,30 @@ defmodule Skitter.PermanentInstanceTest do
     end
   end
 
-  setup do
-    {:ok, pid} = start_supervised(PermanentInstance.supervisor())
-    [sup: pid]
+  test "if the supervisor is started correctly" do
+    PermanentInstance.Supervisor
+    |> GenServer.whereis()
+    |> Process.alive?()
+    |> assert()
   end
 
-  test "if the supervisor is started correctly", c do
-    assert Process.alive?(c[:sup])
-  end
+  test "if the server is started as a part of the supervisor" do
+    {:ok, pid} = PermanentInstance.load(make_ref(), TestComponent, 5)
 
-  test "if the server can be started as a part of a supervisor", c do
-    {:ok, pid} = PermanentInstance.load(c[:sup], TestComponent, 5)
-    children = DynamicSupervisor.which_children(c[:sup])
+    children = DynamicSupervisor.which_children(PermanentInstance.Supervisor)
     child = {:undefined, pid, :worker, [PermanentInstance.Server]}
     assert child in children
   end
 
-  test "if IDs are unique", c do
-    {:ok, p1} = PermanentInstance.load(c[:sup], TestComponent, 5)
-    {:ok, p2} = PermanentInstance.load(c[:sup], TestComponent, 5)
-
-    %PermanentInstance.Server{id: id1} = :sys.get_state(p1)
-    %PermanentInstance.Server{id: id2} = :sys.get_state(p2)
-
-    refute id1 == id2
-  end
-
-  test "if state initialization works correctly", c do
-    {:ok, pid} = PermanentInstance.load(c[:sup], TestComponent, 5)
+  test "if state initialization works correctly" do
+    {:ok, pid} = PermanentInstance.load(make_ref(), TestComponent, 5)
 
     %PermanentInstance.Server{instance: instance} = :sys.get_state(pid)
     assert instance.state == [ctr: 5]
   end
 
-  test "if reacting works", c do
-    {:ok, pid} = PermanentInstance.load(c[:sup], TestComponent, 5)
+  test "if reacting works" do
+    {:ok, pid} = PermanentInstance.load(make_ref(), TestComponent, 5)
     {:ok, pid, ref} = PermanentInstance.react(pid, [:foo])
 
     %PermanentInstance.Server{instance: instance} = :sys.get_state(pid)
