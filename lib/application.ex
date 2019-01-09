@@ -6,17 +6,18 @@
 
 defmodule Skitter.Application do
   @moduledoc false
+
   use Application
+  import Application, only: [get_env: 3, put_env: 3]
 
   alias Skitter.Runtime
 
   def start(_type, []) do
     if check_vm_features() do
-      mode = Application.get_env(:skitter, :mode, :local)
+      mode = get_env(:skitter, :mode, :local)
 
       pre_load(mode)
       children = children(mode)
-
       Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
     else
       {:error, "Erlang/OTP version mismatch"}
@@ -24,17 +25,18 @@ defmodule Skitter.Application do
   end
 
   defp pre_load(:master), do: banner_if_iex()
-
   defp pre_load(:local) do
-    Application.put_env(:skitter, :worker_nodes, [Node.self()])
+    put_env(:skitter, :worker_nodes, Node.self())
     banner_if_iex()
   end
-
   defp pre_load(_), do: nil
 
   defp children(:worker), do: [Runtime.Worker.supervisor()]
-  defp children(:master), do: [Runtime.Master.supervisor()]
   defp children(:local), do: children(:worker) ++ children(:master)
+
+  defp children(:master) do
+    [Runtime.Master.supervisor(get_env(:skitter, :worker_nodes, []))]
+  end
 
   defp check_vm_features do
     Enum.all?(

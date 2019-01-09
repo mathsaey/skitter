@@ -8,6 +8,6 @@ defmodule Skitter.Runtime.Master do
   @moduledoc false
   alias __MODULE__
 
-  def supervisor, do: Master.Supervisor
+  def supervisor(nodes), do: {Master.Supervisor, nodes}
 end
 

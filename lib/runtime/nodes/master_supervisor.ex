@@ -10,16 +10,18 @@ defmodule Skitter.Runtime.Nodes.MasterSupervisor do
 
   alias Skitter.Runtime.Nodes
 
-  def start_link(arg) do
-    Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
+  def start_link(_) do
+    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   def init(_) do
     children = [
-      Nodes.Registry,
-      Nodes.Monitor.Supervisor
+      Nodes.Notifier.Server,
+      Nodes.Registry.Server,
+      Nodes.Monitor.Supervisor,
+      Nodes.LoadBalancer.Server
     ]
 
-    Supervisor.init(children, strategy: :one_for_all, max_restarts: 0)
+    Supervisor.init(children, strategy: :rest_for_one)
   end
 end

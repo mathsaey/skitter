@@ -12,11 +12,15 @@ defmodule Skitter.Runtime.Worker do
 
   def supervisor, do: Worker.Supervisor
 
+  def register_master(node) do
+    GenServer.cast({Worker.Server, node}, {:master, Node.self()})
+  end
+
   def verify_worker(node) do
-    Nodes.on(node, __MODULE__, :verify_worker, [])
+    Nodes.on(node, __MODULE__, :verify_local_worker, [])
   end
 
   def verify_local_worker() do
-    !is_nil(GenServer.whereis(__MODULE__.SuperVisor))
+    !is_nil(GenServer.whereis(__MODULE__.Supervisor))
   end
 end

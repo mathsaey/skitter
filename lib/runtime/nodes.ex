@@ -6,7 +6,11 @@
 
 defmodule Skitter.Runtime.Nodes do
   @moduledoc false
+
+  require Logger
+
   alias __MODULE__
+  alias Skitter.Runtime.Worker
 
   def supervisor(:worker), do: Nodes.WorkerSupervisor
   def supervisor(:master), do: Nodes.MasterSupervisor
@@ -16,20 +20,36 @@ defmodule Skitter.Runtime.Nodes do
   """
   def all, do: Nodes.Registry.all()
 
-  @doc """
-  Subscribe to a node.
-
-  When the node goes down, `pid` will receive `{:node_down, node, reason}`
-  message. The reason is `:normal` in the case of a planned shutdown.
-  """
-  defdelegate subscribe(node, pid), to: Nodes.Monitor
 
   @doc """
-  Unsubscribe.
+  Subscribe to node join events.
 
-  The pid will receive no notifications if the node goes down.
+  When a node joins the network, the pid that called this function will
+  receive `{:node_join, node}`.
   """
-  defdelegate unsubscribe(node, pid), to: Nodes.Monitor
+  defdelegate subscribe_join, to: Nodes.Notifier
+
+  @doc """
+  Subscribe to node leave events.
+
+  When a node leaves the network, the pid that called this function will
+  receive `{:node_leave, node, reason}`.
+  """
+  defdelegate subscribe_leave, to: Nodes.Notifier
+
+  @doc """
+  Unsubscribe from join events.
+
+  The pid will receive no further notifications when a node joins the network.
+  """
+  defdelegate unsubscribe_join, to: Nodes.Notifier
+
+  @doc """
+  Unsubscribe from leave events.
+
+  The pid will receive no further notifications when a node leaves the network.
+  """
+  defdelegate unsubscribe_leave, to: Nodes.Notifier
 
   @doc """
   Execute `{mod, func, args}` on `node`, block until a result is available.
@@ -49,33 +69,25 @@ defmodule Skitter.Runtime.Nodes do
     Nodes.Task.on(Nodes.LoadBalancer.select_transient(), mod, func, args)
   end
 
-  @doc """
-  Add a node or list of nodes.
-
-  The given node will be monitored, processes can subscribe to be notified if
-  the node crashes.
-  """
-  def add(node), do: connect(node)
-
-
-
-  # @doc """
-  # Unregister the node and remove all connections.
-
-  # All subscribers will be notified that the node shut down with reason `:normal`
-  # """
-  # def remove(node) do
-  #   Nodes.Monitor.remove(get(node))
-  #   Worker.unregister_master(node, Node.self())
-  # end
-
   # --------------- #
   # Node Connection #
   # --------------- #
 
-  defp connect([]), do: true
+  def connect([]), do: true
 
-  defp connect(nodes) when is_list(nodes) do
+  def connect(n = :nonode@nohost) do
+    # Allow the local node to act as a worker in local mode
+    if Worker.verify_worker(n) && !Node.alive?() do
+      Nodes.Monitor.start_monitor(n)
+      Nodes.Notifier.notify_join(n)
+      Worker.register_master(n)
+      true
+    else
+      :invalid
+    end
+  end
+
+  def connect(nodes) when is_list(nodes) do
     if Node.alive?() do
       lst =
         nodes
@@ -87,13 +99,14 @@ defmodule Skitter.Runtime.Nodes do
     end
   end
 
-  defp connect(node) when is_atom(node) do
+  def connect(node) when is_atom(node) do
     with true <- Node.connect(node),
-         true <- Worker.verify_node(node),
-         :ok <- Worker.register_master(node, Node.self()),
-         {:ok, pid} <- Nodes.MonitorSupervisor.start_monitor(node),
-         :ok <- Nodes.Registry.register(node, pid) do
-      # Logger.info("Registered new worker: #{node}")
+         true <- Worker.verify_worker(node),
+         :ok <- Worker.register_master(node),
+         {:ok, _} <- Nodes.Monitor.start_monitor(node),
+         :ok <- Nodes.Notifier.notify_join(node)
+    do
+      Logger.info("Registered new worker: #{node}")
       :ok
     else
       :already_connected -> {:already_connected, node}

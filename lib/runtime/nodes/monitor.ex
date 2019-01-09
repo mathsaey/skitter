@@ -7,19 +7,9 @@
 defmodule Skitter.Runtime.Nodes.Monitor do
   @moduledoc false
 
-  alias Skitter.Runtime.Nodes.{Registry, Monitor.Server, Monitor.Supervisor}
+  alias Skitter.Runtime.Nodes.Monitor.{Server, Supervisor}
 
   def start_monitor(node) do
-    {:ok, pid} = DynamicSupervisor.start_child(Supervisor, {Server, node})
-    Registry.update(node, monitor: pid)
-    {:ok, pid}
-  end
-
-  def subscribe(node, pid), do: monitor_cast(node, {:subscribe, pid})
-  def unsubscribe(node, pid), do: monitor_cast(node, {:unsubscribe, pid})
-
-  defp monitor_cast(node, cast) do
-    %Registry{monitor: m} = Registry.get(node)
-    GenServer.cast(m, cast)
+    DynamicSupervisor.start_child(Supervisor, {Server, node})
   end
 end

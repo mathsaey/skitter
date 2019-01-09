@@ -4,21 +4,21 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Master.Supervisor do
+defmodule Skitter.Runtime.Master.Server do
   @moduledoc false
-  use Supervisor
+  use GenServer
+
+  alias Skitter.Runtime.Nodes
 
   def start_link(nodes) do
-    Supervisor.start_link(__MODULE__, nodes,  name: __MODULE__)
+    GenServer.start_link(__MODULE__, nodes, name: __MODULE__)
   end
 
   def init(nodes) do
-    children = [
-      Skitter.Runtime.Nodes.supervisor(:master),
-      {Skitter.Runtime.Master.Server, nodes}
-    ]
-
-    Supervisor.init(children, strategy: :one_for_one)
+    case Nodes.connect(nodes) do
+      true -> {:ok, nil}
+      :not_distributed -> {:stop, :not_distributed}
+      lst -> {:stop, {:invalid_nodes, lst}}
+    end
   end
 end
-

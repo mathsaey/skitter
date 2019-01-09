@@ -7,16 +7,13 @@
 defmodule Skitter.Runtime.Nodes.LoadBalancer do
   @moduledoc false
 
-  alias Skitter.Runtime.Nodes
-
-  # TODO: something less naive here, at the very least cache the registered
-  # nodes and use round robin.
+  alias __MODULE__.Server
 
   def select_permanent() do
-    Enum.random(Nodes.Registry.all())
+    GenServer.call(Server, :permanent)
   end
 
   def select_transient() do
-    Enum.random(Nodes.Registry.all())
+    GenServer.call(Server, :transient)
   end
 end

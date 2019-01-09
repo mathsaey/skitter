@@ -6,11 +6,11 @@
 
 defmodule Skitter.Runtime.Nodes.Monitor.Server do
   @moduledoc false
-  use GenServer, restart: :transient
 
   require Logger
+  use GenServer, restart: :transient
 
-  alias Skitter.Runtime.Nodes.Registry
+  alias Skitter.Runtime.Nodes.Notifier
 
   def start_link(node) do
     GenServer.start_link(__MODULE__, node)
@@ -18,9 +18,9 @@ defmodule Skitter.Runtime.Nodes.Monitor.Server do
 
   @impl true
   def init(node) do
-    Process.monitor({Skitter.Runtime.Worker, node})
+    Process.monitor({Skitter.Runtime.Worker.Supervisor, node})
     setup_logger(node)
-    {:ok, {node, []}}
+    {:ok, node}
   end
 
   defp setup_logger(node) do
@@ -29,42 +29,19 @@ defmodule Skitter.Runtime.Nodes.Monitor.Server do
   end
 
   @impl true
-  def handle_cast({:subscribe, pid}, {node, subscribers}) do
-    {:noreply, {node, [pid | subscribers]}}
-  end
-
-  @impl true
-  def handle_cast({:unsubscribe, pid}, {node, subscribers}) do
-    {:noreply, {node, List.delete(subscribers, pid)}}
-  end
-
-  @impl true
-  def handle_info({:DOWN, _, :process, _, :normal}, {node, subscribers}) do
+  def handle_info({:DOWN, _, :process, _, :normal}, node) do
     Logger.info "Normal exit of monitored Skitter Worker"
-    cleanup(subscribers, node, :normal)
+    notify_and_halt(node, :normal)
   end
 
   @impl true
-  def handle_info({:DOWN, _, :process, _, reason}, {node, subscribers}) do
+  def handle_info({:DOWN, _, :process, _, reason}, node) do
     Logger.warn "Skitter worker failed with #{reason}"
-    cleanup(subscribers, node, reason)
+    notify_and_halt(node, reason)
   end
 
-  @impl true
-  def handle_info(msg, {node, subscribers}) do
-    Logger.debug "Received abnormal message: #{inspect msg}"
-    {:noreply, {node, subscribers}}
+  defp notify_and_halt(node, reason) do
+    Notifier.notify_leave(node, reason)
+    {:stop, :normal, node}
   end
-
-  defp cleanup(subscribers, node, reason) do
-    Registry.remove(node)
-    notify(subscribers, node, reason)
-    {:stop, :normal, {node, subscribers}}
-  end
-
-  defp notify(pids, node, reason) when is_list(pids) do
-    Enum.each(pids, &notify(&1, node, reason))
-  end
-
-  defp notify(pid, node, reason), do: send(pid, {:node_down, node, reason})
 end
