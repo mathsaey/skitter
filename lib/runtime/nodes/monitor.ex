@@ -12,4 +12,13 @@ defmodule Skitter.Runtime.Nodes.Monitor do
   def start_monitor(node) do
     DynamicSupervisor.start_child(Supervisor, {Server, node})
   end
+
+  def remove_monitor(node) do
+    Supervisor
+    |> DynamicSupervisor.which_children()
+    |> Enum.each(
+      fn {:undefined, pid, :worker, [Server]} ->
+        GenServer.cast(pid, {:node_removed, node})
+      end)
+  end
 end

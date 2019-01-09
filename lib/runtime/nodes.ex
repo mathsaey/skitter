@@ -20,7 +20,6 @@ defmodule Skitter.Runtime.Nodes do
   """
   def all, do: Nodes.Registry.all()
 
-
   @doc """
   Subscribe to node join events.
 
@@ -34,6 +33,8 @@ defmodule Skitter.Runtime.Nodes do
 
   When a node leaves the network, the pid that called this function will
   receive `{:node_leave, node, reason}`.
+  When the node was disconnected through `Nodes.disconnect`, the provided reason
+  will be `:removed`.
   """
   defdelegate subscribe_leave, to: Nodes.Notifier
 
@@ -92,7 +93,7 @@ defmodule Skitter.Runtime.Nodes do
       lst =
         nodes
         |> Enum.map(&connect/1)
-        |> Enum.reject(&(&1 == :ok))
+        |> Enum.reject(&(&1 == true))
       lst == [] || lst
     else
       :not_distributed
@@ -107,7 +108,7 @@ defmodule Skitter.Runtime.Nodes do
          :ok <- Nodes.Notifier.notify_join(node)
     do
       Logger.info("Registered new worker: #{node}")
-      :ok
+      true
     else
       :already_connected -> {:already_connected, node}
       :not_connected -> {:not_connected, node}
@@ -115,5 +116,10 @@ defmodule Skitter.Runtime.Nodes do
       false -> {:not_connected, node}
       any -> {:error, any, node}
     end
+  end
+
+  def disconnect(node) do
+    Worker.remove_master(node)
+    Nodes.Monitor.remove_monitor(node)
   end
 end

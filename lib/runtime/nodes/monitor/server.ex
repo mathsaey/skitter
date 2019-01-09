@@ -25,13 +25,17 @@ defmodule Skitter.Runtime.Nodes.Monitor.Server do
 
   defp setup_logger(node) do
     Logger.metadata(node: node)
-    Logger.configure_backend(:console, metadata: [:node])
   end
 
   @impl true
-  def handle_info({:DOWN, _, :process, _, :normal}, node) do
-    Logger.info "Normal exit of monitored Skitter Worker"
-    notify_and_halt(node, :normal)
+  def handle_cast({:node_removed, node}, node) do
+    Logger.info "Removing skitter worker"
+    notify_and_halt(node, :removed)
+  end
+
+  @impl true
+  def handle_cast({:node_removed, _}, node) do
+    {:noreply, node}
   end
 
   @impl true
