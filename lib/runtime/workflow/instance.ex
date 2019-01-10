@@ -4,14 +4,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Workflow do
+defmodule Skitter.Runtime.Workflow.Instance do
   @moduledoc false
 
-  alias __MODULE__
-
-  def supervisor(:master), do: Workflow.MasterSupervisor
-  def supervisor(:worker), do: Workflow.WorkerSupervisor
-
-  defdelegate load(workflow), to: Workflow.Loader
-  defdelegate react(ref, args), to: Workflow.Replica
+  defstruct [:ref, :links, :comp]
 end

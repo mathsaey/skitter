@@ -32,9 +32,8 @@ defmodule Skitter.Runtime.Component.TransientInstance do
   @impl true
   def react(key, args) do
     ref = make_ref()
-    node = Nodes.select_transient()
     {:ok, pid} = DynamicSupervisor.start_child(
-      {Supervisor, node}, {Server, {{__MODULE__, key}, args, self(), ref}}
+      Supervisor, {Server, {{__MODULE__, key}, args, self(), ref}}
     )
     {:ok, pid, ref}
   end

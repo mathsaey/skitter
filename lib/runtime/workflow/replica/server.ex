@@ -11,77 +11,95 @@ defmodule Skitter.Runtime.Workflow.Replica.Server do
 
   require Logger
 
-  alias Skitter.Workflow
-  alias Skitter.Runtime.Matcher
+  alias __MODULE__, as: S
 
-  def start_link(workflow, tokens) do
-    GenServer.start(__MODULE__, {workflow, tokens})
+  alias Skitter.Workflow
+  alias Skitter.Runtime.Component
+  alias Skitter.Runtime.Workflow.Store
+  alias Skitter.Runtime.Workflow.Replica.Matcher
+
+  defstruct [:workflow, :matcher, :invocations]
+
+  def start_link({workflow, source_data}) do
+    GenServer.start(__MODULE__, {workflow, source_data})
   end
 
-  # ------ #
-  # Server #
-  # ------ #
-
   # Verify the sources and start the replica server
-  def init({workflow, tokens}) do
-    setup_logger(workflow)
-
-    if Workflow.sources_match?(workflow, tokens) do
-      {:ok, {workflow, Matcher.new(), 0}, {:continue, tokens}}
+  def init({workflow, source_data}) do
+    if Workflow.sources_match?(Store.get(workflow), source_data) do
+      {
+        :ok,
+        %S{workflow: workflow, matcher: Matcher.new(), invocations: %{}},
+        {:continue, source_data}
+      }
     else
-      {:stop, "Invalid tokens"}
+      {:stop, :invalid_source_tokens}
     end
   end
 
   # Load the tokens to be processed
-  def handle_continue(tokens, {workflow, matcher, pending}) do
-    Enum.each(tokens, fn
-      {source, value} ->
-        destinations = Workflow.get_source!(workflow, source)
-
-        Enum.each(destinations, fn destination ->
-          # add_token(self(), value, destination)
-        end)
-    end)
-
-    {:noreply, {workflow, matcher, pending}}
+  def handle_continue(source_data, s = %S{}) do
+    s
+    |> process_spits(source_data, Store.get(s.workflow).sources)
+    |> continue_if_active()
   end
 
-  defp setup_logger(workflow) do
-    metadata = [workflow: inspect(workflow)]
-    keys = [:pid] ++ Keyword.keys(metadata) ++ [:tokens, :matcher]
+  def handle_info({:react_finished, ref, spits}, s = %S{}) do
+    {id, inv} = Map.pop(s.invocations, ref)
 
-    Logger.metadata(metadata)
+    s
+    |> struct(invocations: inv)
+    |> process_spits(spits, Store.get(s.workflow, id).links)
+    |> continue_if_active()
   end
 
-  # Invocation Tracking
-  # -------------------
-  # A workflow replica tracks the amount of active reacts, when this reaches
-  # 0, no more work can occur.
+  # When no more invocations are pending, the replica will receive no more
+  # tokens. Therefore it can be safely halted.
+  defp continue_if_active(s = %S{invocations: invocations, matcher: matcher}) do
+    case {invocations == %{}, Matcher.empty?(matcher)} do
+      {false, _} ->
+        {:noreply, s}
 
-  def handle_cast(:react_finished, {workflow, matcher, 1}) do
-    unless Matcher.empty?(matcher) do
-      Logger.error "Unused tokens in workflow", matcher: inspect(matcher)
+      {true, true} ->
+        {:stop, :normal, s}
+
+      {true, false} ->
+        # If the matcher is not empty a bug is present in the workflow
+        Logger.error("Unused tokens in workflow", matcher: inspect(matcher))
+        {:stop, :normal, s}
     end
-
-    {:stop, :normal, {workflow, matcher, 0}}
-  end
-
-  def handle_cast(:react_finished, {workflow, matcher, pending}) do
-    {:noreply, {workflow, matcher, pending - 1}}
   end
 
   # Token Processing
   # ----------------
 
-  def handle_cast({:token, token}, {workflow, matcher, pending}) do
-    case Matcher.add(matcher, token, workflow) do
+  defp process_spits(s = %S{}, spits, links) do
+    process_tokens(s, spits_to_tokens(spits, links))
+  end
+
+  defp spits_to_tokens(spits, links) do
+    Enum.flat_map(spits, fn {out, val} ->
+      Enum.map(Access.get(links, out, []), fn {id, port} -> {id, port, val} end)
+    end)
+  end
+
+  defp process_tokens(s = %S{}, []), do: s
+
+  defp process_tokens(s = %S{}, [t | rest]) do
+    s
+    |> process_token(t)
+    |> process_tokens(rest)
+  end
+
+  def process_token(s = %__MODULE__{matcher: matcher, workflow: wf}, token) do
+    case Matcher.add(matcher, token, wf) do
       {:ok, matcher} ->
-        {:noreply, {workflow, matcher, pending}}
+        %{s | matcher: matcher}
 
       {:ready, matcher, id, args} ->
-        # TODO: react
-        {:noreply, {workflow, matcher, pending + 1}}
+        inst = Store.get(wf, id)
+        {:ok, _, ref} = Component.react(inst.ref, args)
+        %{s | matcher: matcher, invocations: Map.put(s.invocations, ref, id)}
     end
   end
 end

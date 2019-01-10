@@ -81,7 +81,7 @@ defmodule Skitter.Workflow do
   end
 
   @doc """
-  List the sources of a component.
+  List the sources of a workflow.
 
   ## Examples
 
@@ -124,74 +124,40 @@ defmodule Skitter.Workflow do
   # Instances
   # ---------
 
-  defp get_instance!(workflow, key) do
+  @doc """
+  Fetch a proto_instance from a workflow based on its identifier.
+
+  ## Examples
+
+      iex> get_instance!(example_workflow(), :i1)
+      {Identity, nil, [value: [i3: :value]]}
+      iex> get_instance!(example_workflow(), :does_not_exist)
+      ** (KeyError) Key `:does_not_exist` not found in workflow
+  """
+  @spec get_instance!(t(), workflow_identifier()) ::
+          proto_instance() | no_return
+  def get_instance!(workflow, key) do
     case Map.fetch(workflow.instances, key) do
       :error -> raise KeyError, "Key `#{inspect(key)}` not found in workflow"
       {:ok, any} -> any
     end
   end
 
-  defp get_instance!(workflow, key, idx) do
-    elem(get_instance!(workflow, key), idx)
-  end
-
   @doc """
-  Retrieve the component of a proto-instance based on its identifier.
+  List the instances of a component.
 
   ## Examples
 
-      iex> get_component!(example_workflow(), :i1)
-      Identity
-      iex> get_component!(example_workflow(), :does_not_exist)
-      ** (KeyError) Key `:does_not_exist` not found in workflow
+      iex> get_instances(example_workflow())
+      [
+        i1: {Identity, nil, [value: [i3: :value]]},
+        i2: {Identity, nil, []},
+        i3: {Identity, nil, []}
+      ]
   """
-  @spec get_component!(t(), workflow_identifier()) ::
-          Skitter.Component.t() | no_return
-  def get_component!(workflow, key) do
-    get_instance!(workflow, key, 0)
-  end
-
-  @doc """
-  Retrieve the init argument of a proto-instance based on its identifier.
-
-  ## Examples
-
-      iex> get_init!(example_workflow(), :i1)
-      nil
-  """
-  @spec get_init!(t(), workflow_identifier()) :: any() | no_return
-  def get_init!(workflow, key) do
-    get_instance!(workflow, key, 1)
-  end
-
-  @doc """
-  Retrieve the links of a proto-instance based on its identifier.
-
-  ## Examples
-
-      iex> get_links!(example_workflow(), :i1)
-      [value: [i3: :value]]
-  """
-  @spec get_links!(t(), workflow_identifier()) :: outgoing_links() | no_return
-  def get_links!(workflow, key) do
-    get_instance!(workflow, key, 2)
-  end
-
-  @doc """
-  Initialize the proto_instance at `key`
-
-  ## Examples
-
-      iex> init_proto_instance!(example_workflow(), :i1)
-      {:ok, %Skitter.Component.Instance{component: WorkflowTest.Identity, state: []}}
-  """
-  @spec init_proto_instance!(t(), workflow_identifier()) ::
-          {:ok, Skitter.Component.instance()}
-          | Skitter.Component.runtime_error()
-          | no_return
-  def init_proto_instance!(workflow, key) do
-    {comp, args, _} = get_instance!(workflow, key)
-    Skitter.Component.init(comp, args)
+  @spec get_instances(t()) :: [{workflow_identifier(), proto_instance()}]
+  def get_instances(workflow) do
+    Map.to_list(workflow.instances)
   end
 
   # ------ #

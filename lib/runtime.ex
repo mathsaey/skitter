@@ -8,4 +8,7 @@ defmodule Skitter.Runtime do
   @moduledoc """
   Interface to Skitter's runtime system.
   """
+
+  defdelegate load_workflow(workflow), to: Skitter.Runtime.Workflow, as: :load
+  defdelegate react(wf, args), to: Skitter.Runtime.Workflow
 end

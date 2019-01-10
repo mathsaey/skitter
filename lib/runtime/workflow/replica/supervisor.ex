@@ -8,21 +8,11 @@ defmodule Skitter.Runtime.Workflow.Replica.Supervisor do
   @moduledoc false
   use DynamicSupervisor
 
-  def start_link(workflow) do
-    DynamicSupervisor.start_link(__MODULE__, [], workflow)
-
+  def start_link(_) do
+    DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  def init(workflow) do
-    DynamicSupervisor.init(
-      strategy: :one_for_one,
-      extra_arguments: [workflow]
-    )
-  end
-
-  # TODO: move this
-  def react(sup, tokens) do
-    spec = {Skitter.Runtime.Local.WorkflowReplica, tokens}
-    DynamicSupervisor.start_child(sup, spec)
+  def init(_) do
+    DynamicSupervisor.init(strategy: :one_for_one)
   end
 end

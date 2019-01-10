@@ -15,7 +15,7 @@ defmodule Skitter.Runtime.Worker.Supervisor do
   def init(_) do
     children = [
       Skitter.Runtime.Worker.Server,
-      Skitter.Runtime.Nodes.supervisor(:worker),
+      Skitter.Runtime.Workflow.supervisor(:worker),
       Skitter.Runtime.Component.supervisor(:worker)
     ]
 
