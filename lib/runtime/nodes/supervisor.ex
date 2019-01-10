@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Nodes.MasterSupervisor do
+defmodule Skitter.Runtime.Nodes.Supervisor do
   @moduledoc false
   use Supervisor
 

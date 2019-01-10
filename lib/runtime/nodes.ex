@@ -12,8 +12,7 @@ defmodule Skitter.Runtime.Nodes do
   alias __MODULE__
   alias Skitter.Runtime.Worker
 
-  def supervisor(:worker), do: Nodes.WorkerSupervisor
-  def supervisor(:master), do: Nodes.MasterSupervisor
+  def supervisor(:master), do: Nodes.Supervisor
 
   @doc """
   List all nodes.

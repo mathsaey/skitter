@@ -6,9 +6,12 @@
 
 defmodule Skitter.Runtime.Component do
   @moduledoc false
-  alias Skitter.Runtime.Component.{InstanceType, Supervisor}
+  alias Skitter.Runtime.Component.{
+    InstanceType, WorkerSupervisor, MasterSupervisor
+  }
 
-  def supervisor(_), do: Supervisor
+  def supervisor(:master), do: MasterSupervisor
+  def supervisor(:worker), do: WorkerSupervisor
 
   @doc """
   Load the runtime version of the component instance.

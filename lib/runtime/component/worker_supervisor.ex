@@ -4,11 +4,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Nodes.WorkerSupervisor do
+defmodule Skitter.Runtime.Component.WorkerSupervisor do
   @moduledoc false
   use Supervisor
 
-  alias Skitter.Runtime.Nodes
+  alias Skitter.Runtime.Component
 
   def start_link(_) do
     Supervisor.start_link(__MODULE__, [], name: __MODULE__)
@@ -16,7 +16,8 @@ defmodule Skitter.Runtime.Nodes.WorkerSupervisor do
 
   def init(_) do
     children = [
-      Nodes.Task.supervisor()
+      Component.PermanentInstance.supervisor(),
+      Component.TransientInstance.supervisor()
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

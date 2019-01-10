@@ -16,7 +16,7 @@ defmodule Skitter.Application do
       nodes = Application.get_env(:skitter, :worker_nodes, [])
 
       pre_load(mode, nodes)
-      children = children(mode, nodes)
+      children = shared_children() ++ children(mode, nodes)
       Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
     else
       {:error, "Erlang/OTP version mismatch"}
@@ -34,6 +34,12 @@ defmodule Skitter.Application do
   end
 
   defp pre_load(_, _), do: nil
+
+  def shared_children() do
+    [
+      {Task.Supervisor, name: Skitter.TaskSupervisor}
+    ]
+  end
 
   defp children(:worker, _), do: [Runtime.Worker.supervisor()]
   defp children(:master, nodes), do: [Runtime.Master.supervisor(nodes)]

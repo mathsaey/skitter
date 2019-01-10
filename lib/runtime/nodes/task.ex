@@ -6,11 +6,9 @@
 
 defmodule Skitter.Runtime.Nodes.Task do
   @moduledoc false
-  @supname __MODULE__.Supervisor
+  @supname Skitter.TaskSupervisor
 
   alias Skitter.Runtime.Nodes.Registry
-
-  def supervisor(), do: {Task.Supervisor, name: @supname}
 
   def on(node, mod, func, args), do: hd(on_many([node], mod, func, args))
   def on_all(mod, func, args), do: on_many(Registry.all(), mod, func, args)
