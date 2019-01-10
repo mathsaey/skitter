@@ -12,7 +12,7 @@ defmodule Skitter.Runtime.Nodes.Task do
 
   def supervisor(), do: {Task.Supervisor, name: @name}
 
-  def on(node, mod, func, args), do: on_many([node], mod, func, args) |> hd()
+  def on(node, mod, func, args), do: hd(on_many([node], mod, func, args))
   def on_all(mod, func, args), do: on_many(Registry.all(), mod, func, args)
 
   defp on_many(nodes, mod, func, args) do

@@ -5,7 +5,16 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Test.DistributedCase do
+  # Case template for unit tests which test distributed functionality.
+  #
+  # Using this ExUnit case template will ensure that:
+  # - Cluster is aliased
+  # - The test case is automatically marked as distributed.
+  # - The current skitter application will be restarted in the mode provided to
+  #   the `using` statement (`using Skitter.Test.DistributedCase, mode: <mode>`)
+  # - When the tests have finished, skitter will restart in local mode.
   use ExUnit.CaseTemplate
+  @moduledoc false
 
   using options do
     mode = Keyword.get(options, :mode, :master)

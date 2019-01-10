@@ -6,6 +6,7 @@
 
 defmodule Skitter.Test.Assertions do
   import ExUnit.Assertions
+  @moduledoc false
 
   defmacro assert_definition_error(
              msg \\ quote do
