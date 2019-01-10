@@ -6,18 +6,18 @@
 
 defmodule Skitter.Runtime.Nodes.Task do
   @moduledoc false
-  @name __MODULE__.Supervisor
+  @supname __MODULE__.Supervisor
 
   alias Skitter.Runtime.Nodes.Registry
 
-  def supervisor(), do: {Task.Supervisor, name: @name}
+  def supervisor(), do: {Task.Supervisor, name: @supname}
 
   def on(node, mod, func, args), do: hd(on_many([node], mod, func, args))
   def on_all(mod, func, args), do: on_many(Registry.all(), mod, func, args)
 
   defp on_many(nodes, mod, func, args) do
     nodes
-    |> Enum.map(&Task.Supervisor.async({@name, &1}, mod, func, args))
+    |> Enum.map(&Task.Supervisor.async({@supname, &1}, mod, func, args))
     |> Enum.map(&Task.await(&1))
   end
 end
