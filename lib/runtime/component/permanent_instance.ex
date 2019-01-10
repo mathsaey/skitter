@@ -16,11 +16,10 @@ defmodule Skitter.Runtime.Component.PermanentInstance do
 
   @impl true
   def load(ref, comp, init) do
-    Nodes.on_permanent(__MODULE__, :load_local, [ref, comp, init])
-  end
-
-  def load_local(ref, comp, init) do
-    DynamicSupervisor.start_child(Supervisor, {Server, {ref, comp, init}})
+    node = Nodes.select_permanent()
+    DynamicSupervisor.start_child(
+      {Supervisor, node}, {Server, {ref, comp, init}}
+    )
   end
 
   @impl true

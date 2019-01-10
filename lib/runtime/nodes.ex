@@ -61,12 +61,15 @@ defmodule Skitter.Runtime.Nodes do
   """
   defdelegate on_all(mod, func, args), to: Nodes.Task
 
+  defdelegate select_permanent(), to: Nodes.LoadBalancer
+  defdelegate select_transient(), to: Nodes.LoadBalancer
+
   def on_permanent(mod, func, args) do
-    Nodes.Task.on(Nodes.LoadBalancer.select_permanent(), mod, func, args)
+    Nodes.Task.on(select_permanent(), mod, func, args)
   end
 
   def on_transient(mod, func, args) do
-    Nodes.Task.on(Nodes.LoadBalancer.select_transient(), mod, func, args)
+    Nodes.Task.on(select_transient(), mod, func, args)
   end
 
   # --------------- #

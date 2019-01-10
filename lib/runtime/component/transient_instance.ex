@@ -11,6 +11,8 @@ defmodule Skitter.Runtime.Component.TransientInstance do
   alias Skitter.Runtime.Component.TransientInstance.{Server, Supervisor}
   alias Skitter.Runtime.Nodes
 
+  # TODO: Make it possible to load a component on a newly added node
+
   @impl true
   def supervisor(), do: Supervisor
 
@@ -30,8 +32,9 @@ defmodule Skitter.Runtime.Component.TransientInstance do
   @impl true
   def react(key, args) do
     ref = make_ref()
+    node = Nodes.select_transient()
     {:ok, pid} = DynamicSupervisor.start_child(
-      Supervisor, {Server, {{__MODULE__, key}, args, self(), ref}}
+      {Supervisor, node}, {Server, {{__MODULE__, key}, args, self(), ref}}
     )
     {:ok, pid, ref}
   end
