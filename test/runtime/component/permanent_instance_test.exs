@@ -8,7 +8,7 @@ defmodule Skitter.PermanentInstanceTest do
   use ExUnit.Case, async: true
 
   import Skitter.Component, only: [component: 3]
-  alias Skitter.Runtime.Component.PermanentInstance
+  alias Skitter.Runtime.Component.{Instance, PermanentInstance}
 
   component TestComponent, in: val, out: current do
     effect state_change
@@ -32,23 +32,23 @@ defmodule Skitter.PermanentInstanceTest do
   end
 
   test "if the server is started as a part of the supervisor" do
-    {:ok, pid} = PermanentInstance.load(make_ref(), TestComponent, 5)
+    {:ok, inst} = PermanentInstance.load(TestComponent, 5)
 
     children = DynamicSupervisor.which_children(PermanentInstance.Supervisor)
-    child = {:undefined, pid, :worker, [PermanentInstance.Server]}
+    child = {:undefined, inst.pid, :worker, [PermanentInstance.Server]}
     assert child in children
   end
 
   test "if state initialization works correctly" do
-    {:ok, pid} = PermanentInstance.load(make_ref(), TestComponent, 5)
+    {:ok, inst} = PermanentInstance.load(TestComponent, 5)
 
-    %PermanentInstance.Server{instance: instance} = :sys.get_state(pid)
+    %PermanentInstance.Server{instance: instance} = :sys.get_state(inst.pid)
     assert instance.state == [ctr: 5]
   end
 
   test "if reacting works" do
-    {:ok, pid} = PermanentInstance.load(make_ref(), TestComponent, 5)
-    {:ok, pid, ref} = PermanentInstance.react(pid, [:foo])
+    {:ok, inst} = PermanentInstance.load(TestComponent, 5)
+    {:ok, pid, ref} = Instance.react(inst, [:foo])
 
     %PermanentInstance.Server{instance: instance} = :sys.get_state(pid)
     assert_receive {:react_finished, ^ref, [current: 6]}

@@ -8,7 +8,7 @@ defmodule Skitter.TransientInstanceTest do
   use ExUnit.Case, async: true
 
   import Skitter.Component, only: [component: 3]
-  alias Skitter.Runtime.Component.TransientInstance
+  alias Skitter.Runtime.Component.{Instance, TransientInstance}
 
   component AddX, in: val, out: out do
     fields x
@@ -32,15 +32,16 @@ defmodule Skitter.TransientInstanceTest do
   end
 
   test "if loading works correctly" do
-    {:ok, ref} = TransientInstance.load(make_ref(), AddX, 10)
-    term = :persistent_term.get({TransientInstance, ref})
+    {:ok, instance} = TransientInstance.load(AddX, 10)
+    term = :persistent_term.get(instance.ref)
+
     {:ok, inst} = Skitter.Component.init(AddX, 10)
     assert term == inst
   end
 
   test "if reacting happens as a part of a supervisor" do
-    {:ok, arg} = TransientInstance.load(make_ref(), AddX, 10)
-    {:ok, pid, _} = TransientInstance.react(arg, [100])
+    {:ok, inst} = TransientInstance.load(AddX, 10)
+    {:ok, pid, _} = Instance.react(inst, [100])
 
     children = DynamicSupervisor.which_children(TransientInstance.Supervisor)
     child = {:undefined, pid, :worker, [TransientInstance.Server]}
@@ -48,8 +49,8 @@ defmodule Skitter.TransientInstanceTest do
   end
 
   test "if reacting works" do
-    {:ok, arg} = TransientInstance.load(make_ref(), AddX, 10)
-    {:ok, _, ref} = TransientInstance.react(arg, [100])
+    {:ok, inst} = TransientInstance.load(AddX, 10)
+    {:ok, _, ref} = Instance.react(inst, [100])
     assert_receive {:react_finished, ^ref, [out: 110]}
   end
 end

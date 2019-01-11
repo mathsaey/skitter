@@ -6,12 +6,10 @@
 
 defmodule Skitter.Runtime.Component do
   @moduledoc false
-  alias Skitter.Runtime.Component.{
-    InstanceType, WorkerSupervisor, MasterSupervisor
-  }
+  alias __MODULE__
 
-  def supervisor(:master), do: MasterSupervisor
-  def supervisor(:worker), do: WorkerSupervisor
+  def supervisor(:master), do: Component.MasterSupervisor
+  def supervisor(:worker), do: Component.WorkerSupervisor
 
   @doc """
   Load the runtime version of the component instance.
@@ -21,9 +19,8 @@ defmodule Skitter.Runtime.Component do
   be passed as an argument to `react/2`
   """
   def load(comp, init_args) do
-    mod = InstanceType.select(comp)
-    {:ok, res} = mod.load(make_ref(), comp, init_args)
-    {:ok, {mod, res}}
+    mod = select(comp)
+    mod.load(comp, init_args)
   end
 
   @doc """
@@ -40,7 +37,15 @@ defmodule Skitter.Runtime.Component do
   where ref is the reference that was returned from the function, while spits
   contains the spits produced by the invocation of react.
   """
-  def react({mod, ref}, args) do
-    mod.react(ref, args)
+  def react(instance, args) do
+    Skitter.Runtime.Component.Instance.react(instance, args)
+  end
+
+  defp select(comp) do
+    if Skitter.Component.state_change?(comp) do
+      Component.PermanentInstance
+    else
+      Component.TransientInstance
+    end
   end
 end

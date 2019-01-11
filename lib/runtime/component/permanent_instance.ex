@@ -5,27 +5,28 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime.Component.PermanentInstance do
-  @behaviour Skitter.Runtime.Component.InstanceType
   @moduledoc false
 
   alias Skitter.Runtime.Nodes
   alias Skitter.Runtime.Component.PermanentInstance.{Server, Supervisor}
 
-  @impl true
-  def supervisor(), do: Supervisor
+  defstruct [:pid]
 
-  @impl true
-  def load(ref, comp, init) do
+  def load(comp, init) do
     node = Nodes.select_permanent()
-    DynamicSupervisor.start_child(
-      {Supervisor, node}, {Server, {ref, comp, init}}
+    {:ok, pid} = DynamicSupervisor.start_child(
+      {Supervisor, node}, {Server, {make_ref(), comp, init}}
     )
+    {:ok, %__MODULE__{pid: pid}}
   end
+end
 
-  @impl true
-  def react(inst, args) do
+alias Skitter.Runtime.Component
+
+defimpl Component.Instance, for: Component.PermanentInstance do
+  def react(instance, args) do
     ref = make_ref()
-    :ok = GenServer.cast(inst, {:react, args, self(), ref})
-    {:ok, inst, ref}
+    :ok = GenServer.cast(instance.pid, {:react, args, self(), ref})
+    {:ok, instance.pid, ref}
   end
 end

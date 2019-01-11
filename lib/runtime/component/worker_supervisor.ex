@@ -16,8 +16,8 @@ defmodule Skitter.Runtime.Component.WorkerSupervisor do
 
   def init(_) do
     children = [
-      Component.PermanentInstance.supervisor(),
-      Component.TransientInstance.supervisor()
+      Component.PermanentInstance.Supervisor,
+      Component.TransientInstance.Supervisor
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
