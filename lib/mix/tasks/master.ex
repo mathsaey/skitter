@@ -19,14 +19,28 @@ defmodule Mix.Tasks.Skitter.Master do
 
   If you wish to pass any arguments to the underlying elixir runtime, this task
   can be started as follows: `elixir --arg1 --arg2 -S mix skitter.master`
+
+  The `--eval` (or `-e`) switch can be used to evaluate an expression, similar
+  to `mix run`.
   """
 
   @shortdoc "Start a Skitter master node for the current project."
 
   @doc false
   def run(args) do
-    read_nodes(args)
-    Mix.Tasks.Skitter.Boot.boot(:master)
+    run_args = parse_args(args)
+    Mix.Tasks.Skitter.Boot.boot(:master, run_args)
+  end
+
+  defp parse_args(args) do
+    {parsed, argv, _} = OptionParser.parse(
+      args,
+      aliases: [e: :eval],
+      strict: [eval: :keep]
+    )
+
+    read_nodes(argv)
+    OptionParser.to_argv(parsed)
   end
 
   defp read_nodes(args) do
