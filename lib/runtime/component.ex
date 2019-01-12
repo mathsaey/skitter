@@ -6,10 +6,17 @@
 
 defmodule Skitter.Runtime.Component do
   @moduledoc false
-  alias __MODULE__
 
-  def supervisor(:master), do: Component.MasterSupervisor
-  def supervisor(:worker), do: Component.WorkerSupervisor
+  alias __MODULE__.{
+    Instance, MasterSupervisor, WorkerSupervisor,
+    TransientInstance, PermanentInstance
+  }
+
+  # TODO: Make it possible to unload a component instance
+  # TODO: Make it possbible to load an instance on a newly added node
+
+  def supervisor(:master), do: MasterSupervisor
+  def supervisor(:worker), do: WorkerSupervisor
 
   @doc """
   Load the runtime version of the component instance.
@@ -37,15 +44,15 @@ defmodule Skitter.Runtime.Component do
   where ref is the reference that was returned from the function, while spits
   contains the spits produced by the invocation of react.
   """
-  def react(instance, args) do
-    Skitter.Runtime.Component.Instance.react(instance, args)
+  def react(instance = %Instance{mod: mod}, args) do
+    mod.react(instance, args)
   end
 
   defp select(comp) do
     if Skitter.Component.state_change?(comp) do
-      Component.PermanentInstance
+      PermanentInstance
     else
-      Component.TransientInstance
+      TransientInstance
     end
   end
 end

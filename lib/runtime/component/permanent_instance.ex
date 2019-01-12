@@ -7,26 +7,22 @@
 defmodule Skitter.Runtime.Component.PermanentInstance do
   @moduledoc false
 
-  alias Skitter.Runtime.Nodes
-  alias Skitter.Runtime.Component.PermanentInstance.{Server, Supervisor}
+  use Skitter.Runtime.Component.Instance
 
-  defstruct [:pid]
+  alias Skitter.Runtime.Nodes
+  alias __MODULE__.{Server, Supervisor}
 
   def load(comp, init) do
     node = Nodes.select_permanent()
     {:ok, pid} = DynamicSupervisor.start_child(
       {Supervisor, node}, {Server, {make_ref(), comp, init}}
     )
-    {:ok, %__MODULE__{pid: pid}}
+    {:ok, create_instance(pid)}
   end
-end
 
-alias Skitter.Runtime.Component
-
-defimpl Component.Instance, for: Component.PermanentInstance do
-  def react(instance, args) do
+  def react(instance_ref(), args) do
     ref = make_ref()
-    :ok = GenServer.cast(instance.pid, {:react, args, self(), ref})
-    {:ok, instance.pid, ref}
+    :ok = GenServer.cast(instance_ref, {:react, args, self(), ref})
+    {:ok, instance_ref, ref}
   end
 end

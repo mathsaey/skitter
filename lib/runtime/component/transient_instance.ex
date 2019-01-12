@@ -7,18 +7,16 @@
 defmodule Skitter.Runtime.Component.TransientInstance do
   @moduledoc false
 
+  use Skitter.Runtime.Component.Instance
+
   alias Skitter.Runtime.Nodes
-
-  defstruct [:ref]
-
-  # TODO: Make it possible to load a component on a newly added node
-  # Subsribe to node_join events and automatically load?
+  alias __MODULE__.{Server, Supervisor}
 
   def load(component, init_args) do
     ref = make_ref()
     res = Nodes.on_all(__MODULE__, :load_local, [ref, component, init_args])
     true = Enum.all?(res, &match?({:ok, ^ref}, &1))
-    {:ok, %__MODULE__{ref: ref}}
+    {:ok, create_instance(ref)}
   end
 
   def load_local(ref, component, init_args) do
@@ -26,16 +24,11 @@ defmodule Skitter.Runtime.Component.TransientInstance do
     :ok = :persistent_term.put(ref, instance)
     {:ok, ref}
   end
-end
 
-alias Skitter.Runtime.Component
-
-defimpl Component.Instance, for: Component.TransientInstance do
-  alias Skitter.Runtime.Component.TransientInstance.{Server, Supervisor}
-  def react(instance, args) do
+  def react(instance_ref(), args) do
     ref = make_ref()
     {:ok, pid} = DynamicSupervisor.start_child(
-      Supervisor, {Server, {instance.ref, args, self(), ref}}
+      Supervisor, {Server, {instance_ref, args, self(), ref}}
     )
     {:ok, pid, ref}
   end
