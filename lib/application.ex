@@ -41,8 +41,8 @@ defmodule Skitter.Application do
     ]
   end
 
-  defp children(:worker, _), do: [Runtime.Worker.supervisor()]
-  defp children(:master, nodes), do: [Runtime.Master.supervisor(nodes)]
+  defp children(:worker, _), do: [Runtime.Worker.Supervisor]
+  defp children(:master, nodes), do: [{Runtime.Master.Supervisor, nodes}]
 
   defp children(:local, _) do
     children(:worker, []) ++ children(:master, Node.self())

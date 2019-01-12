@@ -9,8 +9,7 @@ defmodule Skitter.Runtime.Workflow do
 
   alias __MODULE__
 
-  def supervisor(:master), do: Workflow.MasterSupervisor
-  def supervisor(:worker), do: Workflow.WorkerSupervisor
+  # TODO: Make it possible to unload a workflow
 
   defdelegate load(workflow), to: Workflow.Loader
   defdelegate react(ref, args), to: Workflow.Replica

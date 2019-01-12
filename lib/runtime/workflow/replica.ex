@@ -10,8 +10,6 @@ defmodule Skitter.Runtime.Workflow.Replica do
   alias Skitter.Runtime.Nodes
   alias Skitter.Runtime.Workflow.Replica.{Server, Supervisor}
 
-  def supervisor(), do: Supervisor
-
   def react(ref, args) do
     node = Nodes.select_transient()
     {:ok, _} = DynamicSupervisor.start_child(

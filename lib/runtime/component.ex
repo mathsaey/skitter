@@ -7,16 +7,10 @@
 defmodule Skitter.Runtime.Component do
   @moduledoc false
 
-  alias __MODULE__.{
-    Instance, MasterSupervisor, WorkerSupervisor,
-    TransientInstance, PermanentInstance
-  }
+  alias __MODULE__.{Instance, TransientInstance, PermanentInstance}
 
   # TODO: Make it possible to unload a component instance
   # TODO: Make it possbible to load an instance on a newly added node
-
-  def supervisor(:master), do: MasterSupervisor
-  def supervisor(:worker), do: WorkerSupervisor
 
   @doc """
   Load the runtime version of the component instance.

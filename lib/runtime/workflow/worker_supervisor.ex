@@ -16,7 +16,7 @@ defmodule Skitter.Runtime.Workflow.WorkerSupervisor do
 
   def init(_) do
     children = [
-      Workflow.Replica.supervisor()
+      Workflow.Replica.Supervisor
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

@@ -10,8 +10,6 @@ defmodule Skitter.Runtime.Worker do
   alias __MODULE__
   alias Skitter.Runtime.Nodes
 
-  def supervisor, do: Worker.Supervisor
-
   def register_master(node) do
     GenServer.cast({Worker.Server, node}, {:add_master, Node.self()})
   end
