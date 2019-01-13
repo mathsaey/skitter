@@ -8,14 +8,13 @@ defmodule Skitter.Runtime.Master.Supervisor do
   @moduledoc false
   use Supervisor
 
-  def start_link(nodes) do
-    Supervisor.start_link(__MODULE__, nodes,  name: __MODULE__)
+  def start_link(_) do
+    Supervisor.start_link(__MODULE__, [],  name: __MODULE__)
   end
 
-  def init(nodes) do
+  def init(_) do
     children = [
       Skitter.Runtime.Nodes.Supervisor,
-      {Skitter.Runtime.Master.Server, nodes},
       Skitter.Runtime.Workflow.MasterSupervisor,
       Skitter.Runtime.Component.MasterSupervisor
     ]
