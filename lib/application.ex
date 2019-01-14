@@ -24,6 +24,7 @@ defmodule Skitter.Application do
     catch
       {:vm_features_missing, lst} -> {:error, {"Missing vm features", lst}}
       {:connect_error, any} -> {:error, {"Error connecting to nodes", any}}
+      {:local_error, any} -> {:error, {"Error starting local mode", any}}
     end
   end
 
@@ -50,7 +51,13 @@ defmodule Skitter.Application do
     end
   end
 
-  defp post_load(:local, _), do: Skitter.Runtime.Nodes.connect([Node.self()])
+  defp post_load(:local, _) do
+    case Skitter.Runtime.Nodes.connect(Node.self()) do
+      true -> nil
+      any -> throw {:local_error, any}
+    end
+  end
+
   defp post_load(_, _), do: nil
 
   # Supervision Tree
