@@ -14,7 +14,7 @@ defmodule Skitter.MixProject do
       version: "0.1.0-dev",
       source_url: "https://github.com/mathsaey/skitter/",
       homepage_url: "https://soft.vub.ac.be/~mathsaey/skitter/",
-      elixir: "~> 1.7",
+      elixir: "~> 1.8",
       deps: deps(),
       docs: docs(),
       start_permanent: Mix.env() == :prod,
