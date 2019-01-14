@@ -8,9 +8,8 @@ defmodule Skitter.Runtime.Workflow.Store do
   @moduledoc false
 
   def put(ref, val) do
-    key = {__MODULE__, ref}
-    :ok = :persistent_term.put(key, val)
-    key
+    :ok = :persistent_term.put(ref, val)
+    ref
   end
 
   def get(key) do

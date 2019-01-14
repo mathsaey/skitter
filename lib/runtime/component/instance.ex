@@ -37,3 +37,18 @@ defmodule Skitter.Runtime.Component.Instance do
   end
 end
 
+defimpl Inspect, for: Skitter.Runtime.Component.Instance do
+  import Inspect.Algebra
+
+  def inspect(inst, opts) do
+    mod_last = inst.mod |> Module.split() |> List.last()
+    container_doc(
+      "#RuntimeComponentInstance[",
+      [mod_last, inst.ref],
+      "]",
+      opts,
+      fn el, opts -> to_doc(el, opts) end,
+      separator: ","
+    )
+  end
+end
