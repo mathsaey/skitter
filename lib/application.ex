@@ -96,7 +96,7 @@ defmodule Skitter.Application do
 
   defp ensure_distribution_enabled(mode) do
     # Only perform this setup if the user did not start a distributed node
-    unless Node.alive?() or !get_env(:automatic_distribution) do
+    unless Node.alive?() or !get_env(:automatic_distribution, true) do
       # Erlang only start epmd automatically if the node is started as a
       # distributed node
       System.cmd("epmd", ["-daemon"])
