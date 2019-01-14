@@ -7,14 +7,11 @@
 defmodule Mix.Tasks.Skitter.Boot do
   @moduledoc false
 
-  def boot(mode, args \\ []) do
-    Application.put_env(:skitter, :mode, mode, persistent: true)
-    start_with_default_name(mode)
-    Mix.Tasks.Run.run(modify_args(args))
-  end
+  import Skitter.Configuration
 
-  defp start_with_default_name(mode) do
-    unless Node.alive?(), do: Node.start(mode, :shortnames)
+  def boot(mode, args \\ []) do
+    put_env(:mode, mode)
+    Mix.Tasks.Run.run(modify_args(args))
   end
 
   defp modify_args(args) do

@@ -7,6 +7,8 @@
 defmodule Skitter.Test.Cluster do
   require Logger
 
+  alias Skitter.Configuration
+
   @hostname "127.0.0.1"
   @nodename "skitter_test_node"
   @fullname :"#{@nodename}@#{@hostname}"
@@ -39,7 +41,7 @@ defmodule Skitter.Test.Cluster do
       Application.stop(:skitter)
       Logger.configure(level: level)
       Node.stop()
-      Application.put_env(:skitter, :mode, mode)
+      Configuration.put_env(:mode, mode)
       Application.ensure_all_started(:skitter)
     end
   end

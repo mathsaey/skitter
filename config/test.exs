@@ -6,6 +6,9 @@
 
 use Mix.Config
 
+config :skitter,
+  automatic_distribution: false
+
 config :logger,
   compile_time_purge_matching: [
     [level_lower_than: :warn]

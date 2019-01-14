@@ -9,6 +9,16 @@ defmodule Skitter.Runtime do
   Interface to Skitter's runtime system.
   """
 
-  defdelegate load_workflow(workflow), to: Skitter.Runtime.Workflow, as: :load
+  def add_node(_node) do
+    # TODO
+  end
+
+  def load_workflow(workflow) do
+    case Skitter.Runtime.Nodes.all() do
+      [] -> {:error, :no_workers}
+      _ -> Skitter.Runtime.Workflow.load(workflow)
+    end
+  end
+
   defdelegate react(wf, args), to: Skitter.Runtime.Workflow
 end
