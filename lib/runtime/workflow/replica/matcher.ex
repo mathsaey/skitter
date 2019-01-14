@@ -10,6 +10,8 @@ defmodule Skitter.Runtime.Workflow.Replica.Matcher do
   alias Skitter.Component
   alias Skitter.Runtime.Workflow.Store
 
+  # TODO: "fast path" when arity == 1?
+
   def new, do: Map.new()
 
   def empty?(map) when map == %{}, do: true
