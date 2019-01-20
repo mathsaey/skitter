@@ -43,7 +43,8 @@ defmodule Skitter.Component.MutableBlock do
   #   original return value and the value of `var`.
   # - An assignment will be added before the ast node which assigns `var` to
   #   `var`, after which it returns the original result from the code block.
-  defp transform_node({op, env, args}, var) do
+  defp transform_node(node, var) do
+    {op, env, args} = add_default_branches(node)
     args = transform_args(args, var)
     node = {op, env, args}
 
@@ -52,6 +53,19 @@ defmodule Skitter.Component.MutableBlock do
       res
     end
   end
+
+  defp add_default_branches(node = {op, env, args}) when op in [:if, :unless] do
+    [condition, branches] = args
+
+    if :else not in Keyword.keys(branches) do
+      args = [condition, branches ++ [else: nil]]
+      {op, env, args}
+    else
+      node
+    end
+  end
+
+  defp add_default_branches(node), do: node
 
   # Transform the arguments of an ast node. This function should only be called
   # if `transform_needed?` returned true

@@ -14,7 +14,11 @@ defmodule Skitter.Component.MutableBlockTest.Helpers do
   defmacro write(val), do: quote(do: unquote(var()) = unquote(val))
 
   defmacro transform(do: body) do
-    Skitter.Component.MutableBlock.transform(body, var())
+    body = Skitter.Component.MutableBlock.transform(body, var())
+    quote do
+      unquote(var()) = nil
+      unquote(body)
+    end
   end
 end
 
