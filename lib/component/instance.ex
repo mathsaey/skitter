@@ -10,7 +10,7 @@ defmodule Skitter.Component.Instance do
   @enforce_keys [:state, :component]
   defstruct [:state, :component]
 
-  @typep state :: [{atom(), any()}]
+  @typep state :: %{optional(atom()) => any()}
 
   @type t :: %__MODULE__{
           state: state(),

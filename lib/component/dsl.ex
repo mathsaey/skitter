@@ -121,6 +121,8 @@ defmodule Skitter.Component.DSL do
 
   import Skitter.DefinitionError
 
+  alias Skitter.Component.MutableBlock
+
   # --------- #
   # Constants #
   # --------- #
@@ -248,7 +250,6 @@ defmodule Skitter.Component.DSL do
       component_metadata = struct(Skitter.Component.Metadata, internal_metadata)
 
       # Transform macro calls inside body AST
-      # body = transform_component_callbacks(body, internal_metadata)
       body =
         body |> transform_helpers() |> transform_functions(internal_metadata)
 
@@ -272,6 +273,8 @@ defmodule Skitter.Component.DSL do
               restore_checkpoint: 3,
               clean_checkpoint: 3
             ]
+
+          defstruct unquote(fields)
 
           unquote(body)
           unquote(defaults)
@@ -305,7 +308,7 @@ defmodule Skitter.Component.DSL do
   end
 
   defp parse_port_names(lst) when is_list(lst) do
-    Enum.map(lst, &name_to_symbol/1)
+    Enum.map(lst, &port_to_symbol/1)
   end
 
   # Allow a single port name to be specified outside a list
@@ -327,7 +330,7 @@ defmodule Skitter.Component.DSL do
 
   # Find and remove field declarations in the AST
   defp extract_fields(body) do
-    Macro.postwalk(body, [], fn
+    Macro.prewalk(body, [], fn
       {:fields, _env, fields}, [] ->
         fields =
           Enum.map(fields, fn
@@ -353,7 +356,7 @@ defmodule Skitter.Component.DSL do
   # In both cases, the full statement will be removed from the ast, and the
   # effect will be added to the accumulator with its properties.
   defp extract_effects(body) do
-    Macro.postwalk(body, [], fn
+    Macro.prewalk(body, [], fn
       {:effect, _env, [effect]}, acc ->
         {effect, properties} = Macro.decompose_call(effect)
 
@@ -385,7 +388,7 @@ defmodule Skitter.Component.DSL do
 
   # helper functions are defined as internal functions
   defp transform_helpers(body) do
-    Macro.postwalk(body, fn
+    Macro.prewalk(body, fn
       {:helper, env, rest} ->
         {:defp, env, rest}
 
@@ -398,7 +401,7 @@ defmodule Skitter.Component.DSL do
   # Wrap their arguments in a list (to allow an arbitrary amount of arguments
   # when needed), and add the component metadata to the call.
   defp transform_functions(body, meta) do
-    Macro.postwalk(body, fn
+    Macro.prewalk(body, fn
       {name, env, arg_lst} when name in @component_functions ->
         {args, [block]} = Enum.split(arg_lst, -1)
         {name, env, [args, meta, block]}
@@ -595,15 +598,11 @@ defmodule Skitter.Component.DSL do
 
   @doc false
   defmacro value ~> port do
-    port = name_to_symbol(port)
+    port = port_to_symbol(port)
     var = skitter_var(@output_var)
 
     quote do
-      Skitter.Component.MutableCell.write(
-        unquote(var),
-        unquote(port),
-        unquote(value)
-      )
+      unquote(var) = Keyword.put(unquote(var), unquote(port), unquote(value))
     end
   end
 
@@ -686,7 +685,7 @@ defmodule Skitter.Component.DSL do
 
   # Remove all `after_failure` blocks from the body
   defp remove_after_failure(body) do
-    Macro.postwalk(body, fn
+    Macro.prewalk(body, fn
       {:after_failure, _env, _args} -> nil
       any -> any
     end)
@@ -707,10 +706,8 @@ defmodule Skitter.Component.DSL do
   # Create the AST which will become the body of react. Besides this, generate
   # the arguments for the react function header.
   defp create_react_body_and_arg(body, meta) do
-    {out_init, out_ret} = create_react_output(body)
-
-    {body, inst_arg, state_init, inst_ret} =
-      create_field_access_write(body, meta, :arg)
+    {out_init, body, out_ret} = create_react_output(body)
+    {body, inst_arg, _, inst_ret} = create_field_access_write(body, meta)
 
     body =
       quote do
@@ -719,13 +716,12 @@ defmodule Skitter.Component.DSL do
             ~>: 2,
             skip: 2,
             error: 1,
-            read_field: 2,
+            read_field: 1,
             write_field: 2,
             after_failure: 1
           ]
 
         unquote(out_init)
-        unquote(state_init)
         unquote(body)
         {:ok, unquote(inst_ret), unquote(out_ret)}
       end
@@ -741,19 +737,12 @@ defmodule Skitter.Component.DSL do
   defp create_react_output(body) do
     if_occurrence(body, :~>) do
       {
-        quote do
-          alias Skitter.Component.MutableCell
-          unquote(skitter_var(@output_var)) = MutableCell.create()
-        end,
-        quote do
-          alias Skitter.Component.MutableCell
-          res = MutableCell.to_keyword_list(unquote(skitter_var(@output_var)))
-          MutableCell.destroy(unquote(skitter_var(@output_var)))
-          res
-        end
+        quote(do: unquote(skitter_var(@output_var)) = Keyword.new()),
+        MutableBlock.transform(body, skitter_var(@output_var)),
+        skitter_var(@output_var)
       }
     else
-      {nil, []}
+      {nil, body, []}
     end
   end
 
@@ -765,7 +754,7 @@ defmodule Skitter.Component.DSL do
   defp add_skip_handler(body, state, out) do
     if_occurrence(body, :skip) do
       body =
-        Macro.postwalk(body, fn
+        Macro.prewalk(body, fn
           {:skip, env, atom} when is_atom(atom) -> {:skip, env, [state, out]}
           any -> any
         end)
@@ -812,9 +801,9 @@ defmodule Skitter.Component.DSL do
 
   # Verify all spits have an existing out port
   defp check_spits(ports, body) do
-    Macro.postwalk(body, fn
+    Macro.prewalk(body, fn
       {:~>, _env, [_val, port]} ->
-        port = name_to_symbol(port)
+        port = port_to_symbol(port)
 
         unless port in ports do
           throw {:error, :react, :invalid_spit, port}
@@ -847,14 +836,14 @@ defmodule Skitter.Component.DSL do
   `field <~ value` may be used to set initial values for the state fields.
   """
   defmacro init([arg], meta, do: body) do
-    {body, inst_init, inst_ret} = create_field_access_write(body, meta, :new)
+    {body, _, inst_init, inst_ret} = create_field_access_write(body, meta)
 
     body =
       quote do
         import unquote(__MODULE__),
           only: [
             error: 1,
-            read_field: 2,
+            read_field: 1,
             write_field: 2
           ]
 
@@ -891,7 +880,7 @@ defmodule Skitter.Component.DSL do
 
       body =
         quote do
-          import unquote(__MODULE__), only: [error: 1, read_field: 2]
+          import unquote(__MODULE__), only: [error: 1, read_field: 1]
           unquote(body)
           :ok
         end
@@ -934,7 +923,7 @@ defmodule Skitter.Component.DSL do
 
       body =
         quote do
-          import unquote(__MODULE__), only: [read_field: 2, error: 1]
+          import unquote(__MODULE__), only: [read_field: 1, error: 1]
           checkpoint = unquote(body)
           {:ok, checkpoint}
         end
@@ -970,13 +959,13 @@ defmodule Skitter.Component.DSL do
   `field <~ value` syntax) to set correct values for the state fields.
   """
   defmacro restore_checkpoint([arg], meta, do: body) do
-    {body, inst_init, inst_ret} = create_field_access_write(body, meta, :new)
+    {body, _, inst_init, inst_ret} = create_field_access_write(body, meta)
 
     body =
       quote do
         import unquote(__MODULE__),
           only: [
-            read_field: 2,
+            read_field: 1,
             write_field: 2,
             error: 1
           ]
@@ -1017,7 +1006,7 @@ defmodule Skitter.Component.DSL do
 
       body =
         quote do
-          import unquote(__MODULE__), only: [read_field: 2, error: 1]
+          import unquote(__MODULE__), only: [read_field: 1, error: 1]
           unquote(body)
           :ok
         end
@@ -1076,35 +1065,21 @@ defmodule Skitter.Component.DSL do
   # ------------
 
   @doc false
-  # Read the value of a field which is never modified in the body.
-  # In this case, we simply read out the relevant field from the state variable.
-  defmacro read_field(field, :immutable) do
-    quote do
-      Keyword.get(unquote(skitter_var(@instance_var)).state, unquote(field))
-    end
+  # Read the value of a state field
+  defmacro read_field(field) do
+    quote(do: Map.get(unquote(skitter_var(@state_var)), unquote(field)))
   end
 
   @doc false
-  # Read the value of a field which is modified in the body.
-  # In this case, we read out the current value from a mutable cell.
-  defmacro read_field(field, :mutable) do
-    quote do
-      Skitter.Component.MutableCell.read(
-        unquote(skitter_var(@state_var)),
-        unquote(field)
-      )
-    end
-  end
-
-  @doc false
-  # Modify the value of a field in a mutable cell
+  # Modify the value of a state field.
   defmacro write_field(field, value) do
     quote do
-      Skitter.Component.MutableCell.write(
-        unquote(skitter_var(@state_var)),
-        unquote(field),
-        unquote(value)
-      )
+      unquote(skitter_var(@state_var)) =
+        Map.put(
+          unquote(skitter_var(@state_var)),
+          unquote(field),
+          unquote(value)
+        )
     end
   end
 
@@ -1112,11 +1087,13 @@ defmodule Skitter.Component.DSL do
   # state, a variable to be put in the function header, and an ast which
   # produces an error if the <~ operator has been used.
   defp create_field_access_read(body, meta) do
-    body = transform_field_reads(body, meta, :immutable)
+    body = transform_field_reads(body, meta)
 
     arg =
       if_occurrence(body, :read_field) do
-        skitter_var(@instance_var)
+        quote do
+          %Skitter.Component.Instance{state: unquote(skitter_var(@state_var))}
+        end
       else
         skitter_var(:_instance)
       end
@@ -1132,63 +1109,39 @@ defmodule Skitter.Component.DSL do
   # and modify the fields of a newly created component instance.
   # Returned:
   #   - body
-  #   - ast to initialize the state
-  #   - ast to return the new instance
-  defp create_field_access_write(body, meta, :new) do
-    body = transform_field_read_writes(body, meta)
+  #   - ast to put in the function header
+  #   - ast to create a new instance
+  #   - ast to return the instance
+  defp create_field_access_write(body, meta) do
+    instance_var = skitter_var(@instance_var)
+    state_var = skitter_var(@state_var)
+
+    body =
+      body
+      |> MutableBlock.transform(state_var)
+      |> transform_field_writes(meta)
+      |> transform_field_reads(meta)
 
     {
       body,
       quote do
-        unquote(skitter_var(@instance_var)) = unquote(create_instance(meta))
-        unquote(create_state_init(body))
+        unquote(instance_var) = %Skitter.Component.Instance{
+          state: unquote(state_var)
+        }
       end,
-      create_state_return(body)
+      quote do
+        unquote(instance_var) = unquote(create_instance(meta))
+        unquote(state_var) = unquote(instance_var).state
+      end,
+      quote(do: Map.put(unquote(instance_var), :state, unquote(state_var)))
     }
   end
 
-  # Return a modified body and the needed asts that makes it possible to read
-  # and modify the fields of an existing component instance passed as an
-  # argument.
-  # Returned:
-  #   - body
-  #   - argument ast to be put in function header
-  #   - ast to initialize the state
-  #   - ast to return the modified instance
-  defp create_field_access_write(body, meta, :arg) do
-    body = transform_field_read_writes(body, meta)
-
-    {
-      body,
-      skitter_var(@instance_var),
-      create_state_init(body),
-      create_state_return(body)
-    }
-  end
-
-  # Transform fields access and modification statements
-  defp transform_field_read_writes(body, meta) do
-    # Writes should be transformed before reads due to the way
-    # transform_field_reads works
-    body = transform_field_writes(body, meta)
-
-    # If we don't mutate the fields, we act as if they are immutable
-    if_occurrence(body, :write_field) do
-      transform_field_reads(body, meta, :mutable)
-    else
-      transform_field_reads(body, meta, :immutable)
-    end
-  end
-
-  # Transform any use of a field name into a call to `read_field(name, mode)`
-  defp transform_field_reads(body, %{fields: fields}, mode) do
-    Macro.postwalk(body, fn
+  # Transform any use of a field name into a call to `read_field(name)`
+  defp transform_field_reads(body, %{fields: fields}) do
+    Macro.prewalk(body, fn
       node = {name, _env, atom} when is_atom(atom) ->
-        if name in fields do
-          quote do: read_field(unquote(name), unquote(mode))
-        else
-          node
-        end
+        if(name in fields, do: quote(do: read_field(unquote(name))), else: node)
 
       any ->
         any
@@ -1197,7 +1150,7 @@ defmodule Skitter.Component.DSL do
 
   # Transform `name <~ value` into calls to `write_field`
   defp transform_field_writes(body, _) do
-    Macro.postwalk(body, fn
+    Macro.prewalk(body, fn
       {:<~, _a, [{name, _n, atom}, value]} when is_atom(atom) ->
         quote do: write_field(unquote(name), unquote(value))
 
@@ -1206,69 +1159,32 @@ defmodule Skitter.Component.DSL do
     end)
   end
 
-  defp create_state_init(body) do
-    instance = skitter_var(@instance_var)
-    state = skitter_var(@state_var)
-
-    if_occurrence(body, :write_field) do
-      quote do
-        unquote(state) =
-          Skitter.Component.MutableCell.from_keyword_list(
-            unquote(instance).state
-          )
-      end
-    else
-      nil
-    end
-  end
-
-  defp create_state_return(body) do
-    instance = skitter_var(@instance_var)
-    state = skitter_var(@state_var)
-
-    if_occurrence(body, :write_field) do
-      quote do
-        alias Skitter.Component.MutableCell
-        new_state = MutableCell.to_keyword_list(unquote(state))
-        MutableCell.destroy(unquote(state))
-        %{unquote(instance) | state: new_state}
-      end
-    else
-      instance
-    end
-  end
-
   # Utilities
   # ---------
 
   # Transform a port name (which is just a standard elixir name) into  a symbol
   # e.g foo becomes :foo
   # If the name is ill-formed, return an {:error, form} pair.
-  defp name_to_symbol({name, _env, nil}), do: name
-  defp name_to_symbol(any), do: throw({:error, :component, :invalid_port, any})
+  defp port_to_symbol({name, _env, nil}), do: name
+  defp port_to_symbol(any), do: throw({:error, :component, :invalid_port, any})
 
   # Generate a variable which can only be accessed by skitter macros.
   defp skitter_var(name) do
     var = Macro.var(name, __MODULE__)
-
-    quote do
-      var!(unquote(var), unquote(__MODULE__))
-    end
+    quote(do: var!(unquote(var), unquote(__MODULE__)))
   end
 
   # Create a skitter instance with an initial, empty, state.
-  defp create_instance(%{fields: fields}) do
-    fields = Enum.map(fields, fn key -> {key, nil} end)
-
+  defp create_instance(_) do
     quote do
-      %Skitter.Component.Instance{component: __MODULE__, state: unquote(fields)}
+      %Skitter.Component.Instance{component: __MODULE__, state: %{}}
     end
   end
 
   # Count the occurrences of a given symbol in an ast.
   defp count_occurrences(ast, symbol) do
     {_, n} =
-      Macro.postwalk(ast, 0, fn
+      Macro.prewalk(ast, 0, fn
         ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
         ast, acc -> {ast, acc}
       end)
