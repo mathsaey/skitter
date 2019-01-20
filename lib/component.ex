@@ -395,7 +395,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> init(Identity, nil)
-      {:ok, %Instance{component: Identity, state: []}}
+      {:ok, %Instance{component: Identity, state: %{}}}
   """
   @spec init(t(), any()) :: {:ok, instance()} | runtime_error()
   def init(comp, args), do: comp.__skitter_init__(args)
@@ -428,7 +428,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> react(example_instance(), [20])
-      {:ok, %Instance{component: Identity, state: []}, [value: 20]}
+      {:ok, %Instance{component: Identity, state: %{}}, [value: 20]}
   """
   @spec react(instance(), [any(), ...]) ::
           {:ok, instance(), [{port_name(), any()}]}
@@ -447,7 +447,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> react_after_failure(example_instance(), [20])
-      {:ok, %Instance{component: Identity, state: []}, [value: 20]}
+      {:ok, %Instance{component: Identity, state: %{}}, [value: 20]}
   """
   @spec react_after_failure(instance(), [any(), ...]) ::
           {:ok, instance(), [{port_name(), any()}]}
@@ -466,7 +466,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> {:ok, inst} = init(Features, {3, 4})
-      {:ok, %Instance{component: Features, state: [f: 7]}}
+      {:ok, %Instance{component: Features, state: %{f: 7}}}
       iex> create_checkpoint(inst)
       {:ok, 7}
   """
@@ -485,7 +485,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> restore_checkpoint(Features, 7)
-      {:ok, %Skitter.Component.Instance{component: Features, state: [f: 7]}}
+      {:ok, %Skitter.Component.Instance{component: Features, state: %{f: 7}}}
   """
   @spec restore_checkpoint(t(), checkpoint()) ::
           {:ok, instance()} | runtime_error()

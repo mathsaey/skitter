@@ -43,7 +43,7 @@ defmodule Skitter.PermanentInstanceTest do
     {:ok, inst} = PermanentInstance.load(TestComponent, 5)
 
     %PermanentInstance.Server{instance: instance} = :sys.get_state(inst.ref)
-    assert instance.state == [ctr: 5]
+    assert instance.state == %{ctr: 5}
   end
 
   test "if reacting works" do
@@ -52,6 +52,6 @@ defmodule Skitter.PermanentInstanceTest do
 
     %PermanentInstance.Server{instance: instance} = :sys.get_state(pid)
     assert_receive {:react_finished, ^ref, [current: 6]}
-    assert instance.state == [ctr: 6]
+    assert instance.state == %{ctr: 6}
   end
 end

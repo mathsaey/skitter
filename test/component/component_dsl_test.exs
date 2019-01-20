@@ -12,24 +12,13 @@ defmodule Skitter.Component.DSLTest do
 
   alias Skitter.Component.Instance
 
-  # ---------------- #
-  # Extra Assertions #
-  # ---------------- #
-
-  # Needed to compare instances with a non-trivial state
-  defp assert_instance_equals(
-         %Instance{component: c1, state: s1},
-         %Instance{component: c2, state: s2}
-       ) do
-    assert c1 == c2
-    assert Keyword.equal?(s1, s2)
+  setup do
+    [dummy: %Skitter.Component.Instance{
+      component: nil,
+      state: nil
+    }]
   end
 
-  # ----- #
-  # Tests #
-  # ----- #
-
-  doctest Skitter.Component.DSL
 
   test "if names are generated correctly" do
     component Dot.In.Name, in: [] do
@@ -142,14 +131,10 @@ defmodule Skitter.Component.DSLTest do
     end
 
     {:ok, inst} = Init.__skitter_init__(3)
-
-    assert_instance_equals(
-      inst,
-      %Instance{component: Init, state: [x: 3, y: nil]}
-    )
+    assert inst == %Instance{component: Init, state: %{x: 3}}
   end
 
-  test "if terminate works" do
+  test "if terminate works", %{dummy: i} do
     component TestTerminate, in: [] do
       fields a
 
@@ -161,21 +146,21 @@ defmodule Skitter.Component.DSLTest do
       end
     end
 
-    assert TestTerminate.__skitter_terminate__(nil) == :ok
+    assert TestTerminate.__skitter_terminate__(i) == :ok
     assert_received :hello
   end
 
-  test "if react works" do
+  test "if react works", %{dummy: i} do
     component TestSpit, in: [foo], out: out do
       react foo do
         foo ~> out
       end
     end
 
-    assert TestSpit.__skitter_react__(nil, [10]) == {:ok, nil, [out: 10]}
+    assert TestSpit.__skitter_react__(i, [10]) == {:ok, i, [out: 10]}
   end
 
-  test "if state works correctly" do
+  test "if state works correctly", %{dummy: i} do
     component Total, in: [foo] do
       effect state_change
       fields total
@@ -189,15 +174,34 @@ defmodule Skitter.Component.DSLTest do
       end
     end
 
-    {:ok, inst} = Total.__skitter_init__(nil)
-    assert inst == %Instance{component: Total, state: [total: 0]}
+    {:ok, inst} = Total.__skitter_init__(i)
+    assert inst == %Instance{component: Total, state: %{total: 0}}
     {:ok, inst, []} = Total.__skitter_react__(inst, [5])
-    assert inst == %Instance{component: Total, state: [total: 5]}
+    assert inst == %Instance{component: Total, state: %{total: 5}}
     {:ok, inst, []} = Total.__skitter_react__(inst, [3])
-    assert inst == %Instance{component: Total, state: [total: 8]}
+    assert inst == %Instance{component: Total, state: %{total: 8}}
   end
 
-  test "if after_failure works as it should" do
+  test "if uninitialized state returns nil" do
+    component UnusedFields, in: [] do
+      fields a, b
+
+      init _, do: a <~ :foo
+
+      react do
+        send self(), a
+        send self(), b
+      end
+    end
+
+    {:ok, inst} = UnusedFields.__skitter_init__(nil)
+    UnusedFields.__skitter_react__(inst, [])
+
+    assert_receive :foo
+    assert_receive nil
+  end
+
+  test "if after_failure works as it should", %{dummy: i} do
     component TestAfterFailure, in: [] do
       effect external_effect
 
@@ -209,14 +213,14 @@ defmodule Skitter.Component.DSLTest do
     end
 
     # should not raise
-    TestAfterFailure.__skitter_react__(nil, [])
+    TestAfterFailure.__skitter_react__(i, [])
 
     assert_raise RuntimeError, fn ->
-      TestAfterFailure.__skitter_react_after_failure__(nil, [])
+      TestAfterFailure.__skitter_react_after_failure__(i, [])
     end
   end
 
-  test "if skip works" do
+  test "if skip works", %{dummy: i} do
     component TestSkip, in: [bool], out: [inner, outer] do
       react bool do
         :foo ~> inner
@@ -225,11 +229,11 @@ defmodule Skitter.Component.DSLTest do
       end
     end
 
-    assert TestSkip.__skitter_react_after_failure__(nil, [true]) ==
-             {:ok, nil, [inner: :foo]}
+    assert TestSkip.__skitter_react_after_failure__(i, [true]) ==
+             {:ok, i, [inner: :foo]}
 
-    assert TestSkip.__skitter_react_after_failure__(nil, [false]) ==
-             {:ok, nil, [outer: :foo, inner: :foo]}
+    assert TestSkip.__skitter_react_after_failure__(i, [false]) ==
+             {:ok, i, [outer: :foo, inner: :foo]}
   end
 
   test "if create_checkpoint, clean_checkpoint and restore_checkpoint work" do
@@ -265,22 +269,22 @@ defmodule Skitter.Component.DSLTest do
     assert CPTest.__skitter_clean_checkpoint__(inst, chkp) == :ok
   end
 
-  test "if defaults are generated correctly" do
+  test "if defaults are generated correctly", %{dummy: i} do
     component TestGen, in: [] do
       react do
       end
     end
 
-    {:ok, inst} = TestGen.__skitter_init__([])
+    {:ok, inst} = TestGen.__skitter_init__(i)
 
-    assert inst == %Instance{component: TestGen, state: []}
+    assert inst == %Instance{component: TestGen, state: %{}}
     assert TestGen.__skitter_terminate__(inst) == :ok
-    assert TestGen.__skitter_create_checkpoint__(inst) == {:ok, []}
-    assert TestGen.__skitter_restore_checkpoint__([]) == {:ok, inst}
-    assert TestGen.__skitter_clean_checkpoint__(nil, nil) == :ok
+    assert TestGen.__skitter_create_checkpoint__(inst) == {:ok, %{}}
+    assert TestGen.__skitter_restore_checkpoint__(%{}) == {:ok, inst}
+    assert TestGen.__skitter_clean_checkpoint__(i, nil) == :ok
   end
 
-  test "if helpers work" do
+  test "if helpers work", %{dummy: i} do
     component TestHelper, in: [], out: res do
       react do
         worker() ~> res
@@ -291,10 +295,10 @@ defmodule Skitter.Component.DSLTest do
       end
     end
 
-    assert TestHelper.__skitter_react__(nil, []) == {:ok, nil, [res: :help]}
+    assert TestHelper.__skitter_react__(i, []) == {:ok, i, [res: :help]}
   end
 
-  test "if pattern matching works" do
+  test "if pattern matching works", %{dummy: i} do
     component Patterns, in: input, out: out do
       react :foo do
         :foo ~> out
@@ -305,11 +309,11 @@ defmodule Skitter.Component.DSLTest do
       end
     end
 
-    assert Patterns.__skitter_react__(nil, [:foo]) == {:ok, nil, [out: :foo]}
-    assert Patterns.__skitter_react__(nil, [:bar]) == {:ok, nil, [out: :bar]}
+    assert Patterns.__skitter_react__(i, [:foo]) == {:ok, i, [out: :foo]}
+    assert Patterns.__skitter_react__(i, [:bar]) == {:ok, i, [out: :bar]}
   end
 
-  test "if errors work" do
+  test "if errors work", %{dummy: i} do
     component ErrorsEverywhere, in: [] do
       effect state_change hidden
 
@@ -339,20 +343,20 @@ defmodule Skitter.Component.DSLTest do
     end
 
     assert ErrorsEverywhere.__skitter_init__([]) == {:error, "error!"}
-    assert ErrorsEverywhere.__skitter_react__(nil, []) == {:error, "error!"}
-    assert ErrorsEverywhere.__skitter_terminate__(nil) == {:error, "error!"}
+    assert ErrorsEverywhere.__skitter_react__(i, []) == {:error, "error!"}
+    assert ErrorsEverywhere.__skitter_terminate__(i) == {:error, "error!"}
 
-    assert ErrorsEverywhere.__skitter_create_checkpoint__(nil) ==
+    assert ErrorsEverywhere.__skitter_create_checkpoint__(i) ==
              {:error, "error!"}
 
-    assert ErrorsEverywhere.__skitter_restore_checkpoint__(nil) ==
+    assert ErrorsEverywhere.__skitter_restore_checkpoint__(i) ==
              {:error, "error!"}
 
-    assert ErrorsEverywhere.__skitter_clean_checkpoint__(nil, nil) ==
+    assert ErrorsEverywhere.__skitter_clean_checkpoint__(i, nil) ==
              {:error, "error!"}
   end
 
-  test "if hygiene can be violated" do
+  test "if hygiene can be violated", %{dummy: i} do
     component Hygiene, in: [], out: p do
       react do
         5 ~> p
@@ -362,21 +366,29 @@ defmodule Skitter.Component.DSLTest do
       end
     end
 
-    assert Hygiene.__skitter_react__(nil, []) == {:ok, nil, [p: 5]}
+    assert Hygiene.__skitter_react__(i, []) == {:ok, i, [p: 5]}
   end
 
-  test "If imperative spiting/updating is possible" do
+  test "If imperative spiting is possible", %{dummy: i} do
     component CaseSpit, in: val, out: [gt, lt] do
       react val do
-        case val do
-          x when x > 5 -> x ~> gt
-          x when x < 5 -> x ~> lt
+        v = case val do
+          x when x > 5 ->
+            x ~> gt
+            :test_value
+          x when x < 5 ->
+            x ~> lt
+            :test_value
         end
+        send self(), v
       end
     end
 
-    assert CaseSpit.__skitter_react__(nil, [10]) == {:ok, nil, [gt: 10]}
+    assert CaseSpit.__skitter_react__(i, [10]) == {:ok, i, [gt: 10]}
+    assert_received :test_value
+  end
 
+  test "if imperative state updates are possible", %{dummy: i} do
     component CaseState, in: val do
       effect state_change
       fields my_field
@@ -396,12 +408,12 @@ defmodule Skitter.Component.DSLTest do
       end
     end
 
-    {:ok, inst} = CaseState.__skitter_init__(nil)
+    {:ok, inst} = CaseState.__skitter_init__(i)
     assert CaseState.__skitter_react__(inst, [:foo]) == {:ok, inst, []}
 
     assert CaseState.__skitter_react__(inst, [:update]) == {
              :ok,
-             %Instance{component: CaseState, state: [my_field: :update]},
+             %Instance{component: CaseState, state: %{my_field: :update}},
              []
            }
   end
