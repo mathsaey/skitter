@@ -15,6 +15,7 @@ defmodule Skitter.Configuration do
   - `mode`
   - `nodes`
   - `automatic_distribution`
+  - `profile`
 
   ## Mode
 
@@ -56,6 +57,13 @@ defmodule Skitter.Configuration do
   is already distributed (e.g. when the `--sname` or `--name` switch is provided
   to `elixir`). If you wish to start a skitter node which is not distributed,
   you can set `automatic_distribution` to `false`.
+
+  ## Profiling
+
+  When provided, the profile options specifies an amount of time (in seconds)
+  the current skitter node should profile its execution using `:fprof`. Output
+  of fprof will be stored in `<nodename>.profile`. To disable profiling, do not
+  provide a value for this option (the default) or set it to `false`.
   """
 
   @doc """

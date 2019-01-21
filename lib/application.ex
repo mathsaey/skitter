@@ -23,6 +23,11 @@ defmodule Skitter.Application do
       sup = shared_children() ++ children(mode)
       res = Supervisor.start_link(sup, strategy: :one_for_one, name: __MODULE__)
       post_load(mode, nodes)
+
+      if duration = get_env(:profile) do
+        Skitter.Profiler.profile(duration)
+      end
+
       res
     catch
       {:vm_features_missing, lst} -> {:error, {"Missing vm features", lst}}
