@@ -18,6 +18,7 @@ defmodule Skitter.Profiler do
       Process.sleep(duration * 1000)
       :fprof.trace([:stop])
       :fprof.profile(file: trace_file())
+      File.mkdir_p(profile_path())
       :fprof.analyse(dest: profile_file())
       Logger.info("Finished profiling")
     end)
@@ -27,7 +28,11 @@ defmodule Skitter.Profiler do
     "/tmp/skitter_profile_#{Node.self()}.trace" |> String.to_charlist()
   end
 
+  defp profile_path do
+    "./profile"
+  end
+
   defp profile_file do
-    "#{Node.self()}.profile" |> String.to_charlist()
+    "#{profile_path()}/#{Node.self()}.profile" |> String.to_charlist()
   end
 end
