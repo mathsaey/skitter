@@ -24,15 +24,19 @@ defmodule Skitter.Runtime.Workflow.Replica.Server do
     GenServer.start(__MODULE__, {workflow, source_data})
   end
 
-  # Verify the sources and start the replica server
-  def init({workflow, source_data}) do
+  def init(args) do
+    {:ok, nil, {:continue, args}}
+  end
+
+  def handle_continue({workflow, source_data}, nil) do
     if Workflow.sources_match?(Store.get(workflow), source_data) do
       {
-        :ok,
+        :noreply,
         %S{workflow: workflow, matcher: Matcher.new(), invocations: %{}},
         {:continue, source_data}
       }
     else
+      Logger.error("Invalid source tokens for workflow", tokens: source_data)
       {:stop, :invalid_source_tokens}
     end
   end
