@@ -15,4 +15,8 @@ defmodule Skitter.Runtime.Workflow.Replica.Supervisor do
   def init(_) do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
+
+  def stop_link(pid) do
+    DynamicSupervisor.terminate_child(__MODULE__, pid)
+  end
 end

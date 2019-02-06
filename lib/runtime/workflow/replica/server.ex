@@ -65,13 +65,18 @@ defmodule Skitter.Runtime.Workflow.Replica.Server do
         {:noreply, s}
 
       {true, true} ->
-        {:stop, :normal, s}
+        stop(s)
 
       {true, false} ->
         # If the matcher is not empty a bug is present in the workflow
         Logger.error("Unused tokens in workflow", matcher: inspect(matcher))
-        {:stop, :normal, s}
+        stop(s)
     end
+  end
+
+  defp stop(s) do
+    Component.TransientInstance.Supervisor.stop_link(self())
+    {:stop, :normal, s}
   end
 
   # Token Processing

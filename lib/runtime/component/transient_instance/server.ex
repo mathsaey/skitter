@@ -16,5 +16,6 @@ defmodule Skitter.Runtime.Component.TransientInstance.Server do
     inst = :persistent_term.get(key)
     {:ok, _, spits} = Skitter.Component.react(inst, args)
     send(dst, {:react_finished, ref, spits})
+    Skitter.Runtime.Component.TransientInstance.Supervisor.stop_link(self())
   end
 end
