@@ -15,17 +15,17 @@ defmodule Skitter.Runtime.Worker.Server do
   end
 
   def init(_) do
-    {:ok, []}
+    {:ok, MapSet.new()}
   end
 
-  def handle_cast({:add_master, master}, lst) do
+  def handle_cast({:add_master, master}, set) do
     Logger.info("Registering master: #{master}")
-    {:noreply, [master | lst]}
+    {:noreply, MapSet.put(set, master)}
   end
 
-  def handle_cast({:remove_master, master}, lst) do
+  def handle_cast({:remove_master, master}, set) do
     Logger.info("Removing master: #{master}")
-    {:noreply, List.delete(lst, master)}
+    {:noreply, MapSet.delete(set, master)}
   end
 end
 

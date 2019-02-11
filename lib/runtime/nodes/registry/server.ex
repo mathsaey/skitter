@@ -12,6 +12,8 @@ defmodule Skitter.Runtime.Nodes.Registry.Server do
 
   alias Skitter.Runtime.Nodes
 
+  # TODO: Rediscover connected nodes after crash
+
   def start_link(_) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
@@ -28,29 +30,35 @@ defmodule Skitter.Runtime.Nodes.Registry.Server do
   end
 
   def handle_call({:connect, node}, _, set) do
-    case Nodes.Registry.Connect.connect(node) do
-      {:ok, node} ->
-        Nodes.Notifier.notify_join(node)
-        receive(do: ({:nodeup, ^node, _} -> node))
-        {:reply, true, MapSet.put(set, node)}
-
-      {:local, node} ->
-        Nodes.Notifier.notify_join(node)
-        {:reply, true, MapSet.put(set, node)}
-
-      {error, node} ->
-        {:reply, {error, node}, set}
-    end
+    {reply, set} = connect(node, set)
+    {:reply, reply, set}
   end
 
   @impl true
   def handle_info({:nodeup, node, _}, set) do
-    Logger.warn "Connecting to non-registered node", node: node
+    Logger.warn "Attempting to connect to discovered node", node: node
+    {_, set} = connect(node, set)
     {:noreply, set}
   end
 
   def handle_info({:nodedown, node, _}, set) do
     Logger.warn "Node down", node: node
     {:noreply, MapSet.delete(set, node)}
+  end
+
+  defp connect(node, set) do
+    case Nodes.Registry.Connect.connect(node) do
+      {:ok, node} ->
+        Nodes.Notifier.notify_join(node)
+        receive(do: ({:nodeup, ^node, _} -> node))
+        {true, MapSet.put(set, node)}
+
+      {:local, node} ->
+        Nodes.Notifier.notify_join(node)
+        {true, MapSet.put(set, node)}
+
+      {error, node} ->
+        {{error, node}, set}
+    end
   end
 end

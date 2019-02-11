@@ -52,8 +52,6 @@ defmodule Skitter.Runtime.Nodes.Registry.Connect do
       Logger.info("Registered new worker: #{node}")
       {:ok, node}
     else
-      :already_connected -> {:already_connected, node}
-      :not_connected -> {:not_connected, node}
       :invalid -> {:no_skitter_worker, node}
       :ignored -> {:not_distributed, node}
       false -> {:not_connected, node}
