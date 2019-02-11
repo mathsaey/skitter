@@ -4,11 +4,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Workflow.WorkerSupervisor do
+defmodule Skitter.Runtime.Workflow.Master.Supervisor do
   @moduledoc false
   use Supervisor
-
-  alias Skitter.Runtime.Workflow
 
   def start_link(_) do
     Supervisor.start_link(__MODULE__, [], name: __MODULE__)
@@ -16,7 +14,7 @@ defmodule Skitter.Runtime.Workflow.WorkerSupervisor do
 
   def init(_) do
     children = [
-      Workflow.Replica.Supervisor
+      Skitter.Runtime.Workflow.Master.Manager.Supervisor
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

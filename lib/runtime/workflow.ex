@@ -8,17 +8,17 @@ defmodule Skitter.Runtime.Workflow do
   @moduledoc false
 
   alias __MODULE__
-  defstruct [:key]
+  defstruct [:ref]
 
   # TODO: Make it possible to unload a workflow
   #
   def load(workflow) do
-    {:ok, key} = Workflow.Loader.load(workflow)
-    {:ok, %__MODULE__{key: key}}
+    {:ok, ref} = Workflow.Master.Manager.load(workflow)
+    {:ok, %__MODULE__{ref: ref}}
   end
 
-  def react(%__MODULE__{key: ref}, args) do
-    Workflow.Replica.react(ref, args)
+  def react(%__MODULE__{ref: ref}, args) do
+    Workflow.Master.Manager.react(ref, args)
   end
 end
 
@@ -28,7 +28,7 @@ defimpl Inspect, for: Skitter.Runtime.Workflow do
   def inspect(inst, opts) do
     container_doc(
       "#RuntimeWorkflow[",
-      [inst.key],
+      [inst.ref],
       "]",
       opts,
       fn el, opts -> to_doc(el, opts) end

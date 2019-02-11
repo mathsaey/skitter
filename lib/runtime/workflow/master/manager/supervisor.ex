@@ -4,22 +4,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Worker.Supervisor do
+defmodule Skitter.Runtime.Workflow.Master.Manager.Supervisor do
   @moduledoc false
-  use Supervisor
+  use DynamicSupervisor
 
   def start_link(_) do
-    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
+    DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @impl true
   def init(_) do
-    children = [
-      Skitter.Runtime.Worker.Server,
-      Skitter.Runtime.Workflow.Worker.Supervisor,
-      Skitter.Runtime.Component.WorkerSupervisor
-    ]
-
-    Supervisor.init(children, strategy: :one_for_one)
+    DynamicSupervisor.init(strategy: :one_for_one)
   end
 end
 

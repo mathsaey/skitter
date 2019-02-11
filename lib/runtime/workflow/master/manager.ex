@@ -4,19 +4,15 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Workflow.MasterSupervisor do
+defmodule Skitter.Runtime.Workflow.Master.Manager do
   @moduledoc false
-  use Supervisor
+  alias __MODULE__.{Server, Supervisor}
 
-  def start_link(_) do
-    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
+  def load(workflow) do
+    DynamicSupervisor.start_child(Supervisor, {Server, workflow})
   end
 
-  def init(_) do
-    children = [
-    ]
-
-    Supervisor.init(children, strategy: :one_for_one)
+  def react(manager, src_data) do
+    GenServer.cast(manager, {:react, src_data})
   end
 end
-
