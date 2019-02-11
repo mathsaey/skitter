@@ -8,27 +8,49 @@ defmodule Skitter.Runtime.Nodes.Registry.Server do
   @moduledoc false
 
   use GenServer
+  require Logger
+
   alias Skitter.Runtime.Nodes
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @impl true
   def init(_) do
-    Nodes.Notifier.subscribe_join()
-    Nodes.Notifier.subscribe_leave()
+    :ok = :net_kernel.monitor_nodes(true, node_type: :visible)
     {:ok, MapSet.new()}
   end
 
-  def handle_info({:node_join, node}, set) do
-    {:noreply, MapSet.put(set, node)}
-  end
-
-  def handle_info({:node_leave, node, _}, set) do
-    {:noreply, MapSet.delete(set, node)}
-  end
-
+  @impl true
   def handle_call(:all, _, set) do
-    {:reply, MapSet.to_list(set), set}
+    {:reply, set, set}
+  end
+
+  def handle_call({:connect, node}, _, set) do
+    case Nodes.Registry.Connect.connect(node) do
+      {:ok, node} ->
+        Nodes.Notifier.notify_join(node)
+        receive(do: ({:nodeup, ^node, _} -> node))
+        {:reply, true, MapSet.put(set, node)}
+
+      {:local, node} ->
+        Nodes.Notifier.notify_join(node)
+        {:reply, true, MapSet.put(set, node)}
+
+      {error, node} ->
+        {:reply, {error, node}, set}
+    end
+  end
+
+  @impl true
+  def handle_info({:nodeup, node, _}, set) do
+    Logger.warn "Connecting to non-registered node", node: node
+    {:noreply, set}
+  end
+
+  def handle_info({:nodedown, node, _}, set) do
+    Logger.warn "Node down", node: node
+    {:noreply, MapSet.delete(set, node)}
   end
 end

@@ -7,5 +7,22 @@
 defmodule Skitter.Runtime.Nodes.Registry do
   @moduledoc false
   alias __MODULE__.Server
-  def all, do: GenServer.call(Server, :all)
+
+  def all() do
+    MapSet.to_list(GenServer.call(Server, :all))
+  end
+
+  def connect([]), do: true
+
+  def connect(nodes) when is_list(nodes) do
+    lst =
+      nodes
+      |> Enum.map(&connect/1)
+      |> Enum.reject(&(&1 == true))
+    lst == [] || lst
+  end
+
+  def connect(node) do
+    GenServer.call(Server, {:connect, node})
+  end
 end

@@ -15,8 +15,7 @@ defmodule Skitter.Runtime.Worker.Supervisor do
   def init(_) do
     children = [
       Skitter.Runtime.Worker.Server,
-      Skitter.Runtime.Workflow.Worker.Supervisor,
-      Skitter.Runtime.Component.WorkerSupervisor
+      Skitter.Runtime.Nodes.Task.Supervisor
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

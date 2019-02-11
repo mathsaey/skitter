@@ -23,6 +23,6 @@ defmodule Skitter.Runtime.Worker do
   end
 
   def verify_local_worker() do
-    !is_nil(GenServer.whereis(__MODULE__.Supervisor))
+    !is_nil(GenServer.whereis(__MODULE__.Server))
   end
 end

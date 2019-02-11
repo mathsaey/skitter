@@ -4,15 +4,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Nodes.Monitor.Supervisor do
+defmodule Skitter.Runtime.Nodes.Task.Supervisor do
   @moduledoc false
-  use DynamicSupervisor
 
-  def start_link(_) do
-    DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
-  end
-
-  def init(_) do
-    DynamicSupervisor.init(strategy: :one_for_one)
+  def child_spec([]) do
+    Supervisor.child_spec({Task.Supervisor, name: __MODULE__}, [])
   end
 end

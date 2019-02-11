@@ -18,7 +18,6 @@ defmodule Skitter.Runtime.Nodes.Supervisor do
     children = [
       Nodes.Notifier.Server,
       Nodes.Registry.Server,
-      Nodes.Monitor.Supervisor,
       Nodes.LoadBalancer.Server
     ]
 

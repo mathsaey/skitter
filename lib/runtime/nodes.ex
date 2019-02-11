@@ -10,12 +10,19 @@ defmodule Skitter.Runtime.Nodes do
   require Logger
 
   alias __MODULE__
-  alias Skitter.Runtime.Worker
 
   @doc """
   List all nodes.
   """
   def all, do: Nodes.Registry.all()
+
+  @doc """
+  Connect to a (list of) skitter worker node(s).
+
+  Returns true if successful. When not successful, an error or a list of errors
+  is returned instead.
+  """
+  defdelegate connect(node), to: Nodes.Registry
 
   @doc """
   Subscribe to node join events.
@@ -59,67 +66,10 @@ defmodule Skitter.Runtime.Nodes do
   """
   defdelegate on_all(mod, func, args), to: Nodes.Task
 
+  defdelegate on_permanent(mod, func, args), to: Nodes.Task
+  defdelegate on_transient(mod, func, args), to: Nodes.Task
+
   defdelegate select_permanent(), to: Nodes.LoadBalancer
   defdelegate select_transient(), to: Nodes.LoadBalancer
 
-  def on_permanent(mod, func, args) do
-    Nodes.Task.on(select_permanent(), mod, func, args)
-  end
-
-  def on_transient(mod, func, args) do
-    Nodes.Task.on(select_transient(), mod, func, args)
-  end
-
-  # --------------- #
-  # Node Connection #
-  # --------------- #
-
-  def connect([]), do: true
-
-  def connect(n = :nonode@nohost) do
-    # Allow the local node to act as a worker in local mode
-    if Worker.verify_worker(n) && !Node.alive?() do
-      Nodes.Monitor.start_monitor(n)
-      Nodes.Notifier.notify_join(n)
-      Worker.register_master(n)
-      true
-    else
-      :invalid
-    end
-  end
-
-  def connect(nodes) when is_list(nodes) do
-    if Node.alive?() do
-      lst =
-        nodes
-        |> Enum.map(&connect/1)
-        |> Enum.reject(&(&1 == true))
-      lst == [] || lst
-    else
-      :not_distributed
-    end
-  end
-
-  def connect(node) when is_atom(node) do
-    with true <- Node.connect(node),
-         true <- Worker.verify_worker(node),
-         :ok <- Worker.register_master(node),
-         {:ok, _} <- Nodes.Monitor.start_monitor(node),
-         :ok <- Nodes.Notifier.notify_join(node)
-    do
-      Logger.info("Registered new worker: #{node}")
-      true
-    else
-      :already_connected -> {:already_connected, node}
-      :not_connected -> {:not_connected, node}
-      :invalid -> {:no_skitter_worker, node}
-      false -> {:not_connected, node}
-      any -> {:error, any, node}
-    end
-  end
-
-  def disconnect(node) do
-    Worker.remove_master(node)
-    Nodes.Monitor.remove_monitor(node)
-  end
 end

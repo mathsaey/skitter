@@ -6,12 +6,21 @@
 
 defmodule Skitter.Runtime.Nodes.Task do
   @moduledoc false
-  @supname Skitter.TaskSupervisor
+  @supname Skitter.Runtime.Nodes.Task.Supervisor
 
   alias Skitter.Runtime.Nodes.Registry
+  alias Skitter.Runtime.Nodes.LoadBalancer
 
   def on(node, mod, func, args), do: hd(on_many([node], mod, func, args))
   def on_all(mod, func, args), do: on_many(Registry.all(), mod, func, args)
+
+  def on_permanent(mod, func, args) do
+    on(LoadBalancer.select_permanent(), mod, func, args)
+  end
+
+  def on_transient(mod, func, args) do
+    on(LoadBalancer.select_transient(), mod, func, args)
+  end
 
   defp on_many(nodes, mod, func, args) do
     nodes

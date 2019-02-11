@@ -18,10 +18,7 @@ defmodule Skitter.Application do
 
       check_vm_features()
       ensure_distribution_enabled(mode)
-
-      if duration = get_env(:profile) do
-        Skitter.Profiler.profile(duration)
-      end
+      if duration = get_env(:profile), do: Skitter.Profiler.profile(duration)
 
       pre_load(mode, nodes)
       sup = shared_children() ++ children(mode)
@@ -71,12 +68,7 @@ defmodule Skitter.Application do
   # Supervision Tree
   # ----------------
 
-  def shared_children() do
-    [
-      {Task.Supervisor, name: Skitter.TaskSupervisor}
-    ]
-  end
-
+  def shared_children(), do: []
   defp children(:worker), do: [Runtime.Worker.Supervisor]
   defp children(:master), do: [Runtime.Master.Supervisor]
   defp children(:local), do: children(:worker) ++ children(:master)
