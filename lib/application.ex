@@ -8,8 +8,10 @@ defmodule Skitter.Application do
   @moduledoc false
 
   use Application
-  alias Skitter.Runtime
   import Skitter.Configuration
+
+  alias Skitter.Runtime
+  alias Skitter.Runtime.{Nodes, Instance}
 
   def start(_type, []) do
     try do
@@ -49,7 +51,7 @@ defmodule Skitter.Application do
   defp pre_load(_, _), do: nil
 
   defp post_load(:master, nodes) do
-    case Skitter.Runtime.Nodes.connect(nodes) do
+    case Runtime.Nodes.connect(nodes) do
       true -> nil
       :not_distributed -> throw {:connect_error, :not_distributed}
       lst -> throw {:connect_error, lst}
@@ -57,7 +59,7 @@ defmodule Skitter.Application do
   end
 
   defp post_load(:local, _) do
-    case Skitter.Runtime.Nodes.connect(Node.self()) do
+    case Runtime.Nodes.connect(Node.self()) do
       true -> nil
       any -> throw {:local_error, any}
     end
@@ -69,8 +71,8 @@ defmodule Skitter.Application do
   # ----------------
 
   def shared_children(), do: [{Task.Supervisor, name: TaskSupervisor}]
-  defp children(:worker), do: [Runtime.Worker.Supervisor]
-  defp children(:master), do: [Runtime.Master.Supervisor]
+  defp children(:worker), do: [Runtime.Worker.Server]
+  defp children(:master), do: [Nodes.Supervisor, Instance.CollectionSupervisor]
   defp children(:local), do: children(:worker) ++ children(:master)
 
   # Utils
