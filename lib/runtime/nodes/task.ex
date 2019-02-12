@@ -10,6 +10,8 @@ defmodule Skitter.Runtime.Nodes.Task do
   alias Skitter.Runtime.Nodes.Registry
   alias Skitter.Runtime.Nodes.LoadBalancer
 
+  alias Skitter.Task.Supervisor, as: STS
+
   def on(node, mod, func, args), do: hd(on_many([node], mod, func, args))
   def on_all(mod, func, args), do: on_many(Registry.all(), mod, func, args)
 
@@ -23,7 +25,7 @@ defmodule Skitter.Runtime.Nodes.Task do
 
   defp on_many(nodes, mod, func, args) do
     nodes
-    |> Enum.map(&Task.Supervisor.async({TaskSupervisor, &1}, mod, func, args))
+    |> Enum.map(&Task.Supervisor.async({STS, &1}, mod, func, args))
     |> Enum.map(&Task.await(&1))
   end
 end
