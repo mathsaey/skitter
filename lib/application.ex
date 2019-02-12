@@ -68,7 +68,7 @@ defmodule Skitter.Application do
   # Supervision Tree
   # ----------------
 
-  def shared_children(), do: []
+  def shared_children(), do: [{Task.Supervisor, name: TaskSupervisor}]
   defp children(:worker), do: [Runtime.Worker.Supervisor]
   defp children(:master), do: [Runtime.Master.Supervisor]
   defp children(:local), do: children(:worker) ++ children(:master)

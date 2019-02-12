@@ -6,7 +6,6 @@
 
 defmodule Skitter.Runtime.Nodes.Task do
   @moduledoc false
-  @supname Skitter.Runtime.Nodes.Task.Supervisor
 
   alias Skitter.Runtime.Nodes.Registry
   alias Skitter.Runtime.Nodes.LoadBalancer
@@ -24,7 +23,7 @@ defmodule Skitter.Runtime.Nodes.Task do
 
   defp on_many(nodes, mod, func, args) do
     nodes
-    |> Enum.map(&Task.Supervisor.async({@supname, &1}, mod, func, args))
+    |> Enum.map(&Task.Supervisor.async({TaskSupervisor, &1}, mod, func, args))
     |> Enum.map(&Task.await(&1))
   end
 end
