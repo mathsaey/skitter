@@ -27,7 +27,7 @@ defmodule Skitter.Runtime.Worker do
   end
 
   def verify_worker(node) do
-    Skitter.Runtime.Nodes.on(node, __MODULE__, :verify_local_worker, [])
+    !is_nil(:rpc.call(node, GenServer, :whereis, [__MODULE__]))
   end
 
   def verify_local_worker() do

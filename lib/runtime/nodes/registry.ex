@@ -34,14 +34,18 @@ defmodule Skitter.Runtime.Nodes.Registry do
 
   @impl true
   def handle_info({:nodeup, node, _}, set) do
-    Logger.warn "Attempting to connect to discovered node", node: node
+    Logger.info "Attempting connection with discovered node", node: node
     {_, set} = connect(node, set)
     {:noreply, set}
   end
 
   def handle_info({:nodedown, node, _}, set) do
-    Logger.warn "Node down", node: node
-    {:noreply, MapSet.delete(set, node)}
+    if node in set do
+      Logger.warn "Node down", node: node
+      {:noreply, MapSet.delete(set, node)}
+    else
+      {:noreply, set}
+    end
   end
 
   defp connect(node, set) do

@@ -28,6 +28,7 @@ defmodule Skitter.Application do
       post_load(mode, nodes)
       res
     catch
+      :distributed_local -> {:error, "Local nodes should not be distributed"}
       {:vm_features_missing, lst} -> {:error, {"Missing vm features", lst}}
       {:connect_error, any} -> {:error, {"Error connecting to nodes", any}}
       {:local_error, any} -> {:error, {"Error starting local mode", any}}
@@ -43,9 +44,10 @@ defmodule Skitter.Application do
     put_env(:mode, :local)
     banner_if_iex()
 
-    if not Enum.empty?(nodes) do
-      IO.warn("Worker nodes are ignored in local mode")
-    end
+    if !Enum.empty?(nodes),
+      do: IO.warn("Worker nodes are ignored in local mode")
+
+    if Node.alive?(), do: throw(:distributed_local)
   end
 
   defp pre_load(_, _), do: nil
