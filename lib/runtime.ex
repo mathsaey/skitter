@@ -16,9 +16,9 @@ defmodule Skitter.Runtime do
   def load_workflow(workflow) do
     case Skitter.Runtime.Nodes.all() do
       [] -> {:error, :no_workers}
-      _ -> Skitter.Runtime.Workflow.load(workflow)
+      _ -> Skitter.Runtime.Instance.create(workflow)
     end
   end
 
-  defdelegate react(wf, args), to: Skitter.Runtime.Workflow
+  defdelegate react(wf, args), to: Skitter.Runtime.Instance
 end

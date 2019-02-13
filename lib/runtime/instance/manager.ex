@@ -4,23 +4,26 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Workflow.Master.Manager.Server do
+defmodule Skitter.Runtime.Instance.Manager.Server do
   @moduledoc false
 
-  use GenServer, restart: :transient
+  use GenServer
   alias Skitter.Runtime.Workflow
+
+  defstruct [:workflow]
 
   def start_link(workflow) do
     GenServer.start_link(__MODULE__, workflow)
   end
 
   def init(workflow) do
-    {:ok, _ref} = Workflow.Loader.load(workflow)
+    {:ok, ref} = Workflow.load(workflow)
+    {:ok, %__MODULE__{workflow: ref}}
   end
 
-  def handle_cast({:react, src_data}, ref) do
-    Workflow.Replica.react(ref, src_data)
-    {:noreply, ref}
+  def handle_cast({:react, src_data}, s = %__MODULE__{workflow: ref}) do
+    Workflow.react(ref, src_data)
+    {:noreply, s}
   end
 end
 

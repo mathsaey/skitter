@@ -6,23 +6,53 @@
 
 defmodule Skitter.Runtime.Component.PermanentInstance do
   @moduledoc false
+  @behaviour Skitter.Runtime.Component.Instance
 
-  use Skitter.Runtime.Component.Instance
+  use GenServer
+  defstruct [:id, :instance]
 
   alias Skitter.Runtime.Nodes
-  alias __MODULE__.{Server, Supervisor}
+  alias Skitter.Runtime.Spawner
+  alias Skitter.Runtime.Component.Instance
+
+
+  # --- #
+  # API #
+  # --- #
 
   def load(comp, init) do
     node = Nodes.select_permanent()
-    {:ok, pid} = DynamicSupervisor.start_child(
-      {Supervisor, node}, {Server, {make_ref(), comp, init}}
-    )
-    {:ok, create_instance(pid)}
+    {:ok, pid} = Spawner.spawn_sync(node, __MODULE__, {make_ref(), comp, init})
+    {:ok, %Instance{mod: __MODULE__, ref: pid}}
   end
 
-  def react(instance_ref(), args) do
+  def react(%Instance{ref: inst_ref}, args) do
     ref = make_ref()
-    :ok = GenServer.cast(instance_ref, {:react, args, self(), ref})
-    {:ok, instance_ref, ref}
+    :ok = GenServer.cast(inst_ref, {:react, args, self(), ref})
+    {:ok, inst_ref, ref}
+  end
+
+  # ------ #
+  # Server #
+  # ------ #
+
+  def start({ref, comp, init}) do
+    GenServer.start(__MODULE__, {ref, comp, init})
+  end
+
+  def init({ref, comp, init}) do
+    {:ok, nil, {:continue, {ref, comp, init}}}
+  end
+
+  def handle_continue({ref, comp, init}, nil) do
+    {:ok, instance} = Skitter.Component.init(comp, init)
+    state = %__MODULE__{id: ref, instance: instance}
+    {:noreply, state}
+  end
+
+  def handle_cast({:react, args, dst, ref}, s = %__MODULE__{instance: inst}) do
+    {:ok, instance, spits} = Skitter.Component.react(inst, args)
+    send(dst, {:react_finished, ref, spits})
+    {:noreply, %{s | instance: instance}}
   end
 end

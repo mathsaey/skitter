@@ -71,8 +71,8 @@ defmodule Skitter.Application do
   # ----------------
 
   def shared_children(), do: [{Task.Supervisor, name: Skitter.Task.Supervisor}]
-  defp children(:worker), do: [Runtime.Worker.Server]
   defp children(:master), do: [Nodes.Supervisor, Instance.CollectionSupervisor]
+  defp children(:worker), do: [Runtime.Worker, Runtime.Spawner]
   defp children(:local), do: children(:worker) ++ children(:master)
 
   # Utils

@@ -4,13 +4,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Workflow.Replica.Matcher do
+defmodule Skitter.Runtime.Workflow.Matcher do
   @moduledoc false
 
-  alias Skitter.Component
   alias Skitter.Runtime.Workflow.Store
-
-  # TODO: "fast path" when arity == 1?
 
   def new, do: Map.new()
 
@@ -29,16 +26,16 @@ defmodule Skitter.Runtime.Workflow.Replica.Matcher do
 
   defp get_and_update_entry(matcher, {id, port, data}, ref) do
     case Map.get(matcher, id) do
-      nil -> {%{port => data}, Component.arity(get_comp(ref, id))}
+      nil -> {%{port => data}, get_meta(ref, id).arity}
 
       {entry, arity} -> {Map.put(entry, port, data), arity}
     end
   end
 
   defp entry_to_args(ref, id, entry) do
-    ports = Component.in_ports(get_comp(ref, id))
+    ports = get_meta(ref, id).in_ports
     Enum.map(ports, fn port -> entry[port] end)
   end
 
-  defp get_comp(ref, id), do: Store.get(ref, id).comp
+  defp get_meta(ref, id), do: Store.get(ref, id).meta
 end

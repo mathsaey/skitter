@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Component.TransientInstance.Supervisor do
+defmodule Skitter.Runtime.Instance.CollectionSupervisor do
   @moduledoc false
   use DynamicSupervisor
 
@@ -15,9 +15,5 @@ defmodule Skitter.Runtime.Component.TransientInstance.Supervisor do
   @impl true
   def init(_) do
     DynamicSupervisor.init(strategy: :one_for_one)
-  end
-
-  def stop_link(pid) do
-    DynamicSupervisor.terminate_child(__MODULE__, pid)
   end
 end

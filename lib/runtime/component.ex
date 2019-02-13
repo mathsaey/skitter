@@ -13,6 +13,13 @@ defmodule Skitter.Runtime.Component do
   # TODO: Make it possbible to load an instance on a newly added node
 
   @doc """
+  The children to be spawned for each loaded instance.
+  """
+  def child_specs(_) do
+    []
+  end
+
+  @doc """
   Load the runtime version of the component instance.
 
   `comp` and `init_args` will be passed to `Skitter.Component.init/2`.

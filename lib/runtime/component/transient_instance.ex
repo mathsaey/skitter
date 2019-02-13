@@ -6,17 +6,16 @@
 
 defmodule Skitter.Runtime.Component.TransientInstance do
   @moduledoc false
-
-  use Skitter.Runtime.Component.Instance
+  @behaviour Skitter.Runtime.Component.Instance
 
   alias Skitter.Runtime.Nodes
-  alias __MODULE__.{Server, Supervisor}
+  alias Skitter.Runtime.Component.Instance
 
   def load(component, init_args) do
     ref = make_ref()
     res = Nodes.on_all(__MODULE__, :load_local, [ref, component, init_args])
     true = Enum.all?(res, &match?({:ok, ^ref}, &1))
-    {:ok, create_instance(ref)}
+    {:ok, %Instance{mod: __MODULE__, ref: ref}}
   end
 
   def load_local(ref, component, init_args) do
@@ -25,11 +24,15 @@ defmodule Skitter.Runtime.Component.TransientInstance do
     {:ok, ref}
   end
 
-  def react(instance_ref(), args) do
+  def react(%Instance{ref: inst_ref}, args) do
     ref = make_ref()
-    {:ok, pid} = DynamicSupervisor.start_child(
-      Supervisor, {Server, {instance_ref, args, self(), ref}}
-    )
+    {:ok, pid} = Task.start(__MODULE__, :task, [{inst_ref, args, self(), ref}])
     {:ok, pid, ref}
+  end
+
+  def task({inst_ref, args, dst, ref}) do
+    inst = :persistent_term.get(inst_ref)
+    {:ok, _, spits} = Skitter.Component.react(inst, args)
+    send(dst, {:react_finished, ref, spits})
   end
 end

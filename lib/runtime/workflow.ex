@@ -6,32 +6,49 @@
 
 defmodule Skitter.Runtime.Workflow do
   @moduledoc false
+  alias __MODULE__.{Node, Store, Replica}
 
-  alias __MODULE__
-  defstruct [:ref]
+  alias Skitter.Runtime.Nodes
+  alias Skitter.Runtime.Spawner
+  alias Skitter.Task.Supervisor, as: STS
 
   # TODO: Make it possible to unload a workflow
-  #
+
+  @doc """
+  The children to be spawned for each loaded instance.
+  """
+  def child_specs(_), do: []
+
+  @doc """
+  Prepare a workflow for running on the skitter runtime.
+  """
   def load(workflow) do
-    {:ok, ref} = Workflow.Master.Manager.load(workflow)
-    {:ok, %__MODULE__{ref: ref}}
+    ref = make_ref()
+    val = %{workflow | instances: load_instances(workflow)}
+    res = Nodes.on_all(Store, :put, [ref, val])
+    true = Enum.all?(res, &(&1 == hd(res)))
+    {:ok, hd(res)}
   end
 
-  def react(%__MODULE__{ref: ref}, args) do
-    Workflow.Master.Manager.react(ref, args)
+  defp load_instances(workflow) do
+    workflow
+    |> Skitter.Workflow.get_instances()
+    |> Enum.map(&Task.Supervisor.async(STS, __MODULE__, :load_instance, [&1]))
+    |> Enum.map(&Task.await(&1))
+    |> Map.new()
   end
-end
 
-defimpl Inspect, for: Skitter.Runtime.Workflow do
-  import Inspect.Algebra
+  def load_instance({id, {comp, init, links}}) do
+    meta = comp.__skitter_metadata__()
+    {:ok, ref} = Skitter.Runtime.Component.load(comp, init)
+    {id, %Node{ref: ref, meta: meta, links: links}}
+  end
 
-  def inspect(inst, opts) do
-    container_doc(
-      "#RuntimeWorkflow[",
-      [inst.ref],
-      "]",
-      opts,
-      fn el, opts -> to_doc(el, opts) end
-    )
+  @doc """
+  Spawn a replica to react to incoming data
+  """
+  def react(ref, args) do
+    node = Nodes.select_transient()
+    Spawner.spawn_async(node, Replica, {ref, args})
   end
 end

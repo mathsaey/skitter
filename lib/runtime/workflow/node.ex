@@ -4,15 +4,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Workflow.Master.Manager do
+defmodule Skitter.Runtime.Workflow.Node do
   @moduledoc false
-  alias __MODULE__.{Server, Supervisor}
 
-  def load(workflow) do
-    DynamicSupervisor.start_child(Supervisor, {Server, workflow})
-  end
-
-  def react(manager, src_data) do
-    GenServer.cast(manager, {:react, src_data})
-  end
+  # Runtime representation of a node in the workflow (i.e. a component instance)
+  # + metadata + it's environment.
+  defstruct [:ref, :links, :meta]
 end
