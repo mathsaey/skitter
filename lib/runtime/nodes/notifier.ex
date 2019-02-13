@@ -6,30 +6,57 @@
 
 defmodule Skitter.Runtime.Nodes.Notifier do
   @moduledoc false
+  @topics [:node_join, :node_leave]
+  use GenServer, restart: :transient
 
-  alias __MODULE__.Server
+  # ----------- #
+  # Private API #
+  # ----------- #
 
-  def subscribe_join do
-    GenServer.cast(Server, {:subscribe, self(), :node_join})
-  end
-
-  def subscribe_leave do
-    GenServer.cast(Server, {:subscribe, self(), :node_leave})
-  end
-
-  def unsubscribe_join do
-    GenServer.cast(Server, {:unsubscribe, self(), :node_join})
-  end
-
-  def unsubscribe_leave do
-    GenServer.cast(Server, {:unsubscribe, self(), :node_leave})
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   def notify_join(node) do
-    GenServer.cast(Server, {:node_join, node})
+    GenServer.cast(__MODULE__, {:node_join, node})
   end
 
   def notify_leave(node, reason) do
-    GenServer.cast(Server, {:node_leave, node, reason})
+    GenServer.cast(__MODULE__, {:node_leave, node, reason})
+  end
+
+  # ------ #
+  # Server #
+  # ------ #
+
+  def init(_) do
+    {:ok, Map.new()}
+  end
+
+  def handle_cast({:subscribe, pid, topic}, state) when topic in @topics do
+    state = Map.update(state, topic, MapSet.new([pid]), &MapSet.put(&1, pid))
+    {:noreply, state}
+  end
+
+  def handle_cast({:unsubscribe, pid, topic}, state) when topic in @topics do
+    state = Map.update(state, topic, MapSet.new(), &MapSet.delete(&1, pid))
+    {:noreply, state}
+  end
+
+  def handle_cast({:node_join, node}, state) do
+    notify(:node_join, {:node_join, node}, state)
+    {:noreply, state}
+  end
+
+  def handle_cast({:node_leave, node, reason}, state) do
+    notify(:node_leave, {:node_leave, node, reason}, state)
+    {:noreply, state}
+  end
+
+  defp notify(topic, message, state) do
+    state
+    |> Map.get(topic, MapSet.new())
+    |> MapSet.to_list()
+    |> Enum.each(&send(&1, message))
   end
 end

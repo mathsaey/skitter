@@ -7,14 +7,17 @@
 defmodule Skitter.Runtime.Nodes do
   @moduledoc false
 
-  require Logger
+  alias __MODULE__.{Registry, Notifier, LoadBalancer}
+  alias Skitter.Task.Supervisor, as: STS
 
-  alias __MODULE__
+  # ------------ #
+  # Registration #
+  # ------------ #
 
   @doc """
   List all nodes.
   """
-  def all, do: Nodes.Registry.all()
+  def all(), do: MapSet.to_list(GenServer.call(Registry, :all))
 
   @doc """
   Connect to a (list of) skitter worker node(s).
@@ -22,7 +25,21 @@ defmodule Skitter.Runtime.Nodes do
   Returns true if successful. When not successful, an error or a list of errors
   is returned instead.
   """
-  defdelegate connect(node), to: Nodes.Registry
+  def connect([]), do: true
+
+  def connect(nodes) when is_list(nodes) do
+    lst =
+      nodes
+      |> Enum.map(&connect/1)
+      |> Enum.reject(&(&1 == true))
+    lst == [] || lst
+  end
+
+  def connect(node), do: GenServer.call(Registry, {:connect, node})
+
+  # ------------- #
+  # Notifications #
+  # ------------- #
 
   @doc """
   Subscribe to node join events.
@@ -30,7 +47,9 @@ defmodule Skitter.Runtime.Nodes do
   When a node joins the network, the pid that called this function will
   receive `{:node_join, node}`.
   """
-  defdelegate subscribe_join, to: Nodes.Notifier
+  def subscribe_join do
+    GenServer.cast(Notifier, {:subscribe, self(), :node_join})
+  end
 
   @doc """
   Subscribe to node leave events.
@@ -40,36 +59,66 @@ defmodule Skitter.Runtime.Nodes do
   When the node was disconnected through `Nodes.disconnect`, the provided reason
   will be `:removed`.
   """
-  defdelegate subscribe_leave, to: Nodes.Notifier
+  def subscribe_leave do
+    GenServer.cast(Notifier, {:subscribe, self(), :node_leave})
+  end
 
   @doc """
   Unsubscribe from join events.
 
   The pid will receive no further notifications when a node joins the network.
   """
-  defdelegate unsubscribe_join, to: Nodes.Notifier
+  def unsubscribe_join do
+    GenServer.cast(Notifier, {:unsubscribe, self(), :node_join})
+  end
 
   @doc """
   Unsubscribe from leave events.
 
   The pid will receive no further notifications when a node leaves the network.
   """
-  defdelegate unsubscribe_leave, to: Nodes.Notifier
+  def unsubscribe_leave do
+    GenServer.cast(Notifier, {:unsubscribe, self(), :node_leave})
+  end
+
+  # ----- #
+  # Tasks #
+  # ----- #
 
   @doc """
   Execute `{mod, func, args}` on `node`, block until a result is available.
   """
-  defdelegate on(node, mod, func, args), to: Nodes.Task
+  def on(node, mod, func, args), do: hd(on_many([node], mod, func, args))
 
   @doc """
   Execute `{mod, func, args}` on every node, obtain the results in a list.
   """
-  defdelegate on_all(mod, func, args), to: Nodes.Task
+  def on_all(mod, func, args), do: on_many(all(), mod, func, args)
 
-  defdelegate on_permanent(mod, func, args), to: Nodes.Task
-  defdelegate on_transient(mod, func, args), to: Nodes.Task
+  @doc """
+  Start a permanent task on a node selected by the load balancer.
+  """
+  def on_permanent(mod, func, args) do
+    on(select_permanent(), mod, func, args)
+  end
 
-  defdelegate select_permanent(), to: Nodes.LoadBalancer
-  defdelegate select_transient(), to: Nodes.LoadBalancer
+  @doc """
+  Start a transient task on a node selected by the load balancer.
+  """
+  def on_transient(mod, func, args) do
+    on(select_transient(), mod, func, args)
+  end
 
+  defp on_many(nodes, mod, func, args) do
+    nodes
+    |> Enum.map(&Task.Supervisor.async({STS, &1}, mod, func, args))
+    |> Enum.map(&Task.await(&1))
+  end
+
+  # -------------- #
+  # Load Balancing #
+  # -------------- #
+
+  def select_permanent(), do: GenServer.call(LoadBalancer, :permanent)
+  def select_transient(), do: GenServer.call(LoadBalancer, :transient)
 end

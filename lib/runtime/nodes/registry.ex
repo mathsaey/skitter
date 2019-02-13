@@ -6,23 +6,57 @@
 
 defmodule Skitter.Runtime.Nodes.Registry do
   @moduledoc false
-  alias __MODULE__.Server
 
-  def all() do
-    MapSet.to_list(GenServer.call(Server, :all))
+  use GenServer
+  require Logger
+
+  alias Skitter.Runtime.Nodes
+
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  def connect([]), do: true
-
-  def connect(nodes) when is_list(nodes) do
-    lst =
-      nodes
-      |> Enum.map(&connect/1)
-      |> Enum.reject(&(&1 == true))
-    lst == [] || lst
+  @impl true
+  def init(_) do
+    :ok = :net_kernel.monitor_nodes(true, node_type: :visible)
+    {:ok, MapSet.new()}
   end
 
-  def connect(node) do
-    GenServer.call(Server, {:connect, node})
+  @impl true
+  def handle_call(:all, _, set) do
+    {:reply, set, set}
+  end
+
+  def handle_call({:connect, node}, _, set) do
+    {reply, set} = connect(node, set)
+    {:reply, reply, set}
+  end
+
+  @impl true
+  def handle_info({:nodeup, node, _}, set) do
+    Logger.warn "Attempting to connect to discovered node", node: node
+    {_, set} = connect(node, set)
+    {:noreply, set}
+  end
+
+  def handle_info({:nodedown, node, _}, set) do
+    Logger.warn "Node down", node: node
+    {:noreply, MapSet.delete(set, node)}
+  end
+
+  defp connect(node, set) do
+    case Nodes.Connect.connect(node) do
+      {:ok, node} ->
+        Nodes.Notifier.notify_join(node)
+        receive(do: ({:nodeup, ^node, _} -> node))
+        {true, MapSet.put(set, node)}
+
+      {:local, node} ->
+        Nodes.Notifier.notify_join(node)
+        {true, MapSet.put(set, node)}
+
+      {error, node} ->
+        {{error, node}, set}
+    end
   end
 end
