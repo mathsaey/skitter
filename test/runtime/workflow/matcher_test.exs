@@ -10,8 +10,8 @@ defmodule Skitter.MatcherTest do
   import Skitter.Component
   import Skitter.Workflow
 
-  alias Skitter.Runtime.Workflow.Loader
-  import Skitter.Runtime.Workflow.Replica.Matcher
+  alias Skitter.Runtime.Workflow
+  import Skitter.Runtime.Workflow.Matcher
 
   component Test, in: [x, y] do
     react _x, _y do
@@ -27,7 +27,7 @@ defmodule Skitter.MatcherTest do
   end
 
   setup_all do
-    {:ok, ref} = Loader.load(wf())
+    {:ok, ref} = Workflow.load(wf())
     [ref: ref]
   end
 
