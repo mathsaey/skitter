@@ -37,6 +37,12 @@ defmodule Skitter.Runtime.Nodes.Registry do
     end
   end
 
+  def handle_cast({:disconnect, node}, set) do
+    Logger.info "Disconnecting", node: node
+    Nodes.Notifier.notify_leave(node, :removed)
+    {:noreply, MapSet.delete(set, node)}
+  end
+
   @impl true
   def handle_info({:nodeup, node, _}, set) do
     unless node in set do
@@ -51,6 +57,7 @@ defmodule Skitter.Runtime.Nodes.Registry do
   def handle_info({:nodedown, node, _}, set) do
     if node in set do
       Logger.warn "Node down", node: node
+      Nodes.Notifier.notify_leave(node, :disconnect)
       {:noreply, MapSet.delete(set, node)}
     else
       {:noreply, set}

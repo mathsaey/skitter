@@ -19,11 +19,11 @@ defmodule Skitter.Runtime.Worker do
   end
 
   def register_master(node) do
-    GenServer.cast({Worker.Server, node}, {:add_master, Node.self()})
+    GenServer.cast({__MODULE__, node}, {:add_master, Node.self()})
   end
 
   def remove_master(node) do
-    GenServer.cast({Worker.Server, node}, {:remove_master, Node.self()})
+    GenServer.cast({__MODULE__, node}, {:remove_master, Node.self()})
   end
 
   def verify_worker(node) do
@@ -34,10 +34,12 @@ defmodule Skitter.Runtime.Worker do
   # Server #
   # ------ #
 
+  @impl true
   def init(_) do
     {:ok, MapSet.new()}
   end
 
+  @impl true
   def handle_cast({:add_master, master}, set) do
     Logger.info("Registering master: #{master}")
     {:noreply, MapSet.put(set, master)}

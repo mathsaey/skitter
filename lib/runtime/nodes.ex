@@ -37,6 +37,11 @@ defmodule Skitter.Runtime.Nodes do
 
   def connect(node), do: GenServer.call(Registry, {:connect, node})
 
+  def disconnect(node) do
+    GenServer.cast(Registry, {:disconnect, node})
+    Skitter.Runtime.Worker.remove_master(node)
+  end
+
   # ------------- #
   # Notifications #
   # ------------- #
