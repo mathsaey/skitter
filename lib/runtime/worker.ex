@@ -30,10 +30,6 @@ defmodule Skitter.Runtime.Worker do
     !is_nil(:rpc.call(node, GenServer, :whereis, [__MODULE__]))
   end
 
-  def verify_local_worker() do
-    !is_nil(GenServer.whereis(__MODULE__))
-  end
-
   # ------ #
   # Server #
   # ------ #
