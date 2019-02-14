@@ -28,15 +28,24 @@ defmodule Skitter.Runtime.Nodes.Registry do
   end
 
   def handle_call({:connect, node}, _, set) do
-    {reply, set} = connect(node, set)
-    {:reply, reply, set}
+    if node in set do
+      Logger.warn "Already connected to node", node: node
+      {:reply, {:already_connected, node}, set}
+    else
+      {reply, set} = connect(node, set)
+      {:reply, reply, set}
+    end
   end
 
   @impl true
   def handle_info({:nodeup, node, _}, set) do
-    Logger.info "Attempting connection with discovered node", node: node
-    {_, set} = connect(node, set)
-    {:noreply, set}
+    unless node in set do
+      Logger.info "Attempting connection with discovered node", node: node
+      {_, set} = connect(node, set)
+      {:noreply, set}
+    else
+      {:noreply, set}
+    end
   end
 
   def handle_info({:nodedown, node, _}, set) do
@@ -52,7 +61,6 @@ defmodule Skitter.Runtime.Nodes.Registry do
     case Nodes.Connect.connect(node) do
       {:ok, node} ->
         Nodes.Notifier.notify_join(node)
-        receive(do: ({:nodeup, ^node, _} -> node))
         {true, MapSet.put(set, node)}
 
       {:local, node} ->

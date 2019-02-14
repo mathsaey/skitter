@@ -45,16 +45,16 @@ defmodule Skitter.Runtime.Nodes.Connect do
   end
 
   def connect(node) when is_atom(node) do
-    with true <- Node.connect(node),
-         true <- Worker.verify_worker(node),
+    with {:connect, true} <- {:connect, Node.connect(node)},
+         {:verify, true} <- {:verify, Worker.verify_worker(node)},
          :ok <- Worker.register_master(node)
     do
       Logger.info("Registered new worker: #{node}")
       {:ok, node}
     else
-      :invalid -> {:no_skitter_worker, node}
+      {:verify, false} -> {:no_skitter_worker, node}
+      {:connect, false} -> {:not_connected, node}
       :ignored -> {:not_distributed, node}
-      false -> {:not_connected, node}
       any -> {{:error, any}, node}
     end
   end
