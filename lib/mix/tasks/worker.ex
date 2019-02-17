@@ -8,15 +8,30 @@ defmodule Mix.Tasks.Skitter.Worker do
   @moduledoc """
   Start a Skitter worker node for the current project.
 
-  No special configuration is needed when a worker node is started.
-  Therefore, this task takes no arguments.
+  This task accepts a single argument, which is the name of the master node.
+  After starting the application, the skitter will automatically attempt to
+  connect to this master node. If the master node does not exist or is not
+  alive, the worker will still start without error. This mechanism is intended
+  to be used to reconnect to a master node after failure. Note that the master
+  will not use this node as a skitter worker if automatic_connect is set to
+  false.
 
   If you wish to pass any arguments to the underlying elixir runtime, this task
   can be started as follows: `elixir --arg1 --arg2 -S mix skitter.worker`
   """
   @shortdoc "Start a Skitter worker node for the current project."
   use Mix.Task
+  import Skitter.Configuration
 
   @doc false
-  def run(_args), do: Mix.Tasks.Skitter.Boot.boot(:worker)
+  def run(args) do
+    read_master(args)
+    Mix.Tasks.Skitter.Boot.boot(:worker)
+  end
+
+  defp read_master([]), do: nil
+
+  defp read_master([arg]) do
+    put_env(:master_node, String.to_atom(arg))
+  end
 end

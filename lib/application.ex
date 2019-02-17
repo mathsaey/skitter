@@ -68,6 +68,10 @@ defmodule Skitter.Application do
     end
   end
 
+  defp post_load(:worker, _) do
+    if master = Configuration.master_node(), do: Node.connect(master)
+  end
+
   defp post_load(_, _), do: nil
 
   # Supervision Tree

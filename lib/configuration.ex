@@ -68,6 +68,22 @@ defmodule Skitter.Configuration do
   def worker_nodes, do: get_env(:worker_nodes, [])
 
   @doc """
+  Which master to connect to, only used in `worker` mode.
+
+  Defaults to false.
+
+  This settings causes a worker to connect to a master node specified as the
+  value of this option. If the node cannot connect to the master, no error
+  is raised. However, if the master is reachable, and if it enabled the
+  `automatic_connect/0` setting, it will automatically add the current node
+  as a worker.
+
+  This setting is primarily intended to allow workers to reconnect to their
+  master after failure.
+  """
+  def master_node, do: get_env(:master_node, false)
+
+  @doc """
   Specify if profiling should be enabled, and for how long.
 
   This option specifies an amount of time (in seconds) the current skitter node
