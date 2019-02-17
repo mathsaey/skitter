@@ -42,7 +42,7 @@ defmodule Skitter.NodesTest do
     Cluster.kill_node(b)
 
     assert_receive {:node_leave, w, :removed}
-    assert_receive {:node_leave, b, :noconnection}
+    assert_receive {:node_leave, b, :disconnect}
 
     Nodes.unsubscribe_join()
     Nodes.unsubscribe_leave()
