@@ -8,19 +8,21 @@ defmodule Skitter.Application do
   @moduledoc false
 
   use Application
-  import Skitter.Configuration
+
+  alias Skitter.Profiler
+  alias Skitter.Configuration
 
   alias Skitter.Runtime
   alias Skitter.Runtime.{Nodes, Instance}
 
   def start(_type, []) do
     try do
-      mode = get_env(:mode, :local)
-      nodes = get_env(:worker_nodes, [])
+      mode = Configuration.mode()
+      nodes = Configuration.worker_nodes()
 
       check_vm_features()
       ensure_distribution_enabled(mode)
-      if duration = get_env(:profile), do: Skitter.Profiler.profile(duration)
+      if duration = Configuration.profile(), do: Profiler.profile(duration)
 
       pre_load(mode, nodes)
       sup = shared_children() ++ children(mode)
@@ -41,7 +43,6 @@ defmodule Skitter.Application do
   defp pre_load(:master, _), do: banner_if_iex()
 
   defp pre_load(:local, nodes) do
-    put_env(:mode, :local)
     banner_if_iex()
 
     if !Enum.empty?(nodes),
@@ -96,7 +97,7 @@ defmodule Skitter.Application do
 
   defp ensure_distribution_enabled(mode) do
     # Only perform this setup if the user did not start a distributed node
-    unless Node.alive?() or !get_env(:automatic_distribution, true) do
+    unless Node.alive?() or !Configuration.automatic_distribution() do
       # Erlang only start epmd automatically if the node is started as a
       # distributed node
       System.cmd("epmd", ["-daemon"])

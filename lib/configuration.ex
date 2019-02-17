@@ -6,21 +6,37 @@
 
 defmodule Skitter.Configuration do
   @moduledoc """
-  Skitter application environment documentation and convenience functions.
+  Module to set and retrieve skitter configuration parameters.
 
-  ## Configuration
+  This module forms a thin wrapper around the application environment.
+  Therefore, the settings documented in this module can be manipulated
+  through `Mix.Config`.
 
-  Skitter accepts the following configuration parameters:
+  This module provides the `put_env/2` function, which can be used to set
+  update the skitter application environment. This function should only be
+  called by scripts such as `Mix.Tasks.Skitter.Master`. This function is
+  also used by the testing infrastructure to tweak some settings for easier
+  testing.
 
-  - `mode`
-  - `nodes`
-  - `automatic_distribution`
-  - `profile`
+  Besides this, every other function in this module provides an interface to
+  read the value of a particular configuration setting. Each of these functions
+  is named after the configuration parameter it manages.
+  """
 
-  ## Mode
+  @doc """
+  Add a value to skitters application environment.
 
-  The `mode` configuration determines the mode a skitter node will start in.
-  The supported modes are `master`, `worker`, and `local`.
+  This function should only be used in application start up scripts and test
+  setup code.
+  """
+  def put_env(key, value) do
+    Application.put_env(:skitter, key, value, persistent: true)
+  end
+
+  @doc """
+  Determines which mode a skitter node starts in.
+
+  The supported modes are `master`, `worker`, and `local` (the default).
 
   A skitter master node is responsible for delegating work to the various
   workers nodes in a skitter cluster. A master node cannot perform any work
@@ -32,13 +48,13 @@ defmodule Skitter.Configuration do
   Finally, the local mode enables users to experiment with skitter workflows
   without the hassle of setting up the master and worker nodes. It is primarily
   intended for development.
+  """
+  def mode, do: get_env(:mode, :local)
 
-  You should not set the skitter mode manually, instead, rely on
-  `Mix.Tasks.Skitter.Master` and `Mix.Tasks.Skitter.Worker` to start nodes in
-  the correct mode for you. When no mode is provided, skitter will automatically
-  start in local mode.
+  @doc """
+  Which worker nodes to automatically connect to, only used in `master` mode.
 
-  ## Nodes
+  Defaults to the empty list.
 
   The `nodes` configuration is only used by a skitter node which is running as a
   master. This option should contain a list of hostnames of a set of worker
@@ -48,8 +64,21 @@ defmodule Skitter.Configuration do
 
   Nodes can also be added at runtime through the use of
   `Skitter.Runtime.add_node/1`.
+  """
+  def worker_nodes, do: get_env(:worker_nodes, [])
 
-  ## Automatic distribution
+  @doc """
+  Specify if profiling should be enabled, and for how long.
+
+  This option specifies an amount of time (in seconds) the current skitter node
+  should profile its execution using `:fprof`. The output of fprof will be
+  stored in the current working directory with the name `<nodename>.profile`.
+  When this option is false, profiling is disabled (the default).
+  """
+  def profile, do: get_env(:profile, false)
+
+  @doc """
+  Specify if skitter should automatically enable distribution.
 
   By default, skitter will automatically set itself up as a distributed erlang
   node with a name determined by its mode when it is running in `:master` or
@@ -57,26 +86,8 @@ defmodule Skitter.Configuration do
   is already distributed (e.g. when the `--sname` or `--name` switch is provided
   to `elixir`). If you wish to start a skitter node which is not distributed,
   you can set `automatic_distribution` to `false`.
-
-  ## Profiling
-
-  When provided, the profile options specifies an amount of time (in seconds)
-  the current skitter node should profile its execution using `:fprof`. Output
-  of fprof will be stored in `<nodename>.profile`. To disable profiling, do not
-  provide a value for this option (the default) or set it to `false`.
   """
+  def automatic_distribution, do: get_env(:automatic_distribution, true)
 
-  @doc """
-  Add a value to skitters application environment.
-  """
-  def put_env(key, value) do
-    Application.put_env(:skitter, key, value, persistent: true)
-  end
-
-  @doc """
-  Get a value from the skitter application environment.
-  """
-  def get_env(key, default \\ nil) do
-    Application.get_env(:skitter, key, default)
-  end
+  defp get_env(key, default), do: Application.get_env(:skitter, key, default)
 end
