@@ -7,7 +7,8 @@
 use Mix.Config
 
 config :skitter,
-  automatic_distribution: false
+  automatic_distribution: false,
+  automatic_connect: false
 
 config :logger,
   compile_time_purge_matching: [

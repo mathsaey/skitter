@@ -10,6 +10,7 @@ defmodule Skitter.Runtime.Nodes.Registry do
   use GenServer
   require Logger
 
+  alias Skitter.Configuration
   alias Skitter.Runtime.Nodes
 
   def start_link(_) do
@@ -37,6 +38,7 @@ defmodule Skitter.Runtime.Nodes.Registry do
     end
   end
 
+  @impl true
   def handle_cast({:disconnect, node}, set) do
     Logger.info "Disconnecting", node: node
     Nodes.Notifier.notify_leave(node, :removed)
@@ -45,7 +47,7 @@ defmodule Skitter.Runtime.Nodes.Registry do
 
   @impl true
   def handle_info({:nodeup, node, _}, set) do
-    unless node in set do
+    unless !Configuration.automatic_connect() or node in set do
       Logger.info "Attempting connection with discovered node", node: node
       {_, set} = connect(node, set)
       {:noreply, set}

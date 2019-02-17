@@ -89,5 +89,20 @@ defmodule Skitter.Configuration do
   """
   def automatic_distribution, do: get_env(:automatic_distribution, true)
 
+  @doc """
+  Specify if skitter should automatically use connected nodes as workers.
+
+  When this option is set to true (the default), skitter will automatically
+  attempt to treat each node it is connected to (i.e. `Node.list()`) as a
+  skitter worker node.
+
+  When this option is set to false, skitter will only treat a connected node as
+  a worker when `Skitter.Runtime.add_node/1` is called.
+
+  This setting is mainly intended to enable unit tests to simulate node failure.
+  Leave it at its default value if you're not sure what this does.
+  """
+  def automatic_connect, do: get_env(:automatic_connect, true)
+
   defp get_env(key, default), do: Application.get_env(:skitter, key, default)
 end
