@@ -16,6 +16,8 @@
     component: :*,
     state_change: :*,
     external_effect: :*,
+    # Workflow DSL
+    instance: :*,
     # Logger
     info: :*,
     debug: :*,
