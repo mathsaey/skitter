@@ -72,8 +72,6 @@ defmodule Skitter.Application do
     if master = Configuration.master_node(), do: Node.connect(master)
   end
 
-  defp post_load(_, _), do: nil
-
   # Supervision Tree
   # ----------------
 

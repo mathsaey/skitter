@@ -36,8 +36,6 @@ defmodule Skitter.Component.MutableBlock do
     )
   end
 
-  defp transform_needed?(_), do: false
-
   # Transform an AST node which contains a code block into a modified node.
   # - The code block of the modified node will return a tuple containing the
   #   original return value and the value of `var`.

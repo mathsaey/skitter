@@ -9,7 +9,7 @@ defmodule Skitter.Runtime.Component.Instance do
   defstruct [:mod, :ref]
 
   @type t :: %__MODULE__{mod: module(), ref: any()}
-  @callback load(Skitter.Component.t(), any()) :: t()
+  @callback load(Skitter.Component.t(), any()) :: {:ok, t()}
   @callback react(t(), [any(), ...]) :: {:ok, pid(), reference()}
 end
 
