@@ -216,7 +216,7 @@ defmodule Skitter.Workflow.DSL do
       {l, r} -> {extract_name(l), r}
     end)
     |> Enum.reduce(Map.new(), fn {l, r}, map ->
-      Map.update(map, l, [r], &[r | &1])
+      Map.update(map, l, [r], &(&1 ++ [r]))
     end)
   end
 
