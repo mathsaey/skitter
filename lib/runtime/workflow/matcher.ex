@@ -7,35 +7,30 @@
 defmodule Skitter.Runtime.Workflow.Matcher do
   @moduledoc false
 
-  alias Skitter.Runtime.Workflow.Store
-
   def new, do: Map.new()
 
   def empty?(map) when map == %{}, do: true
   def empty?(_), do: false
 
-  def add(matcher, token = {id, _, _}, ref) do
-    {entry, arity} = get_and_update_entry(matcher, token, ref)
+  def add(matcher, token = {id, _, _}, instances) do
+    {entry, arity} = get_and_update_entry(matcher, token, instances)
 
     if map_size(entry) == arity do
-      {:ready, Map.delete(matcher, id), id, entry_to_args(ref, id, entry)}
+      {:ready, Map.delete(matcher, id), id, entry_to_args(instances, id, entry)}
     else
       {:ok, Map.put(matcher, id, {entry, arity})}
     end
   end
 
-  defp get_and_update_entry(matcher, {id, port, data}, ref) do
+  defp get_and_update_entry(matcher, {id, port, data}, instances) do
     case Map.get(matcher, id) do
-      nil -> {%{port => data}, get_meta(ref, id).arity}
-
+      nil -> {%{port => data}, instances[id].arity}
       {entry, arity} -> {Map.put(entry, port, data), arity}
     end
   end
 
-  defp entry_to_args(ref, id, entry) do
-    ports = get_meta(ref, id).in_ports
-    Enum.map(ports, fn port -> entry[port] end)
+  defp entry_to_args(instances, id, entry) do
+    instances[id].in_ports
+    |> Enum.map(fn port -> entry[port] end)
   end
-
-  defp get_meta(ref, id), do: Store.get(ref, id).meta
 end

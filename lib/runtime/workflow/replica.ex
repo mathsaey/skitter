@@ -15,24 +15,31 @@ defmodule Skitter.Runtime.Workflow.Replica do
 
   alias Skitter.Workflow
   alias Skitter.Runtime.Component
-  alias Skitter.Runtime.Workflow.Store
   alias Skitter.Runtime.Workflow.Matcher
 
-  defstruct [:workflow, :matcher, :invocations]
+  defstruct [:workflow, :instances, :links, :matcher, :invocations]
 
-  def start({workflow, source_data}) do
-    GenServer.start(__MODULE__, {workflow, source_data})
+  def start({ref, source_data}) do
+    GenServer.start(__MODULE__, {ref, source_data})
   end
 
   def init(args) do
     {:ok, nil, {:continue, args}}
   end
 
-  def handle_continue({workflow, source_data}, nil) do
-    if Workflow.sources_match?(Store.get(workflow), source_data) do
+  def handle_continue({ref, source_data}, nil) do
+    workflow = Skitter.Runtime.Workflow.Store.get(ref)
+
+    if Workflow.in_ports_match?(workflow.workflow, source_data) do
       {
         :noreply,
-        %S{workflow: workflow, matcher: Matcher.new(), invocations: %{}},
+        %S{
+          workflow: workflow.workflow,
+          instances: workflow.instances,
+          links: workflow.links,
+          matcher: Matcher.new(),
+          invocations: %{}
+        },
         {:continue, source_data}
       }
     else
@@ -44,7 +51,7 @@ defmodule Skitter.Runtime.Workflow.Replica do
   # Load the tokens to be processed
   def handle_continue(source_data, s = %S{}) do
     s
-    |> process_spits(source_data, Store.get(s.workflow).sources)
+    |> process_sources(source_data)
     |> continue_if_active()
   end
 
@@ -53,7 +60,7 @@ defmodule Skitter.Runtime.Workflow.Replica do
 
     s
     |> struct(invocations: inv)
-    |> process_spits(spits, Store.get(s.workflow, id).links)
+    |> process_spits(spits, id)
     |> continue_if_active()
   end
 
@@ -77,33 +84,38 @@ defmodule Skitter.Runtime.Workflow.Replica do
   # Token Processing
   # ----------------
 
-  defp process_spits(s = %S{}, spits, links) do
-    process_tokens(s, spits_to_tokens(spits, links))
+  defp process_spits(s = %S{}, spits, from) do
+    tokens =
+      Enum.flat_map(spits, fn {out, val} ->
+        dest_to_tokens(s, {from, out}, val)
+      end)
+
+    process_tokens(s, tokens)
   end
 
-  defp spits_to_tokens(spits, links) do
-    Enum.flat_map(spits, fn {out, val} ->
-      Enum.map(Access.get(links, out, []), fn {id, port} -> {id, port, val} end)
-    end)
+  defp process_sources(s = %S{}, sources) do
+    tokens =
+      Enum.flat_map(sources, fn {src, val} -> dest_to_tokens(s, src, val) end)
+
+    process_tokens(s, tokens)
   end
 
-  defp process_tokens(s = %S{}, []), do: s
-
-  defp process_tokens(s = %S{}, [t | rest]) do
-    s
-    |> process_token(t)
-    |> process_tokens(rest)
+  defp dest_to_tokens(%S{links: links}, destination, val) do
+    Enum.map(Map.get(links, destination), fn {id, port} -> {id, port, val} end)
   end
 
-  def process_token(s = %__MODULE__{matcher: matcher, workflow: wf}, token) do
-    case Matcher.add(matcher, token, wf) do
-      {:ok, matcher} ->
-        %{s | matcher: matcher}
+  defp process_tokens(s = %S{}, lst) do
+    Enum.reduce(lst, s, &process_token(&2, &1))
+  end
 
-      {:ready, matcher, id, args} ->
-        inst = Store.get(wf, id)
-        {:ok, _, ref} = Component.react(inst.ref, args)
-        %{s | matcher: matcher, invocations: Map.put(s.invocations, ref, id)}
+  def process_token(s = %__MODULE__{matcher: m, instances: i}, t) do
+    case Matcher.add(m, t, i) do
+      {:ok, m} ->
+        %{s | matcher: m}
+
+      {:ready, m, id, args} ->
+        {:ok, _, ref} = Component.react(i[id].ref, args)
+        %{s | matcher: m, invocations: Map.put(s.invocations, ref, id)}
     end
   end
 end

@@ -4,10 +4,16 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Workflow.Node do
+defmodule Skitter.Workflow.Metadata do
   @moduledoc false
+  @data [:name, :description, :in_ports]
 
-  # Runtime representation of a node in the workflow (i.e. a component instance)
-  # + metadata + it's environment.
-  defstruct [:ref, :in_ports, :arity]
+  @type t :: %__MODULE__{
+          name: String.t(),
+          description: String.t(),
+          in_ports: [atom()],
+        }
+
+  @enforce_keys @data
+  defstruct @data
 end

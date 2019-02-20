@@ -12,12 +12,9 @@ defmodule Skitter.Runtime.Workflow.Store do
     ref
   end
 
-  def get(key) do
-    :persistent_term.get(key)
-  end
+  def get(key), do: :persistent_term.get(key)
 
-  def get(key, id) do
-    %Skitter.Workflow{instances: inst} = get(key)
-    inst[id]
-  end
+  def get_links(key), do: get(key).links
+  def get_workflow(key), do: get(key).workflow
+  def get_instances(key), do: get(key).instances
 end

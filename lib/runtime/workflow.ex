@@ -8,9 +8,12 @@ defmodule Skitter.Runtime.Workflow do
   @moduledoc false
   alias __MODULE__.{Node, Store, Replica}
 
+  alias Skitter.Workflow
   alias Skitter.Runtime.Nodes
   alias Skitter.Runtime.Spawner
   alias Skitter.Task.Supervisor, as: STS
+
+  defstruct [:workflow, :instances, :links]
 
   # TODO: Make it possible to unload a workflow
 
@@ -24,7 +27,9 @@ defmodule Skitter.Runtime.Workflow do
   """
   def load(workflow) do
     ref = make_ref()
-    val = %{workflow | instances: load_instances(workflow)}
+    links = Workflow.get_links(workflow)
+    instances = load_instances(workflow)
+    val = %__MODULE__{links: links, instances: instances, workflow: workflow}
     res = Nodes.on_all(Store, :put, [ref, val])
     true = Enum.all?(res, &(&1 == hd(res)))
     {:ok, hd(res)}
@@ -32,16 +37,17 @@ defmodule Skitter.Runtime.Workflow do
 
   defp load_instances(workflow) do
     workflow
-    |> Skitter.Workflow.get_instances()
+    |> Workflow.get_instances()
     |> Enum.map(&Task.Supervisor.async(STS, __MODULE__, :load_instance, [&1]))
     |> Enum.map(&Task.await(&1))
     |> Map.new()
   end
 
-  def load_instance({id, {comp, init, links}}) do
-    meta = comp.__skitter_metadata__()
+  def load_instance({id, {comp, init}}) do
+    arity = Skitter.Component.arity(comp)
+    in_ports = Skitter.Component.in_ports(comp)
     {:ok, ref} = Skitter.Runtime.Component.load(comp, init)
-    {id, %Node{ref: ref, meta: meta, links: links}}
+    {id, %Node{ref: ref, in_ports: in_ports, arity: arity}}
   end
 
   @doc """

@@ -9,12 +9,21 @@ defmodule Skitter.Workflow do
   Tools to interact with skitter workflows.
 
   This module defines an API that can be used to fetch data from skitter
-  workflow structures. Besides this, this module defines the `workflow/1` macro
+  workflows . Besides this, this module defines the `workflow/2` macro
   which can be used to define a skitter workflow.
   """
 
-  @typedoc "Identifier of an instance or source in a workflow."
-  @type workflow_identifier :: atom()
+  alias Skitter.Workflow.Metadata
+
+  # ----- #
+  # Types #
+  # ----- #
+
+  @typedoc "Identifier of a component instance in a workflow."
+  @type instance_identifier :: atom()
+
+  @typedoc "Identifier of a source in a workflow."
+  @type source_address :: Skitter.Component.port_name()
 
   @typedoc """
   Address a token can be sent to.
@@ -22,92 +31,101 @@ defmodule Skitter.Workflow do
   Specified as the combination of a valid workflow identifier that refers to a
   component instance and the name of a valid port of that component.
   """
-  @type destination :: {workflow_identifier(), Skitter.Component.port_name()}
+  @type port_address :: {instance_identifier(), Skitter.Component.port_name()}
 
   @typedoc """
-  Outgoing links of a component
+  Address a token can originate from.
 
-  Specified as a keyword list. Each key in the list corresponds to an out port
-  of the component, while the values for this key correspond to all the
-  `t:destination` ports this out port is connected with.
+  Can be either an out port or a source.
   """
-  @type outgoing_links :: [{Skitter.Component.port_name(), [destination]}]
+  @type address :: port_address() | source_address()
 
   @typedoc """
-  Proto-instance type.
+  Instance type.
 
-  A proto-instance is a tuple which contains the component it represents, its
-  init argument (which can be anything), and a list of destinations, arranged
-  by out port.
+  An instance type is a tuple of a `Skitter.Component.t()`, and an argument to
+  initialize this component. The initialization argument can be any valid elixir
+  value.
   """
-  @type proto_instance :: {
-          Skitter.Component.t(),
-          any(),
-          outgoing_links()
-        }
+  @type instance :: {Skitter.Component.t(), any()}
 
   @typedoc """
-  Workflow data structure.
+  Workflow type.
 
-  A workflow is defined as a combination of named sources and proto-instances.
+  A workflow is represented by an elixir module which stores its definition.
+  This module should satisfy the `Skitter.Workflow.Behaviour` behaviour.
   """
-  @type t :: %__MODULE__{
-          sources: %{required(workflow_identifier()) => [destination]},
-          instances: %{required(workflow_identifier()) => proto_instance()}
-        }
+  @type t :: module()
 
-  @enforce_keys [:instances, :sources]
-  defstruct [:instances, :sources]
-
-  # Sources
-  # -------
+  # --------- #
+  # Interface #
+  # --------- #
 
   @doc """
-  Obtain the destinations of a source based on its name.
+  Verify if something is a workflow
 
   ## Examples
 
-      iex> get_source!(example_workflow(), :s1)
-      [i1: :value]
-      iex> get_source!(example_workflow(), :foo)
-      ** (KeyError) Key `:foo` not found in workflow
+      iex> is_workflow?(5)
+      false
+      iex> is_workflow?(Enum)
+      false
+      iex> is_workflow?(ExampleWorkflow)
+      true
   """
-  @spec get_source!(t(), workflow_identifier()) :: [destination()] | no_return
-  def get_source!(workflow, key) do
-    case Map.fetch(workflow.sources, key) do
-      :error -> raise KeyError, "Key `#{inspect(key)}` not found in workflow"
-      {:ok, any} -> any
-    end
+  @spec is_workflow?(any()) :: boolean()
+  def is_workflow?(any)
+
+  def is_workflow?(mod) when is_atom(mod) do
+    function_exported?(mod, :__skitter_metadata__, 0) and
+      match?(%Metadata{}, mod.__skitter_metadata__)
   end
 
+  def is_workflow?(_), do: false
+
+  @spec name(t()) :: String.t()
+  def name(wf), do: wf.__skitter_metadata__.name
+
   @doc """
-  List the sources of a workflow.
+  Get the description of a workflow
+
+  An empty string is returned if no documentation is present.
 
   ## Examples
 
-      iex> get_sources(example_workflow())
-      [:s1, :s2]
-
+      iex> description(ExampleWorkflow)
+      ""
   """
-  @spec get_sources(t()) :: [workflow_identifier()]
-  def get_sources(workflow), do: Map.keys(workflow.sources)
+  @spec description(t()) :: String.t()
+  def description(wf), do: wf.__skitter_metadata__.description
 
   @doc """
-  Check if a keyword lists matches with the sources of a workflow.
+  Get the in ports of a workflow.
+
+  ## Examples
+
+      iex> in_ports(ExampleWorkflow)
+      [:value]
+  """
+  @spec in_ports(t()) :: [Skitter.Component.port_name(), ...]
+  def in_ports(wf), do: wf.__skitter_metadata__.in_ports
+
+  @doc """
+  Check if a keyword lists matches with the in ports of a workflow.
 
   This means that the keys of the keyword list and source names should be
   identical. Ordering is not taken into account.
 
   ## Examples
 
-      iex> sources_match?(example_workflow(), s1: 3, s2: 4)
+      iex> in_ports_match?(ExampleWorkflow, s1: 3, s2: 4)
       true
-      iex> sources_match?(example_workflow(), s1: 3, s1: 4)
+      iex> in_ports_match?(ExampleWorkflow, s1: 3, s1: 4)
       false
-      iex> sources_match?(example_workflow(), s1: 3)
+      iex> in_ports_match?(ExampleWorkflow, s1: 3)
       false
   """
-  def sources_match?(workflow, kw_list) do
+  def in_ports_match?(workflow, kw_list) do
     kw_keys =
       Enum.reduce_while(kw_list, MapSet.new(), fn
         {key, _}, set ->
@@ -118,26 +136,23 @@ defmodule Skitter.Workflow do
           end
       end)
 
-    kw_keys && MapSet.equal?(kw_keys, MapSet.new(Map.keys(workflow.sources)))
+    kw_keys && MapSet.equal?(kw_keys, MapSet.new(in_ports(workflow)))
   end
 
-  # Instances
-  # ---------
-
   @doc """
-  Fetch a proto_instance from a workflow based on its identifier.
+  Obtain the destinations of an address based on its name.
 
   ## Examples
 
-      iex> get_instance!(example_workflow(), :i1)
-      {Identity, nil, [value: [i3: :value]]}
-      iex> get_instance!(example_workflow(), :does_not_exist)
-      ** (KeyError) Key `:does_not_exist` not found in workflow
+      iex> get_source!(ExampleWorkflow, :s1)
+      [i1: :value]
+      iex> get_source!(ExampleWorkflow, :foo)
+      ** (KeyError) Key `:foo` not found in workflow
   """
-  @spec get_instance!(t(), workflow_identifier()) ::
-          proto_instance() | no_return
-  def get_instance!(workflow, key) do
-    case Map.fetch(workflow.instances, key) do
+
+  @spec get_destination!(t(), address()) :: [port_address()] | no_return
+  def get_destination!(workflow, key) do
+    case Map.fetch(workflow.__skitter_links__(), key) do
       :error -> raise KeyError, "Key `#{inspect(key)}` not found in workflow"
       {:ok, any} -> any
     end
@@ -148,17 +163,48 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> get_instances(example_workflow())
+      iex> get_links(ExampleWorkflow)
       [
         i1: {Identity, nil, [value: [i3: :value]]},
         i2: {Identity, nil, []},
         i3: {Identity, nil, []}
       ]
   """
-  @spec get_instances(t()) :: [{workflow_identifier(), proto_instance()}]
-  def get_instances(workflow) do
-    Map.to_list(workflow.instances)
+  @spec get_links(t()) :: %{required(address()) => port_address()}
+  def get_links(workflow), do: workflow.__skitter_links__
+
+  @doc """
+  Fetch an instance from a workflow based on its identifier.
+
+  ## Examples
+
+      iex> get_instance!(ExampleWorkflow, :i1)
+      {Identity, nil}
+      iex> get_instance!(ExampleWorkflow, :does_not_exist)
+      ** (KeyError) Key `:does_not_exist` not found in workflow
+  """
+  @spec get_instance!(t(), instance_identifier()) :: instance() | no_return
+  def get_instance!(workflow, key) do
+    case Map.fetch(workflow.__skitter_instances__, key) do
+      :error -> raise KeyError, "Key `#{inspect(key)}` not found in workflow"
+      {:ok, any} -> any
+    end
   end
+
+  @doc """
+  List the instances of a component.
+
+  ## Examples
+
+      iex> get_instances(ExampleWorkflow))
+      [
+        i1: {Identity, nil, [value: [i3: :value]]},
+        i2: {Identity, nil, []},
+        i3: {Identity, nil, []}
+      ]
+  """
+  @spec get_instances(t()) :: %{required(instance_identifier()) => instance()}
+  def get_instances(workflow), do: workflow.__skitter_instances__
 
   # ------ #
   # Macros #
@@ -167,15 +213,15 @@ defmodule Skitter.Workflow do
   @doc """
   Create a workflow.
 
-  This macro is a shorthand for the `Skitter.Workflow.DSL.workflow/1` macro,
+  This macro is a shorthand for the `Skitter.Workflow.DSL.workflow/3` macro,
   which enables the creation of skitter workflows. Please refer to the
   documentation of the `Skitter.Workflow.DSL`.
   """
-  defmacro workflow(do: body) do
+  defmacro workflow(name, ports, do: body) do
     quote do
       require Skitter.Workflow.DSL
 
-      Skitter.Workflow.DSL.workflow do
+      Skitter.Workflow.DSL.workflow unquote(name), unquote(ports) do
         unquote(body)
       end
     end
