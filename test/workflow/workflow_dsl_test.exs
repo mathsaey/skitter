@@ -21,81 +21,76 @@ defmodule Skitter.WorkflowDSLTest do
     end
   end
 
-  component MultiplePorts, in: [a, b], out: [x, y] do
-    react _a, _b do
-    end
-  end
-
   # ----- #
   # Tests #
   # ----- #
 
-  test "if sources are parsed correctly" do
-    w =
-      workflow do
-        source(a ~> x.val)
-        source(b ~> {x.val, y.val})
-        source(c ~> {x.val, y.val, z.val})
-
-        x = {Id, _}
-        y = {Id, _}
-        z = {Id, _}
+  test "metadata generation" do
+    defmodule Metadata do
+      workflow W, in: [a, b, c] do
       end
+    end
 
-    %Skitter.Workflow{instances: _, sources: sources} = w
-
-    assert sources == %{
-             a: [x: :val],
-             b: [x: :val, y: :val],
-             c: [x: :val, y: :val, z: :val]
+    assert Metadata.W.__skitter_metadata__() == %Skitter.Workflow.Metadata{
+             name: "W",
+             description: "",
+             in_ports: [:a, :b, :c]
            }
   end
 
-  test "if instances are parsed correctly" do
-    w =
-      workflow do
-        source(a ~> {x.a, x.b})
+  test "source link parsing" do
+    defmodule SourceLinks do
+      workflow W, in: [a, b] do
+        a ~> x.val
+        b ~> y.val
+        b ~> z.val
 
-        x = {
-          MultiplePorts,
-          nil,
-          x ~> x_dest.val,
-          # Multiple destinations single out port
-          y ~> y_dest.a,
-          y ~> y_dest.b
-        }
-
-        x_dest = {Id, nil}
-        y_dest = {MultiplePorts, nil}
+        x = instance Id
+        y = instance Id
+        z = instance Id
       end
+    end
 
-    %Skitter.Workflow{instances: instances, sources: _} = w
-
-    assert instances == %{
-             x:
-               {MultiplePorts, nil,
-                [x: [x_dest: :val], y: [y_dest: :a, y_dest: :b]]},
-             x_dest: {Id, nil, []},
-             y_dest: {MultiplePorts, nil, []}
+    assert SourceLinks.W.__skitter_links__() == %{
+             :a => [x: :val],
+             :b => [y: :val, z: :val]
            }
   end
 
-  test "if _ is correctly transformed into `nil`" do
-    w1 =
-      workflow do
-        source(a ~> b.val)
+  test "instance link parsing" do
+    defmodule InstanceLinks do
+      workflow W, in: a do
+        x = instance Id
+        y = instance Id
+        z = instance Id
 
-        b = {Id, nil}
+        a ~> x.val
+        x.val ~> y.val
+        x.val ~> z.val
       end
+    end
 
-    w2 =
-      workflow do
-        source(a ~> b.val)
+    assert InstanceLinks.W.__skitter_links__() == %{
+             :a => [x: :val],
+             {:x, :val} => [y: :val, z: :val]
+           }
+  end
 
-        b = {Id, _}
+  test "instance parsing" do
+    defmodule Instances do
+      workflow W, in: a do
+        a ~> x.val
+        a ~> y.val
+
+        x = instance Id
+        y = instance Id, :foo
       end
+    end
 
-    assert w1 == w2
+    assert Instances.W.__skitter_instances__() == %{
+             x: {Id, nil},
+             y: {Id, :foo}
+           }
   end
 
   # Error Reporting
@@ -103,28 +98,42 @@ defmodule Skitter.WorkflowDSLTest do
 
   test "if incorrect syntax is reported" do
     assert_definition_error ~r/Invalid workflow syntax: .*/ do
-      workflow(do: {Id, nil})
+      defmodule Error do
+        workflow W, in: s do
+          source a
+        end
+      end
     end
 
     assert_definition_error ~r/Invalid workflow syntax: .*/ do
-      workflow(do: a ~> b.c)
+      defmodule Error do
+        workflow W, in: s do
+          i = Id
+        end
+      end
     end
 
     assert_definition_error ~r/Invalid workflow syntax: .*/ do
-      workflow(do: source(a = {T, _}))
+      defmodule Error do
+        workflow W, in: s do
+          :i = instance Id
+        end
+      end
     end
 
     assert_definition_error ~r/Invalid workflow syntax: .*/ do
-      workflow(do: source(:a ~> b.c))
+      defmodule Error do
+        workflow W, in: s do
+          i = instance Id
+          s ~> i
+        end
+      end
     end
 
     assert_definition_error ~r/Invalid workflow syntax: .*/ do
-      workflow(do: source(a ~> b))
-    end
-
-    assert_definition_error ~r/Invalid workflow syntax: .*/ do
-      workflow do
-        source a ~> b do
+      defmodule Error do
+        workflow W, in: s do
+          i = instance Id, 5, :foo
         end
       end
     end
@@ -132,91 +141,93 @@ defmodule Skitter.WorkflowDSLTest do
 
   test "if duplicate names are reported" do
     assert_definition_error ~r/Duplicate identifier in workflow: .*/ do
-      workflow do
-        source(s ~> a.val)
-        source(s ~> b.val)
+      defmodule Error do
+        workflow W, in: s do
+          s ~> i.val
 
-        a = {Id, _}
-        b = {Id, _}
+          i = instance Id
+          i = instance Id
+        end
       end
     end
 
     assert_definition_error ~r/Duplicate identifier in workflow: .*/ do
-      workflow do
-        source(s ~> i.val)
-
-        i = {Id, _}
-        i = {Id, _}
-      end
-    end
-
-    assert_definition_error ~r/Duplicate identifier in workflow: .*/ do
-      workflow do
-        source(s ~> s.val)
-        s = {Id, _}
+      defmodule Error do
+        workflow W, in: s do
+          s ~> s.val
+          s = instance Id
+        end
       end
     end
   end
 
   test "if missing modules are reported" do
     assert_definition_error ~r/`.*` does not exist or is not loaded/ do
-      workflow do
-        source(s ~> i.val)
-        i = {DoesNotExist, nil}
+      workflow Error, in: s do
+        s ~> i.val
+        i = instance DoesNotExist
       end
     end
   end
 
   test "if existing modules which are not a component are reported" do
     assert_definition_error ~r/`.*` is not a skitter component/ do
-      workflow do
-        source(s ~> i.val)
-        i = {Enum, nil}
+      workflow Error, in: s do
+        s ~> i.val
+        i = instance Enum
       end
     end
   end
 
   test "if links from wrong out ports are reported" do
     assert_definition_error ~r/`.*` is not a valid out port of `.*`/ do
-      workflow do
-        source(s ~> i1.val)
+      defmodule Error do
+        workflow W, in: s do
+          i1 = instance Id
+          i2 = instance Id
 
-        i1 = {Id, _, x ~> i2.val}
-        i2 = {Id, _}
+          s ~> i1.val
+          i1.x ~> i2.val
+        end
       end
     end
   end
 
   test "if links to unknown names are reported" do
     assert_definition_error ~r/Unknown identifier: .*/ do
-      workflow do
-        source(s ~> i.val)
+      defmodule Error do
+        workflow W, in: s do
+          s ~> i.val
+        end
       end
     end
-
     assert_definition_error ~r/Unknown identifier: .*/ do
-      workflow do
-        source(s ~> i.val)
-        i = {Id, _, val ~> x.val}
+      defmodule Error do
+        workflow W, in: s do
+          i = instance Id
+          x ~> i.val
+        end
       end
     end
   end
 
   test "if unconnected in ports are reported" do
     assert_definition_error ~r/Unused in ports present in workflow: `.*`/ do
-      workflow do
-        i = {Id, _}
+      defmodule Error do
+        workflow W, in: s do
+          i1 = instance Id
+        end
       end
     end
   end
 
   test "if links to wrong in ports are reported" do
     assert_definition_error ~r/`.*` is not a valid in port of `.*`/ do
-      workflow do
-        source(s ~> i.data)
-        source(_ ~> i.val)
-
-        i = {Id, _}
+      defmodule Error do
+        workflow W, in: s do
+          i1 = instance Id
+          s ~> i1.nope
+        end
       end
     end
   end

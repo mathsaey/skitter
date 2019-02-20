@@ -18,26 +18,31 @@ defmodule Skitter.MatcherTest do
     end
   end
 
-  def wf do
-    workflow do
-      source _ ~> {c1.x, c1.y, c2.x, c2.y}
-      c1 = {Test, _}
-      c2 = {Test, _}
+  defmodule Wrapper do
+    workflow MatcherTest, in: s do
+      s ~> c1.x
+      s ~> c1.y
+      s ~> c2.x
+      s ~> c2.y
+
+      c1 = instance Test
+      c2 = instance Test
     end
   end
 
   setup_all do
-    {:ok, ref} = Workflow.load(wf())
-    [ref: ref]
+    {:ok, ref} = Workflow.load(Wrapper.MatcherTest)
+    instances = Workflow.Store.get_instances(ref)
+    [instances: instances]
   end
 
-  test "If adding tokens works", %{ref: wf} do
-    {:ok, map} = add(new(), {:c1, :x, :foo}, wf)
-    {:ok, map} = add(map, {:c2, :y, :bar}, wf)
+  test "If adding tokens works", %{instances: inst} do
+    {:ok, map} = add(new(), {:c1, :x, :foo}, inst)
+    {:ok, map} = add(map, {:c2, :y, :bar}, inst)
 
     assert map == %{c1: {%{x: :foo}, 2}, c2: {%{y: :bar}, 2}}
 
-    {:ready, map, id, entry} = add(map, {:c1, :y, :baz}, wf)
+    {:ready, map, id, entry} = add(map, {:c1, :y, :baz}, inst)
     assert map == %{c2: {%{y: :bar}, 2}}
     assert entry == [:foo, :baz]
     assert id == :c1

@@ -8,22 +8,23 @@ defmodule WorkflowTest do
   use ExUnit.Case
 
   import Skitter.Workflow
-  import Skitter.Component
+  require Skitter.Component
 
-  component Identity, in: value, out: value do
+  Skitter.Component.component Identity, in: value, out: value do
     react value do
       value ~> value
     end
   end
 
-  def example_workflow do
-    workflow do
-      source s1 ~> i1.value
-      source s2 ~> i2.value
+  defmodule Example do
+    workflow Workflow, in: [s1, s2] do
+      s1 ~> i1.value
+      s2 ~> i2.value
+      i2.value ~> i3.value
 
-      i1 = {Identity, _, value ~> i3.value}
-      i2 = {Identity, _}
-      i3 = {Identity, _}
+      i1 = instance Identity
+      i2 = instance Identity
+      i3 = instance Identity
     end
   end
 

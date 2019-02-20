@@ -70,7 +70,7 @@ defmodule Skitter.Workflow do
       false
       iex> is_workflow?(Enum)
       false
-      iex> is_workflow?(ExampleWorkflow)
+      iex> is_workflow?(Example.Workflow)
       true
   """
   @spec is_workflow?(any()) :: boolean()
@@ -83,6 +83,14 @@ defmodule Skitter.Workflow do
 
   def is_workflow?(_), do: false
 
+  @doc """
+  Get the name of a workflow.
+
+  ## Examples
+
+      iex> name(Example.Workflow)
+      "Workflow"
+  """
   @spec name(t()) :: String.t()
   def name(wf), do: wf.__skitter_metadata__.name
 
@@ -93,7 +101,7 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> description(ExampleWorkflow)
+      iex> description(Example.Workflow)
       ""
   """
   @spec description(t()) :: String.t()
@@ -104,8 +112,8 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> in_ports(ExampleWorkflow)
-      [:value]
+      iex> in_ports(Example.Workflow)
+      [:s1, :s2]
   """
   @spec in_ports(t()) :: [Skitter.Component.port_name(), ...]
   def in_ports(wf), do: wf.__skitter_metadata__.in_ports
@@ -118,11 +126,11 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> in_ports_match?(ExampleWorkflow, s1: 3, s2: 4)
+      iex> in_ports_match?(Example.Workflow, s1: 3, s2: 4)
       true
-      iex> in_ports_match?(ExampleWorkflow, s1: 3, s1: 4)
+      iex> in_ports_match?(Example.Workflow, s1: 3, s1: 4)
       false
-      iex> in_ports_match?(ExampleWorkflow, s1: 3)
+      iex> in_ports_match?(Example.Workflow, s1: 3)
       false
   """
   def in_ports_match?(workflow, kw_list) do
@@ -144,9 +152,9 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> get_source!(ExampleWorkflow, :s1)
+      iex> get_destination!(Example.Workflow, :s1)
       [i1: :value]
-      iex> get_source!(ExampleWorkflow, :foo)
+      iex> get_destination!(Example.Workflow, :foo)
       ** (KeyError) Key `:foo` not found in workflow
   """
 
@@ -163,12 +171,12 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> get_links(ExampleWorkflow)
-      [
-        i1: {Identity, nil, [value: [i3: :value]]},
-        i2: {Identity, nil, []},
-        i3: {Identity, nil, []}
-      ]
+      iex> get_links(Example.Workflow)
+      %{
+        :s1 => [i1: :value],
+        :s2 => [i2: :value],
+        {:i2, :value} => [i3: :value]
+      }
   """
   @spec get_links(t()) :: %{required(address()) => port_address()}
   def get_links(workflow), do: workflow.__skitter_links__
@@ -178,9 +186,9 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> get_instance!(ExampleWorkflow, :i1)
+      iex> get_instance!(Example.Workflow, :i1)
       {Identity, nil}
-      iex> get_instance!(ExampleWorkflow, :does_not_exist)
+      iex> get_instance!(Example.Workflow, :does_not_exist)
       ** (KeyError) Key `:does_not_exist` not found in workflow
   """
   @spec get_instance!(t(), instance_identifier()) :: instance() | no_return
@@ -196,12 +204,12 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> get_instances(ExampleWorkflow))
-      [
-        i1: {Identity, nil, [value: [i3: :value]]},
-        i2: {Identity, nil, []},
-        i3: {Identity, nil, []}
-      ]
+      iex> get_instances(Example.Workflow)
+      %{
+        i1: {Identity, nil},
+        i2: {Identity, nil},
+        i3: {Identity, nil}
+      }
   """
   @spec get_instances(t()) :: %{required(instance_identifier()) => instance()}
   def get_instances(workflow), do: workflow.__skitter_instances__

@@ -108,6 +108,7 @@ defmodule Skitter.Workflow.DSL do
 
       validate_instances(instances, links, metadata)
       validate_links(instances, links, metadata)
+      validate_names(instances, links, metadata)
 
       quote do
         defmodule unquote(name) do
@@ -176,7 +177,6 @@ defmodule Skitter.Workflow.DSL do
 
   # Extract the lhs and rhs of an operator and return as a tuple
   defp transform_operator({op, _, [l, r]}, op), do: {l, r}
-  defp transform_operator(n, _), do: throw({:error, :invalid_syntax, n})
 
   # Turn an elixir name into a symbol
   defp extract_name({name, _, nil}), do: name
@@ -224,9 +224,18 @@ defmodule Skitter.Workflow.DSL do
   # Validation #
   # ---------- #
 
+  defp validate_names(instances, _, meta) do
+    Enum.each(
+      meta.in_ports,
+      &if Map.has_key?(instances, &1) do
+        throw {:error, :duplicate_name, &1}
+      end)
+  end
+
   # Ensure the provided modules exist and are a skitter component
   defp validate_instances(instances, _, _) do
     Process.sleep(100)
+
     Enum.map(Map.values(instances), fn {cmp, _init} ->
       unless Code.ensure_compiled?(cmp) do
         throw {:error, :unknown_module, cmp}
@@ -262,11 +271,14 @@ defmodule Skitter.Workflow.DSL do
 
   # Ensure the destination of a link exists
   defp validate_destinations(instances, links, _) do
-    Enum.map(Map.values(links), &Enum.map(&1, fn {i, p} ->
-      unless p in in_ports(get_comp(instances, i)) do
-        throw {:error, :invalid_port, :in, p, get_comp(instances, i)}
-      end
-    end))
+    Enum.map(
+      Map.values(links),
+      &Enum.map(&1, fn {i, p} ->
+        unless p in in_ports(get_comp(instances, i)) do
+          throw {:error, :invalid_port, :in, p, get_comp(instances, i)}
+        end
+      end)
+    )
   end
 
   defp get_comp(instances, i) do
@@ -278,9 +290,11 @@ defmodule Skitter.Workflow.DSL do
 
   # Ensure all available in ports are used
   defp validate_used(instances, links, _) do
-    ports = Enum.flat_map(instances, fn
-      {id, {m, _}} -> Enum.map(in_ports(m), fn port -> {id, port} end)
-    end)
+    ports =
+      Enum.flat_map(instances, fn
+        {id, {m, _}} -> Enum.map(in_ports(m), fn port -> {id, port} end)
+      end)
+
     dests = links |> Map.values() |> List.flatten()
     diff = MapSet.difference(MapSet.new(ports), MapSet.new(dests))
 
