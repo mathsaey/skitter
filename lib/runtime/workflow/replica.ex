@@ -101,7 +101,7 @@ defmodule Skitter.Runtime.Workflow.Replica do
   end
 
   defp dest_to_tokens(%S{links: links}, destination, val) do
-    Enum.map(Map.get(links, destination), fn {id, port} -> {id, port, val} end)
+    Enum.map(Map.get(links, destination, []), fn {id, port} -> {id, port, val} end)
   end
 
   defp process_tokens(s = %S{}, lst) do
