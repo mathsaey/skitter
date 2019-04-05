@@ -11,7 +11,7 @@ defmodule Skitter.MixProject do
     [
       app: :skitter,
       name: "Skitter",
-      version: "0.1.0",
+      version: "0.2.0-dev",
       source_url: "https://github.com/mathsaey/skitter/",
       homepage_url: "https://soft.vub.ac.be/~mathsaey/skitter/",
       elixir: "~> 1.8",
@@ -35,7 +35,7 @@ defmodule Skitter.MixProject do
       # Dev tools
       {:credo, "~> 0.10.0", only: :dev, runtime: false},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.19.0", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.20.0", only: :dev, runtime: false}
     ]
   end
 
