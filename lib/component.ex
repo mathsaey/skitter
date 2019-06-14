@@ -16,21 +16,22 @@ defmodule Skitter.Component do
   elixir struct (`@t:t/0`) along with some utilities to modify and query
   reactive components.
   """
+  alias Skitter.Component.Callback
 
   defstruct name: nil,
             description: "",
             in_ports: [],
             out_ports: [],
             fields: [],
-            callbacks: %{},
-            arity: 0
+            callbacks: %{}
 
   @typedoc """
   A component is defined as a collection of _metadata_ and _callbacks_.
 
   The metadata provides additional information about a component, while the
-  callbacks implement the functionality of a component. Besides these, the
-  component struct stores some precomputed data for optimization purposes.
+  various `Skitter.Component.Callback` implement the functionality of a
+  component. Besides these, the component struct stores some precomputed
+  data for optimization purposes.
 
   The following metadata is stored:
 
@@ -42,22 +43,15 @@ defmodule Skitter.Component do
   | `out_ports`   | List of out ports of the component | `[]`    |
   | `fields`      | List of the slots of the component | `[]`    |
 
-  * Note that a valid component must have at least one in port.
-
-  The following precomputed data is stored inside the component:
-
-  | Name          | Description                   |
-  | ------------- | ----------------------------- |
-  | `arity`       | Length of the `in_ports` list |
+  Note that a valid component must have at least one in port.
   """
   @type t :: %__MODULE__{
           name: String.t() | nil,
           description: String.t(),
-          in_ports: nonempty_list(port_name()),
-          out_ports: list(port_name()),
-          fields: list(field_name),
-          callbacks: %{optional(callback_name()) => callback()},
-          arity: pos_integer()
+          in_ports: [port_name(), ...],
+          out_ports: [port_name()],
+          fields: [field_name],
+          callbacks: %{optional(callback_name()) => Callback.t()}
         }
 
   @typedoc """
@@ -89,14 +83,6 @@ defmodule Skitter.Component do
   @type callback_name :: atom()
 
   @typedoc """
-  Function signature of a skitter callback.
-
-  A skitter callback accepts the state of a component instance, along with an
-  arbitrary amount of arguments, contained in a list.
-  """
-  @type callback :: (state(), [any()] -> any())
-
-  @typedoc """
   State of a component instance.
 
   Each instance of a component has the ability to store some state.
@@ -113,16 +99,14 @@ defmodule Skitter.Component do
 
   ## Examples
 
-      iex> component = %Component{
-      ...>  callbacks: %{f: fn s, [a1, a2] -> s.field + a1 + a2 end},
-      ...>  fields: [:field]
-      ...> }
-      iex> call(component, :f, %{field: 5}, [10, 20])
-      35
+      iex> cb = Callback.create(fn s, [_] -> {:ok, s, nil} end, :read, false)
+      iex> component = %Component{callbacks: %{f: cb}}
+      iex> call(component, :f, %{field: 5}, [10])
+      {:ok, %{field: 5}, nil}
   """
-  @spec call(t(), atom(), state(), [any()]) :: any() | no_return()
+  @spec call(t(), callback_name(), state(), [any()]) :: Calback.result()
   def call(component = %__MODULE__{}, callback_name, state, arguments) do
-    component.callbacks[callback_name].(state, arguments)
+    Callback.call(component.callbacks[callback_name], state, arguments)
   end
 
   @doc """
@@ -141,28 +125,5 @@ defmodule Skitter.Component do
   @spec create_empty_state(t()) :: %{optional(field_name()) => nil}
   def create_empty_state(%__MODULE__{fields: fields}) do
     Map.new(fields, &{&1, nil})
-  end
-
-  defp update_arity(c = %__MODULE__{in_ports: p}), do: %{c | arity: length(p)}
-
-  # ------ #
-  # Macros #
-  # ------ #
-
-  @doc """
-  Create a component.
-
-  This macro is a shorthand for accessing the
-  `Skitter.Component.DSL.component/3` macro, which enables the creation of
-  skitter components.
-  """
-  defmacro component(name, ports, do: body) do
-    quote do
-      require Skitter.Component.DSL
-
-      Skitter.Component.DSL.component unquote(name), unquote(ports) do
-        unquote(body)
-      end
-    end
   end
 end
