@@ -16,13 +16,14 @@ defmodule Skitter.Component do
   elixir struct (`@t:t/0`) along with some utilities to modify and query
   reactive components.
   """
+
+  alias Skitter.Port
   alias Skitter.Component.Callback
 
   defstruct name: nil,
-            description: "",
+            fields: [],
             in_ports: [],
             out_ports: [],
-            fields: [],
             callbacks: %{}
 
   @typedoc """
@@ -30,39 +31,26 @@ defmodule Skitter.Component do
 
   The metadata provides additional information about a component, while the
   various `Skitter.Component.Callback` implement the functionality of a
-  component. Besides these, the component struct stores some precomputed
-  data for optimization purposes.
+  component.
 
   The following metadata is stored:
 
   | Name          | Description                        | Default |
   | ------------- | ---------------------------------- | ------- |
   | `name`        | The name of the component          | `nil`   |
-  | `description` | Description of the component       | `""`    |
+  | `fields`      | List of the slots of the component | `[]`    |
   | `in_ports`    | List of in ports of the component. | `[]`    |
   | `out_ports`   | List of out ports of the component | `[]`    |
-  | `fields`      | List of the slots of the component | `[]`    |
 
   Note that a valid component must have at least one in port.
   """
   @type t :: %__MODULE__{
           name: String.t() | nil,
-          description: String.t(),
-          in_ports: [port_name(), ...],
-          out_ports: [port_name()],
           fields: [field_name],
+          in_ports: [Port.t(), ...],
+          out_ports: [Port.t()],
           callbacks: %{optional(callback_name()) => Callback.t()}
         }
-
-  @typedoc """
-  Input/output interface of a component.
-
-  The ports of a component define how it can receive data from the workflow,
-  and how it can publish data to the workflow.
-  The name of a port is a part of the definition of a component, and is stored
-  as an atom.
-  """
-  @type port_name :: atom()
 
   @typedoc """
   Data storage mechanism of a component.
