@@ -12,7 +12,8 @@ defmodule Skitter.Component.Callback do
   `Skitter.Component`. Internally, a callback is defined as an anonymous
   function and some metadata.
   """
-  alias Skitter.{Component, Port}
+  alias Skitter.Port
+  alias Skitter.Component.State
 
   defstruct [:function, :state_capability, :publish_capability]
 
@@ -55,8 +56,7 @@ defmodule Skitter.Component.Callback do
   When not successful, the callback returns an `{:error, reason}` tuple.
   """
   @type result ::
-          {:ok, Component.state() | nil, publish() | nil, any()}
-          | {:error, any()}
+          {:ok, State.t() | nil, publish() | nil, any()} | {:error, any()}
 
   @typedoc """
   Function signature of a callback.
@@ -65,7 +65,7 @@ defmodule Skitter.Component.Callback do
   amount of arguments wrapped in a list. The return value is defined by
   `t:result/0`.
   """
-  @type signature :: (Component.state(), [any()] -> result())
+  @type signature :: (State.t(), [any()] -> result())
 
   @typedoc """
   Defines how the callback may access the state.
@@ -150,6 +150,6 @@ defmodule Skitter.Component.Callback do
       iex> call(cb, %{f: 1}, [2, 3])
       {:ok, %{f: 1}, [out: 3], 3}
   """
-  @spec call(t(), Component.state(), [any()]) :: result()
+  @spec call(t(), State.t(), [any()]) :: result()
   def call(%__MODULE__{function: f}, state, args), do: f.(state, args)
 end

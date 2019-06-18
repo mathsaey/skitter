@@ -18,7 +18,7 @@ defmodule Skitter.Component do
   """
 
   alias Skitter.Port
-  alias Skitter.Component.Callback
+  alias Skitter.Component.{Callback, State}
 
   defstruct name: nil,
             fields: [],
@@ -46,21 +46,11 @@ defmodule Skitter.Component do
   """
   @type t :: %__MODULE__{
           name: String.t() | nil,
-          fields: [field_name],
+          fields: [State.field()],
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
           callbacks: %{optional(callback_name()) => Callback.t()}
         }
-
-  @typedoc """
-  Data storage mechanism of a component.
-
-  The fields of a component can be used to store the state of a component
-  instance at runtime.
-  The names of these fields are part of the definition of a component, and are
-  stored as atoms.
-  """
-  @type field_name :: atom()
 
   @typedoc """
   Callback identifiers.
@@ -70,20 +60,11 @@ defmodule Skitter.Component do
   """
   @type callback_name :: atom()
 
-  @typedoc """
-  State of a component instance.
-
-  Each instance of a component has the ability to store some state.
-  This state is represented as a map between field names and their associated
-  data.
-  """
-  @type state :: %{optional(field_name()) => any()}
-
   @doc """
   Call a specific callback of the component.
 
   Call the callback named `callback_name` of `component` with the arguments
-  defined in `t:state()`.
+  defined in `t:Skitter.Component.Callback.signature/0`.
 
   ## Examples
 
@@ -92,16 +73,13 @@ defmodule Skitter.Component do
       iex> call(component, :f, %{field: 5}, [10])
       {:ok, %{field: 5}, nil, 10}
   """
-  @spec call(t(), callback_name(), state(), [any()]) :: Callback.result()
+  @spec call(t(), callback_name(), State.t(), [any()]) :: Callback.result()
   def call(component = %__MODULE__{}, callback_name, state, arguments) do
     Callback.call(component.callbacks[callback_name], state, arguments)
   end
 
   @doc """
-  Create an initial state for a given component.
-
-  This initial state is a map with a key for each field the component has.
-  The value of each of these keys is `nil`.
+  Create an initial `t:Skitter.Component.State.t/0` for a given component.
 
   ## Examples
 
@@ -110,8 +88,6 @@ defmodule Skitter.Component do
       iex> create_empty_state(%Component{fields: []})
       %{}
   """
-  @spec create_empty_state(t()) :: %{optional(field_name()) => nil}
-  def create_empty_state(%__MODULE__{fields: fields}) do
-    Map.new(fields, &{&1, nil})
-  end
+  @spec create_empty_state(t()) :: State.t()
+  def create_empty_state(%__MODULE__{fields: fields}), do: State.create(fields)
 end
