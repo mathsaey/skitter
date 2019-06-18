@@ -12,7 +12,7 @@ defmodule Skitter.Component.Callback do
   `Skitter.Component`. Internally, a callback is defined as an anonymous
   function and some metadata.
   """
-  alias Skitter.Component
+  alias Skitter.{Component, Port}
 
   defstruct [:function, :state_capability, :publish_capability]
 
@@ -42,20 +42,21 @@ defmodule Skitter.Component.Callback do
   list. The keys in this list represent the names of output ports; the values
   of the keys represent the data to be publish on an output port.
   """
-  @type publish :: [{Component.port_name(), any()}]
+  @type publish :: [{Port.t(), any()}]
 
   @typedoc """
   Result returned by the invocation of a callback.
 
-  A successful callback is a three tuple which starts with `:ok`. Besides `:ok`,
-  the callback returns the new state of the component instance and the data to
-  be published. `nil` can be provided instead of these values if the callback
-  does not update the instance state, or if it does not publish any data.
-
+  A successful callback is a four tuple which starts with `:ok`. Besides `:ok`,
+  the callback returns the new state of the component instance, the data to be
+  published and the result of the callback. `nil` can be provided instead of
+  the state or published data if the callback does not update the instance
+  state, or if it does not publish any data.
   When not successful, the callback returns an `{:error, reason}` tuple.
   """
   @type result ::
-          {:ok, Component.state() | nil, publish() | nil} | {:error, any()}
+          {:ok, Component.state() | nil, publish() | nil, any()}
+          | {:error, any()}
 
   @typedoc """
   Function signature of a callback.
@@ -144,9 +145,10 @@ defmodule Skitter.Component.Callback do
 
   ## Examples
 
-      iex> cb = %Callback{function: fn s, [a, _] -> {:ok, s, out: s.f + a} end}
+      iex> cb = %Callback{
+      ...>  function: fn s, [a, b] -> {:ok, s, [out: s.f + a], b} end}
       iex> call(cb, %{f: 1}, [2, 3])
-      {:ok, %{f: 1}, [out: 3]}
+      {:ok, %{f: 1}, [out: 3], 3}
   """
   @spec call(t(), Component.state(), [any()]) :: result()
   def call(%__MODULE__{function: f}, state, args), do: f.(state, args)

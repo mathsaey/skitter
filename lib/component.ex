@@ -87,12 +87,12 @@ defmodule Skitter.Component do
 
   ## Examples
 
-      iex> cb = Callback.create(fn s, [_] -> {:ok, s, nil} end, :read, false)
+      iex> cb = Callback.create(fn s, [a] -> {:ok, s, nil, a} end, :read, false)
       iex> component = %Component{callbacks: %{f: cb}}
       iex> call(component, :f, %{field: 5}, [10])
-      {:ok, %{field: 5}, nil}
+      {:ok, %{field: 5}, nil, 10}
   """
-  @spec call(t(), callback_name(), state(), [any()]) :: Calback.result()
+  @spec call(t(), callback_name(), state(), [any()]) :: Callback.result()
   def call(component = %__MODULE__{}, callback_name, state, arguments) do
     Callback.call(component.callbacks[callback_name], state, arguments)
   end
