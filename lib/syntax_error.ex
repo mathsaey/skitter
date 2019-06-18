@@ -20,5 +20,7 @@ defmodule Skitter.SyntaxError do
     loc <> msg
   end
 
-  def raise(m, e \\ nil), do: Kernel.raise(__MODULE__, message: m, env: e)
+  @impl true
+  def exception(msg) when is_binary(msg), do: %__MODULE__{message: msg}
+  def exception({msg, env}), do: %__MODULE__{message: msg, env: env}
 end
