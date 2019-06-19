@@ -4,15 +4,38 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Component.MutableBlock do
+defmodule Skitter.DSL do
   @moduledoc false
+  # Private functions for use in DSLs
+
+  # ------- #
+  # General #
+  # ------- #
+
+  # Convert a name AST into an atom.
+  def name_to_atom({name, _, a}, _) when is_atom(name) and is_atom(a), do: name
+  def name_to_atom(any, env), do: throw({:error, :invalid_syntax, any, env})
+
+  # Generate a variable name only usable by macros
+  def create_internal_var(name) do
+    var = Macro.var(name, __MODULE__)
+    quote(do: var!(unquote(var), unquote(__MODULE__)))
+  end
+
+  # ------------- #
+  # Mutable Block #
+  # ------------- #
+
+  # Ugly yet genius code which makes a variable "mutable". Updates to this
+  # variable will be visible inside the entire block, even in the presence of
+  # control flow structs.
 
   @block_keywords [:do, :else, :catch, :rescue, :after]
 
   # Performan an ast transformation that will ensure the value of `var` is
-  # preserved through various scopes in a function body.
-  def transform(node = {op, env, args}, var) when is_list(args) do
-    args = Enum.map(args, &transform(&1, var))
+  # preserved through various scopes in the provided AST.
+  def make_mutable_in_block(node = {op, env, args}, var) when is_list(args) do
+    args = Enum.map(args, &make_mutable_in_block(&1, var))
 
     if transform_needed?(args) do
       transform_node(node, var)
@@ -21,8 +44,8 @@ defmodule Skitter.Component.MutableBlock do
     end
   end
 
-  def transform(node = {_op, _env, atom}, _) when is_atom(atom), do: node
-  def transform(node, _), do: node
+  def make_mutable_in_block(node = {_, _, atom}, _) when is_atom(atom), do: node
+  def make_mutable_in_block(node, _), do: node
 
   # Check if a function call needs to be transformed (i.e. if it contains any
   # block keywords).
