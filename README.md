@@ -1,5 +1,8 @@
 ![skitter logo](https://raw.githubusercontent.com/mathsaey/skitter/develop/assets/logo.png)
 
+__This version of skitter is currently going through a major refactor and is not usable__
+To experiment with the effect-based version of Skitter, please use /mathseay/skitter/releases/tag/v0.1.
+
 # Skitter
 
 Skitter is a component agnostic, reactive workflow system.
