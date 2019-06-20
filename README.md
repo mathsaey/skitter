@@ -1,7 +1,8 @@
 ![skitter logo](https://raw.githubusercontent.com/mathsaey/skitter/develop/assets/logo.png)
 
 __This version of skitter is currently going through a major refactor and is not usable__
-To experiment with the effect-based version of Skitter, please use /mathsaey/skitter/releases/tag/v0.1.
+To experiment with the effect-based version of Skitter, please use
+[release 0.1](https://github.com/mathsaey/skitter/releases/tag/v0.1).
 
 # Skitter
 
