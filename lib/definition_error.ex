@@ -1,4 +1,4 @@
-# Copyright 2018, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018, 2019 Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,17 +6,27 @@
 
 defmodule Skitter.DefinitionError do
   @moduledoc """
-  This error is raised when a definition is invalid.
+  This error is raised when invalid syntax was encountered in a Skitter DSL.
   """
-  defexception [:message]
+  defexception [:message, :env]
+
+  @impl true
+  def message(%__MODULE__{message: msg, env: nil}) do
+    msg
+  end
+
+  def message(%__MODULE__{message: msg, env: env}) do
+    loc = Exception.format_file_line(env.file, env.line, " ")
+    loc <> msg
+  end
+
+  @impl true
+  def exception(msg) when is_binary(msg), do: %__MODULE__{message: msg}
+  def exception({msg, env}), do: %__MODULE__{message: msg, env: env}
 
   @doc false
-  # Return a quoted raise statement which can be injected by a macro.
-  # When activated, the statement will raise a DefinitionError with `reason`.
-  def inject_error(reason) do
-    quote do
-      import unquote(__MODULE__)
-      raise Skitter.DefinitionError, unquote(reason)
-    end
+  def inject(msg, env \\ nil) do
+    env = Macro.escape(env)
+    quote(do: raise(Skitter.DefinitionError, {unquote(msg), unquote(env)}))
   end
 end
