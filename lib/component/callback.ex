@@ -173,7 +173,7 @@ defmodule Skitter.Component.Callback do
       iex> call(cb, %{field: 1}, [2, 3])
       %Result{state: %{field: 3}, publish: [out: 3], result: 3}
   """
-  @spec call(t(), State.t(), [any()]) :: result()
+  @spec call(t(), state(), [any()]) :: result()
   def call(%__MODULE__{function: f}, state, args), do: f.(state, args)
 
   # ------ #
