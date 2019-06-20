@@ -103,4 +103,94 @@ defmodule Skitter.Component do
   def create_empty_state(%__MODULE__{fields: fields}) do
     Map.new(fields, &{&1, nil})
   end
+
+  # ------ #
+  # Macros #
+  # ------ #
+
+  @allowed_statements [:alias, :import, :require]
+
+  @doc """
+  Create a skitter component. Please refer to the module documentation.
+  """
+  defmacro defcomponent(name \\ nil, ports, do: body) do
+    try do
+      # Get metadata from header
+      name = Macro.expand(name, __CALLER__)
+      {in_ports, out_ports} = Port.parse_list(ports, __CALLER__)
+
+      # Extract metadata from body AST
+      {body, fields} = extract_fields(body)
+
+      # Transform macro calls inside body AST
+      callbacks = extract_callbacks(body, fields, out_ports)
+
+      quote do
+        %Skitter.Component{
+          name: unquote(name),
+          fields: unquote(fields),
+          in_ports: unquote(in_ports),
+          out_ports: unquote(out_ports),
+          callbacks: unquote(callbacks)
+        }
+      end
+    catch
+      err -> handle_error(err)
+    end
+  end
+
+  # Find and remove field declarations in the AST, ensure only one field
+  # declaration is present
+  defp extract_fields(body) do
+    Macro.prewalk(body, [], fn
+      {:fields, env, fields}, [] ->
+        fields =
+          Enum.map(fields, fn
+            {name, _, atom} when is_atom(atom) -> name
+            any -> throw {:error, :invalid_field, any, env}
+          end)
+
+        {nil, fields}
+
+      {:fields, env, any}, _ ->
+        throw {:error, :duplicate_fields, any, env}
+
+      any, acc ->
+        {any, acc}
+    end)
+  end
+
+  # Fetch every top level statement of the body and turn it into a map of
+  # callbacks. Ensure the creation of the map is in AST form.
+  # TODO: extract imports and include them for every callback
+  defp extract_callbacks({:__block__, _, statements}, fields, out) do
+    callbacks =
+      statements
+      |> Enum.reject(&is_nil(&1))
+      |> Enum.reduce([], &[transform_callback(&1, fields, out) | &2])
+      |> Enum.reverse()
+
+    {:%{}, [], callbacks}
+  end
+
+  defp extract_callbacks(statement, fields, out_ports) do
+    extract_callbacks({:__block__, [], [statement]}, fields, out_ports)
+  end
+
+  # Transform a `name args do ... end` ast node into a defcallback call.
+  defp transform_callback({name, _, args}, fields, out) do
+    {args, [body]} = Enum.split(args, -1)
+
+    body =
+      quote do
+        import unquote(__MODULE__.Callback), only: [defcallback: 4]
+        defcallback(unquote(fields), unquote(out), unquote(args), unquote(body))
+      end
+
+    {name, body}
+  end
+
+  defp handle_error(_) do
+    nil
+  end
 end
