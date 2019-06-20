@@ -8,17 +8,6 @@ defmodule Skitter.PortTest do
   use ExUnit.Case, async: true
   alias Skitter.Port
 
-  describe "parsing port names" do
-    test "works on correct input" do
-      assert Port.name_to_atom(quote(do: foo), nil) == :foo
-    end
-
-    test "throws correctly" do
-      assert catch_throw(Port.name_to_atom(quote(do: foo()), nil)) ==
-               {:error, :invalid_port, quote(do: foo()), nil}
-    end
-  end
-
   describe "parsing port lists" do
     test "works on complete input" do
       assert Port.parse_list(quote(do: [in: [a, b], out: [c, d]]), nil) ==
@@ -36,7 +25,7 @@ defmodule Skitter.PortTest do
 
     test "throws correctly" do
       assert catch_throw(Port.parse_list(quote(do: [in: :foo]), nil)) ==
-               {:error, :invalid_port, :foo, nil}
+               {:error, :invalid_syntax, :foo, nil}
 
       assert catch_throw(Port.parse_list(quote(do: [foo]), nil)) ==
                {:error, :invalid_port_list, quote(do: [foo]), nil}

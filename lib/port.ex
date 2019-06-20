@@ -12,6 +12,7 @@ defmodule Skitter.Port do
   data. This module contains a type definition of ports (`t:t/0`) as well as
   some DSL utilities to handle ports.
   """
+  alias Skitter.DSL
 
   @typedoc """
   A port is defined by its name, which is stored as an atom.
@@ -28,15 +29,11 @@ defmodule Skitter.Port do
       lst when is_list(lst) -> lst
       any -> [any]
     end)
-    |> Enum.map(fn ports -> Enum.map(ports, &name_to_atom(&1, env)) end)
+    |> Enum.map(fn ports -> Enum.map(ports, &DSL.name_to_atom(&1, env)) end)
     |> List.to_tuple()
   end
 
   def parse_list(any, env) do
     throw({:error, :invalid_port_list, any, env})
   end
-
-  @doc false
-  def name_to_atom({name, _, a}, _) when is_atom(name) and is_atom(a), do: name
-  def name_to_atom(any, env), do: throw({:error, :invalid_port, any, env})
 end
