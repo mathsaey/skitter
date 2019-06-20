@@ -18,7 +18,7 @@ defmodule Skitter.Component do
   """
 
   alias Skitter.Port
-  alias Skitter.Component.{Callback, State}
+  alias Skitter.Component.Callback
 
   defstruct name: nil,
             fields: [],
@@ -46,11 +46,20 @@ defmodule Skitter.Component do
   """
   @type t :: %__MODULE__{
           name: String.t() | nil,
-          fields: [State.field()],
+          fields: [field()],
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
           callbacks: %{optional(callback_name()) => Callback.t()}
         }
+
+  @typedoc """
+  Data storage "slot" of a component.
+
+  The state of a component instance is divided into various named slots.
+  In skitter, these slots are called _fields_. The fields of a component
+  are statically defined and are stored as atoms.
+  """
+  @type field :: atom()
 
   @typedoc """
   Callback identifiers.
@@ -68,18 +77,20 @@ defmodule Skitter.Component do
 
   ## Examples
 
-      iex> cb = Callback.create(fn s, [a] -> {:ok, s, nil, a} end, :read, false)
+      iex> import Callback, only: [defcallback: 4]
+      iex> cb = defcallback([], [], [], do: 10)
       iex> component = %Component{callbacks: %{f: cb}}
-      iex> call(component, :f, %{field: 5}, [10])
-      {:ok, %{field: 5}, nil, 10}
+      iex> call(component, :f, %{}, [])
+      %Callback.Result{state: nil, publish: nil, result: 10}
   """
-  @spec call(t(), callback_name(), State.t(), [any()]) :: Callback.result()
+  @spec call(t(), callback_name(), Callback.state(), [any()]) ::
+          Callback.result()
   def call(component = %__MODULE__{}, callback_name, state, arguments) do
     Callback.call(component.callbacks[callback_name], state, arguments)
   end
 
   @doc """
-  Create an initial `t:Skitter.Component.State.t/0` for a given component.
+  Create an initial `t:Callback.state/0` for a given component.
 
   ## Examples
 
@@ -88,6 +99,8 @@ defmodule Skitter.Component do
       iex> create_empty_state(%Component{fields: []})
       %{}
   """
-  @spec create_empty_state(t()) :: State.t()
-  def create_empty_state(%__MODULE__{fields: fields}), do: State.create(fields)
+  @spec create_empty_state(t()) :: Callback.state()
+  def create_empty_state(%__MODULE__{fields: fields}) do
+    Map.new(fields, &{&1, nil})
+  end
 end

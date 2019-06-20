@@ -6,7 +6,10 @@
 
 defmodule Skitter.ComponentTest do
   use ExUnit.Case, async: true
+
   alias Skitter.Component
+  alias Skitter.Component.Callback
+
   import Skitter.Component
   doctest Skitter.Component
 end
