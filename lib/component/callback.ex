@@ -17,7 +17,30 @@ defmodule Skitter.Component.Callback do
   """
   alias Skitter.{Component, Port, DSL, DefinitionError}
 
+  # Types
+  # -----
+
   defstruct [:function, :state_capability, :publish_capability]
+
+  defmodule Result do
+    @moduledoc """
+    Struct returned by a successful component callback.
+
+    A callback returns the following:
+    - The updated state, or `nil` if the state has not been changed.
+    - The published data or `nil` if no data has been published.
+    - The result of the callback
+    """
+    alias Skitter.Component.Callback
+
+    defstruct [:state, :publish, :result]
+
+    @type t :: %__MODULE__{
+            state: Callback.state(),
+            publish: Callback.publish(),
+            result: any()
+          }
+  end
 
   @typedoc """
   Callback representation.
@@ -61,26 +84,6 @@ defmodule Skitter.Component.Callback do
   """
   @type state :: %{optional(Component.field()) => any}
 
-  defmodule Result do
-    @moduledoc """
-    Struct returned by a successful component callback.
-
-    A callback returns the following:
-    - The updated state, or `nil` if the state has not been changed.
-    - The published data or `nil` if no data has been published.
-    - The result of the callback
-    """
-    alias Skitter.Component.Callback
-
-    defstruct [:state, :publish, :result]
-
-    @type t :: %__MODULE__{
-            state: Callback.state(),
-            publish: Callback.publish(),
-            result: any()
-          }
-  end
-
   @typedoc """
   Result returned by the invocation of a callback.
 
@@ -108,6 +111,9 @@ defmodule Skitter.Component.Callback do
   Defines if the callback can publish data.
   """
   @type publish_capability :: boolean()
+
+  # Utilities
+  # ---------
 
   @doc """
   Check if the callback adheres to its capabilities.
@@ -269,6 +275,9 @@ defmodule Skitter.Component.Callback do
     end
   end
 
+  # Private Macros
+  # --------------
+
   @doc false
   defmacro publish(port, value) do
     quote do
@@ -291,6 +300,9 @@ defmodule Skitter.Component.Callback do
   defmacro read_state(field) do
     quote(do: unquote(@state_var)[unquote(field)])
   end
+
+  # AST Transformations
+  # -------------------
 
   # Makes the following changes to the body:
   #   - any variable with a name in `fields` is transformed into
@@ -370,6 +382,9 @@ defmodule Skitter.Component.Callback do
   end
 
   defp make_publish_body_return(body, false), do: {body, nil}
+
+  # Error Handling
+  # --------------
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do
     DefinitionError.inject("Invalid syntax: `#{statement}`", env)
