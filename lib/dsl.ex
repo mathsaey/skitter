@@ -12,11 +12,24 @@ defmodule Skitter.DSL do
   # General #
   # ------- #
 
-  # Convert a name AST into an atom.
+  @doc """
+  Convert a name AST into an atom.
+  """
   def name_to_atom({name, _, a}, _) when is_atom(name) and is_atom(a), do: name
   def name_to_atom(any, env), do: throw({:error, :invalid_syntax, any, env})
 
-  # Generate a variable name only usable by macros
+  @doc """
+  Convert the AST that should be behind `do` into a list of statements.
+
+  This works regardless of whether or not the `do: ...` or `do ... end` syntax
+  is used.
+  """
+  def block_to_list({:__block__, _, statements}), do: statements
+  def block_keywords(statement), do: [statement]
+
+  @doc """
+  Generate a variable name only usable by macros
+  """
   def create_internal_var(name) do
     var = Macro.var(name, __MODULE__)
     quote(do: var!(unquote(var), unquote(__MODULE__)))
@@ -32,8 +45,10 @@ defmodule Skitter.DSL do
 
   @block_keywords [:do, :else, :catch, :rescue, :after]
 
-  # Performan an ast transformation that will ensure the value of `var` is
-  # preserved through various scopes in the provided AST.
+  @doc """
+  Perform an an ast transformation that will ensure the value of `var` is
+  preserved through various scopes in the provided AST.
+  """
   def make_mutable_in_block(node = {op, env, args}, var) when is_list(args) do
     args = Enum.map(args, &make_mutable_in_block(&1, var))
 
