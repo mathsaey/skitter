@@ -25,7 +25,7 @@ defmodule Skitter.DSL do
   is used.
   """
   def block_to_list({:__block__, _, statements}), do: statements
-  def block_keywords(statement), do: [statement]
+  def block_to_list(statement), do: [statement]
 
   @doc """
   Generate a variable name only usable by macros

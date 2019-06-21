@@ -38,25 +38,46 @@ defmodule Skitter.ComponentTest do
       comp = defcomponent([in: []], do: react(_, do: nil))
       assert Map.has_key?(comp.callbacks, :react)
     end
-  end
 
-  test "errors" do
-    assert_definition_error ~r/.*: Invalid syntax: `foo`/ do
-      defcomponent(Test, [in: :foo], do: nil)
+    test "reuse directives" do
+      comp = defcomponent in: [pid] do
+        require Integer
+        import String, only: [to_integer: 1]
+        alias String, as: S
+
+        cb pid do
+          send(pid, {:import, to_integer("1")})
+          send(pid, {:alias, S.to_integer("2")})
+          send(pid, {:require, Integer.is_odd(3)})
+        end
+      end
+
+      call(comp, :cb, %{}, [self()])
+
+      assert_receive {:import, 1}
+      assert_receive {:alias, 2}
+      assert_receive {:require, true}
+
     end
 
-    assert_definition_error ~r/.*: Invalid port list: `.*`/ do
-      defcomponent(Test, [extra: foo], do: nil)
-    end
+    test "errors" do
+      assert_definition_error ~r/.*: Invalid syntax: `foo`/ do
+        defcomponent(Test, [in: :foo], do: nil)
+      end
 
-    assert_definition_error ~r/.*: Invalid field: `.*`/ do
-      defcomponent(Test, [in: []], do: (fields a, b, 5))
-    end
+      assert_definition_error ~r/.*: Invalid syntax: `.*`/ do
+        defcomponent(Test, [in: []], do: (fields a, b, 5))
+      end
 
-    assert_definition_error ~r/.*: Only one fields declaration is allowed: `.*`/ do
-      defcomponent Test, in: [] do
-        fields a, b, c
-        fields x, y, z
+      assert_definition_error ~r/.*: Invalid port list: `.*`/ do
+        defcomponent(Test, [extra: foo], do: nil)
+      end
+
+      assert_definition_error ~r/.*: Only one fields declaration is allowed: `.*`/ do
+        defcomponent Test, in: [] do
+          fields a, b, c
+          fields x, y, z
+        end
       end
     end
   end

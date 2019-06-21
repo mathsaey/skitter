@@ -18,7 +18,7 @@ defmodule Skitter.Component do
   """
 
   alias Skitter.Component.Callback
-  alias Skitter.{Port, DefinitionError}
+  alias Skitter.{Port, DefinitionError, DSL}
 
   defstruct name: nil,
             fields: [],
@@ -108,7 +108,7 @@ defmodule Skitter.Component do
   # Macros #
   # ------ #
 
-  @allowed_statements [:alias, :import, :require]
+  @reuse_directives [:alias, :import, :require]
 
   @doc """
   DSL to define skitter components.
@@ -221,11 +221,11 @@ defmodule Skitter.Component do
       name = Macro.expand(name, __CALLER__)
       {in_ports, out_ports} = Port.parse_list(ports, __CALLER__)
 
-      # Extract metadata from body AST
+      # Parse body
+      body = DSL.block_to_list(body)
       {body, fields} = extract_fields(body, __CALLER__)
-
-      # Transform macro calls inside body AST
-      callbacks = extract_callbacks(body, fields, out_ports)
+      {body, imports} = extract_reuse_directives(body)
+      callbacks = extract_callbacks(body, imports, fields, out_ports)
 
       quote do
         %Skitter.Component{
@@ -244,14 +244,9 @@ defmodule Skitter.Component do
   # Find and remove field declarations in the AST, ensure only one field
   # declaration is present
   defp extract_fields(body, env) do
-    Macro.prewalk(body, [], fn
+    Enum.map_reduce(body, [], fn
       {:fields, _, fields}, [] ->
-        fields =
-          Enum.map(fields, fn
-            {name, _, atom} when is_atom(atom) -> name
-            any -> throw {:error, :invalid_field, any, env}
-          end)
-
+        fields = Enum.map(fields, &DSL.name_to_atom(&1, env))
         {nil, fields}
 
       {:fields, _, any}, _ ->
@@ -262,29 +257,35 @@ defmodule Skitter.Component do
     end)
   end
 
+  defp extract_reuse_directives(body) do
+    Enum.map_reduce(body, [], fn
+      node = {call, _, _}, acc when call in @reuse_directives ->
+        {nil, [node | acc]}
+
+      any, acc ->
+        {any, acc}
+    end)
+  end
+
   # Fetch every top level statement of the body and turn it into a map of
   # callbacks. Ensure the creation of the map is in AST form.
-  # TODO: extract imports and include them for every callback
-  defp extract_callbacks({:__block__, _, statements}, fields, out) do
+  defp extract_callbacks(statements, imports, fields, out) do
     callbacks =
       statements
       |> Enum.reject(&is_nil(&1))
-      |> Enum.reduce([], &[transform_callback(&1, fields, out) | &2])
+      |> Enum.reduce([], &[transform_callback(&1, imports, fields, out) | &2])
       |> Enum.reverse()
 
     {:%{}, [], callbacks}
   end
 
-  defp extract_callbacks(statement, fields, out_ports) do
-    extract_callbacks({:__block__, [], [statement]}, fields, out_ports)
-  end
-
   # Transform a `name args do ... end` ast node into a defcallback call.
-  defp transform_callback({name, _, args}, fields, out) do
+  defp transform_callback({name, _, args}, imports, fields, out) do
     {args, [body]} = Enum.split(args, -1)
 
     body =
       quote do
+        unquote(imports)
         import unquote(__MODULE__.Callback), only: [defcallback: 4]
         defcallback(unquote(fields), unquote(out), unquote(args), unquote(body))
       end
@@ -298,10 +299,6 @@ defmodule Skitter.Component do
 
   defp handle_error({:error, :invalid_port_list, any, env}) do
     DefinitionError.inject("Invalid port list: `#{inspect(any)}`", env)
-  end
-
-  defp handle_error({:error, :invalid_field, field, env}) do
-    DefinitionError.inject("Invalid field: `#{field}`", env)
   end
 
   defp handle_error({:error, :duplicate_fields, fields, env}) do
