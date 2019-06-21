@@ -17,8 +17,8 @@ defmodule Skitter.Component do
   reactive components.
   """
 
-  alias Skitter.Port
   alias Skitter.Component.Callback
+  alias Skitter.{Port, DefinitionError}
 
   defstruct name: nil,
             fields: [],
@@ -111,7 +111,109 @@ defmodule Skitter.Component do
   @allowed_statements [:alias, :import, :require]
 
   @doc """
-  Create a skitter component. Please refer to the module documentation.
+  DSL to define skitter components.
+
+  A component definition consists of a signature and a body. The first two
+  arguments that this macro accepts (`name`, `ports`) make up the signature,
+  while the final argument contain the body of the component.
+
+  ## Signature
+
+  The signature of the component declares the externally visible
+  meta-information of the component: its name and list of in -and out ports.
+
+  The name of the component is an atom, which is used to register the component.
+  By convention, components are named with an elixir alias (e.g. `MyComponent`).
+  The name of the component can be omitted, in which case it is not registered.
+
+  The in and out ports of a component are provided as a list of lists of names,
+  e.g. `in: [in_port1, in_port2], out: [out_port1, out_port2]`. As a syntactic
+  convenience, the `[]` around a port list may be dropped if only a single port
+  is declared (e.g.: `out: [foo]` can be written as `out: foo`). Finally, it is
+  possible for a component to not define out ports. This can be specified as
+  `out: []`, or by dropping the out port sub-list altogether.
+
+  ## Body
+
+  The body of a component may contain any of the following elements:
+
+  | Name                         | Description                              |
+  | ---------------------------- | ---------------------------------------  |
+  | fields                       | List of the fields of the component      |
+  | `import`, `alias`, `require` | Elixir import, alias, require constructs |
+  | callback                     | `Skitter.Component.Callback` definition  |
+
+  The fields statement is used to define the various `t:field/0` of the
+  component. This statement may be used only once inside the body of the
+  component. The statement can be omitted if the component does not have any
+  fields.
+
+  `import`, `alias`, and `require` maybe used inside of the component body as
+  if they were being used inside of a module. Note that the use of macros inside
+  of the component DSL may lead to issues due to the various code
+  transformations the DSL performs.
+
+  The remainder of the component body should consist of
+  `Skitter.Component.Callback` definitions. Callbacks are defined with a syntax
+  similar to an elixir function definition with `def` or `defp` omitted. Thus
+  a callback named `react` which accepts two arguments would be defined with
+  the following syntax:
+
+  ```
+  react arg1, arg2 do
+  <body>
+  end
+  ```
+
+  Internally, callback declarations are transformed into a call to the
+  `Skitter.Component.Callback.defcallback/4` macro. Please refer to its
+  documentation to learn about the constructs that may be used in the body of a
+  callback. Note that the `fields`, `out_ports`, and `args` arguments of the
+  call to `defcallback/4` will be provided automatically. As an example, the
+  example above would be translated to the following call:
+
+  ```
+  defcallback(<component fields>, <component out ports>, [arg1, arg2], body)
+  ```
+
+  The generated callback will be stored in the component callbacks field under
+  its name.
+
+  ## Examples
+
+  The following component calculates the average of all the values it receives.
+
+      iex> avg = defcomponent Average, in: value, out: current do
+      ...>    fields total, count
+      ...>
+      ...>    init do
+      ...>      total <~ 0
+      ...>      count <~ 0
+      ...>    end
+      ...>
+      ...>    react value do
+      ...>      count <~ count + 1
+      ...>      total <~ total + value
+      ...>
+      ...>      total / count ~> current
+      ...>    end
+      ...>  end
+      iex> avg.name
+      Average
+      iex> avg.fields
+      [:total, :count]
+      iex> avg.in_ports
+      [:value]
+      iex> avg.out_ports
+      [:current]
+      iex> state = call(avg, :init, create_empty_state(avg), []).state
+      iex> state
+      %{count: 0, total: 0}
+      iex> res = call(avg, :react, state, [10])
+      iex> res.publish
+      [current: 10.0]
+      iex> res.state
+      %{count: 1, total: 10}
   """
   defmacro defcomponent(name \\ nil, ports, do: body) do
     try do
@@ -120,7 +222,7 @@ defmodule Skitter.Component do
       {in_ports, out_ports} = Port.parse_list(ports, __CALLER__)
 
       # Extract metadata from body AST
-      {body, fields} = extract_fields(body)
+      {body, fields} = extract_fields(body, __CALLER__)
 
       # Transform macro calls inside body AST
       callbacks = extract_callbacks(body, fields, out_ports)
@@ -141,9 +243,9 @@ defmodule Skitter.Component do
 
   # Find and remove field declarations in the AST, ensure only one field
   # declaration is present
-  defp extract_fields(body) do
+  defp extract_fields(body, env) do
     Macro.prewalk(body, [], fn
-      {:fields, env, fields}, [] ->
+      {:fields, _, fields}, [] ->
         fields =
           Enum.map(fields, fn
             {name, _, atom} when is_atom(atom) -> name
@@ -152,7 +254,7 @@ defmodule Skitter.Component do
 
         {nil, fields}
 
-      {:fields, env, any}, _ ->
+      {:fields, _, any}, _ ->
         throw {:error, :duplicate_fields, any, env}
 
       any, acc ->
@@ -190,7 +292,22 @@ defmodule Skitter.Component do
     {name, body}
   end
 
-  defp handle_error(_) do
-    nil
+  defp handle_error({:error, :invalid_syntax, statement, env}) do
+    DefinitionError.inject("Invalid syntax: `#{statement}`", env)
+  end
+
+  defp handle_error({:error, :invalid_port_list, any, env}) do
+    DefinitionError.inject("Invalid port list: `#{inspect(any)}`", env)
+  end
+
+  defp handle_error({:error, :invalid_field, field, env}) do
+    DefinitionError.inject("Invalid field: `#{field}`", env)
+  end
+
+  defp handle_error({:error, :duplicate_fields, fields, env}) do
+    DefinitionError.inject(
+      "Only one fields declaration is allowed: `#{inspect(fields)}`",
+      env
+    )
   end
 end
