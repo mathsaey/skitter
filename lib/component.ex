@@ -228,13 +228,13 @@ defmodule Skitter.Component do
       callbacks = extract_callbacks(body, imports, fields, out_ports)
 
       quote do
-        %Skitter.Component{
+        Skitter.Registry.put(%Skitter.Component{
           name: unquote(name),
           fields: unquote(fields),
           in_ports: unquote(in_ports),
           out_ports: unquote(out_ports),
           callbacks: unquote(callbacks)
-        }
+        })
       end
     catch
       err -> handle_error(err)

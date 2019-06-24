@@ -42,14 +42,7 @@ defmodule Skitter.MixProject do
   defp docs do
     [
       source_ref: "develop",
-      logo: "assets/logo-light_docs.png",
-      groups_for_modules: [
-        "Domain Specific Languages": [
-          Skitter.Component.DSL,
-          Skitter.Workflow.DSL
-        ],
-        Querying: [Skitter.Component, Skitter.Workflow]
-      ]
+      logo: "assets/logo-light_docs.png"
     ]
   end
 
