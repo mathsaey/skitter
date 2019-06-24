@@ -15,6 +15,9 @@ defmodule Skitter.HandlerError do
     "Handler `#{handler}` raised error:\n\t#{message}"
   end
 
+  @doc """
+  Raise a handler error where `handler` is set to the current module.
+  """
   defmacro error(message) do
     quote do
       raise(unquote(__MODULE__), message: unquote(message), handler: __MODULE__)
