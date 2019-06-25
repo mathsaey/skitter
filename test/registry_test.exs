@@ -20,12 +20,12 @@ defmodule Skitter.RegistryTest do
   end
 
   test "registering nameless components returns component", %{unnamed: comp} do
-    assert put(comp) == comp
+    assert put_if_named(comp) == comp
   end
 
   test "duplicate name returns error", %{named: comp} do
     assert_raise Skitter.DefinitionError, ~r/`.*` is already in use/, fn ->
-      put(comp)
+      put_if_named(comp)
     end
   end
 end

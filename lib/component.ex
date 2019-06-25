@@ -228,7 +228,7 @@ defmodule Skitter.Component do
       callbacks = extract_callbacks(body, imports, fields, out_ports)
 
       quote do
-        Skitter.Registry.put(%Skitter.Component{
+        Skitter.Registry.put_if_named(%Skitter.Component{
           name: unquote(name),
           fields: unquote(fields),
           in_ports: unquote(in_ports),

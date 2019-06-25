@@ -16,9 +16,9 @@ defmodule Skitter.Registry do
 
   def start_link(_), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
-  def put(c = %Component{name: nil}), do: c
+  def put_if_named(c = %Component{name: nil}), do: c
 
-  def put(c = %Component{name: name}) do
+  def put_if_named(c = %Component{name: name}) do
     case GenServer.call(__MODULE__, {:add, c}) do
       {:error, :duplicate_name} ->
         raise DefinitionError, "`#{name}` is already in use"
