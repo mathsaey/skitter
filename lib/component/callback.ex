@@ -395,13 +395,43 @@ defmodule Skitter.Component.Callback do
 
   defp handle_error({:error, :invalid_field, field, fields, env}) do
     DefinitionError.inject(
-      "Invalid field: `#{field}` is not a part of `#{inspect fields}`", env
+      "Invalid field: `#{field}` is not a part of `#{inspect(fields)}`",
+      env
     )
   end
 
   defp handle_error({:error, :invalid_out_port, port, out_ports, env}) do
     DefinitionError.inject(
-      "Invalid out port: `#{port}` is not a part of `#{inspect out_ports}`", env
+      "Invalid out port: `#{port}` is not a part of `#{inspect(out_ports)}`",
+      env
     )
   end
+end
+
+defimpl Inspect, for: Skitter.Component.Callback do
+  import Inspect.Algebra
+  alias Skitter.Component.Callback
+
+  def inspect(cb, _) do
+    group(
+      concat([
+        "#Callback<",
+        "arity[#{arity(cb)}]",
+        break(", "),
+        "state[#{state_cap_str(cb)}]",
+        break(", "),
+        "publish[#{publish_cap_str(cb)}]",
+        ">"
+      ])
+    )
+  end
+
+  defp arity(%Callback{arity: arity}), do: arity
+
+  defp state_cap_str(%Callback{state_capability: :none}), do: "/"
+  defp state_cap_str(%Callback{state_capability: :read}), do: "R"
+  defp state_cap_str(%Callback{state_capability: :readwrite}), do: "RW"
+
+  defp publish_cap_str(%Callback{publish_capability: true}), do: "✓"
+  defp publish_cap_str(%Callback{publish_capability: false}), do: "x"
 end
