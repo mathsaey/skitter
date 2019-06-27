@@ -20,7 +20,7 @@ defmodule Skitter.Component.Callback do
   # Types
   # -----
 
-  defstruct [:function, :state_capability, :publish_capability]
+  defstruct [:function, :arity, :state_capability, :publish_capability]
 
   defmodule Result do
     @moduledoc """
@@ -47,7 +47,7 @@ defmodule Skitter.Component.Callback do
 
   A callback is defined as a function with type `t:signature`, which implements
   the functionality of the callback and a set of metadata which define the
-  capabilities of the callback.
+  capabilities of the callback, and store its arity.
 
   The following capabilities are defined:
 
@@ -57,6 +57,7 @@ defmodule Skitter.Component.Callback do
   """
   @type t :: %__MODULE__{
           function: signature(),
+          arity: non_neg_integer(),
           state_capability: state_capability(),
           publish_capability: publish_capability()
         }
@@ -243,6 +244,7 @@ defmodule Skitter.Component.Callback do
 
       state = state_access(used?(body, :read_state), used?(body, :update_state))
       publish = used?(body, :publish)
+      arity = length(args)
 
       {body, state_return, state_arg} = make_state_body_return(body, state)
       {body, publish_return} = make_publish_body_return(body, publish)
@@ -266,6 +268,7 @@ defmodule Skitter.Component.Callback do
       quote do
         %unquote(__MODULE__){
           function: unquote(func),
+          arity: unquote(arity),
           state_capability: unquote(state),
           publish_capability: unquote(publish)
         }

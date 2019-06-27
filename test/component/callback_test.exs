@@ -63,7 +63,7 @@ defmodule Skitter.Component.CallbackTest do
       assert call(c, %{}, []).publish == [out: 5]
     end
 
-    test "arguments" do
+    test "arguments and arity" do
       c1 = defcallback([], [], [arg]) do
         arg
       end
@@ -72,6 +72,8 @@ defmodule Skitter.Component.CallbackTest do
         arg1 + arg2
       end
 
+      assert c1.arity == 1
+      assert c2.arity == 2
       assert call(c1, %{}, [10]).result == 10
       assert call(c2, %{}, [10, 20]).result == 30
     end
