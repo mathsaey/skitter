@@ -13,7 +13,7 @@ defmodule Skitter.Component do
   reactive workflow.
 
   This module defines the internal representation of a skitter component as an
-  elixir struct (`@t:t/0`) along with some utilities to modify and query
+  elixir struct (`t:t/0`) along with some utilities to modify and query
   reactive components.
   """
 
