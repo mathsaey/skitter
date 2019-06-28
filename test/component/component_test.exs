@@ -8,6 +8,7 @@ defmodule Skitter.ComponentTest do
   use ExUnit.Case, async: true
   import Skitter.Test.Assertions
 
+  alias Skitter.Registry
   alias Skitter.Component
   alias Skitter.Component.Callback
 
@@ -57,7 +58,11 @@ defmodule Skitter.ComponentTest do
       assert_receive {:import, 1}
       assert_receive {:alias, 2}
       assert_receive {:require, true}
+    end
 
+    test "name registration" do
+      c = defcomponent(Name, [in: ignore], do: nil)
+      assert Registry.get(Name) == c
     end
 
     test "errors" do

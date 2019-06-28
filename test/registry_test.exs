@@ -6,26 +6,33 @@
 
 defmodule Skitter.RegistryTest do
   use ExUnit.Case, async: true
-  import Skitter.{Component, Registry}
+  import Skitter.{Component, Workflow, Registry}
 
   setup_all do
     [
-      named: defcomponent(Name, [in: ignore], do: nil),
-      unnamed: defcomponent([in: ignore], do: nil)
+      component: defcomponent([in: ignore], do: nil),
+      workflow: defworkflow([in: ignore], do: nil)
     ]
   end
 
-  test "automatic registration", %{named: named} do
-    assert get(Name) == named
+  test "nameless registration returns value", %{component: c, workflow: w} do
+    assert put_if_named(c) == c
+    assert put_if_named(w) == w
   end
 
-  test "registering nameless components returns component", %{unnamed: comp} do
-    assert put_if_named(comp) == comp
-  end
+  test "duplicate name returns error", %{component: c, workflow: w} do
+    c_named = %{c | name: ComponentName}
+    w_named = %{w | name: WorkflowName}
 
-  test "duplicate name returns error", %{named: comp} do
+    put_if_named(c_named)
+    put_if_named(w_named)
+
     assert_raise Skitter.DefinitionError, ~r/`.*` is already in use/, fn ->
-      put_if_named(comp)
+      put_if_named(c_named)
+    end
+
+    assert_raise Skitter.DefinitionError, ~r/`.*` is already in use/, fn ->
+      put_if_named(w_named)
     end
   end
 end

@@ -7,7 +7,7 @@
 defmodule Skitter.Registry do
   @moduledoc false
   # Private functions to resolve component and workflow names
-  alias Skitter.{Component, DefinitionError}
+  alias Skitter.{Component, Workflow, DefinitionError}
   use GenServer
 
   # --- #
@@ -17,16 +17,9 @@ defmodule Skitter.Registry do
   def start_link(_), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
   def put_if_named(c = %Component{name: nil}), do: c
-
-  def put_if_named(c = %Component{name: name}) do
-    case GenServer.call(__MODULE__, {:add, c}) do
-      {:error, :duplicate_name} ->
-        raise DefinitionError, "`#{name}` is already in use"
-
-      :ok ->
-        c
-    end
-  end
+  def put_if_named(w = %Workflow{name: nil}), do: w
+  def put_if_named(c = %Component{name: name}), do: insert(name, c)
+  def put_if_named(w = %Workflow{name: name}), do: insert(name, w)
 
   def get(key) do
     case :ets.lookup(__MODULE__, key) do
@@ -39,20 +32,28 @@ defmodule Skitter.Registry do
   # Implementation #
   # -------------- #
 
+  @impl true
   def init(_) do
     table = :ets.new(__MODULE__, [:named_table, {:read_concurrency, true}])
     {:ok, table}
   end
 
-  def handle_call({:add, c = %Component{name: name}}, _, table) do
-    insert(table, name, c)
-  end
-
-  defp insert(table, key, value) do
+  @impl true
+  def handle_call({:add, key, value}, _, table) do
     if :ets.insert_new(table, {key, value}) do
       {:reply, :ok, table}
     else
       {:reply, {:error, :duplicate_name}, table}
+    end
+  end
+
+  defp insert(key, value) do
+    case GenServer.call(__MODULE__, {:add, key, value}) do
+      {:error, :duplicate_name} ->
+        raise DefinitionError, "`#{key}` is already in use"
+
+      :ok ->
+        value
     end
   end
 end
