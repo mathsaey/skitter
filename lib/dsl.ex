@@ -25,6 +25,7 @@ defmodule Skitter.DSL do
   is used.
   """
   def block_to_list({:__block__, _, statements}), do: statements
+  def block_to_list(nil), do: []
   def block_to_list(statement), do: [statement]
 
   @doc """
