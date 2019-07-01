@@ -410,28 +410,29 @@ end
 
 defimpl Inspect, for: Skitter.Component.Callback do
   import Inspect.Algebra
-  alias Skitter.Component.Callback
 
-  def inspect(cb, _) do
-    group(
-      concat([
-        "#Callback<",
-        "arity[#{arity(cb)}]",
-        break(", "),
-        "state[#{state_cap_str(cb)}]",
-        break(", "),
-        "publish[#{publish_cap_str(cb)}]",
-        ">"
-      ])
+  def inspect(cb, opts) do
+    container_doc(
+      "#Callback<", Map.to_list(cb), ">", opts, &doc/2, break: :flex
     )
   end
 
-  defp arity(%Callback{arity: arity}), do: arity
+  defp doc({atm, _}, _) when atm in [:__struct__, :function], do: empty()
 
-  defp state_cap_str(%Callback{state_capability: :none}), do: "/"
-  defp state_cap_str(%Callback{state_capability: :read}), do: "R"
-  defp state_cap_str(%Callback{state_capability: :readwrite}), do: "RW"
+  defp doc({:arity, arity}, _), do: "arity[#{arity}]"
 
-  defp publish_cap_str(%Callback{publish_capability: true}), do: "✓"
-  defp publish_cap_str(%Callback{publish_capability: false}), do: "x"
+  defp doc({:state_capability, state}, _) do
+    "state_capability[#{state_cap_str(state)}]"
+  end
+
+  defp doc({:publish_capability, pub}, _) do
+    "publish_capability[#{publish_cap_str(pub)}]"
+  end
+
+  defp state_cap_str(:none), do: "/"
+  defp state_cap_str(:read), do: "R"
+  defp state_cap_str(:readwrite), do: "RW"
+
+  defp publish_cap_str(true), do: "✓"
+  defp publish_cap_str(false), do: "x"
 end

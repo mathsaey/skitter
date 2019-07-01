@@ -315,25 +315,29 @@ defimpl Inspect, for: Skitter.Component do
   alias Skitter.Component
 
   def inspect(comp, opts) do
-    concat([
-      "#Component",
-      name(comp, opts),
-      "<",
-      break(""),
-      group(glue("in:", to_doc(comp.in_ports, opts))),
-      break(", "),
-      group(glue("out:", to_doc(comp.out_ports, opts))),
-      break(", "),
-      group(glue("fields:", to_doc(comp.fields, opts))),
-      break(", "),
-      group(glue("callbacks:", to_doc(comp.callbacks, opts))),
-      ">"
-    ])
+    open = group(concat(["#Component", name(comp, opts), "<"]))
+    close = ">"
+
+    container_doc(open, Map.to_list(comp), close, opts, &doc/2)
   end
 
   defp name(%Component{name: nil}, _), do: empty()
 
   defp name(%Component{name: name}, opts) do
     concat(["[", to_doc(name, opts), "]"])
+  end
+
+  def doc({atm, _}, _) when atm in [:__struct__, :name], do: empty()
+
+  def doc({e, l}, o) do
+    desc =
+      case e do
+        :in_ports -> "in:"
+        :out_ports -> "out:"
+        :fields -> "fields:"
+        :callbacks -> "callbacks:"
+      end
+
+    group(glue(desc, to_doc(l, o)))
   end
 end

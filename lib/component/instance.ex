@@ -32,3 +32,31 @@ defmodule Skitter.Component.Instance do
     %{i | links: Map.update(links, port, [destination], &[destination | &1])}
   end
 end
+
+defimpl Inspect, for: Skitter.Component.Instance do
+  import Inspect.Algebra
+
+  def inspect(inst, opts) do
+    container_doc("#Instance<", Map.to_list(inst), ">", opts, &doc/2)
+  end
+
+  defp doc({atm, _}, _) when atm == :__struct__, do: empty()
+
+  defp doc({:component, c}, opts), do: to_doc(c, opts)
+  defp doc({:instantiation, i}, opts), do: to_doc(i, opts)
+  defp doc({:links, lst}, opts), do: links_to_doc(lst, opts)
+
+  defp links_to_doc(links, opts) do
+    group(
+      links
+      |> Enum.map(fn {out, lst} ->
+        container_doc("#{out} ~> {", lst, "}", opts, &dest_doc/2, break: :flex)
+      end)
+      |> Enum.intersperse(break("; "))
+      |> concat()
+    )
+  end
+
+  defp dest_doc({nil, port}, _), do: string(Atom.to_string(port))
+  defp dest_doc({id, port}, _), do: string("#{id}.#{port}")
+end
