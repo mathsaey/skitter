@@ -40,7 +40,7 @@ defimpl Inspect, for: Skitter.Component.Instance do
     container_doc("#Instance<", Map.to_list(inst), ">", opts, &doc/2)
   end
 
-  defp doc({atm, _}, _) when atm == :__struct__, do: empty()
+  defp doc({:__struct__, _}, _), do: empty()
 
   defp doc({:component, c}, opts), do: to_doc(c, opts)
   defp doc({:instantiation, i}, opts), do: to_doc(i, opts)
