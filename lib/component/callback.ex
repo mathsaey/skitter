@@ -436,3 +436,17 @@ defimpl Inspect, for: Skitter.Component.Callback do
   defp publish_cap_str(true), do: "✓"
   defp publish_cap_str(false), do: "x"
 end
+
+defimpl Inspect, for: Skitter.Component.Callback.Result do
+  import Inspect.Algebra
+
+  def inspect(res, opts) do
+    container_doc("#Result<", Map.to_list(res), ">", opts, &doc/2, break: :flex)
+  end
+
+  defp doc({:__struct__, _}, _), do: empty()
+  defp doc({e, nil}, _) when e  in [:state, :publish], do: empty()
+  defp doc({field, value}, opts) do
+    glue(Atom.to_string(field), ": ", to_doc(value, opts))
+  end
+end
