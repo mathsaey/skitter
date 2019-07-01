@@ -21,8 +21,14 @@ defmodule Skitter.Component.Instance do
   connections to the workflow.
   """
   @type t :: %__MODULE__{
-    component: Component.t(),
-    instantiation: [any()],
-    links: %{optional(Port.t()) => [Workflow.destination()]}
-  }
+          component: Component.t(),
+          instantiation: [any()],
+          links: %{optional(Port.t()) => [Workflow.destination()]}
+        }
+
+  @doc false
+  # Create a new instance with an added link
+  def add_link(i = %__MODULE__{links: links}, port, destination) do
+    %{i | links: Map.update(links, port, [destination], &[destination | &1])}
+  end
 end
