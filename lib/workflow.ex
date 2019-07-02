@@ -35,7 +35,7 @@ defmodule Skitter.Workflow do
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
           instances: %{optional(id()) => Component.Instance.t()},
-          links: %{required(Port.t()) => [Workflow.destination()]}
+          links: %{required(Port.t()) => [destination()]}
         }
 
   @typedoc """
