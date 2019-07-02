@@ -295,16 +295,19 @@ defmodule Skitter.Component do
   end
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do
-    DefinitionError.inject("Invalid syntax: `#{statement}`", env)
+    DefinitionError.inject(
+      "Invalid syntax: `#{Macro.to_string(statement)}`",
+      env
+    )
   end
 
   defp handle_error({:error, :invalid_port_list, any, env}) do
-    DefinitionError.inject("Invalid port list: `#{inspect(any)}`", env)
+    DefinitionError.inject("Invalid port list: `#{Macro.to_string(any)}`", env)
   end
 
   defp handle_error({:error, :duplicate_fields, fields, env}) do
     DefinitionError.inject(
-      "Only one fields declaration is allowed: `#{inspect(fields)}`",
+      "Only one fields declaration is allowed: `#{Macro.to_string(fields)}`",
       env
     )
   end

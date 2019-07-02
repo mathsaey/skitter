@@ -61,16 +61,16 @@ defmodule Skitter.ComponentTest do
     end
 
     test "name registration" do
-      c = defcomponent(Name, [in: ignore], do: nil)
-      assert Registry.get(Name) == c
+      c = defcomponent(__MODULE__.Named, [in: ignore], do: nil)
+      assert Registry.get(__MODULE__.Named) == c
     end
 
     test "errors" do
-      assert_definition_error ~r/.*: Invalid syntax: `foo`/ do
+      assert_definition_error ~r/.*: Invalid syntax: `:foo`/ do
         defcomponent(Test, [in: :foo], do: nil)
       end
 
-      assert_definition_error ~r/.*: Invalid syntax: `.*`/ do
+      assert_definition_error ~r/.*: Invalid syntax: `5`/ do
         defcomponent(Test, [in: []], do: (fields a, b, 5))
       end
 
