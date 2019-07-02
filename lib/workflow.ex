@@ -64,31 +64,35 @@ defmodule Skitter.Workflow do
   #   - Verify links
   #   - Create workflow
   def create_workflow(name, in_ports, out_ports, instances, links) do
-    instances =
-      instances |> Enum.map(&expand_name/1) |> Map.new(&create_instance/1)
+    try do
+      instances =
+        instances |> Enum.map(&read_name/1) |> Map.new(&create_instance/1)
 
-    verify_links(links, instances, in_ports, out_ports)
-    instances = read_instance_links(links, instances)
-    links = read_workflow_links(links)
+      verify_links(links, instances, in_ports, out_ports)
+      instances = read_instance_links(links, instances)
+      links = read_workflow_links(links)
 
-    %__MODULE__{
-      name: name,
-      in_ports: in_ports,
-      out_ports: out_ports,
-      instances: instances,
-      links: links
-    }
-    |> Registry.put_if_named()
+      %__MODULE__{
+        name: name,
+        in_ports: in_ports,
+        out_ports: out_ports,
+        instances: instances,
+        links: links
+      }
+      |> Registry.put_if_named()
+    catch
+      err -> handle_error(err)
+    end
   end
 
-  defp expand_name({name, comp, args}) when is_atom(comp) do
+  defp read_name({name, comp, args}) when is_atom(comp) do
     case Registry.get(comp) do
       nil -> throw {:error, :invalid_name, comp}
       res -> {name, res, args}
     end
   end
 
-  defp expand_name(any), do: any
+  defp read_name(any), do: any
 
   defp create_instance({name, comp, args}) do
     {name, %Instance{component: comp, instantiation: args}}
@@ -107,15 +111,15 @@ defmodule Skitter.Workflow do
     end
   end
 
-  defp verify_port({instance, port}, instances, _, key) do
-    instance = instances[instance]
+  defp verify_port({identifier, port}, instances, _, key) do
+    instance = instances[identifier]
 
-    unless is_nil(instance) do
+    if is_nil(instance) do
+      throw {:error, :invalid_instance, identifier}
+    else
       unless port in Map.get(instance.component, key) do
         throw {:error, :invalid_component_port, port, instance}
       end
-    else
-      throw {:error, :invalid_instance, instance}
     end
   end
 
@@ -301,14 +305,37 @@ defmodule Skitter.Workflow do
   defp read_destination(port, env), do: {nil, DSL.name_to_atom(port, env)}
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do
-    DefinitionError.inject("Invalid syntax: `#{statement}`", env)
+    DefinitionError.inject(
+      "Invalid syntax: `#{Macro.to_string(statement)}`",
+      env
+    )
   end
 
   defp handle_error({:error, :invalid_port_list, any, env}) do
-    DefinitionError.inject("Invalid port list: `#{inspect(any)}`", env)
+    DefinitionError.inject("Invalid port list: `#{Macro.to_string(any)}`", env)
   end
 
   defp handle_error({:error, :invalid_workflow_syntax, statement, env}) do
-    DefinitionError.inject("`#{statement}` is not allowed in a workflow", env)
+    DefinitionError.inject(
+      "`#{Macro.to_string(statement)}` is not allowed in a workflow",
+      env
+    )
+  end
+
+  defp handle_error({:error, :invalid_name, name}) do
+    raise DefinitionError, "`#{name}` is not defined"
+  end
+
+  defp handle_error({:error, :invalid_workflow_port, port}) do
+    raise DefinitionError, "`#{port}` is not a valid workflow port"
+  end
+
+  defp handle_error({:error, :invalid_instance, name}) do
+    raise DefinitionError, "`#{name}` does not exist"
+  end
+
+  defp handle_error({:error, :invalid_component_port, port, instance}) do
+    raise DefinitionError,
+          "`#{port}` is not a port of `#{inspect(instance.component)}`"
   end
 end
