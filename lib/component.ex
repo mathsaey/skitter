@@ -279,7 +279,7 @@ defmodule Skitter.Component do
     {body, handler} =
       Enum.map_reduce(body, nil, fn
         {:handler, _, [h]}, nil -> {nil, transform_handler(h, imports)}
-        {:handler, _, _}, any -> throw {:error, :duplicate_handler, any, env}
+        n = {:handler, _, _}, any -> throw {:error, :duplicate_handler, n, env}
         any, acc -> {any, acc}
       end)
 
@@ -360,6 +360,13 @@ defmodule Skitter.Component do
   defp handle_error({:error, :duplicate_fields, fields, env}) do
     DefinitionError.inject(
       "Only one fields declaration is allowed: `#{Macro.to_string(fields)}`",
+      env
+    )
+  end
+
+  defp handle_error({:error, :duplicate_handler, handler, env}) do
+    DefinitionError.inject(
+      "Only one handler declaration is allowed: `#{Macro.to_string(handler)}`",
       env
     )
   end

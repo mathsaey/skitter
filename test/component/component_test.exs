@@ -84,6 +84,25 @@ defmodule Skitter.ComponentTest do
           fields x, y, z
         end
       end
+
+      assert_definition_error ~r/.*: Only one handler declaration is allowed: `.*`/ do
+        defcomponent in: [] do
+          handler Handler1
+          handler Handler2
+        end
+      end
+
+      assert_definition_error ~r/`.*` is not defined/ do
+        defcomponent in: [] do
+          handler DoesNotExist
+        end
+      end
+
+      assert_definition_error ~r/`.*` is not a valid component handler/ do
+        defcomponent in: [] do
+          handler 5
+        end
+      end
     end
   end
 end
