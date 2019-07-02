@@ -16,15 +16,18 @@ defmodule Skitter.Component do
   elixir struct (`t:t/0`) along with some utilities to modify and query
   reactive components.
   """
-
   alias Skitter.Component.Callback
-  alias Skitter.{Port, DefinitionError, DSL}
+  alias Skitter.{Port, DefinitionError, DSL, Registry}
+
+  alias Skitter.ComponentHandler, as: Handler
+  alias Skitter.Builtins.DefaultComponentHandler, as: Default
 
   defstruct name: nil,
             fields: [],
             in_ports: [],
             out_ports: [],
-            callbacks: %{}
+            callbacks: %{},
+            handler: Default
 
   @typedoc """
   A component is defined as a collection of _metadata_ and _callbacks_.
@@ -35,12 +38,13 @@ defmodule Skitter.Component do
 
   The following metadata is stored:
 
-  | Name          | Description                        | Default |
-  | ------------- | ---------------------------------- | ------- |
-  | `name`        | The name of the component          | `nil`   |
-  | `fields`      | List of the slots of the component | `[]`    |
-  | `in_ports`    | List of in ports of the component. | `[]`    |
-  | `out_ports`   | List of out ports of the component | `[]`    |
+  | Name          | Description                        | Default   |
+  | ------------- | ---------------------------------- | --------- |
+  | `name`        | The name of the component          | `nil`     |
+  | `fields`      | List of the slots of the component | `[]`      |
+  | `in_ports`    | List of in ports of the component. | `[]`      |
+  | `out_ports`   | List of out ports of the component | `[]`      |
+  | `handler`     | The handler of this component      | `Default` |
 
   Note that a valid component must have at least one in port.
   """
@@ -49,7 +53,8 @@ defmodule Skitter.Component do
           fields: [field()],
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
-          callbacks: %{optional(callback_name()) => Callback.t()}
+          callbacks: %{optional(callback_name()) => Callback.t()},
+          handler: Handler.t()
         }
 
   @typedoc """
@@ -140,6 +145,7 @@ defmodule Skitter.Component do
   | Name                         | Description                              |
   | ---------------------------- | ---------------------------------------  |
   | fields                       | List of the fields of the component      |
+  | handler                      | Specify the handler of the component     |
   | `import`, `alias`, `require` | Elixir import, alias, require constructs |
   | callback                     | `Skitter.Component.Callback` definition  |
 
@@ -147,6 +153,15 @@ defmodule Skitter.Component do
   component. This statement may be used only once inside the body of the
   component. The statement can be omitted if the component does not have any
   fields.
+
+  The handler specifies the `t:Handler.t/0` of the component, if no handler is
+  specified, the default handler is used. A handler is one of the following:
+
+  - `Meta`, in which case this component is a meta-component; i.e. a component
+  that is a handler for another component
+  - A meta-component
+  - a workflow that consists of meta-components
+  - A name which refers to a registered component or workflow
 
   `import`, `alias`, and `require` maybe used inside of the component body as
   if they were being used inside of a module. Note that the use of macros inside
@@ -225,6 +240,7 @@ defmodule Skitter.Component do
       body = DSL.block_to_list(body)
       {body, fields} = extract_fields(body, __CALLER__)
       {body, imports} = extract_reuse_directives(body)
+      {body, handler} = extract_handler(body, imports, __CALLER__)
       callbacks = extract_callbacks(body, imports, fields, out_ports)
 
       quote do
@@ -233,7 +249,8 @@ defmodule Skitter.Component do
           fields: unquote(fields),
           in_ports: unquote(in_ports),
           out_ports: unquote(out_ports),
-          callbacks: unquote(callbacks)
+          callbacks: unquote(callbacks),
+          handler: unquote(__MODULE__)._expand_handler(unquote(handler))
         }
         |> Skitter.Registry.put_if_named()
       end
@@ -256,6 +273,32 @@ defmodule Skitter.Component do
       any, acc ->
         {any, acc}
     end)
+  end
+
+  defp extract_handler(body, imports, env) do
+    {body, handler} =
+      Enum.map_reduce(body, nil, fn
+        {:handler, _, [h]}, nil -> {nil, transform_handler(h, imports)}
+        {:handler, _, _}, any -> throw {:error, :duplicate_handler, any, env}
+        any, acc -> {any, acc}
+      end)
+
+    handler =
+      case handler do
+        nil -> Default
+        any -> any
+      end
+
+    {body, handler}
+  end
+
+  defp transform_handler(handler, imports) do
+    quote do
+      unquote(imports)
+      alias Skitter.Builtins.DefaultComponentHandler, as: Default
+      alias Skitter.Builtins.MetaComponentHandler, as: Meta
+      unquote(handler)
+    end
   end
 
   defp extract_reuse_directives(body) do
@@ -294,6 +337,15 @@ defmodule Skitter.Component do
     {name, body}
   end
 
+  @doc false
+  def _expand_handler(handler) do
+    try do
+      Handler.expand(handler)
+    catch
+      err -> handle_error(err)
+    end
+  end
+
   defp handle_error({:error, :invalid_syntax, statement, env}) do
     DefinitionError.inject(
       "Invalid syntax: `#{Macro.to_string(statement)}`",
@@ -311,11 +363,23 @@ defmodule Skitter.Component do
       env
     )
   end
+
+  defp handle_error({:error, :invalid_name, name}) do
+    raise DefinitionError, "`#{name}` is not defined"
+  end
+
+  defp handle_error({:error, :invalid_handler, handler}) do
+    raise DefinitionError,
+          "`#{inspect(handler)}` is not a valid component handler"
+  end
 end
 
 defimpl Inspect, for: Skitter.Component do
   import Inspect.Algebra
   alias Skitter.Component
+
+  alias Skitter.Builtins.MetaComponentHandler, as: M
+  alias Skitter.Builtins.DefaultComponentHandler, as: D
 
   def inspect(comp, opts) do
     open = group(concat(["#Component", name(comp, opts), "<"]))
@@ -332,6 +396,9 @@ defimpl Inspect, for: Skitter.Component do
 
   def doc({atm, _}, _) when atm in [:__struct__, :name], do: empty()
 
+  def doc({:handler, M}, o), do: doc({:handler, Meta}, o)
+  def doc({:handler, D}, o), do: doc({:handler, Default}, o)
+
   def doc({e, l}, o) do
     desc =
       case e do
@@ -339,6 +406,7 @@ defimpl Inspect, for: Skitter.Component do
         :out_ports -> "out:"
         :fields -> "fields:"
         :callbacks -> "callbacks:"
+        :handler -> "handler:"
       end
 
     group(glue(desc, to_doc(l, o)))
