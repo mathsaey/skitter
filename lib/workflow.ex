@@ -63,7 +63,7 @@ defmodule Skitter.Workflow do
   #   - Create instances
   #   - Verify links
   #   - Create workflow
-  def create_workflow(name, in_ports, out_ports, instances, links) do
+  def _create_workflow(name, in_ports, out_ports, instances, links) do
     try do
       instances =
         instances |> Enum.map(&read_name/1) |> Map.new(&create_instance/1)
@@ -240,7 +240,7 @@ defmodule Skitter.Workflow do
       instances = read_instances(instances, __CALLER__)
 
       quote do
-        unquote(__MODULE__).create_workflow(
+        unquote(__MODULE__)._create_workflow(
           unquote(name),
           unquote(in_ports),
           unquote(out_ports),
