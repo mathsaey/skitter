@@ -21,11 +21,28 @@ defmodule Skitter.ComponentHandler do
   alias Skitter.MetaComponentHandler, as: Meta
   alias Skitter.Builtins.DefaultComponentHandler, as: Default
 
+  @typedoc """
+  Reactive component handler type.
+
+  A reactive component handler is one of the following:
+  - A meta-component
+  - A workflow that consists of meta-components
+  - `Meta`. When this handler is used, it specifies that a meta-component is
+  being defined; i.e. a component which uses the `Meta` handler can be used as
+  a handler for other components.
+  """
   @type t :: Meta | Component.t() | Workflow.t()
 
   # --------- #
   # Utilities #
   # --------- #
+
+  @doc """
+  Verify if a component is a meta-component
+  """
+  defp meta_component?(%Component{handler: Meta}), do: true
+  defp meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
+  defp meta_component?(_), do: false
 
   # TODO: Figure out "built in" handlers
   # TODO: Allow workflow handlers
@@ -48,7 +65,35 @@ defmodule Skitter.ComponentHandler do
   # Hooks #
   # ----- #
 
-  def on_compile_hook(c = %Component{handler: Meta}) do
-    Meta.on_compile(c)
+  def on_compile_hook(c = %Component{handler: Meta}), do: Meta.on_compile(c)
+
+  # ------ #
+  # Macros #
+  # ------ #
+
+  @doc """
+  Define a meta-component.
+
+  This macro is syntactic sugar for defining a component using
+  `Skitter.Component.defcomponent/3`. The handler and ports of this component
+  do not need to be specified, as they are defined by this macro.
+  The body of the component is defined using the DSL offered by
+  `Skitter.Component.defcomponent/3`.
+  """
+  defmacro defhandler(name \\ nil, do: body) do
+    body =
+      case body do
+        {:__block__, _, []} -> nil
+        any -> any
+      end
+
+    quote do
+      import Skitter.Component
+
+      defcomponent unquote(name), in: [] do
+        handler(unquote(Meta))
+        unquote(body)
+      end
+    end
   end
 end

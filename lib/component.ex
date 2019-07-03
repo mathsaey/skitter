@@ -154,15 +154,9 @@ defmodule Skitter.Component do
   component. The statement can be omitted if the component does not have any
   fields.
 
-  The handler specifies the `t:Handler.t/0` of the component, if no handler is
-  specified, the default handler is used. A handler is one of the following:
-
-  - A meta-component
-  - a workflow that consists of meta-components
-  - A name which refers to a registered meta-component or workflow of
-  meta-components
-  - `Meta`, in which case this component is a meta-component; i.e. a component
-  that is a handler for another component
+  The handler specifies the `t:Skitter.ComponentHandler.t/0` of the component,
+  if no handler is specified, the default handler is used. A name of a valid
+  handler may be used instead of a handler definition.
 
   `import`, `alias`, and `require` maybe used inside of the component body as
   if they were being used inside of a module. Note that the use of macros inside

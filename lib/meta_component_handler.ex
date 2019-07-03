@@ -5,9 +5,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.MetaComponentHandler do
-  @moduledoc """
-  Handler which handles component handlers.
-  """
+  @moduledoc false
+
   alias Skitter.Component
   alias Skitter.ComponentHandler
 
