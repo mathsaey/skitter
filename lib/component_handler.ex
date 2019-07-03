@@ -17,7 +17,8 @@ defmodule Skitter.ComponentHandler do
   component which acts as a component handler.
   """
   alias Skitter.{Component, Workflow, Registry}
-  alias Skitter.Builtins.MetaComponentHandler, as: Meta
+
+  alias Skitter.MetaComponentHandler, as: Meta
   alias Skitter.Builtins.DefaultComponentHandler, as: Default
 
   @type t :: Meta | Component.t() | Workflow.t()

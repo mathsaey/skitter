@@ -157,11 +157,12 @@ defmodule Skitter.Component do
   The handler specifies the `t:Handler.t/0` of the component, if no handler is
   specified, the default handler is used. A handler is one of the following:
 
-  - `Meta`, in which case this component is a meta-component; i.e. a component
-  that is a handler for another component
   - A meta-component
   - a workflow that consists of meta-components
-  - A name which refers to a registered component or workflow
+  - A name which refers to a registered meta-component or workflow of
+  meta-components
+  - `Meta`, in which case this component is a meta-component; i.e. a component
+  that is a handler for another component
 
   `import`, `alias`, and `require` maybe used inside of the component body as
   if they were being used inside of a module. Note that the use of macros inside
@@ -296,7 +297,7 @@ defmodule Skitter.Component do
     quote do
       unquote(imports)
       alias Skitter.Builtins.DefaultComponentHandler, as: Default
-      alias Skitter.Builtins.MetaComponentHandler, as: Meta
+      alias Skitter.MetaComponentHandler, as: Meta
       unquote(handler)
     end
   end
@@ -385,7 +386,7 @@ defimpl Inspect, for: Skitter.Component do
   import Inspect.Algebra
   alias Skitter.Component
 
-  alias Skitter.Builtins.MetaComponentHandler, as: M
+  alias Skitter.MetaComponentHandler, as: M
   alias Skitter.Builtins.DefaultComponentHandler, as: D
 
   def inspect(comp, opts) do
@@ -404,7 +405,10 @@ defimpl Inspect, for: Skitter.Component do
   def doc({atm, _}, _) when atm in [:__struct__, :name], do: empty()
 
   def doc({:handler, M}, o), do: doc({:handler, Meta}, o)
-  def doc({:handler, D}, o), do: doc({:handler, Default}, o)
+
+  def doc({:handler, %Component{handler: D}}, o) do
+    doc({:handler, Default}, o)
+  end
 
   def doc({e, l}, o) do
     desc =
