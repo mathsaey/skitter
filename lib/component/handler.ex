@@ -28,8 +28,8 @@ defmodule Skitter.Component.Handler do
   - A meta-component
   - A workflow that consists of meta-components
   - `Meta`. When this handler is used, it specifies that a meta-component is
-  being defined; i.e. a component which uses the `Meta` handler can be used as
-  a handler for other components.
+  being defined. A component which uses the `Meta` handler can be used as a
+  handler for other components.
   """
   @type t :: Meta | Component.t() | Workflow.t()
 
@@ -40,9 +40,9 @@ defmodule Skitter.Component.Handler do
   @doc """
   Verify if a component is a meta-component
   """
-  defp meta_component?(%Component{handler: Meta}), do: true
-  defp meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
-  defp meta_component?(_), do: false
+  def meta_component?(%Component{handler: Meta}), do: true
+  def meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
+  def meta_component?(_), do: false
 
   # TODO: Figure out "built in" handlers
   # TODO: Allow workflow handlers

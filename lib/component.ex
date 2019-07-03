@@ -152,7 +152,7 @@ defmodule Skitter.Component do
   component. The statement can be omitted if the component does not have any
   fields.
 
-  The handler specifies the `t:Skitter.ComponentHandler.t/0` of the component,
+  The handler specifies the `t:Skitter.Component.Handler.t/0` of the component,
   if no handler is specified, the default handler is used. A name of a valid
   handler may be used instead of a handler definition.
 
