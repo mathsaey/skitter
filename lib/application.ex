@@ -9,7 +9,7 @@ defmodule Skitter.Application do
 
   use Application
 
-  alias Skitter.{Configuration, Profiler}
+  alias Skitter.{Configuration, Profiler, Builtins}
 
   def start(_type, []) do
     try do
@@ -48,6 +48,14 @@ defmodule Skitter.Application do
   end
 
   defp pre_load(_, _), do: nil
+
+  defp post_load(:master, _) do
+    Builtins.load()
+  end
+
+  defp post_load(:local, _) do
+    Builtins.load()
+  end
 
   # Temporary disable this until nodes are up and running again
   defp post_load(_, _), do: nil
