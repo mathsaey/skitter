@@ -65,7 +65,8 @@ defmodule Skitter.Component.Handler do
   # Hooks #
   # ----- #
 
-  def on_compile_hook(c = %Component{handler: Meta}), do: Meta.on_compile(c)
+  @doc section: :hooks
+  def on_compile(c = %Component{handler: Meta}), do: Meta.on_compile(c)
 
   # ------ #
   # Macros #
@@ -80,6 +81,7 @@ defmodule Skitter.Component.Handler do
   The body of the component is defined using the DSL offered by
   `Skitter.Component.defcomponent/3`.
   """
+  @doc section: :dsl
   defmacro defhandler(name \\ nil, do: body) do
     body =
       case body do

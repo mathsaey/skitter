@@ -223,6 +223,7 @@ defmodule Skitter.Component do
       iex> res.state
       %{count: 1, total: 10}
   """
+  @doc section: :dsl
   defmacro defcomponent(name \\ nil, ports, do: body) do
     try do
       # Get metadata from header

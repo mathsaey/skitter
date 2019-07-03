@@ -47,6 +47,10 @@ defmodule Skitter.MixProject do
         Components: [~r/Skitter\.Component.*/],
         Workflows: [~r/Skitter\.Workflow.*/],
         Runtime: [~r/Skitter\.Runtime.*/]
+      ],
+      groups_for_functions: [
+        Hooks: &(&1[:section] == :hooks),
+        Language: &(&1[:section] == :dsl)
       ]
     ]
   end

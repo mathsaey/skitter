@@ -223,6 +223,7 @@ defmodule Skitter.Workflow do
       iex> wf.links
       %{data: [id: :in_val]}
   """
+  @doc section: :dsl
   defmacro defworkflow(name \\ nil, ports, do: body) do
     try do
       # Header data
