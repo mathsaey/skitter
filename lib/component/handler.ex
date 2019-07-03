@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.ComponentHandler do
+defmodule Skitter.Component.Handler do
   @moduledoc """
   Reactive component handler utilities.
 
@@ -18,7 +18,7 @@ defmodule Skitter.ComponentHandler do
   """
   alias Skitter.{Component, Workflow, Registry}
 
-  alias Skitter.MetaComponentHandler, as: Meta
+  alias Skitter.Component.MetaHandler, as: Meta
   alias Skitter.Builtins.DefaultComponentHandler, as: Default
 
   @typedoc """

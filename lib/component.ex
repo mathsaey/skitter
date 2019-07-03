@@ -16,10 +16,8 @@ defmodule Skitter.Component do
   elixir struct (`t:t/0`) along with some utilities to modify and query
   reactive components.
   """
-  alias Skitter.Component.Callback
-  alias Skitter.{Port, DefinitionError, DSL, Registry}
-
-  alias Skitter.ComponentHandler, as: Handler
+  alias Skitter.Component.{Callback, Handler}
+  alias Skitter.{Port, DefinitionError, DSL}
   alias Skitter.Builtins.DefaultComponentHandler, as: Default
 
   defstruct name: nil,
@@ -274,7 +272,7 @@ defmodule Skitter.Component do
     {body, handler} =
       Enum.map_reduce(body, nil, fn
         {:handler, _, [h]}, nil -> {nil, transform_handler(h, imports)}
-        n = {:handler, _, _}, any -> throw {:error, :duplicate_handler, n, env}
+        n = {:handler, _, _}, _ -> throw {:error, :duplicate_handler, n, env}
         any, acc -> {any, acc}
       end)
 
@@ -291,7 +289,7 @@ defmodule Skitter.Component do
     quote do
       unquote(imports)
       alias Skitter.Builtins.DefaultComponentHandler, as: Default
-      alias Skitter.MetaComponentHandler, as: Meta
+      alias Skitter.Component.MetaHandler, as: Meta
       unquote(handler)
     end
   end
@@ -380,7 +378,7 @@ defimpl Inspect, for: Skitter.Component do
   import Inspect.Algebra
   alias Skitter.Component
 
-  alias Skitter.MetaComponentHandler, as: M
+  alias Skitter.Component.MetaHandler, as: M
   alias Skitter.Builtins.DefaultComponentHandler, as: D
 
   def inspect(comp, opts) do

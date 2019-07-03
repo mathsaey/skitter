@@ -4,11 +4,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.MetaComponentHandler do
+defmodule Skitter.Component.MetaHandler do
   @moduledoc false
 
   alias Skitter.Component
-  alias Skitter.ComponentHandler
+  alias Skitter.Component.Handler
 
   def on_compile(x) do
     x
