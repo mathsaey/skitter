@@ -289,8 +289,8 @@ defmodule Skitter.Component do
   defp transform_handler(handler, imports) do
     quote do
       unquote(imports)
-      alias Skitter.Builtins.DefaultComponentHandler, as: Default
       alias Skitter.Component.MetaHandler, as: Meta
+      alias DefaultComponentHandler, as: Default
       unquote(handler)
     end
   end
@@ -334,7 +334,13 @@ defmodule Skitter.Component do
   @doc false
   def _expand_handler(handler) do
     try do
-      Handler._expand(handler)
+      handler = Handler._expand(handler)
+
+      if Handler.valid_handler?(handler) do
+        handler
+      else
+        throw {:error, :invalid_handler, handler}
+      end
     catch
       err -> handle_error(err)
     end

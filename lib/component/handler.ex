@@ -15,11 +15,11 @@ defmodule Skitter.Component.Handler do
 
   Finally, it provides a macro which allows one to implement a
   component which acts as a component handler.
+
+  # TODO: Allow workflow handlers
   """
   alias Skitter.{Component, Workflow, Registry}
-
   alias Skitter.Component.MetaHandler, as: Meta
-  alias Skitter.Builtins.DefaultComponentHandler, as: Default
 
   @typedoc """
   Reactive component handler type.
@@ -44,10 +44,15 @@ defmodule Skitter.Component.Handler do
   def meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
   def meta_component?(_), do: false
 
-  # TODO: Allow workflow handlers
+  @doc """
+  Verify if a handler is valid, as described in `t:t/0`
+  """
+  def valid_handler?(Meta), do: true
+  def valid_handler?(h = %Component{}), do: meta_component?(h)
+  def valid_handler?(_), do: false
+
   @doc false
   def _expand(Meta), do: Meta
-  def _expand(Default), do: Default
   def _expand(handler = %Component{handler: Meta}), do: handler
 
   def _expand(name) when is_atom(name) do
@@ -91,7 +96,7 @@ defmodule Skitter.Component.Handler do
       import Skitter.Component
 
       defcomponent unquote(name), in: [] do
-        handler(unquote(Meta))
+        handler(Meta)
         unquote(body)
       end
     end
