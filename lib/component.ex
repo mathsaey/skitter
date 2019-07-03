@@ -18,7 +18,7 @@ defmodule Skitter.Component do
   """
   alias Skitter.Component.{Callback, Handler}
   alias Skitter.{Port, DefinitionError, DSL}
-  alias Skitter.Builtins.DefaultComponentHandler, as: Default
+  alias DefaultComponentHandler, as: Default
 
   defstruct name: nil,
             fields: [],
@@ -380,7 +380,6 @@ defimpl Inspect, for: Skitter.Component do
   alias Skitter.Component
 
   alias Skitter.Component.MetaHandler, as: M
-  alias Skitter.Builtins.DefaultComponentHandler, as: D
 
   def inspect(comp, opts) do
     open = group(concat(["#Component", name(comp, opts), "<"]))
@@ -399,7 +398,11 @@ defimpl Inspect, for: Skitter.Component do
 
   def doc({:handler, M}, o), do: doc({:handler, Meta}, o)
 
-  def doc({:handler, %Component{handler: D}}, o) do
+  def doc({:handler, %Component{name: name}}, o) when not is_nil(name) do
+    doc({:handler, name}, o)
+  end
+
+  def doc({:handler, DefaultComponentHandler}, o) do
     doc({:handler, Default}, o)
   end
 
