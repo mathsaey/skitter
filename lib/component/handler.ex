@@ -44,22 +44,20 @@ defmodule Skitter.Component.Handler do
   def meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
   def meta_component?(_), do: false
 
-  # TODO: Figure out "built in" handlers
   # TODO: Allow workflow handlers
-  # TODO: Document valid handlers
   @doc false
-  def expand(Meta), do: Meta
-  def expand(Default), do: Default
-  def expand(handler = %Component{handler: Meta}), do: handler
+  def _expand(Meta), do: Meta
+  def _expand(Default), do: Default
+  def _expand(handler = %Component{handler: Meta}), do: handler
 
-  def expand(name) when is_atom(name) do
+  def _expand(name) when is_atom(name) do
     case Registry.get(name) do
       nil -> throw {:error, :invalid_name, name}
-      handler -> expand(handler)
+      handler -> _expand(handler)
     end
   end
 
-  def expand(any), do: throw({:error, :invalid_handler, any})
+  def _expand(any), do: throw({:error, :invalid_handler, any})
 
   # ----- #
   # Hooks #

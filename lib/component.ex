@@ -334,7 +334,7 @@ defmodule Skitter.Component do
   @doc false
   def _expand_handler(handler) do
     try do
-      Handler.expand(handler)
+      Handler._expand(handler)
     catch
       err -> handle_error(err)
     end
