@@ -103,6 +103,7 @@ defmodule Skitter.ComponentTest do
           handler 5
         end
       end
+
       assert_definition_error ~r/`.*` is not a valid component handler/ do
         h = defcomponent [in: []], do: nil
         defcomponent in: [] do

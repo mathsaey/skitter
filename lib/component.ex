@@ -334,13 +334,7 @@ defmodule Skitter.Component do
   @doc false
   def _expand_handler(handler) do
     try do
-      handler = Handler._expand(handler)
-
-      if Handler.valid_handler?(handler) do
-        handler
-      else
-        throw {:error, :invalid_handler, handler}
-      end
+      Handler._expand(handler)
     catch
       err -> handle_error(err)
     end
