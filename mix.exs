@@ -42,7 +42,12 @@ defmodule Skitter.MixProject do
   defp docs do
     [
       source_ref: "develop",
-      logo: "assets/logo-light_docs.png"
+      logo: "assets/logo-light_docs.png",
+      groups_for_modules: [
+        Components: [~r/Skitter\.Component.*/],
+        Workflows: [~r/Skitter\.Workflow.*/],
+        Runtime: [~r/Skitter\.Runtime.*/]
+      ]
     ]
   end
 
