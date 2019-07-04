@@ -5,4 +5,14 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defhandler DefaultComponentHandler do
+  on_compile c do
+    c
+    |> default_callback(:init, [], do: nil)
+    |> require_callback(
+      :react,
+      arity: length(c.in_ports),
+      state_capability: :read,
+      publish_capability: true
+    )
+  end
 end

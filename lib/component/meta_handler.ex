@@ -7,10 +7,10 @@
 defmodule Skitter.Component.MetaHandler do
   @moduledoc false
 
-  alias Skitter.Component
-  alias Skitter.Component.Handler
+  import Skitter.Component
 
-  def on_compile(x) do
-    x
+  def on_compile(component) do
+    component
+    |> require_callback(:on_compile, arity: 1)
   end
 end
