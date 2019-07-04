@@ -18,8 +18,9 @@ defmodule Skitter.Component.Handler do
 
   # TODO: Allow workflow handlers
   """
-  alias Skitter.{Component, Workflow, Registry}
+  alias Skitter.Component.Callback
   alias Skitter.Component.MetaHandler, as: Meta
+  alias Skitter.{Component, Workflow, Registry, HandlerError}
 
   @typedoc """
   Reactive component handler type.
@@ -38,18 +39,11 @@ defmodule Skitter.Component.Handler do
   # --------- #
 
   @doc """
-  Verify if a component is a meta-component
-  """
-  def meta_component?(%Component{handler: Meta}), do: true
-  def meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
-  def meta_component?(_), do: false
-
-  @doc """
   Verify if a handler is valid, as described in `t:t/0`
   """
-  def valid_handler?(Meta), do: true
-  def valid_handler?(h = %Component{}), do: meta_component?(h)
-  def valid_handler?(_), do: false
+  def valid?(Meta), do: true
+  def valid?(h = %Component{}), do: Component.meta_component?(h)
+  def valid?(_), do: false
 
   @doc false
   def _expand(Meta), do: Meta
@@ -70,6 +64,11 @@ defmodule Skitter.Component.Handler do
 
   @doc section: :hooks
   def on_compile(c = %Component{handler: Meta}), do: Meta.on_compile(c)
+
+  def on_compile(c = %Component{handler: handler}) do
+    # TODO: figure out state?
+    Component.call(handler, :on_compile, %{}, [c]).result
+  end
 
   # ------ #
   # Macros #

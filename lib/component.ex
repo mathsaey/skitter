@@ -16,9 +16,13 @@ defmodule Skitter.Component do
   elixir struct (`t:t/0`) along with some utilities to modify and query
   reactive components.
   """
-  alias Skitter.Component.{Callback, Handler}
-  alias Skitter.{Port, DefinitionError, DSL}
+  alias Skitter.{Port, DSL, Registry}
+  alias Skitter.{DefinitionError, HandlerError}
+
   alias DefaultComponentHandler, as: Default
+
+  alias Skitter.Component.{Callback, Handler}
+  alias Skitter.Component.MetaHandler, as: Meta
 
   defstruct name: nil,
             fields: [],
@@ -82,8 +86,7 @@ defmodule Skitter.Component do
 
       iex> import Callback, only: [defcallback: 4]
       iex> cb = defcallback([], [], [], do: 10)
-      iex> component = %Component{callbacks: %{f: cb}}
-      iex> call(component, :f, %{}, [])
+      iex> call(%Component{callbacks: %{f: cb}}, :f, %{}, [])
       %Callback.Result{state: nil, publish: nil, result: 10}
   """
   @spec call(t(), callback_name(), Callback.state(), [any()]) ::
@@ -105,6 +108,81 @@ defmodule Skitter.Component do
   @spec create_empty_state(t()) :: Callback.state()
   def create_empty_state(%__MODULE__{fields: fields}) do
     Map.new(fields, &{&1, nil})
+  end
+
+  @doc """
+  Verify if a component is a meta-component
+  """
+  def meta_component?(%__MODULE__{handler: Meta}), do: true
+  def meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
+  def meta_component?(_), do: false
+
+  defmacro default_callback(component, name, args, do: body) do
+    quote do
+      import Skitter.Component.Callback, only: [defcallback: 4]
+
+      cb =
+        defcallback(
+          unquote(component).fields,
+          unquote(component).out_ports,
+          unquote(args),
+          do: unquote(body)
+        )
+
+      unquote(__MODULE__)._default_callback(
+        unquote(component),
+        unquote(name),
+        cb
+      )
+    end
+  end
+
+  @doc false
+  def _default_callback(component, name, cb) do
+    if Map.has_key?(component.callbacks, name) do
+      component
+    else
+      %{component | callbacks: Map.put(component.callbacks, name, cb)}
+    end
+  end
+
+  @doc """
+  Ensure a component defines a given callback.
+
+  Ensures `component` has a callback named `name` with a certain arity, state
+  -and publish capability. If this is not the case, it raises a handler error.
+  If it is the case, the component is returned unchanged.
+
+  The following options can be provided:
+  - `arity`: the arity the callback should have, defaults to `-1`, which accepts
+  any arity.
+  - `state_capability`: the state capability that is allowed, defaults to `none`
+  - `publish_capability`: the publish capability that is allowed, defaults to
+  `false`
+  """
+  def require_callback(component, name, opts \\ []) do
+    arity = Keyword.get(opts, :arity, -1)
+    state = Keyword.get(opts, :state_capability, :none)
+    publish = Keyword.get(opts, :publish_capability, false)
+
+    with cb = %Callback{} <- component.callbacks[name],
+         true <- Callback.check_permissions(cb, state, publish),
+         true <- Callback.check_arity(cb, arity) do
+      component
+    else
+      nil ->
+        raise HandlerError,
+          component: component,
+          message: "`#{inspect(component)} is missing `#{name}` callback"
+
+      false ->
+        raise HandlerError,
+          component: component,
+          message:
+            "Invalid implementation of `#{name}`: requires " <>
+              "state_capability: #{state}, publish_capability: #{publish} " <>
+              "and arity: #{arity}, got: #{inspect(component.callbacks[name])}"
+    end
   end
 
   # ------ #
@@ -231,11 +309,7 @@ defmodule Skitter.Component do
       {in_ports, out_ports} = Port.parse_list(ports, __CALLER__)
 
       # Parse body
-      body =
-        body
-        |> replace_pseudovariables(name)
-        |> DSL.block_to_list()
-
+      body = DSL.block_to_list(body)
       {body, fields} = extract_fields(body, __CALLER__)
       {body, imports} = extract_reuse_directives(body)
       {body, handler} = extract_handler(body, imports, __CALLER__)
@@ -250,18 +324,12 @@ defmodule Skitter.Component do
           callbacks: unquote(callbacks),
           handler: unquote(__MODULE__)._expand_handler(unquote(handler))
         }
+        |> Skitter.Component.Handler.on_compile()
         |> Skitter.Registry.put_if_named()
       end
     catch
       err -> handle_error(err)
     end
-  end
-
-  defp replace_pseudovariables(body, name) do
-    Macro.prewalk(body, fn
-      {:__COMPONENT__, _, a} when is_atom(a) -> name
-      any -> any
-    end)
   end
 
   # Find and remove field declarations in the AST, ensure only one field

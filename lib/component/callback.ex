@@ -163,6 +163,23 @@ defmodule Skitter.Component.Callback do
       (cb.publish_capability == publish_capability or publish_capability)
   end
 
+  @doc """
+  Check if the arity of a component is equal to a given number.
+
+  Using this function with negative numbers always returns 0
+
+  ## Examples
+
+      iex> check_arity(%Callback{arity: 1}, 1)
+      true
+      iex> check_arity(%Callback{arity: 1}, 3)
+      false
+      iex> check_arity(%Callback{arity: 1}, -1)
+      true
+  """
+  def check_arity(%__MODULE__{}, n) when n < 0, do: true
+  def check_arity(%__MODULE__{arity: cb}, wanted), do: cb == wanted
+
   defp state_order(:none), do: 0
   defp state_order(:read), do: 1
   defp state_order(:readwrite), do: 2
@@ -238,6 +255,7 @@ defmodule Skitter.Component.Callback do
       iex> call(c, %{total: 5, count: 1}, [5])
       %Result{state: %{count: 2, total: 10}, publish: [current: 5.0], result: 0}
   """
+  @doc section: :dsl
   defmacro defcallback(fields, out_ports, args, do: body) do
     try do
       body = transform_operators(fields, out_ports, body, __CALLER__)
