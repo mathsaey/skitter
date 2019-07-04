@@ -63,11 +63,11 @@ defmodule Skitter.Component.Handler do
   # ----- #
 
   @doc section: :hooks
-  def on_compile(c = %Component{handler: Meta}), do: Meta.on_compile(c)
+  def on_define(c = %Component{handler: Meta}), do: Meta.on_define(c)
 
-  def on_compile(c = %Component{handler: handler}) do
+  def on_define(c = %Component{handler: handler}) do
     # TODO: figure out state?
-    Component.call(handler, :on_compile, %{}, [c]).result
+    Component.call(handler, :on_define, %{}, [c]).result
   end
 
   # ------ #

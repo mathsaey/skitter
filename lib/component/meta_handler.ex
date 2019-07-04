@@ -9,8 +9,8 @@ defmodule Skitter.Component.MetaHandler do
 
   import Skitter.Component
 
-  def on_compile(component) do
+  def on_define(component) do
     component
-    |> require_callback(:on_compile, arity: 1)
+    |> require_callback(:on_define, arity: 1)
   end
 end

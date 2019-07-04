@@ -324,7 +324,7 @@ defmodule Skitter.Component do
           callbacks: unquote(callbacks),
           handler: unquote(__MODULE__)._expand_handler(unquote(handler))
         }
-        |> Skitter.Component.Handler.on_compile()
+        |> Skitter.Component.Handler.on_define()
         |> Skitter.Registry.put_if_named()
       end
     catch
