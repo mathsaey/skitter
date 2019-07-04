@@ -16,6 +16,15 @@ defmodule Skitter.ComponentTest do
   doctest Skitter.Component
 
   describe "defcomponent" do
+    test "__COMPONENT__ pseudovariable" do
+      comp = defcomponent __MODULE__.PseudoTest, in: [], out: comp do
+        cb do
+          __COMPONENT__ ~> comp
+        end
+      end
+      assert call(comp, :cb, %{}, []).publish == [comp: __MODULE__.PseudoTest]
+    end
+
     test "fields extraction" do
       comp =
         defcomponent in: [] do

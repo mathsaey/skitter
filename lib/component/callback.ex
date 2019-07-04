@@ -432,9 +432,11 @@ defimpl Inspect, for: Skitter.Component.Callback do
   defp state_cap_str(:none), do: "/"
   defp state_cap_str(:read), do: "R"
   defp state_cap_str(:readwrite), do: "RW"
+  defp state_cap_str(_), do: ""
 
   defp publish_cap_str(true), do: "✓"
   defp publish_cap_str(false), do: "x"
+  defp publish_cap_str(_), do: ""
 end
 
 defimpl Inspect, for: Skitter.Component.Callback.Result do

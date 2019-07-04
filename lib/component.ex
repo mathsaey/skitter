@@ -231,7 +231,11 @@ defmodule Skitter.Component do
       {in_ports, out_ports} = Port.parse_list(ports, __CALLER__)
 
       # Parse body
-      body = DSL.block_to_list(body)
+      body =
+        body
+        |> replace_pseudovariables(name)
+        |> DSL.block_to_list()
+
       {body, fields} = extract_fields(body, __CALLER__)
       {body, imports} = extract_reuse_directives(body)
       {body, handler} = extract_handler(body, imports, __CALLER__)
@@ -251,6 +255,13 @@ defmodule Skitter.Component do
     catch
       err -> handle_error(err)
     end
+  end
+
+  defp replace_pseudovariables(body, name) do
+    Macro.prewalk(body, fn
+      {:__COMPONENT__, _, a} when is_atom(a) -> name
+      any -> any
+    end)
   end
 
   # Find and remove field declarations in the AST, ensure only one field
