@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defcomponent Printer, in: value do
+defcomponent Printer, in: value, out: value do
   fields label
 
   init l do
@@ -13,5 +13,6 @@ defcomponent Printer, in: value do
 
   react value do
     IO.inspect value, label: label
+    value ~> value
   end
 end
