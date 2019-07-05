@@ -7,7 +7,10 @@
 defhandler DefaultComponentHandler do
   on_define c do
     c
-    |> default_callback(:init, [], do: nil)
+    |> default_callback(:init, defcallback([], [], [], do: nil))
+    |> default_callback(:terminate, defcallback([], [], [], do: nil))
+    |> require_callback(:init, state_capability: :readwrite)
+    |> require_callback(:terminate, state_capability: :read)
     |> require_callback(
       :react,
       arity: length(c.in_ports),
