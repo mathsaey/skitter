@@ -4,14 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import Config
+defmodule Skitter.Test.Handlers do
+  @moduledoc false
 
-config :skitter,
-  automatic_distribution: false,
-  automatic_connect: false,
-  load_builtins: false
+  import Skitter.Component.Handler
 
-config :logger,
-  compile_time_purge_matching: [
-    [level_lower_than: :warn]
-  ]
+  def register_empty_default_component_handler() do
+    defhandler DefaultComponentHandler, do: nil
+    :ok
+  end
+end
