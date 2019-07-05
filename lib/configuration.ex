@@ -52,6 +52,23 @@ defmodule Skitter.Configuration do
   def mode, do: get_env(:mode, :local)
 
   @doc """
+  Determines if the skitter built-ins should be loaded.
+
+  Skitter ships with a set of built-in handlers and components. When this option
+  is set to `true`, these will be loaded after the application is started.
+  By default, built-ins are always loaded when skitter is started in `local` or
+  `master` mode. Skitter does not automatically load built-ins in `worker` mode.
+  """
+  def load_builtins do
+    case {get_env(:load_builtins, nil), mode()} do
+      {nil, :worker} -> false
+      {nil, :master} -> true
+      {nil, :local} -> true
+      {any, _} -> any
+    end
+  end
+
+  @doc """
   Which worker nodes to automatically connect to, only used in `master` mode.
 
   Defaults to the empty list.

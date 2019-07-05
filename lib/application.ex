@@ -15,6 +15,7 @@ defmodule Skitter.Application do
     try do
       mode = Configuration.mode()
       nodes = Configuration.worker_nodes()
+      builtins? = Configuration.load_builtins()
 
       check_vm_features()
       ensure_distribution_enabled(mode)
@@ -24,6 +25,9 @@ defmodule Skitter.Application do
       sup = shared_children() ++ children(mode)
       res = Supervisor.start_link(sup, strategy: :one_for_one, name: __MODULE__)
       post_load(mode, nodes)
+
+      if builtins?, do: Builtins.load()
+
       res
     catch
       :distributed_local -> {:error, "Local nodes should not be distributed"}
@@ -48,14 +52,6 @@ defmodule Skitter.Application do
   end
 
   defp pre_load(_, _), do: nil
-
-  defp post_load(:master, _) do
-    Builtins.load()
-  end
-
-  defp post_load(:local, _) do
-    Builtins.load()
-  end
 
   # Temporary disable this until nodes are up and running again
   defp post_load(_, _), do: nil
