@@ -8,19 +8,19 @@ defmodule Skitter.HandlerError do
   @moduledoc """
   This module can be raised by handlers.
   """
-  defexception [:handler, :message]
+  alias Skitter.Component
+
+  defexception [:handler, :component, :message]
 
   @impl true
-  def message(%__MODULE__{handler: handler, message: message}) do
-    "Handler `#{handler}` raised error:\n\t#{message}"
+  def message(%__MODULE__{handler: h, component: c, message: m}) do
+    h = comp_to_string(h)
+    c = comp_to_string(c)
+    "Handler #{h} raised error for component #{c}:\n#{m}"
   end
 
-  @doc """
-  Raise a handler error where `handler` is set to the current module.
-  """
-  defmacro error(message) do
-    quote do
-      raise(unquote(__MODULE__), message: unquote(message), handler: __MODULE__)
-    end
-  end
+  defp comp_to_string(%Component{name: name}) when name != nil, do: name
+  defp comp_to_string(c = %Component{}), do: inspect(c)
+  defp comp_to_string(Component.MetaHandler), do: Meta
+  defp comp_to_string(nil), do: ""
 end
