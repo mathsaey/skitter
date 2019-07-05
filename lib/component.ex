@@ -117,28 +117,7 @@ defmodule Skitter.Component do
   def meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
   def meta_component?(_), do: false
 
-  defmacro default_callback(component, name, args, do: body) do
-    quote do
-      import Skitter.Component.Callback, only: [defcallback: 4]
-
-      cb =
-        defcallback(
-          unquote(component).fields,
-          unquote(component).out_ports,
-          unquote(args),
-          do: unquote(body)
-        )
-
-      unquote(__MODULE__)._default_callback(
-        unquote(component),
-        unquote(name),
-        cb
-      )
-    end
-  end
-
-  @doc false
-  def _default_callback(component, name, cb) do
+  def default_callback(component, name, cb) do
     if Map.has_key?(component.callbacks, name) do
       component
     else
@@ -397,14 +376,26 @@ defmodule Skitter.Component do
   end
 
   # Transform a `name args do ... end` ast node into a defcallback call.
+  # Make sure to add the imports as a part of the body.
   defp transform_callback({name, _, args}, imports, fields, out) do
-    {args, [body]} = Enum.split(args, -1)
+    {args, [[do: body]]} = Enum.split(args, -1)
 
     body =
       quote do
         unquote(imports)
+        unquote(body)
+      end
+
+    body =
+      quote do
         import unquote(__MODULE__.Callback), only: [defcallback: 4]
-        defcallback(unquote(fields), unquote(out), unquote(args), unquote(body))
+
+        defcallback(
+          unquote(fields),
+          unquote(out),
+          unquote(args),
+          do: unquote(body)
+        )
       end
 
     {name, body}

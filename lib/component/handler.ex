@@ -18,9 +18,8 @@ defmodule Skitter.Component.Handler do
 
   # TODO: Allow workflow handlers
   """
-  alias Skitter.Component.Callback
   alias Skitter.Component.MetaHandler, as: Meta
-  alias Skitter.{Component, Workflow, Registry, HandlerError}
+  alias Skitter.{Component, Workflow, Registry}
 
   @typedoc """
   Reactive component handler type.
@@ -95,6 +94,7 @@ defmodule Skitter.Component.Handler do
       import Skitter.Component
 
       defcomponent unquote(name), in: [] do
+        import Skitter.Component.Callback
         handler(Meta)
         unquote(body)
       end
