@@ -15,6 +15,7 @@ defmodule Skitter.Component.Handler do
   act as a component handler.
 
   # TODO: Allow workflow handlers
+  # TODO: Allow handler options
   """
   alias Skitter.Component.MetaHandler, as: Meta
   alias Skitter.{Component, Workflow, Registry}
@@ -83,7 +84,8 @@ defmodule Skitter.Component.Handler do
     body =
       case body do
         {:__block__, _, []} -> nil
-        any -> any
+        {:__block__, _, lst} -> lst
+        any -> [any]
       end
 
     quote do
@@ -97,7 +99,7 @@ defmodule Skitter.Component.Handler do
         import Skitter.Component.Callback, only: [defcallback: 4]
 
         handler(Meta)
-        unquote(body)
+        unquote_splicing(body)
       end
     end
   end
