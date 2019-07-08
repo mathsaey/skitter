@@ -5,17 +5,22 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defhandler DefaultComponentHandler do
-  on_define c do
-    c
-    |> default_callback(:init, defcallback([], [], [], do: nil))
-    |> default_callback(:terminate, defcallback([], [], [], do: nil))
-    |> require_callback(:init, state_capability: :readwrite)
-    |> require_callback(:terminate, state_capability: :read)
-    |> require_callback(
-      :react,
-      arity: length(c.in_ports),
-      state_capability: :read,
-      publish_capability: true
-    )
-  end
+   on_define c do
+     c
+     |> default_callback(:init, defcallback([], [], [], do: nil))
+     |> default_callback(:terminate, defcallback([], [], [], do: nil))
+     |> require_callback(:init, state_capability: :readwrite)
+     |> require_callback(:terminate, state_capability: :read)
+     |> require_callback(
+       :react,
+       arity: length(c.in_ports),
+       state_capability: :read,
+       publish_capability: true
+     )
+   end
+
+  on_instantiate instance do
+    instance
+    |> require_instantiation_arity(instance.component.callbacks.init.arity)
+   end
 end

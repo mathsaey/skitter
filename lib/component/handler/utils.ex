@@ -17,6 +17,8 @@ defmodule Skitter.Component.Handler.Utils do
 
   alias Skitter.HandlerError
 
+  def error(for, message), do: raise HandlerError, for: for, message: message
+
   # --------- #
   # on_define #
   # --------- #
@@ -70,6 +72,20 @@ defmodule Skitter.Component.Handler.Utils do
               "#{publish}, arity: #{arity}.\n" <>
               "Got: #{inspect(component.callbacks[name])}"
     end
+  end
+
+  # -------------- #
+  # on_instantiate #
+  # -------------- #
+
+  def require_instantiation_arity(instance, arity) do
+    length = length(instance.instantiation) 
+    unless length == arity do
+      raise HandlerError,
+        for: instance,
+        message: "Component expects #{arity} arguments, received #{length}"
+    end
+    instance
   end
 
   defdelegate create_empty_state(component), to: Component
