@@ -19,6 +19,7 @@ defmodule Skitter.Component.Handler do
   """
   alias Skitter.Component.MetaHandler, as: Meta
   alias Skitter.{Component, Workflow, Registry}
+  alias Skitter.Component.Instance
 
   @typedoc """
   Reactive component handler type.
@@ -64,6 +65,15 @@ defmodule Skitter.Component.Handler do
   def on_define(c = %Component{handler: handler}) do
     # TODO: figure out state?
     Component.call(handler, :on_define, %{}, [c]).result
+  end
+
+  @doc section: :hooks
+  def on_instantiate(i = %Instance{component: %Component{handler: Meta}}) do
+    Meta.on_instantiate(i)
+  end
+
+  def on_instantiate(i = %Instance{component: %Component{handler: handler}}) do
+    Component.call(handler, :on_instantiate, %{}, [i]).result
   end
 
   # ------ #
