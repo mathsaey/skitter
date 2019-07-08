@@ -14,20 +14,60 @@ defmodule Skitter.Component.CallbackTest do
   import Skitter.Component.Callback
   doctest Skitter.Component.Callback
 
+  describe "internal utility functions: " do
+    test "check_permissions" do
+      c1 = %Callback{state_capability: :read, publish_capability: true}
+      assert check_permissions(c1, :readwrite, true) == true
+      assert check_permissions(c1, :none, true) == false
+
+      c2 = %Callback{state_capability: :none, publish_capability: true}
+      assert check_permissions(c2, :none, true) == true
+      assert check_permissions(c2, :none, false) == false
+
+      c3 = %Callback{state_capability: :none, publish_capability: false}
+      assert check_permissions(c3, :none, false) == true
+      assert check_permissions(c3, :none, true) == true
+    end
+
+    test "check_arity" do
+      c = %Callback{arity: 1}
+      assert check_arity(c, 1) == true
+      assert check_arity(c, 3) == false
+      assert check_arity(c, -1) == true
+    end
+
+    test "call" do
+      c =
+        defcallback([:field], [:out], [arg1, arg2]) do
+          field <~ (field + arg1)
+          arg2 ~> out
+          field
+        end
+
+      assert call(c, %{field: 1}, [2, 3]) == %Result{
+               state: %{field: 3},
+               publish: [out: 3],
+               result: 3
+             }
+    end
+  end
+
   describe "defcallback" do
     test "`:none` state capability" do
-      c = defcallback([:field], [], []) do
-        10
-      end
+      c =
+        defcallback([:field], [], []) do
+          10
+        end
 
       assert c.state_capability == :none
       assert call(c, %{field: nil}, []).state == nil
     end
 
     test "`:read` state capability" do
-      c = defcallback([:field], [], []) do
-        field
-      end
+      c =
+        defcallback([:field], [], []) do
+          field
+        end
 
       assert c.state_capability == :read
 
@@ -37,40 +77,45 @@ defmodule Skitter.Component.CallbackTest do
     end
 
     test "`:readwrite` state capability" do
-      c = defcallback([:field], [], []) do
-        field <~ 30
-      end
+      c =
+        defcallback([:field], [], []) do
+          field <~ 30
+        end
 
       assert c.state_capability == :readwrite
       assert call(c, %{field: nil}, []).state == %{field: 30}
     end
 
     test "no publish" do
-      c = defcallback([], [:out], []) do
-        5
-      end
+      c =
+        defcallback([], [:out], []) do
+          5
+        end
 
       assert c.publish_capability == false
       assert call(c, %{}, []).publish == nil
     end
 
     test "publish" do
-      c = defcallback([], [:out], []) do
-        5 ~> out
-      end
+      c =
+        defcallback([], [:out], []) do
+          5 ~> out
+        end
 
       assert c.publish_capability == true
       assert call(c, %{}, []).publish == [out: 5]
     end
 
     test "arguments and arity" do
-      c1 = defcallback([], [], [arg]) do
-        arg
-      end
+      c1 =
+        defcallback([], [], [arg]) do
+          arg
+        end
 
-      c2 = defcallback([], [], [arg1, arg2]) do
-        arg1 + arg2
-      end
+      c2 =
+        defcallback([], [], [arg1, arg2]) do
+          arg1 + arg2
+        end
 
       assert c1.arity == 1
       assert c2.arity == 2

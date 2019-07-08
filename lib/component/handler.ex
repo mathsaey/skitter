@@ -9,12 +9,10 @@ defmodule Skitter.Component.Handler do
   Reactive component handler utilities.
 
   Handlers determine the behaviour of a component at compile -and runtime.
-  This module documents handlers, and provides (private) utility functions which
-  are used by skitter infrastructure to call these hooks at the appropriate
-  time.
-
-  Finally, it provides a macro which allows one to implement a
-  component which acts as a component handler.
+  This module documents the handler type, and documents the hooks a handler can
+  use to determine the behaviour of a component. Finally, it provides the
+  `defhandler/2` macro, which can be used to implement a component which can
+  act as a component handler.
 
   # TODO: Allow workflow handlers
   """
@@ -37,25 +35,23 @@ defmodule Skitter.Component.Handler do
   # Utilities #
   # --------- #
 
-  @doc """
-  Verify if a handler is valid, as described in `t:t/0`
-  """
+  @doc false
   def valid?(Meta), do: true
-  def valid?(h = %Component{}), do: Component.meta_component?(h)
+  def valid?(h = %Component{}), do: Component.meta?(h)
   def valid?(_), do: false
 
   @doc false
-  def _expand(Meta), do: Meta
-  def _expand(handler = %Component{handler: Meta}), do: handler
+  def expand(Meta), do: Meta
+  def expand(handler = %Component{handler: Meta}), do: handler
 
-  def _expand(name) when is_atom(name) do
+  def expand(name) when is_atom(name) do
     case Registry.get(name) do
       nil -> throw {:error, :invalid_name, name}
-      handler -> _expand(handler)
+      handler -> expand(handler)
     end
   end
 
-  def _expand(any), do: throw({:error, :invalid_handler, any})
+  def expand(any), do: throw({:error, :invalid_handler, any})
 
   # ----- #
   # Hooks #
@@ -94,7 +90,12 @@ defmodule Skitter.Component.Handler do
       import Skitter.Component
 
       defcomponent unquote(name), in: [] do
-        import Skitter.Component.Callback
+        alias Skitter.Component
+        alias Skitter.Component.{Callback, Instance}
+
+        import Skitter.Component.Handler.Utils
+        import Skitter.Component.Callback, only: [defcallback: 4]
+
         handler(Meta)
         unquote(body)
       end

@@ -13,14 +13,15 @@ defmodule Skitter.Component do
   reactive workflow.
 
   This module defines the internal representation of a skitter component as an
-  elixir struct (`t:t/0`) along with some utilities to modify and query
-  reactive components.
+  elixir struct (`t:t/0`) along with `defcomponent/3`, a DSL to create reactive
+  components.
   """
+  alias Skitter.DefinitionError
   alias Skitter.{Port, DSL, Registry}
-  alias Skitter.{DefinitionError, HandlerError}
 
   alias DefaultComponentHandler, as: Default
 
+  alias Skitter.Component
   alias Skitter.Component.{Callback, Handler}
   alias Skitter.Component.MetaHandler, as: Meta
 
@@ -76,6 +77,10 @@ defmodule Skitter.Component do
   """
   @type callback_name :: atom()
 
+  # --------- #
+  # Utilities #
+  # --------- #
+
   @doc """
   Call a specific callback of the component.
 
@@ -91,7 +96,7 @@ defmodule Skitter.Component do
   """
   @spec call(t(), callback_name(), Callback.state(), [any()]) ::
           Callback.result()
-  def call(component = %__MODULE__{}, callback_name, state, arguments) do
+  def call(component = %Component{}, callback_name, state, arguments) do
     Callback.call(component.callbacks[callback_name], state, arguments)
   end
 
@@ -105,64 +110,15 @@ defmodule Skitter.Component do
       iex> create_empty_state(%Component{fields: []})
       %{}
   """
-  @spec create_empty_state(t()) :: Callback.state()
-  def create_empty_state(%__MODULE__{fields: fields}) do
+  @spec create_empty_state(Component.t()) :: Callback.state()
+  def create_empty_state(%Component{fields: fields}) do
     Map.new(fields, &{&1, nil})
   end
 
-  @doc """
-  Verify if a component is a meta-component
-  """
-  def meta_component?(%__MODULE__{handler: Meta}), do: true
-  def meta_component?(a) when is_atom(a), do: meta_component?(Registry.get(a))
-  def meta_component?(_), do: false
-
-  def default_callback(component, name, cb) do
-    if Map.has_key?(component.callbacks, name) do
-      component
-    else
-      %{component | callbacks: Map.put(component.callbacks, name, cb)}
-    end
-  end
-
-  @doc """
-  Ensure a component defines a given callback.
-
-  Ensures `component` has a callback named `name` with a certain arity, state
-  -and publish capability. If this is not the case, it raises a handler error.
-  If it is the case, the component is returned unchanged.
-
-  The following options can be provided:
-  - `arity`: the arity the callback should have, defaults to `-1`, which accepts
-  any arity.
-  - `state_capability`: the state capability that is allowed, defaults to `none`
-  - `publish_capability`: the publish capability that is allowed, defaults to
-  `false`
-  """
-  def require_callback(component, name, opts \\ []) do
-    arity = Keyword.get(opts, :arity, -1)
-    state = Keyword.get(opts, :state_capability, :none)
-    publish = Keyword.get(opts, :publish_capability, false)
-
-    with cb = %Callback{} <- component.callbacks[name],
-         true <- Callback.check_permissions(cb, state, publish),
-         true <- Callback.check_arity(cb, arity) do
-      component
-    else
-      nil ->
-        raise HandlerError,
-          component: component,
-          message: "`#{inspect(component)} is missing `#{name}` callback"
-
-      false ->
-        raise HandlerError,
-          component: component,
-          message:
-            "Invalid implementation of `#{name}`: requires " <>
-              "state_capability: #{state}, publish_capability: #{publish} " <>
-              "and arity: #{arity}, got: #{inspect(component.callbacks[name])}"
-    end
-  end
+  @doc false
+  def meta?(%__MODULE__{handler: Meta}), do: true
+  def meta?(a) when is_atom(a), do: meta?(Registry.get(a))
+  def meta?(_), do: false
 
   # ------ #
   # Macros #
@@ -301,7 +257,7 @@ defmodule Skitter.Component do
           in_ports: unquote(in_ports),
           out_ports: unquote(out_ports),
           callbacks: unquote(callbacks),
-          handler: unquote(__MODULE__)._expand_handler(unquote(handler))
+          handler: unquote(__MODULE__).expand_handler(unquote(handler))
         }
         |> Skitter.Component.Handler.on_define()
         |> Skitter.Registry.put_if_named()
@@ -402,9 +358,9 @@ defmodule Skitter.Component do
   end
 
   @doc false
-  def _expand_handler(handler) do
+  def expand_handler(handler) do
     try do
-      Handler._expand(handler)
+      Handler.expand(handler)
     catch
       err -> handle_error(err)
     end

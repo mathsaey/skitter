@@ -27,7 +27,7 @@ defmodule Skitter.Component.Instance do
         }
 
   @doc false
-  # Create a new instance with an added link
+  @spec add_link(t(), Port.t(), Workflow.destination()) :: t()
   def add_link(i = %__MODULE__{links: links}, port, destination) do
     %{i | links: Map.update(links, port, [destination], &[destination | &1])}
   end

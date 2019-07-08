@@ -12,8 +12,8 @@ defmodule Skitter.Component.Callback do
   `Skitter.Component`. Internally, a callback is defined as an anonymous
   function and some metadata.
 
-  This module also contains `defcallback/4`, a DSL which can be used to define
-  callbacks.
+  This module contains the definition of a callback, and `defcallback/4`, a
+  macro which can be used to define callbacks.
   """
   alias Skitter.{Component, Port, DSL, DefinitionError}
 
@@ -116,44 +116,9 @@ defmodule Skitter.Component.Callback do
   # Utilities
   # ---------
 
-  @doc """
-  Check if the callback adheres to its capabilities.
-
-  Concretely, this means that the callback does not access the state or publish
-  data when it is not allowed to.
-
-  Note that a callback may have a permission without using it. E.g. a callback
-  may have a `:readwrite` state capability and only read the state or not
-  access it at all.
-
-  ## Examples
-
-      iex> check_permissions(
-      ...>  %Callback{state_capability: :read, publish_capability: true},
-      ...>  :readwrite,
-      ...>  true
-      ...> )
-      true
-      iex> check_permissions(
-      ...>  %Callback{state_capability: :read, publish_capability: true},
-      ...>  :none,
-      ...>  true
-      ...> )
-      false
-      iex> check_permissions(
-      ...>  %Callback{state_capability: :none, publish_capability: true},
-      ...>  :none,
-      ...>  false
-      ...> )
-      false
-      iex> check_permissions(
-      ...>  %Callback{state_capability: :none, publish_capability: false},
-      ...>  :none,
-      ...>  false
-      ...> )
-      true
-  """
-  @spec check_permissions(t(), state_capability(), boolean()) :: boolean()
+  @doc false
+  @spec check_permissions(t(), state_capability(), publish_capability()) ::
+          boolean()
   def check_permissions(
         cb = %__MODULE__{},
         state_capability,
@@ -163,40 +128,16 @@ defmodule Skitter.Component.Callback do
       (cb.publish_capability == publish_capability or publish_capability)
   end
 
-  @doc """
-  Check if the arity of a component is equal to a given number.
-
-  Using this function with negative numbers always returns 0
-
-  ## Examples
-
-      iex> check_arity(%Callback{arity: 1}, 1)
-      true
-      iex> check_arity(%Callback{arity: 1}, 3)
-      false
-      iex> check_arity(%Callback{arity: 1}, -1)
-      true
-  """
-  def check_arity(%__MODULE__{}, n) when n < 0, do: true
-  def check_arity(%__MODULE__{arity: cb}, wanted), do: cb == wanted
-
   defp state_order(:none), do: 0
   defp state_order(:read), do: 1
   defp state_order(:readwrite), do: 2
 
-  @doc """
-  Call the callback.
+  @doc false
+  @spec check_arity(t(), integer()) :: boolean()
+  def check_arity(%__MODULE__{}, n) when n < 0, do: true
+  def check_arity(%__MODULE__{arity: cb}, wanted), do: cb == wanted
 
-  ## Examples
-
-      iex> cb = defcallback([:field], [:out], [arg1, arg2]) do
-      ...>  field <~ field + arg1
-      ...>  arg2 ~> out
-      ...>  field
-      ...> end
-      iex> call(cb, %{field: 1}, [2, 3])
-      %Result{state: %{field: 3}, publish: [out: 3], result: 3}
-  """
+  @doc false
   @spec call(t(), state(), [any()]) :: result()
   def call(%__MODULE__{function: f}, state, args), do: f.(state, args)
 
@@ -431,7 +372,12 @@ defimpl Inspect, for: Skitter.Component.Callback do
 
   def inspect(cb, opts) do
     container_doc(
-      "#Callback<", Map.to_list(cb), ">", opts, &doc/2, break: :flex
+      "#Callback<",
+      Map.to_list(cb),
+      ">",
+      opts,
+      &doc/2,
+      break: :flex
     )
   end
 
@@ -465,7 +411,8 @@ defimpl Inspect, for: Skitter.Component.Callback.Result do
   end
 
   defp doc({:__struct__, _}, _), do: empty()
-  defp doc({e, nil}, _) when e  in [:state, :publish], do: empty()
+  defp doc({e, nil}, _) when e in [:state, :publish], do: empty()
+
   defp doc({field, value}, opts) do
     glue(Atom.to_string(field), ": ", to_doc(value, opts))
   end
