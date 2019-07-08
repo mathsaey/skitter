@@ -35,6 +35,7 @@ end
 
 defimpl Inspect, for: Skitter.Component.Instance do
   import Inspect.Algebra
+  alias Skitter.Component
 
   def inspect(inst, opts) do
     container_doc("#Instance<", Map.to_list(inst), ">", opts, &doc/2)
@@ -42,7 +43,9 @@ defimpl Inspect, for: Skitter.Component.Instance do
 
   defp doc({:__struct__, _}, _), do: empty()
 
-  defp doc({:component, c}, opts), do: to_doc(c, opts)
+  defp doc({:component, c = %Component{name: nil}}, opts), do: to_doc(c, opts)
+  defp doc({:component, %Component{name: name}}, opts), do: to_doc(name, opts)
+
   defp doc({:instantiation, i}, opts), do: to_doc(i, opts)
   defp doc({:links, lst}, opts), do: links_to_doc(lst, opts)
 
