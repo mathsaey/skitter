@@ -10,17 +10,21 @@ defmodule Skitter.HandlerError do
   """
   alias Skitter.Component
 
-  defexception [:handler, :component, :message]
+  defexception [:handler, :message, :for]
 
   @impl true
-  def message(%__MODULE__{handler: h, component: c, message: m}) do
-    h = comp_to_string(h)
-    c = comp_to_string(c)
-    "Handler #{h} raised error for component #{c}:\n#{m}"
+  def message(%__MODULE__{handler: h, message: m, for: nil}) do
+    h = handler_to_string(h)
+    "Handler #{h} raised error:\n#{m}"
   end
 
-  defp comp_to_string(%Component{name: name}) when name != nil, do: name
-  defp comp_to_string(c = %Component{}), do: inspect(c)
-  defp comp_to_string(Component.MetaHandler), do: Meta
-  defp comp_to_string(nil), do: ""
+  def message(%__MODULE__{handler: h, message: m, for: f}) do
+    h = handler_to_string(h)
+    "Handler #{h} raised error for #{inspect(f)}:\n#{m}"
+  end
+
+  defp handler_to_string(%Component{name: name}) when name != nil, do: name
+  defp handler_to_string(c = %Component{}), do: inspect(c)
+  defp handler_to_string(Component.MetaHandler), do: Meta
+  defp handler_to_string(nil), do: ""
 end

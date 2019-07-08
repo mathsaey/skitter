@@ -43,7 +43,9 @@ defmodule Skitter.Component.Handler.Utils do
   - `publish_capability`: the publish capability that is allowed, defaults to
   `false`
   """
-  @spec require_callback(Component.t(), Component.callback_name(), [(:ok | :error)]) :: :ok
+  @spec require_callback(Component.t(), Component.callback_name(), [
+          :ok | :error
+        ]) :: :ok
   def require_callback(component, name, opts \\ []) do
     arity = Keyword.get(opts, :arity, -1)
     state = Keyword.get(opts, :state_capability, :none)
@@ -56,16 +58,17 @@ defmodule Skitter.Component.Handler.Utils do
     else
       nil ->
         raise HandlerError,
-          component: component,
-          message: "`#{inspect(component)} is missing `#{name}` callback"
+          for: component,
+          message: "Missing `#{name}` callback"
 
       false ->
         raise HandlerError,
-          component: component,
+          for: component,
           message:
-            "Invalid implementation of `#{name}`: requires " <>
-              "state_capability: #{state}, publish_capability: #{publish} " <>
-              "and arity: #{arity}, got: #{inspect(component.callbacks[name])}"
+            "Invalid implementation of #{name}.\n" <>
+              "Wanted: state_capability: #{state}, publish_capability: " <>
+              "#{publish}, arity: #{arity}.\n" <>
+              "Got: #{inspect(component.callbacks[name])}"
     end
   end
 
