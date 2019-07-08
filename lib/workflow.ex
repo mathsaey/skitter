@@ -72,6 +72,8 @@ defmodule Skitter.Workflow do
       instances = read_instance_links(links, instances)
       links = read_workflow_links(links)
 
+      instances = instances |> Enum.map(&instantiate(&1)) |> Enum.into(%{})
+
       %__MODULE__{
         name: name,
         in_ports: in_ports,
@@ -141,6 +143,10 @@ defmodule Skitter.Workflow do
       _, links ->
         links
     end)
+  end
+
+  defp instantiate({name, instance}) do
+    {name, Component.Handler.on_instantiate(instance)}
   end
 
   # ------ #
