@@ -17,17 +17,25 @@ defmodule Skitter.Component.Handler.Utils do
 
   alias Skitter.HandlerError
 
-  def error(for, message), do: raise HandlerError, for: for, message: message
+  def error(for, message), do: raise(HandlerError, for: for, message: message)
 
   # --------- #
   # on_define #
   # --------- #
 
-  def default_callback(component, name, cb) do
+  @doc """
+  Add `callback` to `component` with `name` if it does not exist yet.
+  """
+  @spec default_callback(
+          Component.t(),
+          Component.callback_name(),
+          Callback.t()
+        ) :: Component.t()
+  def default_callback(component, name, callback) do
     if Map.has_key?(component.callbacks, name) do
       component
     else
-      %{component | callbacks: Map.put(component.callbacks, name, cb)}
+      %{component | callbacks: Map.put(component.callbacks, name, callback)}
     end
   end
 
@@ -45,32 +53,33 @@ defmodule Skitter.Component.Handler.Utils do
   - `publish_capability`: the publish capability that is allowed, defaults to
   `false`
   """
-  @spec require_callback(Component.t(), Component.callback_name(), [
-          :ok | :error
-        ]) :: :ok
+  @spec require_callback(Component.t(), Component.callback_name(),
+          arity: non_neg_integer(),
+          state: Callback.state_capability(),
+          publish: Callback.publish_capability()
+        ) ::
+          Component.t() | no_return()
   def require_callback(component, name, opts \\ []) do
     arity = Keyword.get(opts, :arity, -1)
     state = Keyword.get(opts, :state_capability, :none)
     publish = Keyword.get(opts, :publish_capability, false)
 
-    with cb = %Callback{} <- component.callbacks[name],
-         true <- Callback.check_permissions(cb, state, publish),
-         true <- Callback.check_arity(cb, arity) do
-      component
-    else
-      nil ->
-        raise HandlerError,
-          for: component,
-          message: "Missing `#{name}` callback"
+    if cb = Map.get(component.callbacks, name) do
+      permissions? = Callback.check_permissions(cb, state, publish)
+      arity? = Callback.check_arity(cb, arity)
 
-      false ->
+      if permissions? and arity? do
+        component
+      else
         raise HandlerError,
           for: component,
           message:
             "Invalid implementation of #{name}.\n" <>
               "Wanted: state_capability: #{state}, publish_capability: " <>
-              "#{publish}, arity: #{arity}.\n" <>
-              "Got: #{inspect(component.callbacks[name])}"
+              "#{publish}, arity: #{arity}.\n Got: #{inspect(cb)}"
+      end
+    else
+      raise HandlerError, for: component, message: "Missing `#{name}` callback"
     end
   end
 
@@ -79,12 +88,14 @@ defmodule Skitter.Component.Handler.Utils do
   # -------------- #
 
   def require_instantiation_arity(instance, arity) do
-    length = length(instance.instantiation) 
+    length = length(instance.instantiation)
+
     unless length == arity do
       raise HandlerError,
         for: instance,
         message: "Component expects #{arity} arguments, received #{length}"
     end
+
     instance
   end
 

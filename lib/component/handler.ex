@@ -26,7 +26,7 @@ defmodule Skitter.Component.Handler do
 
   A reactive component handler is one of the following:
   - A meta-component
-  - A workflow that consists of meta-components
+  - A workflow that contains an out -and in-port for each handler hook.
   - `Meta`. When this handler is used, it specifies that a meta-component is
   being defined. A component which uses the `Meta` handler can be used as a
   handler for other components.
@@ -60,11 +60,12 @@ defmodule Skitter.Component.Handler do
   # ----- #
 
   @doc section: :hooks
-  def on_define(c = %Component{handler: Meta}), do: Meta.on_define(c)
+  def on_define(c = %Component{handler: Meta}) do
+    Meta.on_define(c)
+  end
 
   def on_define(c = %Component{handler: handler}) do
-    # TODO: figure out state?
-    Component.call(handler, :on_define, %{}, [c]).result
+    Component.call(handler, :on_define, %{}, [c]).publish[:component]
   end
 
   @doc section: :hooks
@@ -73,7 +74,7 @@ defmodule Skitter.Component.Handler do
   end
 
   def on_instantiate(i = %Instance{component: %Component{handler: handler}}) do
-    Component.call(handler, :on_instantiate, %{}, [i]).result
+    Component.call(handler, :on_instantiate, %{}, [i]).publish[:instance]
   end
 
   # ------ #
@@ -101,12 +102,14 @@ defmodule Skitter.Component.Handler do
     quote do
       import Skitter.Component
 
-      defcomponent unquote(name), in: [] do
+      defcomponent unquote(name),
+        in: [component, instance],
+        out: [component, instance] do
         alias Skitter.Component
         alias Skitter.Component.{Callback, Instance}
 
         import Skitter.Component.Handler.Utils
-        import Skitter.Component.Callback, only: [defcallback: 4]
+        import Skitter.Component.Callback
 
         handler(Meta)
         unquote_splicing(body)

@@ -6,7 +6,7 @@
 
 defmodule Skitter.HandlerError do
   @moduledoc """
-  This module can be raised by handlers.
+  This exception can be raised by handlers.
   """
   alias Skitter.Component
 
@@ -20,8 +20,12 @@ defmodule Skitter.HandlerError do
 
   def message(%__MODULE__{handler: h, message: m, for: f}) do
     h = handler_to_string(h)
-    "Handler #{h} raised error for #{inspect(f)}:\n#{m}"
+    f = for_to_string(f)
+    "Handler #{h} raised error for #{f}:\n#{m}"
   end
+
+  defp for_to_string(%Component{name: name}), do: name
+  defp for_to_string(any), do: inspect(any)
 
   defp handler_to_string(%Component{name: name}) when name != nil, do: name
   defp handler_to_string(c = %Component{}), do: inspect(c)
