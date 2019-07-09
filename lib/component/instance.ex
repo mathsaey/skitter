@@ -12,9 +12,9 @@ defmodule Skitter.Component.Instance do
   inside of a reactive workflow. It is defined by its reactive component, its
   instantiation parameters and its links to other instances.
   """
-  alias Skitter.{Component, Workflow, Port}
+  alias Skitter.Component
 
-  defstruct component: nil, instantiation: [], links: %{}
+  defstruct component: nil, instantiation: []
 
   @typedoc """
   A component instance stores its component, instantiation parameters and its
@@ -22,15 +22,8 @@ defmodule Skitter.Component.Instance do
   """
   @type t :: %__MODULE__{
           component: Component.t(),
-          instantiation: [any()],
-          links: %{optional(Port.t()) => [Workflow.destination()]}
+          instantiation: [any()]
         }
-
-  @doc false
-  @spec add_link(t(), Port.t(), Workflow.destination()) :: t()
-  def add_link(i = %__MODULE__{links: links}, port, destination) do
-    %{i | links: Map.update(links, port, [destination], &[destination | &1])}
-  end
 end
 
 defimpl Inspect, for: Skitter.Component.Instance do
@@ -47,19 +40,4 @@ defimpl Inspect, for: Skitter.Component.Instance do
   defp doc({:component, %Component{name: name}}, opts), do: to_doc(name, opts)
 
   defp doc({:instantiation, i}, opts), do: to_doc(i, opts)
-  defp doc({:links, lst}, opts), do: links_to_doc(lst, opts)
-
-  defp links_to_doc(links, opts) do
-    group(
-      links
-      |> Enum.map(fn {out, lst} ->
-        container_doc("#{out} ~> {", lst, "}", opts, &dest_doc/2, break: :flex)
-      end)
-      |> Enum.intersperse(break("; "))
-      |> concat()
-    )
-  end
-
-  defp dest_doc({nil, port}, _), do: string(Atom.to_string(port))
-  defp dest_doc({id, port}, _), do: string("#{id}.#{port}")
 end

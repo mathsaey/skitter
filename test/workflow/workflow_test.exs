@@ -72,9 +72,14 @@ defmodule Skitter.WorkflowTest do
         b.y ~> y
       end
 
-      assert w.links == %{a: [{:a, :b}, {:a, :a}], b: [{:a, :c}]}
-      assert w.instances.a.links == %{x: [{:b, :b}, {:b, :a}]}
-      assert w.instances.b.links == %{x: [{nil, :x}], y: [{nil, :y}]}
+      assert w.links == %{
+        {nil, :a} => [{:a, :b}, {:a, :a}],
+        {nil, :b} => [{:a, :c}],
+
+        {:a, :x} => [b: :b, b: :a],
+        {:b, :x} => [nil: :x],
+        {:b, :y} => [nil: :y]
+      }
     end
 
     test "errors", %{component: c} do

@@ -26,16 +26,13 @@ defmodule Skitter.Workflow do
   Like a component, a workflow had a set of in -and out ports, and an optional
   name. On top of this, the workflow stores the links between its in-ports and
   in-ports of components.
-
-  NOTE: In a future version of skitter, the map that contains the instances may
-  be replaced by an array for more efficient indexing.
   """
   @type t :: %__MODULE__{
           name: String.t() | nil,
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
           instances: %{optional(id()) => Component.Instance.t()},
-          links: %{required(Port.t()) => [destination()]}
+          links: %{required(address()) => [address()]}
         }
 
   @typedoc """
@@ -44,13 +41,20 @@ defmodule Skitter.Workflow do
   @type id() :: atom()
 
   @typedoc """
-  Destination of a link (i.e. an edge) in a workflow.
+  Address of a port in a workflow.
 
-  A link can either point to a `t:Skitter.Port.t/0` of an instance, or to a port
-  of the workflow itself. In the former case, an `t:address/0` is used; in the
-  latter case, `nil` is used.
+  An address can refer to a `t:Skitter.Port.t/0` of an instance in the workflow,
+  or to a port of the workflow itself.
+
+  An address is a tuple which identifies an instance in the workflow, and a port
+  of this instance. When the address refers to a workflow port, the instance is
+  replaced by `nil`.
+
+  Note that it is possible for an in -and out port in a workflow to share an
+  address. This happens when a component or workflow defines an in -and out port
+  with the same name.
   """
-  @type destination :: {id() | nil, Port.t()}
+  @type address() :: {id() | nil, Port.t()}
 
   # ------------------ #
   # Workflow Expansion #
@@ -66,13 +70,15 @@ defmodule Skitter.Workflow do
   def _create_workflow(name, in_ports, out_ports, instances, links) do
     try do
       instances =
-        instances |> Enum.map(&read_name/1) |> Map.new(&create_instance/1)
+        instances
+        |> Enum.map(&expand_name/1)
+        |> Enum.map(&create_instance/1)
+        |> Enum.into(%{})
 
-      verify_links(links, instances, in_ports, out_ports)
-      instances = read_instance_links(links, instances)
-      links = read_workflow_links(links)
-
-      instances = instances |> Enum.map(&instantiate(&1)) |> Enum.into(%{})
+      links =
+        links
+        |> verify_links(instances, in_ports, out_ports)
+        |> read_links()
 
       %__MODULE__{
         name: name,
@@ -87,17 +93,21 @@ defmodule Skitter.Workflow do
     end
   end
 
-  defp read_name({name, comp, args}) when is_atom(comp) do
+  defp expand_name({name, comp, args}) when is_atom(comp) do
     case Registry.get(comp) do
       nil -> throw {:error, :invalid_name, comp}
       res -> {name, res, args}
     end
   end
 
-  defp read_name(any), do: any
+  defp expand_name(any), do: any
 
   defp create_instance({name, comp, args}) do
-    {name, %Instance{component: comp, instantiation: args}}
+    {name,
+     Component.Handler.on_instantiate(%Instance{
+       component: comp,
+       instantiation: args
+     })}
   end
 
   defp verify_links(links, instances, in_ports, out_ports) do
@@ -105,6 +115,8 @@ defmodule Skitter.Workflow do
       verify_port(source, instances, in_ports, :out_ports)
       verify_port(destination, instances, out_ports, :in_ports)
     end)
+
+    links
   end
 
   defp verify_port({nil, port}, _, ports, _) do
@@ -125,28 +137,10 @@ defmodule Skitter.Workflow do
     end
   end
 
-  defp read_instance_links(links, instances) do
-    Enum.reduce(links, instances, fn
-      {{nil, _}, _}, instances ->
-        instances
-
-      {{instance, port}, dest}, instances ->
-        Map.update!(instances, instance, &Instance.add_link(&1, port, dest))
+  defp read_links(links) do
+    Enum.reduce(links, %{}, fn {source, destination}, links ->
+      Map.update(links, source, [destination], &[destination | &1])
     end)
-  end
-
-  defp read_workflow_links(links) do
-    Enum.reduce(links, %{}, fn
-      {{nil, port}, destination}, links ->
-        Map.update(links, port, [destination], &[destination | &1])
-
-      _, links ->
-        links
-    end)
-  end
-
-  defp instantiate({name, instance}) do
-    {name, Component.Handler.on_instantiate(instance)}
   end
 
   # ------ #
@@ -227,7 +221,7 @@ defmodule Skitter.Workflow do
       iex> wf.out_ports
       []
       iex> wf.links
-      %{data: [id: :in_val]}
+      %{{nil, :data} => [id: :in_val], {:id, :out_val} => [printer: :val]}
   """
   @doc section: :dsl
   defmacro defworkflow(name \\ nil, ports, do: body) do
