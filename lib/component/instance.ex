@@ -14,7 +14,7 @@ defmodule Skitter.Component.Instance do
   """
   alias Skitter.Component
 
-  defstruct component: nil, instantiation: []
+  defstruct component: nil, state: nil
 
   @typedoc """
   A component instance stores its component, instantiation parameters and its
@@ -22,7 +22,7 @@ defmodule Skitter.Component.Instance do
   """
   @type t :: %__MODULE__{
           component: Component.t(),
-          instantiation: [any()]
+          state: any()
         }
 end
 

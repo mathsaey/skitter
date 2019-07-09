@@ -15,23 +15,22 @@ defmodule Skitter.Workflow do
   a macro which can be used to create reactive workflows.
   """
   alias Skitter.{Component, Registry, Port, DSL, DefinitionError}
-  alias Skitter.Component.Instance
 
   defstruct name: nil, in_ports: [], out_ports: [], instances: %{}, links: %{}
 
   @typedoc """
   Internal workflow representation.
 
-  A component is defined as a collection of `t:Skitter.Component.Instance.t/0`.
-  Like a component, a workflow had a set of in -and out ports, and an optional
-  name. On top of this, the workflow stores the links between its in-ports and
-  in-ports of components.
+  A workflow contains a set of component "instances"; components grouped with
+  the arguments that can be used to initialize them. Besides this, a workflow
+  has a set of in -and out ports, and an optional name. Finally, the workflow
+  stores the links between the various `t:address/0` of ports in the workflow.
   """
   @type t :: %__MODULE__{
           name: String.t() | nil,
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
-          instances: %{optional(id()) => Component.Instance.t()},
+          instances: %{optional(id()) => {Component.t(), [any()]}},
           links: %{required(address()) => [address()]}
         }
 
@@ -68,7 +67,7 @@ defmodule Skitter.Workflow do
       instances =
         instances
         |> Enum.map(&expand_name/1)
-        |> Enum.map(&create_instance/1)
+        |> Enum.map(&create_pair/1)
         |> Enum.into(%{})
 
       links =
@@ -98,12 +97,8 @@ defmodule Skitter.Workflow do
 
   defp expand_name(any), do: any
 
-  defp create_instance({name, comp, args}) do
-    {name,
-     Component.Handler.on_instantiate(%Instance{
-       component: comp,
-       instantiation: args
-     })}
+  defp create_pair({name, comp, args}) do
+    {name, Component.Handler.on_embed(comp, args)}
   end
 
   defp verify_links(links, instances, in_ports, out_ports) do
@@ -122,14 +117,14 @@ defmodule Skitter.Workflow do
   end
 
   defp verify_port({identifier, port}, instances, _, key) do
-    instance = instances[identifier]
-
-    if is_nil(instance) do
-      throw {:error, :invalid_instance, identifier}
-    else
-      unless port in Map.get(instance.component, key) do
-        throw {:error, :invalid_component_port, port, instance}
+    component =
+      case instances[identifier] do
+        nil -> throw {:error, :invalid_instance, identifier}
+        {component, _args} -> component
       end
+
+    unless port in Map.get(component, key) do
+      throw {:error, :invalid_component_port, port, component}
     end
   end
 
@@ -331,8 +326,8 @@ defmodule Skitter.Workflow do
     raise DefinitionError, "`#{name}` does not exist"
   end
 
-  defp handle_error({:error, :invalid_component_port, port, instance}) do
+  defp handle_error({:error, :invalid_component_port, port, component}) do
     raise DefinitionError,
-          "`#{port}` is not a port of `#{inspect(instance.component)}`"
+          "`#{port}` is not a port of `#{inspect(component)}`"
   end
 end

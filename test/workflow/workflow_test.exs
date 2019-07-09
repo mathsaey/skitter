@@ -13,7 +13,6 @@ defmodule Skitter.WorkflowTest do
 
   alias Skitter.Workflow
   alias Skitter.Registry
-  alias Skitter.Component.Instance
 
   doctest Skitter.Workflow
 
@@ -42,8 +41,8 @@ defmodule Skitter.WorkflowTest do
           b = instance defcomponent([in: ignore], do: nil)
         end
 
-      assert w.instances.a == %Instance{component: c}
-      assert w.instances.b == %Instance{component: c}
+      assert w.instances.a == {c, []}
+      assert w.instances.b == {c, []}
     end
 
     test "named components", %{component: c} do
@@ -52,7 +51,7 @@ defmodule Skitter.WorkflowTest do
           c = instance c.name
         end
 
-      assert w.instances.c == %Instance{component: Registry.get(c.name)}
+      assert w.instances.c == {Registry.get(c.name), []}
     end
 
     test "links", %{component: c} do
