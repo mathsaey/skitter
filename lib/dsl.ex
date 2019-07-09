@@ -45,6 +45,7 @@ defmodule Skitter.DSL do
   # control flow structs.
 
   @block_keywords [:do, :else, :catch, :rescue, :after]
+  @block_operators [:if, :unless, :try, :with, :case]
 
   @doc """
   Perform an an ast transformation that will ensure the value of `var` is
@@ -53,7 +54,7 @@ defmodule Skitter.DSL do
   def make_mutable_in_block(node = {op, env, args}, var) when is_list(args) do
     args = Enum.map(args, &make_mutable_in_block(&1, var))
 
-    if transform_needed?(args) do
+    if transform_needed?(op, args) do
       transform_node(node, var)
     else
       {op, env, args}
@@ -65,14 +66,15 @@ defmodule Skitter.DSL do
 
   # Check if a function call needs to be transformed (i.e. if it contains any
   # block keywords).
-  defp transform_needed?(args) when is_list(args) do
-    Enum.any?(
-      args,
-      fn arg ->
-        Keyword.keyword?(arg) and
-          Enum.any?(Keyword.keys(arg), &(&1 in @block_keywords))
-      end
-    )
+  defp transform_needed?(op, args) when is_list(args) do
+    op in @block_operators and
+      Enum.any?(
+        args,
+        fn arg ->
+          Keyword.keyword?(arg) and
+            Enum.any?(Keyword.keys(arg), &(&1 in @block_keywords))
+        end
+      )
   end
 
   # Transform an AST node which contains a code block into a modified node.
