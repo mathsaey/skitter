@@ -63,10 +63,6 @@ defmodule Skitter.Workflow do
   @doc false
   # Expand the workflow at runtime, needed since names are not registered
   # at compile time.
-  #   - Look up registered names
-  #   - Create instances
-  #   - Verify links
-  #   - Create workflow
   def _create_workflow(name, in_ports, out_ports, instances, links) do
     try do
       instances =
