@@ -8,6 +8,7 @@ defmodule Skitter.Component.MetaHandler do
   @moduledoc false
 
   alias Skitter.Component
+  alias Skitter.Component.Instance
 
   import Skitter.Component.Handler.Utils
   import Skitter.Component.Callback, only: [defcallback: 4]
@@ -15,13 +16,30 @@ defmodule Skitter.Component.MetaHandler do
   def on_define(component = %Component{}) do
     component
     |> default_callback(:on_define, defcallback([], [:component], [c], do: c ~> component))
-    |> default_callback(:on_instantiate, defcallback([], [:instance], [i], do: i ~> instance))
+    |> default_callback(:on_embed, defcallback([], [:component, :arguments], [c, a]) do
+        c ~> component
+        a ~> arguments
+      end)
     |> require_callback(:on_define, arity: 1, publish_capability: true)
-    |> require_callback(:on_instantiate, arity: 1, publish_capability: true)
+    |> require_callback(:on_embed, arity: 2, publish_capability: true)
+    |> require_callback(:deploy, arity: 2, publish_capability: true, state_access: :readwrite)
+    |> require_callback(:react, arity: 2, publish_capability: true)
   end
 
-  def on_instantiate(instance) do
-    instance
-    |> require_instantiation_arity(0)
+  def on_embed(component, args) do
+    component
+    |> require_instantiation_arity(args, 0)
+  end
+
+  def deploy(handler, args) do
+    res = Component.call(handler, :deploy, create_empty_state(handler), args)
+    # TODO: Store state on master, not needed for now
+    %Instance{component: handler, state_ref: res.publish[:reference]}
+  end
+
+  def react(%Instance{component: __MODULE__, state_ref: instance}, args) do
+    %Instance{component: handler, state_ref: ref} = instance
+    # React happens on worker node, do not provide state
+    Component.call(handler, :react, %{}, [ref, args])
   end
 end

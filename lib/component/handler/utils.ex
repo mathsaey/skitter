@@ -83,20 +83,20 @@ defmodule Skitter.Component.Handler.Utils do
     end
   end
 
-  # -------------- #
-  # on_instantiate #
-  # -------------- #
+  # -------- #
+  # on_embed #
+  # -------- #
 
-  def require_instantiation_arity(instance, arity) do
-    length = length(instance.instantiation)
+  def require_instantiation_arity(component, args, length) do
+    arity = length(args)
 
     unless length == arity do
       raise HandlerError,
-        for: instance,
-        message: "Component expects #{arity} arguments, received #{length}"
+        for: component,
+        message: "Component expects #{length} arguments, received #{arity}"
     end
 
-    instance
+    component
   end
 
   defdelegate create_empty_state(component), to: Component

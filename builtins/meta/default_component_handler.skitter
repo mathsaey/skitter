@@ -19,8 +19,19 @@ defhandler DefaultComponentHandler do
     ) ~> component
   end
 
-  on_instantiate instance do
-    instance
-    |> require_instantiation_arity(instance.component.callbacks.init.arity) ~> instance
+  on_embed comp, args do
+    require_instantiation_arity(comp, args, comp.callbacks.init.arity)
+    comp ~> component
+    args ~> arguments
+  end
+
+  deploy comp, args do
+    res = Component.call(comp, :init, create_empty_state(comp), args)
+    %Instance{component: comp, state_ref: res.state} ~> reference
+  end
+
+  react inst, args do
+    %Instance{component: comp, state_ref: state} = inst
+    Component.call(comp, :react, state, args)
   end
 end

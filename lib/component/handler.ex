@@ -60,22 +60,31 @@ defmodule Skitter.Component.Handler do
   # ----- #
 
   @doc section: :hooks
-  def on_define(c = %Component{handler: Meta}) do
-    Meta.on_define(c)
-  end
+  def on_define(c = %Component{handler: Meta}), do: Meta.on_define(c)
 
   def on_define(c = %Component{handler: handler}) do
     Component.call(handler, :on_define, %{}, [c]).publish[:component]
   end
 
   @doc section: :hooks
-  def on_instantiate(i = %Instance{component: %Component{handler: Meta}}) do
-    Meta.on_instantiate(i)
+  def on_embed(c = %Component{handler: Meta}, args), do: Meta.on_embed(c, args)
+
+  def on_embed(c = %Component{handler: handler}, args) do
+    res = Component.call(handler, :on_embed, %{}, [c, args])
+    {res.publish[:component], res.publish[:arguments]}
   end
 
-  def on_instantiate(i = %Instance{component: %Component{handler: handler}}) do
-    Component.call(handler, :on_instantiate, %{}, [i]).publish[:instance]
+  @doc section: :hooks
+  def deploy(c = %Component{handler: Meta}, args) do
+    %Instance{component: Meta, state_ref: Meta.deploy(c, args)}
   end
+
+  def deploy(c = %Component{handler: handler}, args) do
+    deploy(handler, [c, args])
+  end
+
+  @doc section: :hooks
+  def react(i = %Instance{component: Meta}, args), do: Meta.react(i, args)
 
   # ------ #
   # Macros #
@@ -100,11 +109,11 @@ defmodule Skitter.Component.Handler do
       end
 
     quote do
-      import Skitter.Component
+      import Skitter.Component, only: [defcomponent: 3]
 
       defcomponent unquote(name),
-        in: [component, instance],
-        out: [component, instance] do
+        in: [component, arguments],
+        out: [component, arguments, reference] do
         alias Skitter.Component
         alias Skitter.Component.{Callback, Instance}
 
