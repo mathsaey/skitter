@@ -10,7 +10,9 @@ defmodule Skitter.Test.Handlers do
   import Skitter.Component.Handler
 
   def register_empty_default_component_handler() do
-    defhandler DefaultComponentHandler, do: nil
-    :ok
+    defhandler DefaultComponentHandler do
+      deploy(_, _, do: nil)
+      react(_, _, do: nil)
+    end
   end
 end
