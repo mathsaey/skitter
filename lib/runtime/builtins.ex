@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Builtins do
+defmodule Skitter.Runtime.Builtins do
   @moduledoc false
   # Module responsible for loading Skitters built-in components
 

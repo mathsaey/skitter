@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Registry do
+defmodule Skitter.Runtime.Registry do
   @moduledoc false
   # Private functions to resolve component and workflow names
   alias Skitter.{Component, Workflow, DefinitionError}

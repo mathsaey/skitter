@@ -16,8 +16,7 @@ defmodule Skitter.Component do
   elixir struct (`t:t/0`) along with `defcomponent/3`, a DSL to create reactive
   components.
   """
-  alias Skitter.DefinitionError
-  alias Skitter.{Port, DSL, Registry}
+  alias Skitter.{Port, DSL, DefinitionError, Runtime.Registry}
 
   alias DefaultComponentHandler, as: Default
 
@@ -260,7 +259,7 @@ defmodule Skitter.Component do
           handler: unquote(__MODULE__).expand_handler(unquote(handler))
         }
         |> Skitter.Component.Handler.on_define()
-        |> Skitter.Registry.put_if_named()
+        |> Skitter.Runtime.Registry.put_if_named()
       end
     catch
       err -> handle_error(err)

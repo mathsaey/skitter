@@ -14,7 +14,7 @@ defmodule Skitter.Workflow do
   necessary utilities to operate on this struct. Finally, this module contains
   a macro which can be used to create reactive workflows.
   """
-  alias Skitter.{Component, Registry, Port, DSL, DefinitionError}
+  alias Skitter.{Component, Port, DSL, DefinitionError, Runtime.Registry}
 
   defstruct name: nil, in_ports: [], out_ports: [], instances: %{}, links: %{}
 

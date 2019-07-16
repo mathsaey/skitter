@@ -8,9 +8,10 @@ defmodule Skitter.ComponentTest do
   use ExUnit.Case, async: true
   import Skitter.Test.Assertions
 
-  alias Skitter.Registry
   alias Skitter.Component
   alias Skitter.Component.Callback
+
+  alias Skitter.Runtime.Registry
 
   import Skitter.Component
   doctest Skitter.Component

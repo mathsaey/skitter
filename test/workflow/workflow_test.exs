@@ -12,7 +12,7 @@ defmodule Skitter.WorkflowTest do
   import Skitter.Component
 
   alias Skitter.Workflow
-  alias Skitter.Registry
+  alias Skitter.Runtime.Registry
 
   doctest Skitter.Workflow
 
