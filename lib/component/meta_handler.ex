@@ -10,7 +10,7 @@ defmodule Skitter.Component.MetaHandler do
   alias Skitter.Component
   alias Skitter.Component.Instance
 
-  import Skitter.Component.Handler.Utils
+  import Skitter.HandlerLib
   import Skitter.Component.Callback, only: [defcallback: 4]
 
   def on_define(component = %Component{}) do
@@ -22,8 +22,8 @@ defmodule Skitter.Component.MetaHandler do
       end)
     |> require_callback(:on_define, arity: 1, publish_capability: true)
     |> require_callback(:on_embed, arity: 2, publish_capability: true)
-    |> require_callback(:deploy, arity: 2, publish_capability: true, state_access: :readwrite)
-    |> require_callback(:react, arity: 2, publish_capability: true)
+    # |> require_callback(:deploy, arity: 2, publish_capability: true, state_access: :readwrite)
+    # |> require_callback(:react, arity: 2, publish_capability: true)
   end
 
   def on_embed(component, args) do
@@ -37,9 +37,8 @@ defmodule Skitter.Component.MetaHandler do
     %Instance{component: handler, state_ref: res.publish[:reference]}
   end
 
-  def react(%Instance{component: __MODULE__, state_ref: instance}, args) do
-    %Instance{component: handler, state_ref: ref} = instance
+  def react(%Instance{component: handler, state_ref: ref}, args) do
     # React happens on worker node, do not provide state
-    Component.call(handler, :react, %{}, [ref, args])
+    Component.call(handler, :react, %{}, [ref, args]).result
   end
 end

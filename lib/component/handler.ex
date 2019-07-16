@@ -77,7 +77,7 @@ defmodule Skitter.Component.Handler do
 
   @doc section: :hooks
   def deploy(c = %Component{handler: Meta}, args) do
-    %Instance{component: Meta, state_ref: Meta.deploy(c, args)}
+    Meta.deploy(c, args)
   end
 
   def deploy(c = %Component{handler: handler}, args) do
@@ -85,7 +85,7 @@ defmodule Skitter.Component.Handler do
   end
 
   @doc section: :hooks
-  def react(i = %Instance{component: Meta}, args), do: Meta.react(i, args)
+  def react(i = %Instance{}, args), do: Meta.react(i, args)
 
   # ------ #
   # Macros #
@@ -118,7 +118,7 @@ defmodule Skitter.Component.Handler do
         alias Skitter.Component
         alias Skitter.Component.{Callback, Instance}
 
-        import Skitter.Component.Handler.Utils
+        import Skitter.HandlerLib
         import Skitter.Component.Callback
 
         handler(Meta)

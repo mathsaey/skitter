@@ -4,24 +4,34 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Component.Handler.Utils do
+defmodule Skitter.HandlerLib do
   @moduledoc """
-  Reactive component handler utilities.
+  Library to be used by component and workflow handlers.
 
-  This module, which is automatically imported when using
-  `Skitter.Component.Handler.defhandler/2`, defines a set of utility functions
-  which can be useful when defining a handler.
+  This module, and any other module in this namespace, provide a "standard
+  library" of functions that can be used by component or workflow handlers.
+
+  They are included by default when a handler is defined through the use of
+  `Skitter.Component.Handler.defhandler/2`.
   """
+
   alias Skitter.Component
   alias Skitter.Component.Callback
 
-  alias Skitter.HandlerError
+  # ------- #
+  # General #
+  # ------- #
 
-  def error(for, message), do: raise(HandlerError, for: for, message: message)
+  @doc """
+  Raise a `Skitter.HandlerError`
+  """
+  def error(for, message) do
+    raise(Skitter.HandlerError, for: for, message: message)
+  end
 
-  # --------- #
-  # on_define #
-  # --------- #
+  # ---------- #
+  # Definition #
+  # ---------- #
 
   @doc """
   Add `callback` to `component` with `name` if it does not exist yet.
@@ -31,7 +41,7 @@ defmodule Skitter.Component.Handler.Utils do
           Component.callback_name(),
           Callback.t()
         ) :: Component.t()
-  def default_callback(component, name, callback) do
+  def default_callback(component = %Component{}, name, callback) do
     if Map.has_key?(component.callbacks, name) do
       component
     else
@@ -59,7 +69,7 @@ defmodule Skitter.Component.Handler.Utils do
           publish: Callback.publish_capability()
         ) ::
           Component.t() | no_return()
-  def require_callback(component, name, opts \\ []) do
+  def require_callback(component = %Component{}, name, opts \\ []) do
     arity = Keyword.get(opts, :arity, -1)
     state = Keyword.get(opts, :state_capability, :none)
     publish = Keyword.get(opts, :publish_capability, false)
@@ -71,33 +81,34 @@ defmodule Skitter.Component.Handler.Utils do
       if permissions? and arity? do
         component
       else
-        raise HandlerError,
-          for: component,
-          message:
-            "Invalid implementation of #{name}.\n" <>
-              "Wanted: state_capability: #{state}, publish_capability: " <>
-              "#{publish}, arity: #{arity}.\n Got: #{inspect(cb)}"
+        error(
+          component,
+          "Invalid implementation of #{name}.\n" <>
+            "Wanted: state_capability: #{state}, publish_capability: " <>
+            "#{publish}, arity: #{arity}.\n Got: #{inspect(cb)}"
+        )
       end
     else
-      raise HandlerError, for: component, message: "Missing `#{name}` callback"
+      error(component, "Missing `#{name}` callback")
     end
   end
 
-  # -------- #
-  # on_embed #
-  # -------- #
-
-  def require_instantiation_arity(component, args, length) do
+  def require_instantiation_arity(component = %Component{}, args, length) do
     arity = length(args)
 
     unless length == arity do
-      raise HandlerError,
-        for: component,
-        message: "Component expects #{length} arguments, received #{arity}"
+      error(
+        component,
+        "Component expects #{length} arguments, received #{arity}"
+      )
     end
 
     component
   end
+
+  # --------- #
+  # Callbacks #
+  # --------- #
 
   defdelegate create_empty_state(component), to: Component
   defdelegate call(component, callback_name, state, args), to: Component
