@@ -43,10 +43,15 @@ defmodule Skitter.MixProject do
     [
       source_ref: "develop",
       logo: "assets/logo-light_docs.png",
+      extras: Path.wildcard("pages/*.md"),
       groups_for_modules: [
-        Components: [~r/Skitter\.Component.*/],
-        Workflows: [~r/Skitter\.Workflow.*/],
-        Runtime: [~r/Skitter\.Runtime.*/]
+        "Data Types": [
+          Skitter.Port,
+          ~r/Skitter\.Component.*/,
+          ~r/Skitter\.Workflow.*/
+        ],
+        Runtime: [~r/Skitter\.Runtime.*/],
+        "Handler Support": [~r/Skitter\.HandlerLib.*/]
       ],
       groups_for_functions: [
         Hooks: &(&1[:section] == :hooks),
