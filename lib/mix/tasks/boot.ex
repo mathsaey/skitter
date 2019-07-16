@@ -7,7 +7,7 @@
 defmodule Mix.Tasks.Skitter.Boot do
   @moduledoc false
 
-  import Skitter.Configuration
+  import Skitter.Runtime.Configuration
 
   def boot(mode, args \\ []) do
     put_env(:mode, mode)

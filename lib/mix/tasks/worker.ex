@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Skitter.Worker do
   """
   @shortdoc "Start a Skitter worker node for the current project."
   use Mix.Task
-  import Skitter.Configuration
+  import Skitter.Runtime.Configuration
 
   @doc false
   def run(args) do

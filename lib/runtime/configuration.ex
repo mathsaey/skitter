@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Configuration do
+defmodule Skitter.Runtime.Configuration do
   @moduledoc """
   Module to set and retrieve skitter configuration parameters.
 
@@ -29,6 +29,7 @@ defmodule Skitter.Configuration do
   This function should only be used in application start up scripts and test
   setup code.
   """
+  @spec put_env(atom(), any()) :: :ok
   def put_env(key, value) do
     Application.put_env(:skitter, key, value, persistent: true)
   end
@@ -49,6 +50,7 @@ defmodule Skitter.Configuration do
   without the hassle of setting up the master and worker nodes. It is primarily
   intended for development.
   """
+  @spec mode() :: :local | :master | :worker
   def mode, do: get_env(:mode, :local)
 
   @doc """
@@ -59,6 +61,7 @@ defmodule Skitter.Configuration do
   By default, built-ins are always loaded when skitter is started in `local` or
   `master` mode. Skitter does not automatically load built-ins in `worker` mode.
   """
+  @spec load_builtins() :: boolean()
   def load_builtins do
     case {get_env(:load_builtins, nil), mode()} do
       {nil, :worker} -> false
@@ -82,6 +85,7 @@ defmodule Skitter.Configuration do
   Nodes can also be added at runtime through the use of
   `Skitter.Runtime.add_node/1`.
   """
+  @spec worker_nodes() :: [node()]
   def worker_nodes, do: get_env(:worker_nodes, [])
 
   @doc """
@@ -98,6 +102,7 @@ defmodule Skitter.Configuration do
   This setting is primarily intended to allow workers to reconnect to their
   master after failure.
   """
+  @spec master_node() :: node() | false
   def master_node, do: get_env(:master_node, false)
 
   @doc """
@@ -108,6 +113,7 @@ defmodule Skitter.Configuration do
   stored in the current working directory with the name `<nodename>.profile`.
   When this option is false, profiling is disabled (the default).
   """
+  @spec profile() :: boolean()
   def profile, do: get_env(:profile, false)
 
   @doc """
@@ -120,6 +126,7 @@ defmodule Skitter.Configuration do
   to `elixir`). If you wish to start a skitter node which is not distributed,
   you can set `automatic_distribution` to `false`.
   """
+  @spec automatic_distribution() :: boolean()
   def automatic_distribution, do: get_env(:automatic_distribution, true)
 
   @doc """
@@ -135,6 +142,7 @@ defmodule Skitter.Configuration do
   This setting is mainly intended to enable unit tests to simulate node failure.
   Leave it at its default value if you're not sure what this does.
   """
+  @spec automatic_connect() :: boolean()
   def automatic_connect, do: get_env(:automatic_connect, true)
 
   defp get_env(key, default), do: Application.get_env(:skitter, key, default)

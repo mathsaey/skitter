@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Skitter.Master do
   @shortdoc "Start a Skitter master node for the current project."
 
   use Mix.Task
-  import Skitter.Configuration
+  import Skitter.Runtime.Configuration
 
   @doc false
   def run(args) do

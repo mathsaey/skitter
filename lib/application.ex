@@ -9,7 +9,7 @@ defmodule Skitter.Application do
 
   use Application
 
-  alias Skitter.{Configuration, Profiler, Builtins}
+  alias Skitter.{Runtime.Configuration, Runtime, Profiler, Builtins}
 
   def start(_type, []) do
     try do
@@ -53,34 +53,31 @@ defmodule Skitter.Application do
 
   defp pre_load(_, _), do: nil
 
-  # Temporary disable this until nodes are up and running again
-  defp post_load(_, _), do: nil
+  defp post_load(:master, nodes) do
+    case Runtime.Nodes.connect(nodes) do
+      true -> nil
+      :not_distributed -> throw {:connect_error, :not_distributed}
+      lst -> throw {:connect_error, lst}
+    end
+  end
 
-  # defp post_load(:master, nodes) do
-  #   case Runtime.Nodes.connect(nodes) do
-  #     true -> nil
-  #     :not_distributed -> throw {:connect_error, :not_distributed}
-  #     lst -> throw {:connect_error, lst}
-  #   end
-  # end
+  defp post_load(:local, _) do
+    case Runtime.Nodes.connect(Node.self()) do
+      true -> nil
+      any -> throw {:local_error, any}
+    end
+  end
 
-  # defp post_load(:local, _) do
-  #   case Runtime.Nodes.connect(Node.self()) do
-  #     true -> nil
-  #     any -> throw {:local_error, any}
-  #   end
-  # end
-
-  # defp post_load(:worker, _) do
-  #   if master = Configuration.master_node(), do: Node.connect(master)
-  # end
+  defp post_load(:worker, _) do
+    if master = Configuration.master_node(), do: Node.connect(master)
+  end
 
   # Supervision Tree
   # ----------------
 
   def shared_children(), do: [{Task.Supervisor, name: Skitter.Task.Supervisor}]
-  defp children(:master), do: [Skitter.Registry]
-  defp children(:worker), do: []
+  defp children(:master), do: [Skitter.Registry, Runtime.Nodes.Supervisor]
+  defp children(:worker), do: [Runtime.Worker]
   defp children(:local), do: children(:worker) ++ children(:master)
 
   # Utils
