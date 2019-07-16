@@ -61,8 +61,8 @@ defmodule Skitter.Runtime.Configuration do
   By default, built-ins are always loaded when skitter is started in `local` or
   `master` mode. Skitter does not automatically load built-ins in `worker` mode.
   """
-  @spec load_builtins() :: boolean()
-  def load_builtins do
+  @spec load_builtins?() :: boolean()
+  def load_builtins? do
     case {get_env(:load_builtins, nil), mode()} do
       {nil, :worker} -> false
       {nil, :master} -> true
@@ -126,8 +126,8 @@ defmodule Skitter.Runtime.Configuration do
   to `elixir`). If you wish to start a skitter node which is not distributed,
   you can set `automatic_distribution` to `false`.
   """
-  @spec automatic_distribution() :: boolean()
-  def automatic_distribution, do: get_env(:automatic_distribution, true)
+  @spec automatic_distribution?() :: boolean()
+  def automatic_distribution?, do: get_env(:automatic_distribution, true)
 
   @doc """
   Specify if skitter should automatically use connected nodes as workers.
@@ -142,8 +142,8 @@ defmodule Skitter.Runtime.Configuration do
   This setting is mainly intended to enable unit tests to simulate node failure.
   Leave it at its default value if you're not sure what this does.
   """
-  @spec automatic_connect() :: boolean()
-  def automatic_connect, do: get_env(:automatic_connect, true)
+  @spec automatic_connect?() :: boolean()
+  def automatic_connect?, do: get_env(:automatic_connect, true)
 
   defp get_env(key, default), do: Application.get_env(:skitter, key, default)
 end
