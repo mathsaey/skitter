@@ -52,9 +52,7 @@ defmodule Skitter.MixProject do
         ],
         Prelude: [
           ~r/Skitter\.Prelude.*/
-        ],
-        Runtime: [~r/Skitter\.Runtime.*/],
-        "Handler Support": [~r/Skitter\.HandlerLib.*/]
+        ]
       ],
       groups_for_functions: [
         Hooks: &(&1[:section] == :hooks),
