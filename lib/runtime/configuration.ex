@@ -54,16 +54,17 @@ defmodule Skitter.Runtime.Configuration do
   def mode, do: get_env(:mode, :local)
 
   @doc """
-  Determines if the skitter built-ins should be loaded.
+  Determines if `Skitter.Prelude` should be loaded.
 
   Skitter ships with a set of built-in handlers and components. When this option
   is set to `true`, these will be loaded after the application is started.
-  By default, built-ins are always loaded when skitter is started in `local` or
-  `master` mode. Skitter does not automatically load built-ins in `worker` mode.
+  By default, the prelude is always loaded when skitter is started in `local` or
+  `master` mode. Skitter does not automatically load the prelude in `worker`
+  mode.
   """
-  @spec load_builtins?() :: boolean()
-  def load_builtins? do
-    case {get_env(:load_builtins, nil), mode()} do
+  @spec load_prelude?() :: boolean()
+  def load_prelude? do
+    case {get_env(:load_prelude, nil), mode()} do
       {nil, :worker} -> false
       {nil, :master} -> true
       {nil, :local} -> true

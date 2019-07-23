@@ -10,7 +10,7 @@ defmodule Skitter.Runtime do
   """
 
   alias __MODULE__
-  alias __MODULE__.{Configuration, Registry, Builtins, Profiler}
+  alias __MODULE__.{Configuration, Registry, Profiler}
 
   # ------------- #
   # Runtime Setup #
@@ -36,19 +36,20 @@ defmodule Skitter.Runtime do
   This function may return a `{:error, reason}` tuple. Any of the following
   reasons may be returned:
 
-  * _Local nodes should not be distributed_: Returned when Skitter is started
+  - _Local nodes should not be distributed_: Returned when Skitter is started
   in `:local` mode on an elixir node with distribution enabled.
-  * _Missing vm features_: Returned when the current version of the erlang VM
+  - _Missing vm features_: Returned when the current version of the erlang VM
   doest not support all of the features required by skitter. Returned alongside
   a list of modules that should be included with the erlang runtime system.
-  * _Error connecting to nodes_: Returned when a Skitter runtime in `:master`
-  mode could not connect to a specific worker node. A list of nodes and the
-  reason a connection is not possible is returned.
-  * _Error starting local mode_: Returned when a skitter runtime in `:local`
-  mode could not be started correctly. The reason is provided along with this
-  error.
+  - _Error connecting to nodes_: Returned when a Skitter runtime in `:master`
+  mode could not connect to a specific worker node. When this error is returned,
+  it is returned along with either `:not_distributed` (which indicated the
+  current node is not distributed), or a list of `{node, reason}` pairs, where
+  `reason` is one of the following:
+    - `:already_connected`: Already connected to this node
+    - `:not_connected`: Connecting to the node failed.
+    - `:invalid`: This node is not a skitter worker node.
   """
-  # TODO: Link to node.connect docs for "error connecting..." reasons
   def start do
     try do
       mode = Configuration.mode()
@@ -70,7 +71,6 @@ defmodule Skitter.Runtime do
       :distributed_local -> {:error, "Local nodes should not be distributed"}
       {:vm_features_missing, lst} -> {:error, {"Missing vm features", lst}}
       {:connect_error, any} -> {:error, {"Error connecting to nodes", any}}
-      {:local_error, any} -> {:error, {"Error starting local mode", any}}
     end
   end
 
@@ -87,7 +87,7 @@ defmodule Skitter.Runtime do
   end
 
   defp post_load(atom, nodes) when atom in [:master, :local] do
-    if Configuration.load_builtins?(), do: Builtins.load()
+    if Configuration.load_prelude?(), do: Skitter.Prelude._load()
 
     nodes =
       case atom do

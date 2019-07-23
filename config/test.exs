@@ -9,7 +9,7 @@ import Config
 config :skitter,
   automatic_distribution: false,
   automatic_connect: false,
-  load_builtins: false
+  load_prelude: false
 
 config :logger,
   compile_time_purge_matching: [
