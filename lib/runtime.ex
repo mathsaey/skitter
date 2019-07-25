@@ -8,7 +8,7 @@ defmodule Skitter.Runtime do
   @moduledoc false
 
   alias __MODULE__
-  alias __MODULE__.{Configuration, Registry, Loader, Profiler, Nodes, Worker}
+  alias __MODULE__.{Configuration, Registry, Loader, Profiler, Nodes}
 
   # ------------- #
   # Runtime Setup #
@@ -79,7 +79,7 @@ defmodule Skitter.Runtime do
 
   defp post_load(:worker, _) do
     if master = Configuration.master_node() do
-      Worker.connect_to_master(master)
+      Nodes.Worker.connect_to_master(master)
     end
   end
 
@@ -91,7 +91,7 @@ defmodule Skitter.Runtime do
   end
 
   defp children(:master), do: [Registry, Runtime.Nodes.Supervisor]
-  defp children(:worker), do: [Runtime.Worker]
+  defp children(:worker), do: [Runtime.Nodes.Worker]
   defp children(:local), do: children(:worker) ++ children(:master)
 
   # Utils

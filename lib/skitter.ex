@@ -92,7 +92,7 @@ defmodule Skitter do
   """
   @doc mode: :worker
   @spec connected_master() :: node() | nil
-  def connected_master, do: Skitter.Runtime.Worker.master()
+  def connected_master, do: Skitter.Runtime.Nodes.Worker.master()
 
   @doc """
   Attempt to connect to a skitter worker node.
@@ -113,8 +113,9 @@ defmodule Skitter do
   """
   @doc mode: :worker
   @spec connect_to_master(node()) :: :ok | {:error, connection_error()}
-  def connect_to_master(node),
-    do: Skitter.Runtime.Worker.connect_to_master(node)
+  def connect_to_master(node) do
+    Skitter.Runtime.Nodes.Worker.connect_to_master(node)
+  end
 
   @doc """
   Load the file at `path`.

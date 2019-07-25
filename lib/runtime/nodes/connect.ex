@@ -8,7 +8,7 @@ defmodule Skitter.Runtime.Nodes.Connect do
   @moduledoc false
 
   require Logger
-  alias Skitter.Runtime.Worker
+  alias Skitter.Runtime.Nodes.Worker
 
   @doc """
   Connect to a skitter worker node.
