@@ -9,7 +9,7 @@ import Config
 config :skitter,
   automatic_distribution: false,
   automatic_connect: false,
-  standard_library_path: File.cwd!() |> Path.join("test/utils/stdlib")
+  standard_library_path: Path.join(File.cwd!(), "test/support/stdlib")
 
 config :logger,
   compile_time_purge_matching: [
