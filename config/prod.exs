@@ -6,6 +6,9 @@
 
 import Config
 
+config :skitter,
+  standard_library_path: File.cwd!() |> Path.join("stdlib")
+
 config :logger,
   compile_time_purge_matching: [
     [level_lower_than: :warn]

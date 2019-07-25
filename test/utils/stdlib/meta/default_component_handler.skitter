@@ -1,0 +1,4 @@
+defhandler DefaultComponentHandler do
+  deploy(_, _, do: nil)
+  react(_, _, do: nil)
+end

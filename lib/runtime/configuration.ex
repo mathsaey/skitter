@@ -54,23 +54,13 @@ defmodule Skitter.Runtime.Configuration do
   def mode, do: get_env(:mode, :local)
 
   @doc """
-  Determines if `Skitter.Prelude` should be loaded.
+  Location of the skitter standard library.
 
-  Skitter ships with a set of built-in handlers and components. When this option
-  is set to `true`, these will be loaded after the application is started.
-  By default, the prelude is always loaded when skitter is started in `local` or
-  `master` mode. Skitter does not automatically load the prelude in `worker`
-  mode.
+  If this is `nil`, no standard library files will be loaded.
+  Note that the runtime will not load the standard library in `:worker` mode.
   """
-  @spec load_prelude?() :: boolean()
-  def load_prelude? do
-    case {get_env(:load_prelude, nil), mode()} do
-      {nil, :worker} -> false
-      {nil, :master} -> true
-      {nil, :local} -> true
-      {any, _} -> any
-    end
-  end
+  @spec standard_library_path() :: Path.t() | nil
+  def standard_library_path, do: get_env(:standard_library_path, nil)
 
   @doc """
   Which worker nodes to automatically connect to, only used in `master` mode.

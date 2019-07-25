@@ -7,4 +7,5 @@
 import Config
 
 config :skitter,
-  profile: false
+  profile: false,
+  standard_library_path: File.cwd!() |> Path.join("stdlib")

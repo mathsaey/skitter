@@ -10,7 +10,7 @@ defmodule Skitter.Runtime do
   """
 
   alias __MODULE__
-  alias __MODULE__.{Configuration, Registry, Profiler}
+  alias __MODULE__.{Configuration, Registry, Loader, Profiler}
 
   # ------------- #
   # Runtime Setup #
@@ -87,7 +87,7 @@ defmodule Skitter.Runtime do
   end
 
   defp post_load(atom, nodes) when atom in [:master, :local] do
-    if Configuration.load_prelude?(), do: Skitter.Prelude._load()
+    if Configuration.standard_library_path(), do: Loader.load_standard_library()
 
     nodes =
       case atom do
