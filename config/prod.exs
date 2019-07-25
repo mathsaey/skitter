@@ -7,7 +7,7 @@
 import Config
 
 config :skitter,
-  standard_library_path: File.cwd!() |> Path.join("stdlib")
+  standard_library_path: Path.join(File.cwd!(), "stdlib")
 
 config :logger,
   compile_time_purge_matching: [

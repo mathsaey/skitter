@@ -8,4 +8,4 @@ import Config
 
 config :skitter,
   profile: false,
-  standard_library_path: File.cwd!() |> Path.join("stdlib")
+  standard_library_path: Path.join(File.cwd!(), "stdlib")
