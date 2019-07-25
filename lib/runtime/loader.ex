@@ -9,12 +9,14 @@ defmodule Skitter.Runtime.Loader do
   # This module is responsible for loading .skitter files
 
   alias Skitter.Runtime.Configuration
+  require Logger
 
   @doc """
   Load the file at `path`
   """
   def load(path) do
-    IO.puts "loading #{path}"
+    Logger.debug("Loading #{path}")
+
     path
     |> File.read!()
     |> Code.string_to_quoted!(file: path)
