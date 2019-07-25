@@ -13,34 +13,33 @@ defmodule Skitter.Runtime.Nodes.Connect do
   @doc """
   Connect to a skitter worker node.
 
-  When successful, this function returns `true`. Otherwise, an error is
-  returned. (See the "Errors" section below).
+  When successful, this function returns `:ok`. Otherwise, an error pair is
+  returned.
 
   ## Distribution and local mode
 
-  This function will return `:not_distributed` if the current node is not
-  alive (i.e. not distributed). As an exception to this rule, a node can
-  connect to itself when the skitter application is running in local mode.
-  (See `Skitter.Configuration`).
+  This function will return `{:error, :not_distributed}` if the current node is
+  not alive (i.e. not distributed). However, a non-distributed skitter runtime
+  in local mode can connect to itself.
 
   ## Errors
 
-  The following errors can be returned from this function.
+  If the connection did not succeed, an `{:error, reason}` is returned. Any of
+  the following reasons can be returned:
 
-  - `:not_distributed`: The local node is not distributed, can only be returned
-    standalone.
-  - `:already_connected`: This node is already connected.
+  - `:connect_to_self`: Could not connect to self, this generally happens when
+  a non local-mode node attempts to connect to itself.
+  - `:not_distributed`: The local node is not distributed.
   - `:not_connected`: Connecting to the node failed.
-  - `:invalid`: The node to connect to is not a skitter worker node.
+  - `:invalid_node`: The node to connect to is not a skitter worker node.
   """
   def connect(node = :nonode@nohost) do
     # Allow the local node to act as a worker in local mode
     if Worker.verify_worker(node) && !Node.alive?() do
       Worker.register_master(node)
-      {:local, node}
+      :ok
     else
-      Logger.error "Connecting to the local node is only allowed in local mode."
-      {:invalid, node}
+      {:error, :connect_to_self}
     end
   end
 
@@ -49,13 +48,17 @@ defmodule Skitter.Runtime.Nodes.Connect do
          {:verify, true} <- {:verify, Worker.verify_worker(node)},
          :ok <- Worker.register_master(node)
     do
-      Logger.info("Registered new worker: #{node}")
-      {:ok, node}
+      :ok
     else
-      {:verify, false} -> {:no_skitter_worker, node}
-      {:connect, false} -> {:not_connected, node}
-      :ignored -> {:not_distributed, node}
-      any -> {{:error, any}, node}
+      {:verify, false} -> {:error, :invalid_node}
+      {:connect, false} -> {:error, :not_connected}
+      {:connect, :ignored} -> {:error, :not_distributed}
+      any -> {:error, any}
     end
   end
+
+  @doc """
+  Disconnect from a worker node.
+  """
+  def disconnect(node), do: Worker.remove_master(node)
 end

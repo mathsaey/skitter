@@ -8,7 +8,7 @@ defmodule Skitter.Runtime do
   @moduledoc false
 
   alias __MODULE__
-  alias __MODULE__.{Configuration, Registry, Loader, Profiler}
+  alias __MODULE__.{Configuration, Registry, Loader, Profiler, Nodes, Worker}
 
   # ------------- #
   # Runtime Setup #
@@ -68,18 +68,19 @@ defmodule Skitter.Runtime do
     nodes =
       case atom do
         :master -> nodes
-        :local -> Node.self()
+        :local -> [Node.self()]
       end
 
-    case Runtime.Nodes.connect(nodes) do
-      true -> nil
-      :not_distributed -> throw {:connect_error, :not_distributed}
-      any -> throw {:connect_error, any}
+    case Nodes.batch_connect(nodes) do
+      [] -> nil
+      lst -> throw {:connect_error, lst}
     end
   end
 
   defp post_load(:worker, _) do
-    if master = Configuration.master_node(), do: Node.connect(master)
+    if master = Configuration.master_node() do
+      Worker.connect_to_master(master)
+    end
   end
 
   # Supervision Tree

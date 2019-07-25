@@ -5,6 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter do
+  # TODO: General overview
   @moduledoc """
   Component agnostic, reactive workflow system.
 
@@ -25,13 +26,9 @@ defmodule Skitter do
   doest not support all of the features required by skitter. Returned alongside
   a list of the modules that could not be loaded.
   - _Error connecting to nodes_: Returned when a Skitter runtime in `:master`
-  `mode/0` could not connect to a specific worker node. When this error is
-  returned, it is returned along with either `:not_distributed` (which indicated
-  the current node is not distributed), or a list of `{node, reason}` pairs,
-  where `reason` is one of the following:
-    - `:already_connected`: Already connected to this node
-    - `:not_connected`: Connecting to the node failed.
-    - `:invalid`: This node is not a skitter worker node.
+  `mode/0` could not connect to a specific worker node. This error is returned
+  with a list of `{node, reason}` pairs. The potential values for `reason` are
+  defined in `t:connection_error/0`
   """
 
   @typedoc """
@@ -39,6 +36,25 @@ defmodule Skitter do
   """
   @type mode() :: :local | :master | :worker
 
+  @typedoc """
+  Errors that can be returned when connecting to a worker node.
+
+  - `:connect_to_self` indicates the local node tried to connect to itself but
+  failed. This is generally caused by a skitter master or working attempting to
+  connect with itself.
+  - `:invalid_node` indicates the remote node is not a skitter worker.
+  - `:not_connected` indicates something went wrong when establishing the low
+  level erlang connection.
+  - `:not_distributed` indicates the local node is not distributed.
+  - `:already_connected` indicates the current node is already connected to this
+  worker.
+  """
+  @type connection_error() ::
+          :connect_to_self
+          | :invalid_node
+          | :not_connected
+          | :not_distributed
+          | :already_connected
   @doc """
   Mode of the skitter runtime.
 
@@ -60,7 +76,41 @@ defmodule Skitter do
   mode by default.
   """
   @spec mode() :: mode()
-  def mode, do: Skitter.Configuration.mode()
+  def mode, do: Skitter.Runtime.Configuration.mode()
+
+  @doc """
+  List the connected worker nodes.
+
+  This function should only be called by a master node.
+  """
+  @spec connected_workers() :: [node()]
+  def connected_workers, do: Skitter.Runtime.Nodes.all()
+
+  @doc """
+  Check the master of the node.
+  """
+  @spec connected_master() :: node() | nil
+  def connected_master, do: Skitter.Runtime.Worker.master()
+
+  @doc """
+  Attempt to connect to a skitter worker node.
+
+  Should only be used on a skitter runtime in master mode.
+  Returns true if successful, otherwise, one of the following
+  """
+  @spec connect_to_worker(node()) :: :ok | {:error, connection_error()}
+  def connect_to_worker(node), do: Skitter.Runtime.Nodes.connect(node)
+
+  @doc """
+  Attempt to connect to a skitter master node.
+
+  Should only be used on a skitter runtime in worker mode.
+  This function is useful to re-establish a connection to a master after a
+  failure.
+  """
+  @spec connect_to_master(node()) :: :ok | {:error, connection_error()}
+  def connect_to_master(node),
+    do: Skitter.Runtime.Worker.connect_to_master(node)
 
   @doc """
   Load the file at `path`.

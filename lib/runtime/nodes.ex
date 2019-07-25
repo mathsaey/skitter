@@ -6,41 +6,41 @@
 
 defmodule Skitter.Runtime.Nodes do
   @moduledoc false
+  # Facilities to work with nodes, intended to be used by a master node.
 
-  alias __MODULE__.{Registry, Notifier, LoadBalancer}
-  alias Skitter.Task.Supervisor, as: STS
+  alias Skitter.Runtime.TaskSupervisor, as: STS
+  alias __MODULE__.{Registry, Notifier}
 
   # ------------ #
   # Registration #
   # ------------ #
 
-  @doc """
-  List all nodes.
-  """
   def all(), do: MapSet.to_list(GenServer.call(Registry, :all))
 
   @doc """
-  Connect to a (list of) skitter worker node(s).
+  Connect to a list of nodes.
 
-  Returns true if successful. When not successful, an error or a list of errors
-  is returned instead.
+  Returns a list of `{node, error}` pairs where `node` is the node that caused
+  an issue and `error` is the `error` that was returned. Returns an empty list
+  if no errors occurred.
   """
-  def connect([]), do: true
-
-  def connect(nodes) when is_list(nodes) do
-    lst =
-      nodes
-      |> Enum.map(&connect/1)
-      |> Enum.reject(&(&1 == true))
-    lst == [] || lst
+  def batch_connect(nodes) do
+    nodes
+    |> Enum.map(&Task.Supervisor.async(STS, fn -> {&1, connect(&1)} end))
+    |> Enum.map(&Task.await(&1))
+    |> Enum.reject(fn {_, ret} -> ret == :ok end)
+    |> Enum.map(fn {node, {:error, error}} -> {node, error} end)
   end
 
+  @doc """
+  Connect to a single node.
+
+  Returns `:ok` if the connection succeeded, `{:error, reason}` otherwise.
+  The possible reasons are documented in `t:Skitter.connection_error/0`
+  """
   def connect(node), do: GenServer.call(Registry, {:connect, node})
 
-  def disconnect(node) do
-    GenServer.cast(Registry, {:disconnect, node})
-    Skitter.Runtime.Worker.remove_master(node)
-  end
+  def disconnect(node), do: GenServer.call(Registry, {:disconnect, node})
 
   # ------------- #
   # Notifications #
@@ -100,30 +100,9 @@ defmodule Skitter.Runtime.Nodes do
   """
   def on_all(mod, func, args), do: on_many(all(), mod, func, args)
 
-  @doc """
-  Start a permanent task on a node selected by the load balancer.
-  """
-  def on_permanent(mod, func, args) do
-    on(select_permanent(), mod, func, args)
-  end
-
-  @doc """
-  Start a transient task on a node selected by the load balancer.
-  """
-  def on_transient(mod, func, args) do
-    on(select_transient(), mod, func, args)
-  end
-
   defp on_many(nodes, mod, func, args) do
     nodes
     |> Enum.map(&Task.Supervisor.async({STS, &1}, mod, func, args))
     |> Enum.map(&Task.await(&1))
   end
-
-  # -------------- #
-  # Load Balancing #
-  # -------------- #
-
-  def select_permanent(), do: GenServer.call(LoadBalancer, :permanent)
-  def select_transient(), do: GenServer.call(LoadBalancer, :transient)
 end

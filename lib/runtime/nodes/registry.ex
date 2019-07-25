@@ -10,8 +10,7 @@ defmodule Skitter.Runtime.Nodes.Registry do
   use GenServer
   require Logger
 
-  alias Skitter.Configuration
-  alias Skitter.Runtime.Nodes
+  alias Skitter.Runtime.{Nodes, Configuration}
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -30,25 +29,30 @@ defmodule Skitter.Runtime.Nodes.Registry do
 
   def handle_call({:connect, node}, _, set) do
     if node in set do
-      Logger.warn "Already connected to node", node: node
-      {:reply, {:already_connected, node}, set}
+      Logger.warn("Already connected to node", node: node)
+      {:reply, {:error, :already_connected}, set}
     else
       {reply, set} = connect(node, set)
       {:reply, reply, set}
     end
   end
 
-  @impl true
-  def handle_cast({:disconnect, node}, set) do
-    Logger.info "Disconnecting", node: node
-    Nodes.Notifier.notify_leave(node, :removed)
-    {:noreply, MapSet.delete(set, node)}
+  def handle_call({:disconnect, node}, _, set) do
+    if node in set do
+      Logger.info("Disconnecting", node: node)
+      Nodes.Connect.disconnect(node)
+      Nodes.Notifier.notify_leave(node, :removed)
+      {:reply, :ok, MapSet.delete(set, node)}
+    else
+      Logger.warn("Attempting to disconnect a non-connected node: #{node}")
+      {:reply, :ok, set}
+    end
   end
 
   @impl true
   def handle_info({:nodeup, node, _}, set) do
-    unless !Configuration.automatic_connect() or node in set do
-      Logger.info "Attempting connection with discovered node", node: node
+    if Configuration.automatic_connect?() and node not in set do
+      Logger.info("Attempting connection with discovered node", node: node)
       {_, set} = connect(node, set)
       {:noreply, set}
     else
@@ -58,7 +62,7 @@ defmodule Skitter.Runtime.Nodes.Registry do
 
   def handle_info({:nodedown, node, _}, set) do
     if node in set do
-      Logger.warn "Node down", node: node
+      Logger.warn("Node down", node: node)
       Nodes.Notifier.notify_leave(node, :disconnect)
       {:noreply, MapSet.delete(set, node)}
     else
@@ -68,16 +72,13 @@ defmodule Skitter.Runtime.Nodes.Registry do
 
   defp connect(node, set) do
     case Nodes.Connect.connect(node) do
-      {:ok, node} ->
+      :ok ->
+        Logger.info("Connected to worker: #{node}")
         Nodes.Notifier.notify_join(node)
-        {true, MapSet.put(set, node)}
+        {:ok, MapSet.put(set, node)}
 
-      {:local, node} ->
-        Nodes.Notifier.notify_join(node)
-        {true, MapSet.put(set, node)}
-
-      {error, node} ->
-        {{error, node}, set}
+      t = {:error, _} ->
+        {t, set}
     end
   end
 end
