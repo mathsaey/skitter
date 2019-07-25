@@ -56,7 +56,10 @@ defmodule Skitter.MixProject do
       ],
       groups_for_functions: [
         Hooks: &(&1[:section] == :hooks),
-        Language: &(&1[:section] == :dsl)
+        Language: &(&1[:section] == :dsl),
+        "Master/local mode": &(&1[:mode] == [:master, :local]),
+        "Master mode": &(&1[:mode] == :master),
+        "Worker mode": &(&1[:mode] == :worker)
       ]
     ]
   end

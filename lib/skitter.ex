@@ -83,12 +83,14 @@ defmodule Skitter do
 
   This function should only be called by a master node.
   """
+  @doc mode: :master
   @spec connected_workers() :: [node()]
   def connected_workers, do: Skitter.Runtime.Nodes.all()
 
   @doc """
   Check the master of the node.
   """
+  @doc mode: :worker
   @spec connected_master() :: node() | nil
   def connected_master, do: Skitter.Runtime.Worker.master()
 
@@ -98,6 +100,7 @@ defmodule Skitter do
   Should only be used on a skitter runtime in master mode.
   Returns true if successful, otherwise, one of the following
   """
+  @doc mode: :master
   @spec connect_to_worker(node()) :: :ok | {:error, connection_error()}
   def connect_to_worker(node), do: Skitter.Runtime.Nodes.connect(node)
 
@@ -108,6 +111,7 @@ defmodule Skitter do
   This function is useful to re-establish a connection to a master after a
   failure.
   """
+  @doc mode: :worker
   @spec connect_to_master(node()) :: :ok | {:error, connection_error()}
   def connect_to_master(node),
     do: Skitter.Runtime.Worker.connect_to_master(node)
@@ -122,6 +126,7 @@ defmodule Skitter do
   If a previously loaded file is loaded again, the same value will be returned,
   even if the file has been modified in the meantime.
   """
+  @doc mode: [:master, :local]
   @spec load_file(Path.t()) :: any()
   def load_file(path), do: Skitter.Runtime.Loader.load(path)
 end
