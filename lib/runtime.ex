@@ -5,9 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime do
-  @doc """
-  Skitter runtime API.
-  """
+  @moduledoc false
 
   alias __MODULE__
   alias __MODULE__.{Configuration, Registry, Loader, Profiler}
@@ -22,33 +20,11 @@ defmodule Skitter.Runtime do
   @doc """
   Start the Skitter runtime environment.
 
-  Loads the Skitter runtime for the current
-  `Skitter.Runtime.Configuration.mode/0`.  This function returns the same
-  values as `c:Application.start/2`, i.e.  `{:ok, pid}` where `pid` refers to a
-  supervisor. In certain circumstances, an `{:error, reason}` tuple is returned,
-  these are documented below.
-
-  This function is automatically called when Skitter is started as an elixir
-  application. Thus, you should not need to call it yourself.
-
-  ## Error values
-
-  This function may return a `{:error, reason}` tuple. Any of the following
-  reasons may be returned:
-
-  - _Local nodes should not be distributed_: Returned when Skitter is started
-  in `:local` mode on an elixir node with distribution enabled.
-  - _Missing vm features_: Returned when the current version of the erlang VM
-  doest not support all of the features required by skitter. Returned alongside
-  a list of modules that should be included with the erlang runtime system.
-  - _Error connecting to nodes_: Returned when a Skitter runtime in `:master`
-  mode could not connect to a specific worker node. When this error is returned,
-  it is returned along with either `:not_distributed` (which indicated the
-  current node is not distributed), or a list of `{node, reason}` pairs, where
-  `reason` is one of the following:
-    - `:already_connected`: Already connected to this node
-    - `:not_connected`: Connecting to the node failed.
-    - `:invalid`: This node is not a skitter worker node.
+  Loads the Skitter runtime for the current mode.
+  This function returns the same values as `c:Application.start/2`, i.e.
+  `{:ok, pid}` where `pid` refers to a supervisor. In certain circumstances,
+  an `{:error, reason}` tuple is returned. The possible error values are
+  documented in `Skitter`
   """
   def start do
     try do

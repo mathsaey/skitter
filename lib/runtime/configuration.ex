@@ -17,8 +17,7 @@ defmodule Skitter.Runtime.Configuration do
   @doc """
   Add a value to skitters application environment.
 
-  This function should only be used in application start up scripts and test
-  setup code.
+  This function should only be used in application start up scripts.
   """
   @spec put_env(atom(), any()) :: :ok
   def put_env(key, value) do
@@ -28,20 +27,9 @@ defmodule Skitter.Runtime.Configuration do
   @doc """
   Determines which mode a skitter node starts in.
 
-  The supported modes are `master`, `worker`, and `local` (the default).
-
-  A skitter master node is responsible for delegating work to the various
-  workers nodes in a skitter cluster. A master node cannot perform any work
-  when no worker nodes are available.
-
-  Worker nodes are responsible for the actual execution of a workflow, they
-  receive work from a master node.
-
-  Finally, the local mode enables users to experiment with skitter workflows
-  without the hassle of setting up the master and worker nodes. It is primarily
-  intended for development.
+  See `Skitter.mode/0`
   """
-  @spec mode() :: :local | :master | :worker
+  @spec mode() :: Skitter.mode()
   def mode, do: get_env(:mode, :local)
 
   @doc """
@@ -64,8 +52,8 @@ defmodule Skitter.Runtime.Configuration do
   connect to the provided worker nodes. Thus, the worker nodes should be online
   before a master node is started with a list of nodes.
 
-  Nodes can also be added at runtime through the use of
-  `Skitter.Runtime.add_node/1`.
+  Nodes can also be added at runtime, this value will _not_ be updated to
+  reflect this.
   """
   @spec worker_nodes() :: [node()]
   def worker_nodes, do: get_env(:worker_nodes, [])
@@ -78,7 +66,7 @@ defmodule Skitter.Runtime.Configuration do
   This settings causes a worker to connect to a master node specified as the
   value of this option. If the node cannot connect to the master, no error
   is raised. However, if the master is reachable, and if it enabled the
-  `automatic_connect/0` setting, it will automatically add the current node
+  `automatic_connect?/0` setting, it will automatically add the current node
   as a worker.
 
   This setting is primarily intended to allow workers to reconnect to their
