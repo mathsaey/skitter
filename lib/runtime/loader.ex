@@ -12,16 +12,16 @@ defmodule Skitter.Runtime.Loader do
   require Logger
 
   @doc """
-  Load the file at `path`
+  Load the file at `path`.
+
+  A file will only be loaded once. If the file was previously loaded, the return
+  value of loading that file will be returned again.
   """
   def load(path) do
-    Logger.debug("Loading #{path}")
-
-    path
-    |> File.read!()
-    |> Code.string_to_quoted!(file: path)
-    |> add_imports()
-    |> Code.eval_quoted([], file: Path.relative_to_cwd(path))
+    case get(path) do
+      :not_present -> load_new(path)
+      val -> val
+    end
   end
 
   @doc """
@@ -46,6 +46,23 @@ defmodule Skitter.Runtime.Loader do
     |> Path.wildcard()
     |> Enum.each(&load/1)
   end
+
+  defp load_new(path) do
+    Logger.debug("Loading #{path}")
+
+    {val, _} =
+      path
+      |> File.read!()
+      |> Code.string_to_quoted!(file: path)
+      |> add_imports()
+      |> Code.eval_quoted([], file: Path.relative_to_cwd(path))
+
+    put(path, val)
+    val
+  end
+
+  defp put(path, val), do: :persistent_term.put({__MODULE__, path}, val)
+  defp get(path), do: :persistent_term.get({__MODULE__, path}, :not_present)
 
   defp add_imports(body) do
     quote do

@@ -5,23 +5,14 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime.Configuration do
-  @moduledoc """
-  Module to set and retrieve skitter configuration parameters.
-
-  This module forms a thin wrapper around the application environment.
-  Therefore, the settings documented in this module can be manipulated
-  through `Mix.Config`.
-
-  This module provides the `put_env/2` function, which can be used to set
-  update the skitter application environment. This function should only be
-  called by scripts such as `Mix.Tasks.Skitter.Master`. This function is
-  also used by the testing infrastructure to tweak some settings for easier
-  testing.
-
-  Besides this, every other function in this module provides an interface to
-  read the value of a particular configuration setting. Each of these functions
-  is named after the configuration parameter it manages.
-  """
+  @moduledoc false
+  # Module to set and retrieve skitter configuration parameters + documentation
+  # of available configuration settings.
+  #
+  # Notes:
+  #   - `put_env/2` can be used by command line parsers and other setup scripts
+  #   - Each setting "accessor" should have a sane default
+  #   - _Never_ modify these values after the Skitter application has started
 
   @doc """
   Add a value to skitters application environment.
