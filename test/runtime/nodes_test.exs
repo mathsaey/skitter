@@ -9,59 +9,33 @@ defmodule Skitter.NodesTest do
   alias Skitter.Runtime.Nodes
 
   setup_all do
-    nodes = Cluster.spawn_workers([:w1, :w2, :w3])
-    [nodes: nodes]
+    [workers: Cluster.spawn_workers([:w1, :w2])]
   end
 
-  setup %{nodes: nodes} do
-    on_exit fn ->
-      Enum.each(nodes, &Nodes.disconnect(&1))
-    end
+  setup %{workers: workers} do
+    on_exit(fn ->
+      Enum.each(workers, &Nodes.disconnect(&1))
+    end)
   end
 
-  test "connecting", %{nodes: nodes} do
-    Nodes.connect(nodes)
-    Process.sleep(100)
-
-    assert nodes == Nodes.all()
+  test "connects at application start", %{workers: workers} do
+    Cluster.load_with(mode: :master, worker_nodes: workers)
+    assert workers == Nodes.all()
   end
 
-  test "notifications", %{nodes: [w, _, _]} do
-    b = Cluster.spawn_workers([:boom])
-
-    Nodes.subscribe_join()
-    Nodes.subscribe_leave()
-
+  test "can connect to node after starting", %{workers: workers} do
+    Cluster.load_with(mode: :master, worker_nodes: [])
+    w = hd(workers)
     Nodes.connect(w)
-    Nodes.connect(b)
-
-    assert_receive {:node_join, w}
-    assert_receive {:node_join, b}
-
-    Nodes.disconnect(w)
-    Cluster.kill_node(b)
-
-    assert_receive {:node_leave, w, :removed}
-    assert_receive {:node_leave, b, :disconnect}
-
-    Nodes.unsubscribe_join()
-    Nodes.unsubscribe_leave()
-
-    Nodes.connect(w)
-    Nodes.disconnect(w)
-
-    send(self(), :flag)
-
-    assert_receive :flag
+    assert [w] == Nodes.all()
   end
 
-  test "tasks", %{nodes: nodes} do
-    Nodes.connect(nodes)
-    Process.sleep(100)
-
-    assert Nodes.on_all(String, :to_integer, ["42"]) == [42, 42, 42]
-    assert Nodes.on(hd(nodes), String, :to_integer, ["42"]) == 42
-    assert Nodes.on_transient(String, :to_integer, ["42"]) == 42
-    assert Nodes.on_permanent(String, :to_integer, ["42"]) == 42
+  test "can disconnect", %{workers: workers} do
+    Cluster.load_with(mode: :master, worker_nodes: [])
+    w = hd(workers)
+    Nodes.connect(w)
+    assert [w] == Nodes.all()
+    Nodes.disconnect(w)
+    assert [] == Nodes.all()
   end
 end

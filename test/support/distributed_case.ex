@@ -10,22 +10,17 @@ defmodule Skitter.Test.DistributedCase do
   # Using this ExUnit case template will ensure that:
   # - Cluster is aliased
   # - The test case is automatically marked as distributed.
-  # - The current skitter application will be restarted in the mode provided to
-  #   the `using` statement (`using Skitter.Test.DistributedCase, mode: <mode>`)
   # - When the tests have finished, skitter will restart in local mode.
   use ExUnit.CaseTemplate
   @moduledoc false
 
-  using options do
-    mode = Keyword.get(options, :mode, :master)
-
+  using _ do
     quote do
       @moduletag :distributed
       alias Skitter.Test.Cluster
 
       setup_all do
-        Cluster.become(unquote(mode))
-        on_exit fn -> Cluster.become(:local) end
+        on_exit(&Cluster.load_default/0)
       end
     end
   end
