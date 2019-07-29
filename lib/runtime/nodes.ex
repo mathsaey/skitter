@@ -47,6 +47,26 @@ defmodule Skitter.Runtime.Nodes do
   # ------------- #
 
   @doc """
+  Subscribe to node join and leave events.
+
+  See `subscribe_join/0` and `subscribe_leave`.
+  """
+  def subscribe_all do
+    subscribe_join()
+    subscribe_leave()
+  end
+
+  @doc """
+  Unsubscribe from all node join and leave events.
+
+  See `unsubscribe_join/0` and `unsubscribe_leave`.
+  """
+  def unsubscribe_all do
+    unsubscribe_join()
+    unsubscribe_leave()
+  end
+
+  @doc """
   Subscribe to node join events.
 
   When a node joins the network, the pid that called this function will

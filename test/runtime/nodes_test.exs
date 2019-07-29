@@ -18,24 +18,84 @@ defmodule Skitter.NodesTest do
     end)
   end
 
-  test "connects at application start", %{workers: workers} do
-    Cluster.load_with(mode: :master, worker_nodes: workers)
-    assert workers == Nodes.all()
+  describe "connect" do
+    test "at application start", %{workers: workers} do
+      Cluster.load_with(mode: :master, worker_nodes: workers)
+      assert workers == Nodes.all()
+    end
+
+    test "at runtime", %{workers: [w, _]} do
+      Cluster.load_with(mode: :master, worker_nodes: [])
+      Nodes.connect(w)
+      assert [w] == Nodes.all()
+    end
+
+    test "and disconnect", %{workers: [w, _]} do
+      Cluster.load_with(mode: :master, worker_nodes: [])
+      Nodes.connect(w)
+      assert [w] == Nodes.all()
+      Nodes.disconnect(w)
+      assert [] == Nodes.all()
+    end
   end
 
-  test "can connect to node after starting", %{workers: workers} do
-    Cluster.load_with(mode: :master, worker_nodes: [])
-    w = hd(workers)
-    Nodes.connect(w)
-    assert [w] == Nodes.all()
-  end
+  describe "subscribe" do
+    test "join and leave events", %{workers: [w, _]} do
+      Cluster.load_with(mode: :master, worker_nodes: [])
 
-  test "can disconnect", %{workers: workers} do
-    Cluster.load_with(mode: :master, worker_nodes: [])
-    w = hd(workers)
-    Nodes.connect(w)
-    assert [w] == Nodes.all()
-    Nodes.disconnect(w)
-    assert [] == Nodes.all()
+      Nodes.subscribe_all()
+      Nodes.connect(w)
+
+      assert_receive {:node_join, w}
+
+      Nodes.disconnect(w)
+
+      assert_receive {:node_leave, w, _}
+    end
+
+    test "leave reasons", %{workers: [w1, _]} do
+      Cluster.load_with(mode: :master, worker_nodes: [])
+      [w2] = Cluster.spawn_workers([:crash_me])
+
+      Nodes.subscribe_leave()
+      Nodes.connect(w1)
+      Nodes.connect(w2)
+
+      Nodes.disconnect(w1)
+      Cluster.kill_node(w2)
+
+      assert_receive {:node_leave, w1, :removed}
+      assert_receive {:node_leave, w2, :disconnect}
+    end
+
+    test "unsubscribe", %{workers: [w1, w2]} do
+      Cluster.load_with(mode: :master, worker_nodes: [])
+
+      Nodes.subscribe_join()
+      Nodes.connect(w1)
+
+      assert_receive {:node_join, w1}
+
+      Nodes.unsubscribe_join()
+      Nodes.connect(w2)
+      send(self(), :ok)
+
+      assert (receive do
+        any -> any
+      end) == :ok
+
+      Nodes.subscribe_leave()
+      Nodes.disconnect(w1)
+
+      assert_receive {:node_leave, w1, _}
+
+      Nodes.unsubscribe_leave()
+      Nodes.disconnect(w2)
+      send(self(), :ok)
+
+      assert (receive do
+        any -> any
+      end) == :ok
+    end
   end
 end

@@ -15,7 +15,7 @@ defmodule Skitter.Runtime.Nodes.Supervisor do
   end
 
   def init(_) do
-    children = [Nodes.Registry, Nodes.Notifier, Nodes.LoadBalancer]
+    children = [Nodes.Registry, Nodes.Notifier]
     Supervisor.init(children, strategy: :one_for_all)
   end
 end
