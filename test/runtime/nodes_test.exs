@@ -5,7 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.NodesTest do
-  use Skitter.Test.DistributedCase, mode: :master
+  use Skitter.Test.DistributedCase
   alias Skitter.Runtime.Nodes
 
   setup_all do
@@ -20,18 +20,33 @@ defmodule Skitter.NodesTest do
 
   describe "connect" do
     test "at application start", %{workers: workers} do
-      Cluster.load_with(mode: :master, worker_nodes: workers)
+      load_with(worker_nodes: workers)
       assert workers == Nodes.all()
     end
 
     test "at runtime", %{workers: [w, _]} do
-      Cluster.load_with(mode: :master, worker_nodes: [])
+      load_with()
       Nodes.connect(w)
       assert [w] == Nodes.all()
     end
 
+    test "when a new worker joins", %{workers: [w, _]} do
+      load_with(automatic_connect: true)
+      pid = GenServer.whereis(Skitter.Runtime.Nodes.Registry)
+      send(pid, {:nodeup, w, []})
+      Process.sleep 300
+
+      assert Nodes.all() == [w]
+    end
+
+    test "to an already connected node", %{workers: workers = [w, _]} do
+      load_with(worker_nodes: workers)
+      assert Nodes.connect(w) == {:error, :already_connected}
+      assert Nodes.all() == workers
+    end
+
     test "and disconnect", %{workers: [w, _]} do
-      Cluster.load_with(mode: :master, worker_nodes: [])
+      load_with()
       Nodes.connect(w)
       assert [w] == Nodes.all()
       Nodes.disconnect(w)
@@ -41,7 +56,7 @@ defmodule Skitter.NodesTest do
 
   describe "subscribe" do
     test "join and leave events", %{workers: [w, _]} do
-      Cluster.load_with(mode: :master, worker_nodes: [])
+      load_with()
 
       Nodes.subscribe_all()
       Nodes.connect(w)
@@ -54,7 +69,7 @@ defmodule Skitter.NodesTest do
     end
 
     test "leave reasons", %{workers: [w1, _]} do
-      Cluster.load_with(mode: :master, worker_nodes: [])
+      load_with()
       [w2] = Cluster.spawn_workers([:crash_me])
 
       Nodes.subscribe_leave()
@@ -69,7 +84,7 @@ defmodule Skitter.NodesTest do
     end
 
     test "unsubscribe", %{workers: [w1, w2]} do
-      Cluster.load_with(mode: :master, worker_nodes: [])
+      load_with()
 
       Nodes.subscribe_join()
       Nodes.connect(w1)
@@ -91,6 +106,16 @@ defmodule Skitter.NodesTest do
 
       Nodes.unsubscribe_leave()
       Nodes.disconnect(w2)
+      send(self(), :ok)
+
+      assert (receive do
+        any -> any
+      end) == :ok
+
+      Nodes.unsubscribe_all()
+      Nodes.connect(w1)
+      Nodes.disconnect(w1)
+
       send(self(), :ok)
 
       assert (receive do

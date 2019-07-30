@@ -9,6 +9,7 @@ defmodule Skitter.Test.DistributedCase do
   #
   # Using this ExUnit case template will ensure that:
   # - Cluster is aliased
+  # - A load_with function with sane defaults is created.
   # - The test case is automatically marked as distributed.
   # - When the tests have finished, skitter will restart in local mode.
   use ExUnit.CaseTemplate
@@ -21,6 +22,15 @@ defmodule Skitter.Test.DistributedCase do
 
       setup_all do
         on_exit(&Cluster.load_default/0)
+      end
+
+      def load_with(opts \\ []) do
+        Cluster.load_with(
+          mode: Keyword.get(opts, :mode, :master),
+          master_node: Keyword.get(opts, :master_node, false),
+          worker_nodes: Keyword.get(opts, :worker_nodes, []),
+          automatic_connect: Keyword.get(opts, :automatic_connect, false)
+        )
       end
     end
   end
