@@ -12,7 +12,7 @@ defmodule Skitter.HandlerLib do
   library" of functions that can be used by component or workflow handlers.
 
   They are included by default when a handler is defined through the use of
-  `Skitter.Component.Handler.defhandler/2`.
+  `Skitter.Handler.defhandler/2`.
   """
 
   alias Skitter.Component

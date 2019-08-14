@@ -18,11 +18,12 @@ defmodule Skitter.Component do
   """
   alias Skitter.{Port, DSL, DefinitionError, Runtime.Registry}
 
-  alias DefaultComponentHandler, as: Default
-
   alias Skitter.Component
-  alias Skitter.Component.{Callback, Handler}
-  alias Skitter.Component.MetaHandler, as: Meta
+  alias Skitter.Component.Callback
+
+  alias Skitter.Handler
+  alias DefaultComponentHandler, as: Default
+  alias Skitter.Runtime.MetaHandler, as: Meta
 
   defstruct name: nil,
             fields: [],
@@ -164,9 +165,9 @@ defmodule Skitter.Component do
   component. The statement can be omitted if the component does not have any
   fields.
 
-  The handler specifies the `t:Skitter.Component.Handler.t/0` of the component,
-  if no handler is specified, the default handler is used. A name of a valid
-  handler may be used instead of a handler definition.
+  The handler specifies the `t:Skitter.Handler.t/0` of the component, if no
+  handler is specified, the default handler is used. A name of a valid handler
+  may be used instead of a handler definition.
 
   `import`, `alias`, and `require` maybe used inside of the component body as
   if they were being used inside of a module. Note that the use of macros inside
@@ -258,7 +259,7 @@ defmodule Skitter.Component do
           callbacks: unquote(callbacks),
           handler: unquote(__MODULE__).expand_handler(unquote(handler))
         }
-        |> Skitter.Component.Handler.on_define()
+        |> Skitter.Handler.on_define()
         |> Skitter.Runtime.Registry.put_if_named()
       end
     catch
@@ -302,7 +303,7 @@ defmodule Skitter.Component do
   defp transform_handler(handler, imports) do
     quote do
       unquote(imports)
-      alias Skitter.Component.MetaHandler, as: Meta
+      alias Skitter.Runtime.MetaHandler, as: Meta
       alias DefaultComponentHandler, as: Default
       unquote(handler)
     end
@@ -404,7 +405,7 @@ defimpl Inspect, for: Skitter.Component do
   import Inspect.Algebra
   alias Skitter.Component
 
-  alias Skitter.Component.MetaHandler, as: M
+  alias Skitter.Runtime.MetaHandler, as: M
 
   def inspect(comp, opts) do
     open = group(concat(["#Component", name(comp, opts), "<"]))

@@ -67,7 +67,7 @@ defmodule Skitter.Runtime.Loader do
   defp add_imports(body) do
     quote do
       import Skitter.Component, only: [defcomponent: 3]
-      import Skitter.Component.Handler, only: [defhandler: 2]
+      import Skitter.Handler, only: [defhandler: 2]
       unquote(body)
     end
   end

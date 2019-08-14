@@ -4,29 +4,30 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Component.Handler do
+defmodule Skitter.Handler do
   @moduledoc """
-  Reactive component handler utilities.
+  Meta facilities for components and workflows.
 
-  Handlers determine the behaviour of a component at compile -and runtime.
-  This module documents the handler type, and documents the hooks a handler can
-  use to determine the behaviour of a component. Finally, it provides the
-  `defhandler/2` macro, which can be used to implement a component which can
-  act as a component handler.
+  Handlers determine the behaviour of components and workflows at compile -and
+  runtime.  This module documents the handler type, and documents the hooks a
+  handler can use to determine the behaviour of a component or workflow.
+  Finally, it provides the `defhandler/2` macro, which can be used to implement
+  a component-based handler.
 
   # TODO: Allow workflow handlers
   # TODO: Allow handler options
+  # TODO: Document meta-components and meta-workflows
   """
-  alias Skitter.Component.MetaHandler, as: Meta
   alias Skitter.{Component, Workflow, Instance}
+  alias Skitter.Runtime.MetaHandler, as: Meta
   alias Skitter.Runtime.Registry
 
   @typedoc """
-  Reactive component handler type.
+  Internal representation of handler type.
 
-  A reactive component handler is one of the following:
+  A handler is one of the following:
   - A meta-component
-  - A workflow that contains an out -and in-port for each handler hook.
+  - A meta-workflow
   - `Meta`. When this handler is used, it specifies that a meta-component is
   being defined. A component which uses the `Meta` handler can be used as a
   handler for other components.
