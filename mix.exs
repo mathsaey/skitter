@@ -47,6 +47,7 @@ defmodule Skitter.MixProject do
       groups_for_modules: [
         "Language Concepts": [
           Skitter.Port,
+          Skitter.Instance,
           ~r/Skitter\.Component.*/,
           ~r/Skitter\.Workflow.*/
         ],

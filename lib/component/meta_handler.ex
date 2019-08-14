@@ -7,8 +7,7 @@
 defmodule Skitter.Component.MetaHandler do
   @moduledoc false
 
-  alias Skitter.Component
-  alias Skitter.Component.Instance
+  alias Skitter.{Component, Instance}
 
   import Skitter.HandlerLib
   import Skitter.Component.Callback, only: [defcallback: 4]
@@ -34,10 +33,10 @@ defmodule Skitter.Component.MetaHandler do
   def deploy(handler, args) do
     res = Component.call(handler, :deploy, create_empty_state(handler), args)
     # TODO: Store state on master, not needed for now
-    %Instance{component: handler, state_ref: res.publish[:reference]}
+    %Instance{elem: handler, ref: res.publish[:reference]}
   end
 
-  def react(%Instance{component: handler, state_ref: ref}, args) do
+  def react(%Instance{elem: handler, ref: ref}, args) do
     # React happens on worker node, do not provide state
     Component.call(handler, :react, %{}, [ref, args]).result
   end

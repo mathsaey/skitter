@@ -18,8 +18,7 @@ defmodule Skitter.Component.Handler do
   # TODO: Allow handler options
   """
   alias Skitter.Component.MetaHandler, as: Meta
-  alias Skitter.{Component, Workflow}
-  alias Skitter.Component.Instance
+  alias Skitter.{Component, Workflow, Instance}
   alias Skitter.Runtime.Registry
 
   @typedoc """
