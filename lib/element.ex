@@ -14,7 +14,7 @@ defmodule Skitter.Element do
 
   This module defines the element type (`t:t/0`) type and related operations.
   """
-  alias Skitter.{Component, Workflow, Handler, Port}
+  alias Skitter.{Handler, Port}
 
   @typedoc """
   Data processing element type.
