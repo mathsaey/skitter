@@ -41,8 +41,8 @@ defmodule Skitter.WorkflowTest do
           b = instance defcomponent([in: ignore], do: nil)
         end
 
-      assert w.instances.a == {c, []}
-      assert w.instances.b == {c, []}
+      assert w.nodes.a == {c, []}
+      assert w.nodes.b == {c, []}
     end
 
     test "named components", %{component: c} do
@@ -51,7 +51,7 @@ defmodule Skitter.WorkflowTest do
           c = instance c.name
         end
 
-      assert w.instances.c == {Registry.get(c.name), []}
+      assert w.nodes.c == {Registry.get(c.name), []}
     end
 
     test "links", %{component: c} do

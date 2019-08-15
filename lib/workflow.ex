@@ -8,31 +8,38 @@ defmodule Skitter.Workflow do
   @moduledoc """
   Data processing pipeline.
 
-  A reactive workflow is a collection of connected reactive components and
-  which make up a data processing pipeline. This module defines the internal
-  representation of a skitter workflow as an elixir struct, along with the
-  necessary utilities to operate on this struct. Finally, this module contains
-  a macro which can be used to create reactive workflows.
+  A reactive workflow is a collection of connected `Skitter.Element` (i.e.
+  components or workflows) which make up a data processing pipeline. This module
+  defines the internal representation of a skitter workflow as an elixir struct,
+  along with the necessary utilities to operate on this struct. Finally, this
+  module defines the `defworkflow/3` macro, which can be used to create
+  reactive workflows.
   """
-  alias Skitter.{Component, Handler, Port}
-  alias Skitter.{DSL, DefinitionError, Runtime.Registry}
+  alias Skitter.{Handler, Port, DSL, DefinitionError, Runtime.Registry}
+  alias Skitter.Workflow.Node
 
-  defstruct name: nil, in_ports: [], out_ports: [], instances: %{}, links: %{}
+  defstruct name: nil,
+            in_ports: [],
+            out_ports: [],
+            nodes: %{},
+            links: %{},
+            handler: Default
 
   @typedoc """
   Internal workflow representation.
 
-  A workflow contains a set of component "instances"; components grouped with
-  the arguments that can be used to initialize them. Besides this, a workflow
-  has a set of in -and out ports, and an optional name. Finally, the workflow
-  stores the links between the various `t:address/0` of ports in the workflow.
+  A workflow contains a set of nodes; elements grouped with the arguments that
+  can be used to initialize them. Besides this, a workflow has a set of in -and
+  out ports, and an optional name. Finally, the workflow stores the links
+  between the various `t:address/0` of ports in the workflow.
   """
   @type t :: %__MODULE__{
           name: String.t() | nil,
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
-          instances: %{optional(id()) => {Component.t(), [any()]}},
-          links: %{required(address()) => [address()]}
+          nodes: %{optional(id()) => Node.t()},
+          links: %{required(address()) => [address()]},
+          handler: Handler.t()
         }
 
   @typedoc """
@@ -43,11 +50,11 @@ defmodule Skitter.Workflow do
   @typedoc """
   Address of a port in a workflow.
 
-  An address can refer to a `t:Skitter.Port.t/0` of an instance in the workflow,
-  or to a port of the workflow itself.
+  An address can refer to a `t:Skitter.Port.t/0` of a node in the workflow, or
+  to a port of the workflow itself.
 
-  An address is a tuple which identifies an instance in the workflow, and a port
-  of this instance. When the address refers to a workflow port, the instance is
+  An address is a tuple which identifies a node in the workflow, and a port of
+  this node. When the address refers to a workflow port, the instance is
   replaced by `nil`.
 
   Note that it is possible for an in -and out port in a workflow to share an
@@ -63,24 +70,24 @@ defmodule Skitter.Workflow do
   @doc false
   # Expand the workflow at runtime, needed since names are not registered
   # at compile time.
-  def _create_workflow(name, in_ports, out_ports, instances, links) do
+  def _create_workflow(name, in_ports, out_ports, nodes, links) do
     try do
-      instances =
-        instances
+      nodes =
+        nodes
         |> Enum.map(&expand_name/1)
         |> Enum.map(&create_pair/1)
         |> Enum.into(%{})
 
       links =
         links
-        |> verify_links(instances, in_ports, out_ports)
+        |> verify_links(nodes, in_ports, out_ports)
         |> read_links()
 
       %__MODULE__{
         name: name,
         in_ports: in_ports,
         out_ports: out_ports,
-        instances: instances,
+        nodes: nodes,
         links: links
       }
       |> Registry.put_if_named()
@@ -102,10 +109,10 @@ defmodule Skitter.Workflow do
     {name, Handler.on_embed(comp, args)}
   end
 
-  defp verify_links(links, instances, in_ports, out_ports) do
+  defp verify_links(links, nodes, in_ports, out_ports) do
     Enum.each(links, fn {source, destination} ->
-      verify_port(source, instances, in_ports, :out_ports)
-      verify_port(destination, instances, out_ports, :in_ports)
+      verify_port(source, nodes, in_ports, :out_ports)
+      verify_port(destination, nodes, out_ports, :in_ports)
     end)
 
     links
@@ -117,9 +124,9 @@ defmodule Skitter.Workflow do
     end
   end
 
-  defp verify_port({identifier, port}, instances, _, key) do
+  defp verify_port({identifier, port}, nodes, _, key) do
     component =
-      case instances[identifier] do
+      case nodes[identifier] do
         nil -> throw {:error, :invalid_instance, identifier}
         {component, _args} -> component
       end
@@ -223,21 +230,21 @@ defmodule Skitter.Workflow do
       {in_ports, out_ports} = Port.parse_list(ports, __CALLER__)
 
       # Parse body
-      {instances, links} =
+      {nodes, links} =
         body
         |> DSL.block_to_list()
         |> verify_statements(__CALLER__)
         |> split_workflow()
 
       links = read_links(links, __CALLER__)
-      instances = read_instances(instances, __CALLER__)
+      nodes = read_nodes(nodes, __CALLER__)
 
       quote do
         unquote(__MODULE__)._create_workflow(
           unquote(name),
           unquote(in_ports),
           unquote(out_ports),
-          unquote(instances),
+          unquote(nodes),
           unquote(links)
         )
       end
@@ -255,13 +262,13 @@ defmodule Skitter.Workflow do
     end)
   end
 
-  # Split the workflow into links and instances
+  # Split the workflow into links and nodes
   defp split_workflow(statements) do
     Enum.split_with(statements, fn node -> elem(node, 0) == := end)
   end
 
-  # Extract the instances of the workflow
-  defp read_instances(statements, env) do
+  # Extract the nodes of the workflow
+  defp read_nodes(statements, env) do
     ast = Enum.map(statements, &read_instance(&1, env))
 
     quote do
