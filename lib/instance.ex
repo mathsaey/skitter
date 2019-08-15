@@ -6,21 +6,19 @@
 
 defmodule Skitter.Instance do
   @moduledoc """
-  Runtime representation of a workflow or component after it has been deployed.
+  Runtime representation of a `t:Skitter.Element.t/0` after deployment.
   """
-  alias Skitter.{Component, Workflow}
+  alias Skitter.Element
 
   defstruct elem: nil, ref: nil
 
   @typedoc """
   Instance representation.
 
-  An instance is defined by the element it instantiates (i.e. a component or
-  workflow) and a unique reference to the runtime representation of an instance
-  of this component or workflow. The exact nature of this reference is defined
-  by the handler of the element.
+  An instance is defined by the element it instantiates and a unique reference
+  to the runtime representation of the element returned by its handler.
   """
-  @type t :: %__MODULE__{elem: Component.t() | Workflow.t(), ref: any()}
+  @type t :: %__MODULE__{elem: Element.t(), ref: any()}
 end
 
 defimpl Inspect, for: Skitter.Instance do
