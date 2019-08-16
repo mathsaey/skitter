@@ -77,13 +77,10 @@ defmodule Skitter.Handler do
   end
 
   @doc section: :hooks
-  # TODO: Make this use node!
-  def deploy(c = %Component{handler: Meta}, args) do
-    Meta.deploy(c, args)
-  end
+  def deploy(n = %Node{elem: %{handler: Meta}}), do: Meta.deploy(n)
 
-  def deploy(c = %Component{handler: handler}, args) do
-    deploy(handler, [c, args])
+  def deploy(n = %Node{elem: %{handler: handler}}) do
+    deploy(%Node{elem: handler, args: [n]})
   end
 
   @doc section: :hooks

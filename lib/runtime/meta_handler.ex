@@ -8,6 +8,7 @@ defmodule Skitter.Runtime.MetaHandler do
   @moduledoc false
 
   alias Skitter.{Component, Instance}
+  alias Skitter.Workflow.Node
 
   import Skitter.HandlerLib
   import Skitter.Component.Callback, only: [defcallback: 4]
@@ -29,7 +30,7 @@ defmodule Skitter.Runtime.MetaHandler do
     |> require_instantiation_arity(0)
   end
 
-  def deploy(handler, args) do
+  def deploy(%Node{elem: handler, args: args}) do
     res = Component.call(handler, :deploy, create_empty_state(handler), args)
     # TODO: Store state on master, not needed for now
     %Instance{elem: handler, ref: res.publish[:reference]}
