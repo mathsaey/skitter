@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.HandlerError do
+defmodule Skitter.Handler.Error do
   @moduledoc """
   This exception can be raised by handlers.
   """
@@ -14,16 +14,17 @@ defmodule Skitter.HandlerError do
   defexception [:handler, :message, :for]
 
   @impl true
-  def message(%__MODULE__{handler: h, message: m, for: nil}) do
-    h = handler_to_string(h)
-    "Handler #{h} raised error:\n#{m}"
+  def message(%__MODULE__{handler: h, message: m, for: f}) do
+    h = handler_string(h)
+    f = for_string(f)
+    "Handler #{h}raised error#{f}:\n#{m}"
   end
 
-  def message(%__MODULE__{handler: h, message: m, for: f}) do
-    h = handler_to_string(h)
-    f = for_to_string(f)
-    "Handler #{h} raised error for #{f}:\n#{m}"
-  end
+  defp handler_string(nil), do: ""
+  defp handler_string(any), do: handler_to_string(any) <> " "
+
+  defp for_string(nil), do: ""
+  defp for_string(any), do: " for" <> for_to_string(any)
 
   defp for_to_string(%Component{name: name}), do: name
   defp for_to_string(any), do: inspect(any)

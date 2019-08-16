@@ -26,7 +26,7 @@ defmodule Skitter.HandlerLib do
   Raise a `Skitter.HandlerError`
   """
   def error(for, message) do
-    raise(Skitter.HandlerError, for: for, message: message)
+    raise(Skitter.Handler.Error, for: for, message: message)
   end
 
   # ---------- #
