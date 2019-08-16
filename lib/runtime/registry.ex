@@ -7,7 +7,9 @@
 defmodule Skitter.Runtime.Registry do
   @moduledoc false
   # Private functions to resolve component and workflow names
-  alias Skitter.{Component, Workflow, DefinitionError}
+
+  alias Skitter.DefinitionError
+  import Skitter.Element
   use GenServer
 
   # --- #
@@ -16,10 +18,10 @@ defmodule Skitter.Runtime.Registry do
 
   def start_link(_), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
-  def put_if_named(c = %Component{name: nil}), do: c
-  def put_if_named(w = %Workflow{name: nil}), do: w
-  def put_if_named(c = %Component{name: name}), do: insert(name, c)
-  def put_if_named(w = %Workflow{name: name}), do: insert(name, w)
+  def put_if_named(e = %{name: nil}), do: e
+  def put_if_named(e = %{name: n, __struct__: s}) when is_element(s) do
+    insert(n, e)
+  end
 
   def get(key) do
     case :ets.lookup(__MODULE__, key) do

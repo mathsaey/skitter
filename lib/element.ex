@@ -14,7 +14,7 @@ defmodule Skitter.Element do
 
   This module defines the element type (`t:t/0`) type and related operations.
   """
-  alias Skitter.{Handler, Port}
+  alias Skitter.{Component, Workflow, Handler, Port}
 
   @typedoc """
   Data processing element type.
@@ -29,4 +29,12 @@ defmodule Skitter.Element do
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()]
         }
+
+  @doc """
+  Test if the module of a struct is a valid element.
+
+  Due to limitation in elixir, the value of the `__struct__` key needs to be
+  passed to the guard.
+  """
+  defguard is_element(module) when module in [Component, Workflow]
 end
