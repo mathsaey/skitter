@@ -37,8 +37,8 @@ defmodule Skitter.WorkflowTest do
 
       w =
         defworkflow in: ignore do
-          a = instance c
-          b = instance defcomponent([in: ignore], do: nil)
+          a = new c
+          b = new defcomponent([in: ignore], do: nil)
         end
 
       assert w.nodes.a == {c, []}
@@ -48,7 +48,7 @@ defmodule Skitter.WorkflowTest do
     test "named components", %{component: c} do
       w =
         defworkflow in: ignore do
-          c = instance c.name
+          c = new c.name
         end
 
       assert w.nodes.c == {Registry.get(c.name), []}
@@ -56,9 +56,9 @@ defmodule Skitter.WorkflowTest do
 
     test "links", %{component: c} do
       w = defworkflow in: [a, b, c], out: [x, y, z] do
-        a = instance c
-        b = instance c
-        c = instance c
+        a = new c
+        b = new c
+        c = new c
 
         a ~> a.a
         a ~> a.b
@@ -88,7 +88,7 @@ defmodule Skitter.WorkflowTest do
 
       assert_definition_error ~r/.*: Invalid syntax: `.*`/ do
         defworkflow in: ignore do
-          a = instancex
+          a = instance Foo
         end
       end
 
@@ -104,20 +104,20 @@ defmodule Skitter.WorkflowTest do
 
       assert_definition_error ~r/`.*` is not defined/ do
         defworkflow in: ignore do
-          _ = instance DoesNotExist
+          _ = new DoesNotExist
         end
       end
 
       assert_definition_error ~r/`.*` is not a valid workflow port/ do
         defworkflow in: ignore do
-          c = instance c.name
+          c = new c.name
           doesnotexist ~> c.a
         end
       end
 
       assert_definition_error ~r/`.*` is not a valid workflow port/ do
         defworkflow in: ignore do
-          c = instance c.name
+          c = new c.name
           c.x ~> doesnotexist
         end
       end
@@ -130,7 +130,7 @@ defmodule Skitter.WorkflowTest do
 
       assert_definition_error ~r/`.*` is not a port of `.*`/ do
         defworkflow in: ignore do
-          c = instance c.name
+          c = new c.name
           ignore ~> c.in_port
         end
       end

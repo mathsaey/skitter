@@ -15,19 +15,18 @@ defmodule Skitter.Runtime.MetaHandler do
   def on_define(component = %Component{}) do
     component
     |> default_callback(:on_define, defcallback([], [:component], [c], do: c ~> component))
-    |> default_callback(:on_embed, defcallback([], [:component, :arguments], [c, a]) do
-        c ~> component
-        a ~> arguments
+    |> default_callback(:on_embed, defcallback([], [:node], [n]) do
+        n ~> node
       end)
     |> require_callback(:on_define, arity: 1, publish_capability: true)
-    |> require_callback(:on_embed, arity: 2, publish_capability: true)
+    |> require_callback(:on_embed, arity: 1, publish_capability: true)
     # |> require_callback(:deploy, arity: 2, publish_capability: true, state_access: :readwrite)
     # |> require_callback(:react, arity: 2, publish_capability: true)
   end
 
-  def on_embed(component, args) do
-    component
-    |> require_instantiation_arity(args, 0)
+  def on_embed(node) do
+    node
+    |> require_instantiation_arity(0)
   end
 
   def deploy(handler, args) do

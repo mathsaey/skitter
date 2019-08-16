@@ -15,9 +15,7 @@ defhandler DefaultComponentHandler do
     ~> component
   end
 
-  on_embed comp, args do
-    require_instantiation_arity(comp, args, comp.callbacks.init.arity)
-    comp ~> component
-    args ~> arguments
+  on_embed node do
+    require_instantiation_arity(node, node.elem.callbacks.init.arity) ~> node
   end
 end

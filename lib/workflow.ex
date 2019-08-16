@@ -43,7 +43,7 @@ defmodule Skitter.Workflow do
         }
 
   @typedoc """
-  Identifier of a component instance in a workflow.
+  Identifier of a node in a workflow.
   """
   @type id() :: atom()
 
@@ -54,12 +54,12 @@ defmodule Skitter.Workflow do
   to a port of the workflow itself.
 
   An address is a tuple which identifies a node in the workflow, and a port of
-  this node. When the address refers to a workflow port, the instance is
+  this node. When the address refers to a workflow port, the node name is
   replaced by `nil`.
 
   Note that it is possible for an in -and out port in a workflow to share an
-  address. This happens when a component or workflow defines an in -and out port
-  with the same name.
+  address. This happens when an element defines an in -and out port with the
+  same name.
   """
   @type address() :: {id() | nil, Port.t()}
 
@@ -75,7 +75,7 @@ defmodule Skitter.Workflow do
       nodes =
         nodes
         |> Enum.map(&expand_name/1)
-        |> Enum.map(&create_pair/1)
+        |> Enum.map(&create_node/1)
         |> Enum.into(%{})
 
       links =
@@ -96,17 +96,18 @@ defmodule Skitter.Workflow do
     end
   end
 
-  defp expand_name({name, comp, args}) when is_atom(comp) do
-    case Registry.get(comp) do
-      nil -> throw {:error, :invalid_name, comp}
+  defp expand_name({name, elem, args}) when is_atom(elem) do
+    case Registry.get(elem) do
+      nil -> throw {:error, :invalid_name, elem}
       res -> {name, res, args}
     end
   end
 
   defp expand_name(any), do: any
 
-  defp create_pair({name, comp, args}) do
-    {name, Handler.on_embed(comp, args)}
+  defp create_node({name, elem, args}) do
+    node = %Node{elem: elem, args: args}
+    {name, Handler.on_embed(node)}
   end
 
   defp verify_links(links, nodes, in_ports, out_ports) do
@@ -125,14 +126,14 @@ defmodule Skitter.Workflow do
   end
 
   defp verify_port({identifier, port}, nodes, _, key) do
-    component =
+    element =
       case nodes[identifier] do
-        nil -> throw {:error, :invalid_instance, identifier}
-        {component, _args} -> component
+        nil -> throw {:error, :invalid_node, identifier}
+        %Node{elem: element} -> element
       end
 
-    unless port in Map.get(component, key) do
-      throw {:error, :invalid_component_port, port, component}
+    unless port in Map.get(element, key) do
+      throw {:error, :invalid_element_port, port, element}
     end
   end
 
@@ -146,13 +147,15 @@ defmodule Skitter.Workflow do
   # Macros #
   # ------ #
 
+  @node_keyword :new
+
   @doc """
   DSL to define skitter workflows.
 
   Like a component definition, a workflow definition consists of a signature
   and a body. The first two arguments accepted by this macro (`name`, `port`)
   make up the signature, while the final argument contains the body of the
-  component.
+  workflow.
 
   ## Signature
 
@@ -172,31 +175,32 @@ defmodule Skitter.Workflow do
 
   ## Body
 
-  The body of a workflow contains two possible types of statements: instance
-  declarations or links.
+  The body of a workflow contains two possible types of statements: nodes or
+  links.
 
-  ### Instance declarations
+  ### Nodes
 
-  An instance declaration specifies that a specific component will be used
-  by a workflow. It has the following form:
+  Nodes specify that a specific element will be used by a workflow. A node is
+  declared with the following syntax:
 
   ```
-  <name> = instance <component>, <arg1>, <arg2>
+  <name> = new <element>, <arg1>, <arg2>
   ```
 
-  - The name of an instance uniquely identifies it in the workflow. This name
-  is used by links.
-  - The component is either the name of an existing component, or the inline
-  definition of a new component.
-  - Any other argument passed to the instance declaration is passed as an
-  argument when the component is initialized.
+  - The name of a node uniquely identifies it in a workflow. This name is used
+  to link the node to others.
+  - `element` is either the name of an existing `Skitter.Element`, or an inline
+  definition of an element.
+  - Any other argument is stored as a part of the node. When the element gets
+  deployed, these arguments are passed to the `Skitter.Handler.deploy/2` hook
+  along with the element.
 
   ### Links
 
   The body of a workflow may contain links. A link is declared through the use
   of the `<source> ~> <destination>` syntax. `source` and `destination` may
   refer to any port in the workflow. The `<name>.<port>` syntax is used to
-  identify a port of an instance. `<name>` is used to refer to a port of the
+  identify a port of a node. `<name>` is used to refer to a port of the
   workflow.
 
   ## Examples
@@ -206,9 +210,9 @@ defmodule Skitter.Workflow do
       ...> end
       iex> wf = defworkflow in: data do
       ...>
-      ...>   id = instance Identity
+      ...>   id = new Identity
       ...>
-      ...>   printer = instance (defcomponent in: val do
+      ...>   printer = new (defcomponent in: val do
       ...>      react val, do: IO.inspect(val)
       ...>   end)
       ...>
@@ -269,7 +273,7 @@ defmodule Skitter.Workflow do
 
   # Extract the nodes of the workflow
   defp read_nodes(statements, env) do
-    ast = Enum.map(statements, &read_instance(&1, env))
+    ast = Enum.map(statements, &read_node(&1, env))
 
     quote do
       import Skitter.Component
@@ -277,13 +281,13 @@ defmodule Skitter.Workflow do
     end
   end
 
-  # Grab the data from an instance declaration
-  defp read_instance({:=, _, [name, func]}, env) do
+  # Grab the data from a node declaration
+  defp read_node({:=, _, [name, func]}, env) do
     name = DSL.name_to_atom(name, env)
 
     args =
       case Macro.decompose_call(func) do
-        {:instance, args} -> args
+        {@node_keyword, args} -> args
         _ -> throw {:error, :invalid_syntax, func, env}
       end
 
@@ -330,12 +334,12 @@ defmodule Skitter.Workflow do
     raise DefinitionError, "`#{port}` is not a valid workflow port"
   end
 
-  defp handle_error({:error, :invalid_instance, name}) do
+  defp handle_error({:error, :invalid_node, name}) do
     raise DefinitionError, "`#{name}` does not exist"
   end
 
-  defp handle_error({:error, :invalid_component_port, port, component}) do
+  defp handle_error({:error, :invalid_element_port, port, element}) do
     raise DefinitionError,
-          "`#{port}` is not a port of `#{inspect(component)}`"
+          "`#{port}` is not a port of `#{inspect(element)}`"
   end
 end
