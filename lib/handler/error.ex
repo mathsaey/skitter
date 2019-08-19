@@ -9,7 +9,6 @@ defmodule Skitter.Handler.Error do
   This exception can be raised by handlers.
   """
   alias Skitter.Component
-  alias Skitter.Runtime.MetaHandler
 
   defexception [:handler, :message, :for]
 
@@ -31,6 +30,6 @@ defmodule Skitter.Handler.Error do
 
   defp handler_to_string(%Component{name: name}) when name != nil, do: name
   defp handler_to_string(c = %Component{}), do: inspect(c)
-  defp handler_to_string(MetaHandler), do: Meta
+  defp handler_to_string(Meta), do: Meta
   defp handler_to_string(nil), do: ""
 end

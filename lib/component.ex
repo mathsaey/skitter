@@ -23,7 +23,6 @@ defmodule Skitter.Component do
 
   alias Skitter.Handler
   alias DefaultComponentHandler, as: Default
-  alias Skitter.Runtime.MetaHandler, as: Meta
 
   defstruct name: nil,
             fields: [],
@@ -291,7 +290,6 @@ defmodule Skitter.Component do
   defp transform_handler([{:handler, _, [handler]}], imports, _) do
     quote do
       unquote(imports)
-      alias Skitter.Runtime.MetaHandler, as: Meta
       unquote(handler)
     end
   end
@@ -382,8 +380,6 @@ defimpl Inspect, for: Skitter.Component do
   import Inspect.Algebra
   alias Skitter.Component
 
-  alias Skitter.Runtime.MetaHandler, as: M
-
   def inspect(comp, opts) do
     open = group(concat(["#Component", name(comp, opts), "<"]))
     close = ">"
@@ -398,8 +394,6 @@ defimpl Inspect, for: Skitter.Component do
   end
 
   def doc({atm, _}, _) when atm in [:__struct__, :name], do: empty()
-
-  def doc({:handler, M}, o), do: doc({:handler, Meta}, o)
 
   def doc({:handler, %Component{name: name}}, o) when not is_nil(name) do
     doc({:handler, name}, o)

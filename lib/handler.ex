@@ -21,8 +21,8 @@ defmodule Skitter.Handler do
   alias Skitter.{Component, Workflow, Instance, Element}
   alias Skitter.Workflow.Node
 
-  alias Skitter.Runtime.MetaHandler, as: Meta
   alias Skitter.Runtime.Registry
+  alias Skitter.Runtime.MetaHandler, as: M
 
   @typedoc """
   Internal representation of handler type.
@@ -71,7 +71,7 @@ defmodule Skitter.Handler do
   """
   @doc section: :hooks
   @spec on_define(Element.t()) :: Element.t() | no_return()
-  def on_define(e = %{handler: Meta}), do: Meta.on_define(e)
+  def on_define(e = %{handler: Meta}), do: M.on_define(e)
 
   def on_define(e = %{handler: handler = %Component{handler: Meta}}) do
     Component.call(handler, :on_define, %{}, [e]).publish[:on_define]
@@ -79,21 +79,21 @@ defmodule Skitter.Handler do
 
   @doc section: :hooks
   @spec on_embed(Node.t()) :: Node.t()
-  def on_embed(n = %Node{elem: %{handler: Meta}}), do: Meta.on_embed(n)
+  def on_embed(n = %Node{elem: %{handler: Meta}}), do: M.on_embed(n)
 
   def on_embed(n = %Node{elem: %Component{handler: handler}}) do
     Component.call(handler, :on_embed, %{}, [n]).publish[:on_embed]
   end
 
   @doc section: :hooks
-  def deploy(n = %Node{elem: %{handler: Meta}}), do: Meta.deploy(n)
+  def deploy(n = %Node{elem: %{handler: Meta}}), do: M.deploy(n)
 
   def deploy(n = %Node{elem: %{handler: handler}}) do
     deploy(%Node{elem: handler, args: [n]})
   end
 
   @doc section: :hooks
-  def react(i = %Instance{}, args), do: Meta.react(i, args)
+  def react(i = %Instance{}, args), do: M.react(i, args)
 
   # ------ #
   # Macros #
