@@ -15,8 +15,11 @@ defmodule Skitter.Workflow do
   module defines the `defworkflow/3` macro, which can be used to create
   reactive workflows.
   """
-  alias Skitter.{Handler, Port, DSL, DefinitionError, Runtime.Registry}
+  alias Skitter.{Port, DSL, DefinitionError, Runtime.Registry}
   alias Skitter.Workflow.Node
+
+  alias Skitter.Handler
+  alias DefaultWorkflowHandler, as: Default
 
   defstruct name: nil,
             in_ports: [],
@@ -70,7 +73,7 @@ defmodule Skitter.Workflow do
   @doc false
   # Expand the workflow at runtime, needed since names are not registered
   # at compile time.
-  def _create_workflow(name, in_ports, out_ports, nodes, links) do
+  def _create_workflow(name, in_ports, out_ports, handler, nodes, links) do
     try do
       nodes =
         nodes
@@ -83,13 +86,17 @@ defmodule Skitter.Workflow do
         |> verify_links(nodes, in_ports, out_ports)
         |> read_links()
 
+      handler = Handler.expand(handler)
+
       %__MODULE__{
         name: name,
         in_ports: in_ports,
         out_ports: out_ports,
+        handler: handler,
         nodes: nodes,
         links: links
       }
+      |> Handler.on_define()
       |> Registry.put_if_named()
     catch
       err -> handle_error(err)
@@ -234,9 +241,12 @@ defmodule Skitter.Workflow do
       {in_ports, out_ports} = Port.parse_list(ports, __CALLER__)
 
       # Parse body
+      body = DSL.block_to_list(body)
+      {body, handler} = DSL.extract_calls(body, [:handler])
+      handler = read_handler(handler, __CALLER__)
+
       {nodes, links} =
         body
-        |> DSL.block_to_list()
         |> verify_statements(__CALLER__)
         |> split_workflow()
 
@@ -248,6 +258,7 @@ defmodule Skitter.Workflow do
           unquote(name),
           unquote(in_ports),
           unquote(out_ports),
+          unquote(handler),
           unquote(nodes),
           unquote(links)
         )
@@ -255,6 +266,14 @@ defmodule Skitter.Workflow do
     catch
       err -> handle_error(err)
     end
+  end
+
+  # Ensure only a single handler is present, extract it
+  defp read_handler([], _), do: Default
+  defp read_handler([{:handler, _, [handler]}], _), do: handler
+
+  defp read_handler([_, dup | _], env) do
+    throw {:error, :duplicate_handler, dup, env}
   end
 
   # Ensure only valid workflow statements are present
@@ -317,6 +336,13 @@ defmodule Skitter.Workflow do
 
   defp handle_error({:error, :invalid_port_list, any, env}) do
     DefinitionError.inject("Invalid port list: `#{Macro.to_string(any)}`", env)
+  end
+
+  defp handle_error({:error, :duplicate_handler, handler, env}) do
+    DefinitionError.inject(
+      "Only one handler declaration is allowed: `#{Macro.to_string(handler)}`",
+      env
+    )
   end
 
   defp handle_error({:error, :invalid_workflow_syntax, statement, env}) do
