@@ -45,15 +45,13 @@ defmodule Skitter.MixProject do
       logo: "assets/logo-light_docs.png",
       extras: Path.wildcard("pages/*.md"),
       groups_for_modules: [
-        "Language Concepts": [
+        Language: [
           Skitter.Port,
           Skitter.Element,
+          Skitter.Handler,
           Skitter.Instance,
           ~r/Skitter\.Component.*/,
           ~r/Skitter\.Workflow.*/
-        ],
-        Prelude: [
-          ~r/Skitter\.Prelude.*/
         ]
       ],
       groups_for_functions: [
