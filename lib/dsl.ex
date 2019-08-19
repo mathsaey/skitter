@@ -36,6 +36,21 @@ defmodule Skitter.DSL do
     quote(do: var!(unquote(var), unquote(__MODULE__)))
   end
 
+  @doc """
+  Remove certain calls from the body.
+
+  Returns the modified body and the extracted calls.
+  """
+  def extract_calls(body, statements) do
+    Enum.map_reduce(body, [], fn
+      node = {call, _, _}, acc ->
+        if(call in statements, do: {nil, [node | acc]}, else: {node, acc})
+
+      any, acc ->
+        {any, acc}
+    end)
+  end
+
   # ------------- #
   # Mutable Block #
   # ------------- #

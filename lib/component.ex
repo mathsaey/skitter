@@ -124,8 +124,6 @@ defmodule Skitter.Component do
   # Macros #
   # ------ #
 
-  @reuse_directives [:alias, :import, :require]
-
   @doc """
   DSL to define skitter components.
 
@@ -245,9 +243,14 @@ defmodule Skitter.Component do
 
       # Parse body
       body = DSL.block_to_list(body)
-      {body, fields} = extract_fields(body, __CALLER__)
-      {body, imports} = extract_reuse_directives(body)
-      {body, handler} = extract_handler(body, imports, __CALLER__)
+      {body, imports} = DSL.extract_calls(body, [:alias, :import, :require])
+
+      {body, fields} = DSL.extract_calls(body, [:fields])
+      fields = verify_fields(fields, __CALLER__)
+
+      {body, handler} = DSL.extract_calls(body, [:handler])
+      handler = transform_handler(handler, imports, __CALLER__)
+
       callbacks = extract_callbacks(body, imports, fields, out_ports)
 
       quote do
@@ -267,56 +270,30 @@ defmodule Skitter.Component do
     end
   end
 
-  # Find and remove field declarations in the AST, ensure only one field
-  # declaration is present
-  defp extract_fields(body, env) do
-    Enum.map_reduce(body, [], fn
-      {:fields, _, fields}, [] ->
-        fields = Enum.map(fields, &DSL.name_to_atom(&1, env))
-        {nil, fields}
+  # Parse field names, ensure only one field declaration is present
+  defp verify_fields([], _), do: []
 
-      {:fields, _, any}, _ ->
-        throw {:error, :duplicate_fields, any, env}
-
-      any, acc ->
-        {any, acc}
-    end)
+  defp verify_fields([{:fields, _, fields}], env) do
+    Enum.map(fields, &DSL.name_to_atom(&1, env))
   end
 
-  defp extract_handler(body, imports, env) do
-    {body, handler} =
-      Enum.map_reduce(body, nil, fn
-        {:handler, _, [h]}, nil -> {nil, transform_handler(h, imports)}
-        n = {:handler, _, _}, _ -> throw {:error, :duplicate_handler, n, env}
-        any, acc -> {any, acc}
-      end)
-
-    handler =
-      case handler do
-        nil -> Default
-        any -> any
-      end
-
-    {body, handler}
+  defp verify_fields([_fields, dup | _], env) do
+    throw {:error, :duplicate_fields, dup, env}
   end
 
-  defp transform_handler(handler, imports) do
+  # Ensure no duplicate handler is present, add needed imports
+  defp transform_handler([], _, _), do: Default
+
+  defp transform_handler([_, dup | _], _, env) do
+    throw {:error, :duplicate_handler, dup, env}
+  end
+
+  defp transform_handler([{:handler, _, [handler]}], imports, _) do
     quote do
       unquote(imports)
       alias Skitter.Runtime.MetaHandler, as: Meta
-      alias DefaultComponentHandler, as: Default
       unquote(handler)
     end
-  end
-
-  defp extract_reuse_directives(body) do
-    Enum.map_reduce(body, [], fn
-      node = {call, _, _}, acc when call in @reuse_directives ->
-        {nil, [node | acc]}
-
-      any, acc ->
-        {any, acc}
-    end)
   end
 
   # Fetch every top level statement of the body and turn it into a map of
