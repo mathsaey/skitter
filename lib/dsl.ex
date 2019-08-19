@@ -42,13 +42,17 @@ defmodule Skitter.DSL do
   Returns the modified body and the extracted calls.
   """
   def extract_calls(body, statements) do
-    Enum.map_reduce(body, [], fn
-      node = {call, _, _}, acc ->
-        if(call in statements, do: {nil, [node | acc]}, else: {node, acc})
+    {body, statements} =
+      Enum.map_reduce(body, [], fn
+        node = {call, _, _}, acc ->
+          if(call in statements, do: {nil, [node | acc]}, else: {node, acc})
 
-      any, acc ->
-        {any, acc}
-    end)
+        any, acc ->
+          {any, acc}
+      end)
+
+    body = Enum.reject(body, &is_nil/1)
+    {body, statements}
   end
 
   # ------------- #
