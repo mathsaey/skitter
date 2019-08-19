@@ -16,7 +16,7 @@ defmodule Skitter.Component do
   elixir struct (`t:t/0`) along with `defcomponent/3`, a DSL to create reactive
   components.
   """
-  alias Skitter.{Port, DSL, DefinitionError, Runtime.Registry}
+  alias Skitter.{Port, DSL, DefinitionError}
 
   alias Skitter.Component
   alias Skitter.Component.Callback
@@ -113,11 +113,6 @@ defmodule Skitter.Component do
   def create_empty_state(%Component{fields: fields}) do
     Map.new(fields, &{&1, nil})
   end
-
-  @doc false
-  def meta?(%__MODULE__{handler: Meta}), do: true
-  def meta?(a) when is_atom(a), do: meta?(Registry.get(a))
-  def meta?(_), do: false
 
   # ------ #
   # Macros #

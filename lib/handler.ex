@@ -41,11 +41,6 @@ defmodule Skitter.Handler do
   # --------- #
 
   @doc false
-  def valid?(Meta), do: true
-  def valid?(h = %Component{}), do: Component.meta?(h)
-  def valid?(_), do: false
-
-  @doc false
   def expand(Meta), do: Meta
   def expand(handler = %Component{handler: Meta}), do: handler
 
