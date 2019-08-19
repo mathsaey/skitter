@@ -12,10 +12,10 @@ defhandler DefaultComponentHandler do
     |> require_callback(:init, state_capability: :readwrite)
     |> require_callback(:terminate, state_capability: :read)
     |> require_callback(:react, arity: length(c.in_ports), state_capability: :read, publish_capability: true)
-    ~> component
+    ~> on_define
   end
 
   on_embed node do
-    require_instantiation_arity(node, node.elem.callbacks.init.arity) ~> node
+    require_instantiation_arity(node, node.elem.callbacks.init.arity) ~> on_embed
   end
 end

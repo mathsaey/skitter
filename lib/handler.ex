@@ -18,7 +18,7 @@ defmodule Skitter.Handler do
   # TODO: Allow handler options
   # TODO: Document meta-components and meta-workflows
   """
-  alias Skitter.{Component, Workflow, Instance}
+  alias Skitter.{Component, Workflow, Instance, Element}
   alias Skitter.Workflow.Node
 
   alias Skitter.Runtime.MetaHandler, as: Meta
@@ -62,18 +62,27 @@ defmodule Skitter.Handler do
   # Hooks #
   # ----- #
 
-  @doc section: :hooks
-  def on_define(c = %Component{handler: Meta}), do: Meta.on_define(c)
+  @doc """
+  Triggers on element definition, returns a (modified) element.
 
-  def on_define(c = %Component{handler: handler}) do
-    Component.call(handler, :on_define, %{}, [c]).publish[:component]
+  This hook is activated when a `t:Skitter.Element.t/0` is defined. It can be
+  used to add functionality to an element, or to ensure that it matches certain
+  constraints. This hook should return an element, or raise an error.
+  """
+  @doc section: :hooks
+  @spec on_define(Element.t()) :: Element.t() | no_return()
+  def on_define(e = %{handler: Meta}), do: Meta.on_define(e)
+
+  def on_define(e = %{handler: handler = %Component{handler: Meta}}) do
+    Component.call(handler, :on_define, %{}, [e]).publish[:on_define]
   end
 
   @doc section: :hooks
+  @spec on_embed(Node.t()) :: Node.t()
   def on_embed(n = %Node{elem: %{handler: Meta}}), do: Meta.on_embed(n)
 
   def on_embed(n = %Node{elem: %Component{handler: handler}}) do
-    Component.call(handler, :on_embed, %{}, [n]).publish[:node]
+    Component.call(handler, :on_embed, %{}, [n]).publish[:on_embed]
   end
 
   @doc section: :hooks
@@ -112,8 +121,8 @@ defmodule Skitter.Handler do
       import Skitter.Component, only: [defcomponent: 3]
 
       defcomponent unquote(name),
-        in: [component, node],
-        out: [component, node] do
+        in: [on_define, on_embed],
+        out: [on_define, on_embed] do
         alias Skitter.Component
         alias Skitter.Component.{Callback, Instance}
 
