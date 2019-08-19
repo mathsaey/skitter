@@ -26,6 +26,15 @@ defmodule Skitter.ComponentTest do
       assert comp.fields == [:a, :b, :c]
     end
 
+    test "handler extraction" do
+      comp =
+        defcomponent in: [] do
+          handler DefaultComponentHandler
+        end
+
+      assert comp.handler.name == DefaultComponentHandler
+    end
+
     test "callback extraction in block" do
       comp =
         defcomponent in: [] do

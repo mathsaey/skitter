@@ -33,6 +33,14 @@ defmodule Skitter.WorkflowTest do
       assert Registry.get(__MODULE__.Named) == w
     end
 
+    test "handler extraction" do
+      w = defworkflow in: ignore do
+        handler DefaultWorkflowHandler
+      end
+
+      assert w.handler.name == DefaultWorkflowHandler
+    end
+
     test "inline components" do
       c = defcomponent([in: ignore], do: nil)
 
@@ -95,6 +103,13 @@ defmodule Skitter.WorkflowTest do
 
       assert_definition_error ~r/.*: Invalid port list: `.*`/ do
         defworkflow [extra: ignore], do: nil
+      end
+
+      assert_definition_error ~r/.*: Only one handler declaration is allowed: `.*`/ do
+        defworkflow in: ignore do
+          handler Foo
+          handler Bar
+        end
       end
 
       assert_definition_error ~r/.*: `.*` is not allowed in a workflow/ do
