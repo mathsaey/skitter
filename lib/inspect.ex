@@ -16,14 +16,14 @@ defmodule Skitter.Inspect do
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
-      unquote(header(prefix, named?, opts))
+      unquote(header(prefix, named?))
       unquote(helpers())
     end
   end
 
   # Header: Add an inspect which calls _doc. Take care of printing the prefix
   # and the name if needed.
-  defp header(prefix, true, opts) do
+  defp header(prefix, true) do
     quote do
       def inspect(%{name: n}, o = %Inspect.Opts{custom_options: [short: true]})
           when not is_nil(n) do
@@ -40,7 +40,7 @@ defmodule Skitter.Inspect do
     end
   end
 
-  defp header(prefix, false, opts) do
+  defp header(prefix, false) do
     quote do
       def inspect(x, o) do
         container_doc("##{unquote(prefix)}<", Map.to_list(x), ">", o, &_doc/2)
