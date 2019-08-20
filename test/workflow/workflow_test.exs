@@ -50,8 +50,8 @@ defmodule Skitter.WorkflowTest do
           b = new defcomponent([in: ignore], do: nil)
         end
 
-      assert w.nodes.a == %Node{elem: c, args: []}
-      assert w.nodes.b == %Node{elem: c, args: []}
+      assert w[:a] == %Node{elem: c, args: []}
+      assert w[:b] == %Node{elem: c, args: []}
     end
 
     test "named components", %{component: c} do
@@ -60,7 +60,7 @@ defmodule Skitter.WorkflowTest do
           c = new c.name
         end
 
-      assert w.nodes.c == %Node{elem: Registry.get(c.name), args: []}
+      assert w[:c] == %Node{elem: Registry.get(c.name), args: []}
     end
 
     test "links", %{component: c} do

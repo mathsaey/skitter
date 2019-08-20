@@ -44,7 +44,7 @@ defmodule Skitter.HandlerLib do
           Callback.t()
         ) :: Component.t()
   def default_callback(component = %Component{}, name, callback) do
-    if Map.has_key?(component.callbacks, name) do
+    if component[name] do
       component
     else
       %{component | callbacks: Map.put(component.callbacks, name, callback)}
@@ -76,7 +76,7 @@ defmodule Skitter.HandlerLib do
     state = Keyword.get(opts, :state_capability, :none)
     publish = Keyword.get(opts, :publish_capability, false)
 
-    if cb = Map.get(component.callbacks, name) do
+    if cb = component[name] do
       permissions? = Callback.check_permissions(cb, state, publish)
       arity? = Callback.check_arity(cb, arity)
 

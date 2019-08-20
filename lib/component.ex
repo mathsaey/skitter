@@ -24,6 +24,8 @@ defmodule Skitter.Component do
   alias Skitter.Handler
   alias DefaultComponentHandler, as: Default
 
+  @behaviour Access
+
   defstruct name: nil,
             fields: [],
             in_ports: [],
@@ -96,7 +98,7 @@ defmodule Skitter.Component do
   @spec call(t(), callback_name(), Callback.state(), [any()]) ::
           Callback.result()
   def call(component = %Component{}, callback_name, state, arguments) do
-    Callback.call(component.callbacks[callback_name], state, arguments)
+    Callback.call(component[callback_name], state, arguments)
   end
 
   @doc """
@@ -112,6 +114,17 @@ defmodule Skitter.Component do
   @spec create_empty_state(Component.t()) :: Callback.state()
   def create_empty_state(%Component{fields: fields}) do
     Map.new(fields, &{&1, nil})
+  end
+
+  @impl true
+  def fetch(comp, key), do: Access.fetch(comp.callbacks, key)
+
+  @impl true
+  def pop(comp, key), do: Access.pop(comp.callbacks, key)
+
+  @impl true
+  def get_and_update(comp, key, f) do
+    Access.get_and_update(comp.callbacks, key, f)
   end
 
   # ------ #

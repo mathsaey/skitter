@@ -21,6 +21,8 @@ defmodule Skitter.Workflow do
   alias Skitter.Handler
   alias DefaultWorkflowHandler, as: Default
 
+  @behaviour Access
+
   defstruct name: nil,
             in_ports: [],
             out_ports: [],
@@ -65,6 +67,21 @@ defmodule Skitter.Workflow do
   same name.
   """
   @type address() :: {id() | nil, Port.t()}
+
+  # --------- #
+  # Utilities #
+  # --------- #
+
+  @impl true
+  def fetch(wf, key), do: Access.fetch(wf.nodes, key)
+
+  @impl true
+  def pop(wf, key), do: Access.pop(wf.nodes, key)
+
+  @impl true
+  def get_and_update(wf, key, f) do
+    Access.get_and_update(wf.nodes, key, f)
+  end
 
   # ------------------ #
   # Workflow Expansion #

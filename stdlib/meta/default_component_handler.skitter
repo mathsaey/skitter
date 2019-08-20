@@ -16,6 +16,6 @@ defhandler DefaultComponentHandler do
   end
 
   on_embed node do
-    require_instantiation_arity(node, node.elem.callbacks.init.arity) ~> on_embed
+    require_instantiation_arity(node, node.elem[:init].arity) ~> on_embed
   end
 end
