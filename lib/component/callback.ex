@@ -368,52 +368,31 @@ defmodule Skitter.Component.Callback do
 end
 
 defimpl Inspect, for: Skitter.Component.Callback do
-  import Inspect.Algebra
+  use Skitter.Inspect, prefix: "Callback"
 
-  def inspect(cb, opts) do
-    container_doc(
-      "#Callback<",
-      Map.to_list(cb),
-      ">",
-      opts,
-      &doc/2,
-      break: :flex
-    )
-  end
+  ignore :function
 
-  defp doc({atm, _}, _) when atm in [:__struct__, :function], do: empty()
+  match(:arity, arity, _, do: "arity[#{arity}]")
 
-  defp doc({:arity, arity}, _), do: "arity[#{arity}]"
-
-  defp doc({:state_capability, state}, _) do
+  match(:state_capability, state, _) do
     "state_capability[#{state_cap_str(state)}]"
   end
 
-  defp doc({:publish_capability, pub}, _) do
+  match(:publish_capability, pub, _) do
     "publish_capability[#{publish_cap_str(pub)}]"
   end
 
   defp state_cap_str(:none), do: "/"
   defp state_cap_str(:read), do: "R"
   defp state_cap_str(:readwrite), do: "RW"
-  defp state_cap_str(_), do: ""
+  defp state_cap_str(_), do: "?"
 
   defp publish_cap_str(true), do: "✓"
   defp publish_cap_str(false), do: "x"
-  defp publish_cap_str(_), do: ""
+  defp publish_cap_str(_), do: "?"
 end
 
 defimpl Inspect, for: Skitter.Component.Callback.Result do
-  import Inspect.Algebra
-
-  def inspect(res, opts) do
-    container_doc("#Result<", Map.to_list(res), ">", opts, &doc/2, break: :flex)
-  end
-
-  defp doc({:__struct__, _}, _), do: empty()
-  defp doc({e, nil}, _) when e in [:state, :publish], do: empty()
-
-  defp doc({field, value}, opts) do
-    glue(Atom.to_string(field), ": ", to_doc(value, opts))
-  end
+  use Skitter.Inspect, prefix: "Result", named: false
+  ignore_empty [:state, :publish]
 end

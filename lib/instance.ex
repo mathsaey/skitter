@@ -22,15 +22,6 @@ defmodule Skitter.Instance do
 end
 
 defimpl Inspect, for: Skitter.Instance do
-  import Inspect.Algebra
-
-  def inspect(inst, opts) do
-    container_doc("#Instance<", Map.to_list(inst), ">", opts, &doc/2)
-  end
-
-  defp doc({:__struct__, _}, _), do: empty()
-  defp doc({:ref, s}, opts), do: to_doc(s, opts)
-
-  defp doc({:elem, e = %{name: nil}}, opts), do: to_doc(e, opts)
-  defp doc({:elem, %{name: name}}, opts), do: to_doc(name, opts)
+  use Skitter.Inspect, prefix: "Instance"
+  value_only([:ref, :elem])
 end

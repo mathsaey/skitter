@@ -27,17 +27,9 @@ defmodule Skitter.Workflow.Node do
 end
 
 defimpl Inspect, for: Skitter.Workflow.Node do
-  import Inspect.Algebra
+  use Skitter.Inspect, prefix: "Node"
 
-  def inspect(node, opts) do
-    container_doc("#Node<", Map.to_list(node), ">", opts, &doc/2)
-  end
-
-  defp doc({:__struct__, _}, _), do: empty()
-
-  defp doc({:args, []}, _), do: empty()
-  defp doc({:args, lst}, opts), do: to_doc(lst, opts)
-
-  defp doc({:elem, e = %{name: nil}}, opts), do: to_doc(e, opts)
-  defp doc({:elem, %{name: name}}, opts), do: to_doc(name, opts)
+  ignore_short :args
+  ignore_empty :args
+  value_only [:args, :elem]
 end
