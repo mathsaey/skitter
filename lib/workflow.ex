@@ -369,3 +369,13 @@ defmodule Skitter.Workflow do
           "`#{port}` is not a port of `#{inspect(element)}`"
   end
 end
+
+defimpl Inspect, for: Skitter.Workflow do
+  use Skitter.Inspect, prefix: "Workflow", named: true
+
+  ignore_empty([:out_ports])
+  ignore_short([:handler, :nodes, :links])
+
+  describe(:in_ports, "in")
+  describe(:out_ports, "out")
+end
