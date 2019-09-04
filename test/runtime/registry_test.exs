@@ -22,9 +22,20 @@ defmodule Skitter.Runtime.RegistryTest do
     assert put_if_named(w) == w
   end
 
+  test "insertion", %{component: c, workflow: w} do
+    c_named = %{c | name: ComponentInsertName}
+    w_named = %{w | name: WorkflowInsertName}
+
+    put_if_named(c_named)
+    put_if_named(w_named)
+
+    assert {c_named.name, c_named} in get_all()
+    assert {w_named.name, w_named} in get_all()
+  end
+
   test "duplicate name returns error", %{component: c, workflow: w} do
-    c_named = %{c | name: ComponentName}
-    w_named = %{w | name: WorkflowName}
+    c_named = %{c | name: ComponentDuplicateName}
+    w_named = %{w | name: WorkflowDuplicateName}
 
     put_if_named(c_named)
     put_if_named(w_named)

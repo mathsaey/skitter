@@ -30,6 +30,9 @@ defmodule Skitter.Runtime.Registry do
     end
   end
 
+  def get_all, do: :ets.tab2list(__MODULE__)
+  def get_names, do: Enum.map(get_all(), &(elem(&1, 0)))
+
   # -------------- #
   # Implementation #
   # -------------- #
