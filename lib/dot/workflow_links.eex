@@ -4,5 +4,5 @@
   # License, v. 2.0. If a copy of the MPL was not distributed with this
   # file, You can obtain one at http://mozilla.org/MPL/2.0/. %>
 <%= for dst <- @dst_lst do %>
-  <%= src_address(@src) %> -> <%= dst_address(dst) %>;
+  <%= src_address(@src, @path, @workflow) %> -> <%= dst_address(dst, @path, @workflow) %>;
 <% end %>

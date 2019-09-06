@@ -6,5 +6,5 @@
 strict digraph {
   rankdir = "LR";
 
-  <%= workflow_body(workflow: @workflow) %>
+  <%= workflow_body(workflow: @workflow, path: "") %>
 }

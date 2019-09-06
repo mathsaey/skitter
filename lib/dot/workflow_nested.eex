@@ -6,5 +6,5 @@
 subgraph cluster_<%= @id %> {
   label = "<%= @id %>";
 
-  <%= workflow_body(workflow: @workflow) %>
+  <%= workflow_body(workflow: @workflow, path: @path) %>
 }

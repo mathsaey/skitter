@@ -68,6 +68,7 @@ defmodule Skitter.Dot do
 
   require EEx
 
+  # Load all templates
   __DIR__
   |> Path.join("dot/*.eex")
   |> Path.wildcard()
@@ -76,26 +77,39 @@ defmodule Skitter.Dot do
     EEx.function_from_file(:defp, fname, file, [:assigns], trim: true)
   end)
 
-  # Workflow
-  # --------
+  # Path is used to avoid name conflicts in nested workflows
+  defp expand_path("", id), do: Atom.to_string(id)
+  defp expand_path(path, id), do: "#{path}_#{Atom.to_string(id)}"
 
-  defp workflow_node(id, %Prototype{elem: c = %Component{}}) do
-    component(id: id, component: c)
+  defp port_path("", prefix, port), do: "#{prefix}_#{port}"
+  defp port_path(path, prefix, port), do: "#{path}_#{prefix}_#{port}"
+
+  # Pattern match to treat workflows and components differently
+  defp workflow_node(id, %Prototype{elem: c = %Component{}}, path) do
+    component(id: id, component: c, path: path)
   end
 
-  defp workflow_node(id, %Prototype{elem: w = %Workflow{}}) do
-    workflow_nested(id: id, workflow: w)
+  defp workflow_node(id, %Prototype{elem: w = %Workflow{}}, path) do
+    workflow_nested(id: id, workflow: w, path: expand_path(path, id))
   end
 
-  defp src_address({nil, port}), do: "in_#{port}"
-  defp src_address({id, port}), do: "#{id}:out_#{port}"
+  # Generate dot links
+  defp src_address({nil, prt}, pth, wf), do: address({nil, prt}, "in", pth, wf)
+  defp src_address(tup, pth, wf), do: address(tup, "out", pth, wf)
 
-  defp dst_address({nil, port}), do: "out_#{port}"
-  defp dst_address({id, port}), do: "#{id}:in_#{port}"
+  defp dst_address({nil, prt}, pth, wf), do: address({nil, prt}, "out", pth, wf)
+  defp dst_address(tup, pth, wf), do: address(tup, "in", pth, wf)
 
-  # Component
-  # ---------
+  defp address({nil, port}, prefix, path, _), do: port_path(path, prefix, port)
 
+  defp address({id, port}, prefix, path, workflow) do
+    case workflow[id].elem do
+      %Component{} -> "#{expand_path(path, id)}:#{prefix}_#{port}"
+      %Workflow{} -> path |> expand_path(id) |> port_path(prefix, port)
+    end
+  end
+
+  # Print identifier and name if components is named
   defp component_name(%Component{name: nil}), do: ""
 
   defp component_name(%Component{name: n}) do
