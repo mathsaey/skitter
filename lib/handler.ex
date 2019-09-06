@@ -74,10 +74,10 @@ defmodule Skitter.Handler do
 
   @doc section: :hooks
   @spec on_embed(Prototype.t()) :: Prototype.t()
-  def on_embed(n = %Prototype{elem: %{handler: Meta}}), do: M.on_embed(n)
+  def on_embed(p = %Prototype{elem: %{handler: Meta}}), do: M.on_embed(p)
 
-  def on_embed(n = %Prototype{elem: %Component{handler: handler}}) do
-    Component.call(handler, :on_embed, %{}, [n]).publish[:on_embed]
+  def on_embed(p = %Prototype{elem: %{handler: h = %Component{handler: Meta}}}) do
+    Component.call(h, :on_embed, %{}, [p]).publish[:on_embed]
   end
 
   @doc section: :hooks
