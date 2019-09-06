@@ -15,7 +15,7 @@ defhandler DefaultComponentHandler do
     ~> on_define
   end
 
-  on_embed node do
-    require_instantiation_arity(node, node.elem[:init].arity) ~> on_embed
+  on_embed proto do
+    require_instantiation_arity(proto, proto.elem[:init].arity) ~> on_embed
   end
 end

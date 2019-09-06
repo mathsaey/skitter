@@ -16,7 +16,7 @@ defmodule Skitter.Workflow do
   reactive workflows.
   """
   alias Skitter.{Port, DSL, DefinitionError, Runtime.Registry}
-  alias Skitter.Workflow.Node
+  alias Skitter.Instance.Prototype
 
   alias Skitter.Handler
   alias DefaultWorkflowHandler, as: Default
@@ -33,16 +33,16 @@ defmodule Skitter.Workflow do
   @typedoc """
   Internal workflow representation.
 
-  A workflow contains a set of nodes; elements grouped with the arguments that
-  can be used to initialize them. Besides this, a workflow has a set of in -and
-  out ports, and an optional name. Finally, the workflow stores the links
-  between the various `t:address/0` of ports in the workflow.
+  A workflow is a directed acyclic graph where each node is a
+  named `t:Skitter.Instance.Prototype.t/0`. Connections between nodes are
+  stored as a map of `t:address/0`. Finally, a workflow has in -and out ports
+  and an optional name.
   """
   @type t :: %__MODULE__{
           name: String.t() | nil,
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
-          nodes: %{optional(id()) => Node.t()},
+          nodes: %{optional(id()) => Prototype.t()},
           links: %{required(address()) => [address()]},
           handler: Handler.t()
         }
@@ -130,7 +130,7 @@ defmodule Skitter.Workflow do
   defp expand_name(any), do: any
 
   defp create_node({name, elem, args}) do
-    node = %Node{elem: elem, args: args}
+    node = %Prototype{elem: elem, args: args}
     {name, Handler.on_embed(node)}
   end
 
@@ -153,7 +153,7 @@ defmodule Skitter.Workflow do
     element =
       case nodes[identifier] do
         nil -> throw {:error, :invalid_node, identifier}
-        %Node{elem: element} -> element
+        %Prototype{elem: element} -> element
       end
 
     unless port in Map.get(element, key) do
@@ -215,9 +215,9 @@ defmodule Skitter.Workflow do
   to link the node to others.
   - `element` is either the name of an existing `Skitter.Element`, or an inline
   definition of an element.
-  - Any other argument is stored as a part of the node. When the element gets
-  deployed, these arguments are passed to the `Skitter.Handler.deploy/2` hook
-  along with the element.
+  - The remaining arguments are stored along with the element as a
+  `Skitter.Instance.Prototype`. This prototype is passed to
+  `Skitter.Handler.deploy/2` when the workflow is deployed.
 
   ### Links
 

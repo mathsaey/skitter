@@ -12,8 +12,8 @@ defmodule Skitter.WorkflowTest do
   import Skitter.Component
 
   alias Skitter.Workflow
-  alias Skitter.Workflow.Node
   alias Skitter.Runtime.Registry
+  alias Skitter.Instance.Prototype
 
   doctest Skitter.Workflow
 
@@ -50,8 +50,8 @@ defmodule Skitter.WorkflowTest do
           b = new defcomponent([in: ignore], do: nil)
         end
 
-      assert w[:a] == %Node{elem: c, args: []}
-      assert w[:b] == %Node{elem: c, args: []}
+      assert w[:a] == %Prototype{elem: c, args: []}
+      assert w[:b] == %Prototype{elem: c, args: []}
     end
 
     test "named components", %{component: c} do
@@ -60,7 +60,7 @@ defmodule Skitter.WorkflowTest do
           c = new c.name
         end
 
-      assert w[:c] == %Node{elem: Registry.get(c.name), args: []}
+      assert w[:c] == %Prototype{elem: Registry.get(c.name), args: []}
     end
 
     test "links", %{component: c} do

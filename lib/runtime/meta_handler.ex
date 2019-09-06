@@ -8,7 +8,7 @@ defmodule Skitter.Runtime.MetaHandler do
   @moduledoc false
 
   alias Skitter.{Component, Instance}
-  alias Skitter.Workflow.Node
+  alias Skitter.Instance.Prototype
 
   import Skitter.HandlerLib
   import Skitter.Component.Callback, only: [defcallback: 4]
@@ -21,7 +21,7 @@ defmodule Skitter.Runtime.MetaHandler do
     )
     |> default_callback(
       :on_embed,
-      defcallback([], [:on_embed], [n], do: n ~> on_embed)
+      defcallback([], [:on_embed], [p], do: p ~> on_embed)
     )
     |> require_callback(:on_define, arity: 1, publish_capability: true)
     |> require_callback(:on_embed, arity: 1, publish_capability: true)
@@ -30,12 +30,12 @@ defmodule Skitter.Runtime.MetaHandler do
     # |> require_callback(:react, arity: 2, publish_capability: true)
   end
 
-  def on_embed(node) do
-    node
+  def on_embed(proto) do
+    proto
     |> require_instantiation_arity(0)
   end
 
-  def deploy(%Node{elem: handler, args: args}) do
+  def deploy(%Prototype{elem: handler, args: args}) do
     res = Component.call(handler, :deploy, create_empty_state(handler), args)
     # TODO: Store state on master, not needed for now
     %Instance{elem: handler, ref: res.publish[:reference]}

@@ -18,7 +18,7 @@ defmodule Skitter.HandlerLib do
   alias Skitter.Component
   alias Skitter.Component.Callback
 
-  alias Skitter.Workflow.Node
+  alias Skitter.Instance.Prototype
 
   # ------- #
   # General #
@@ -95,17 +95,17 @@ defmodule Skitter.HandlerLib do
     end
   end
 
-  def require_instantiation_arity(node = %Node{args: args}, length) do
+  def require_instantiation_arity(proto = %Prototype{args: args}, length) do
     arity = length(args)
 
     unless length == arity do
       error(
-        node,
+        proto,
         "Element expects #{length} arguments, received #{arity}"
       )
     end
 
-    node
+    proto
   end
 
   # --------- #

@@ -19,7 +19,7 @@ defmodule Skitter.Handler do
   # TODO: Document meta-components and meta-workflows
   """
   alias Skitter.{Component, Workflow, Instance, Element}
-  alias Skitter.Workflow.Node
+  alias Skitter.Instance.Prototype
 
   alias Skitter.Runtime.Registry
   alias Skitter.Runtime.MetaHandler, as: M
@@ -73,18 +73,18 @@ defmodule Skitter.Handler do
   end
 
   @doc section: :hooks
-  @spec on_embed(Node.t()) :: Node.t()
-  def on_embed(n = %Node{elem: %{handler: Meta}}), do: M.on_embed(n)
+  @spec on_embed(Prototype.t()) :: Prototype.t()
+  def on_embed(n = %Prototype{elem: %{handler: Meta}}), do: M.on_embed(n)
 
-  def on_embed(n = %Node{elem: %Component{handler: handler}}) do
+  def on_embed(n = %Prototype{elem: %Component{handler: handler}}) do
     Component.call(handler, :on_embed, %{}, [n]).publish[:on_embed]
   end
 
   @doc section: :hooks
-  def deploy(n = %Node{elem: %{handler: Meta}}), do: M.deploy(n)
+  def deploy(n = %Prototype{elem: %{handler: Meta}}), do: M.deploy(n)
 
-  def deploy(n = %Node{elem: %{handler: handler}}) do
-    deploy(%Node{elem: handler, args: [n]})
+  def deploy(n = %Prototype{elem: %{handler: handler}}) do
+    deploy(%Prototype{elem: handler, args: [n]})
   end
 
   @doc section: :hooks
