@@ -24,7 +24,7 @@ defmodule Skitter.Element do
   enough to be a `t:Skitter.Component.t/0` or `t:Skitter.Workflow.t/0`.
   """
   @type t :: %{
-          name: String.t() | nil,
+          name: atom | nil,
           handler: Handler.t(),
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()]
