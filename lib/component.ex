@@ -120,11 +120,15 @@ defmodule Skitter.Component do
   def fetch(comp, key), do: Access.fetch(comp.callbacks, key)
 
   @impl true
-  def pop(comp, key), do: Access.pop(comp.callbacks, key)
+  def pop(comp, key) do
+    {val, cbs} = Access.pop(comp.callbacks, key)
+    {val, %{comp | callbacks: cbs}}
+  end
 
   @impl true
   def get_and_update(comp, key, f) do
-    Access.get_and_update(comp.callbacks, key, f)
+    {val, cbs} = Access.get_and_update(comp.callbacks, key, f)
+    {val, %{comp | callbacks: cbs}}
   end
 
   # ------ #

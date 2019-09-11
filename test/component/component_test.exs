@@ -16,6 +16,47 @@ defmodule Skitter.ComponentTest do
   import Skitter.Component
   doctest Skitter.Component
 
+  describe "access behaviour:" do
+    test "fetch" do
+      c = defcomponent in: ignore do
+        callback _ do
+          nil
+        end
+      end
+
+      assert c[:doesnotexist] == nil
+      assert %Callback{} = c[:callback]
+    end
+
+    test "pop" do
+      c = defcomponent in: ignore do
+        callback _ do
+          nil
+        end
+      end
+
+      {val, comp} = Access.pop(c, :doesnotexist)
+      assert %Callback{} = comp[:callback]
+      assert val == nil
+
+      {val, comp} = Access.pop(c, :callback)
+      assert comp[:callback] == nil
+      assert %Callback{} = val
+    end
+
+    test "get_and_update" do
+      c = defcomponent in: ignore do
+        callback _ do
+          nil
+        end
+      end
+
+      {val, comp} = Access.get_and_update(c, :callback, fn _ -> :pop end)
+      assert comp[:callback] == nil
+      assert %Callback{} = val
+    end
+  end
+
   describe "defcomponent" do
     test "fields extraction" do
       comp =
