@@ -76,11 +76,15 @@ defmodule Skitter.Workflow do
   def fetch(wf, key), do: Access.fetch(wf.nodes, key)
 
   @impl true
-  def pop(wf, key), do: Access.pop(wf.nodes, key)
+  def pop(wf, key) do
+    {val, nodes} = Access.pop(wf.nodes, key)
+    {val, %{wf | nodes: nodes}}
+  end
 
   @impl true
   def get_and_update(wf, key, f) do
-    Access.get_and_update(wf.nodes, key, f)
+    {val, nodes} = Access.get_and_update(wf.nodes, key, f)
+    {val, %{wf | nodes: nodes}}
   end
 
   # ------------------ #

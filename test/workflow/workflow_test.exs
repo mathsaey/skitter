@@ -27,6 +27,41 @@ defmodule Skitter.WorkflowTest do
     %Workflow{}
   end
 
+  describe "access behaviour" do
+    test "fetch", %{component: c} do
+      w = defworkflow in: ignore do
+        comp = new c
+      end
+
+      assert w[:doesnotexist] == nil
+      assert w[:comp] == %Prototype{comp: c}
+    end
+
+    test "pop", %{component: c} do
+      w = defworkflow in: ignore do
+        comp = new c
+      end
+
+      {v, w} = Access.pop(w, :doesnotexist)
+      assert w[:comp] == %Prototype{comp: c}
+      assert v == nil
+
+      {v, w} = Access.pop(w, :comp)
+      assert v == %Prototype{comp: c}
+      assert w[:comp] == nil
+    end
+
+    test "get_and_update", %{component: c} do
+      w = defworkflow in: ignore do
+        comp = new c
+      end
+
+      {v, w} = Access.get_and_update(w, :comp, fn _ -> :pop end)
+      assert v == %Prototype{comp: c}
+      assert w[:comp] == nil
+    end
+  end
+
   describe "defworkflow" do
     test "name registration" do
       w = defworkflow(__MODULE__.Named, [in: ignore], do: nil)
