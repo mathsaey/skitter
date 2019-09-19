@@ -5,5 +5,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defhandler DefaultWorkflowHandler do
-  nil
+  on_define w do
+    w
+    |> inline_workflows_with_handler(DefaultWorkflowHandler)
+    ~> on_define
+  end
 end
