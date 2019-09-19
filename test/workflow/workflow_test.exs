@@ -34,7 +34,7 @@ defmodule Skitter.WorkflowTest do
       end
 
       assert w[:doesnotexist] == nil
-      assert w[:comp] == %Prototype{comp: c}
+      assert w[:comp] == %Prototype{elem: c}
     end
 
     test "pop", %{component: c} do
@@ -43,11 +43,11 @@ defmodule Skitter.WorkflowTest do
       end
 
       {v, w} = Access.pop(w, :doesnotexist)
-      assert w[:comp] == %Prototype{comp: c}
+      assert w[:comp] == %Prototype{elem: c}
       assert v == nil
 
       {v, w} = Access.pop(w, :comp)
-      assert v == %Prototype{comp: c}
+      assert v == %Prototype{elem: c}
       assert w[:comp] == nil
     end
 
@@ -57,7 +57,7 @@ defmodule Skitter.WorkflowTest do
       end
 
       {v, w} = Access.get_and_update(w, :comp, fn _ -> :pop end)
-      assert v == %Prototype{comp: c}
+      assert v == %Prototype{elem: c}
       assert w[:comp] == nil
     end
   end
