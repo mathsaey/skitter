@@ -19,20 +19,10 @@ defmodule Skitter.Runtime.MetaHandler do
       :on_define,
       defcallback([], [:on_define], [e], do: e ~> on_define)
     )
-    |> default_callback(
-      :on_embed,
-      defcallback([], [:on_embed], [p], do: p ~> on_embed)
-    )
     |> require_callback(:on_define, arity: 1, publish_capability: true)
-    |> require_callback(:on_embed, arity: 1, publish_capability: true)
 
     # |> require_callback(:deploy, arity: 2, publish_capability: true, state_access: :readwrite)
     # |> require_callback(:react, arity: 2, publish_capability: true)
-  end
-
-  def on_embed(proto) do
-    proto
-    |> require_instantiation_arity(0)
   end
 
   def deploy(%Prototype{elem: handler, args: args}) do

@@ -73,14 +73,6 @@ defmodule Skitter.Handler do
   end
 
   @doc section: :hooks
-  @spec on_embed(Prototype.t()) :: Prototype.t()
-  def on_embed(p = %Prototype{elem: %{handler: Meta}}), do: M.on_embed(p)
-
-  def on_embed(p = %Prototype{elem: %{handler: h = %Component{handler: Meta}}}) do
-    Component.call(h, :on_embed, %{}, [p]).publish[:on_embed]
-  end
-
-  @doc section: :hooks
   def deploy(n = %Prototype{elem: %{handler: Meta}}), do: M.deploy(n)
 
   def deploy(n = %Prototype{elem: %{handler: handler}}) do
@@ -116,8 +108,8 @@ defmodule Skitter.Handler do
       import Skitter.Component, only: [defcomponent: 3]
 
       defcomponent unquote(name),
-        in: [on_define, on_embed],
-        out: [on_define, on_embed] do
+        in: [on_define],
+        out: [on_define] do
         alias Skitter.Component
         alias Skitter.Component.{Callback, Instance}
 

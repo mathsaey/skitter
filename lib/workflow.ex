@@ -134,8 +134,7 @@ defmodule Skitter.Workflow do
   defp expand_name(any), do: any
 
   defp create_node({name, elem, args}) do
-    node = %Prototype{elem: elem, args: args}
-    {name, Handler.on_embed(node)}
+    {name, %Prototype{elem: elem, args: args}}
   end
 
   defp verify_links(links, nodes, in_ports, out_ports) do

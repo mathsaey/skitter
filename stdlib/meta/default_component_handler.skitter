@@ -14,8 +14,4 @@ defhandler DefaultComponentHandler do
     |> require_callback(:react, arity: length(c.in_ports), state_capability: :read, publish_capability: true)
     ~> on_define
   end
-
-  on_embed proto do
-    require_instantiation_arity(proto, proto.elem[:init].arity) ~> on_embed
-  end
 end
