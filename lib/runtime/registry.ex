@@ -9,7 +9,6 @@ defmodule Skitter.Runtime.Registry do
   # Private functions to resolve component and workflow names
 
   alias Skitter.DefinitionError
-  import Skitter.Element
   use GenServer
 
   # --- #
@@ -19,9 +18,7 @@ defmodule Skitter.Runtime.Registry do
   def start_link(_), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
   def put_if_named(e = %{name: nil}), do: e
-  def put_if_named(e = %{name: n, __struct__: s}) when is_element(s) do
-    insert(n, e)
-  end
+  def put_if_named(e = %{name: n}), do: insert(n, e)
 
   def get(key) do
     case :ets.lookup(__MODULE__, key) do
