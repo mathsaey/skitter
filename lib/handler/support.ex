@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.HandlerLib do
+defmodule Skitter.Handler.Support do
   @moduledoc """
   Library to be used by component and workflow handlers.
 
@@ -18,7 +18,7 @@ defmodule Skitter.HandlerLib do
   alias Skitter.Component
   alias Skitter.Component.Callback
 
-  alias Skitter.Instance.Prototype
+  alias Skitter.Component.Instance.Prototype
 
   # ------- #
   # General #
@@ -28,7 +28,7 @@ defmodule Skitter.HandlerLib do
   Raise a `Skitter.HandlerError`
   """
   def error(for, message) do
-    raise(Skitter.Handler.Error, for: for, message: message)
+    raise(Skitter.HandlerError, for: for, message: message)
   end
 
   # ---------- #
@@ -93,19 +93,6 @@ defmodule Skitter.HandlerLib do
     else
       error(component, "Missing `#{name}` callback")
     end
-  end
-
-  def require_instantiation_arity(proto = %Prototype{args: args}, length) do
-    arity = length(args)
-
-    unless length == arity do
-      error(
-        proto,
-        "Element expects #{length} arguments, received #{arity}"
-      )
-    end
-
-    proto
   end
 
   # --------- #
