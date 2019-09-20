@@ -21,6 +21,7 @@ defmodule Skitter.Runtime.MetaHandler do
     )
     |> require_callback(:on_define, arity: 1, publish_capability: true)
 
+    # TODO: add these again once workflow handler is working
     # |> require_callback(:deploy, arity: 2, publish_capability: true, state_access: :readwrite)
     # |> require_callback(:react, arity: 2, publish_capability: true)
   end

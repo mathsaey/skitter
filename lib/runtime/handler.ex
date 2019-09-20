@@ -10,6 +10,7 @@ defmodule Skitter.Runtime.Handler do
   alias Skitter.Workflow
   alias Skitter.Component
 
+  alias Skitter.Instance
   alias Skitter.Instance.Prototype
 
   alias Skitter.Runtime.MetaHandler, as: M
@@ -25,4 +26,6 @@ defmodule Skitter.Runtime.Handler do
   def deploy(n = %Prototype{elem: %{handler: handler}}) do
     deploy(%Prototype{elem: handler, args: [n]})
   end
+
+  def react(i = %Instance{}, args), do: M.react(i, args)
 end

@@ -108,8 +108,8 @@ defmodule Skitter.Handler do
       import Skitter.Component, only: [defcomponent: 3]
 
       defcomponent unquote(name),
-        in: [elem, prototype],
-        out: [elem, reference] do
+        in: [elem, prototype, reference, args],
+        out: [elem, reference, publish] do
         alias Skitter.Component
         alias Skitter.Component.Callback
 

@@ -21,4 +21,9 @@ defhandler DefaultComponentHandler do
       {comp, state}
     end) ~> reference
   end
+
+  react ref, args do
+    {comp, state} = Ubiquitous.get(ref)
+    Component.call(comp, :react, state, args).publish ~> publish
+  end
 end
