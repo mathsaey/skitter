@@ -76,17 +76,6 @@ defmodule Skitter.Runtime.Configuration do
   def master_node, do: get_env(:master_node, false)
 
   @doc """
-  Specify if profiling should be enabled, and for how long.
-
-  This option specifies an amount of time (in seconds) the current skitter node
-  should profile its execution using `:fprof`. The output of fprof will be
-  stored in the current working directory with the name `<nodename>.profile`.
-  When this option is false, profiling is disabled (the default).
-  """
-  @spec profile() :: boolean()
-  def profile, do: get_env(:profile, false)
-
-  @doc """
   Specify if skitter should automatically enable distribution.
 
   By default, skitter will automatically set itself up as a distributed erlang

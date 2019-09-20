@@ -8,7 +8,7 @@ defmodule Skitter.Runtime do
   @moduledoc false
 
   alias __MODULE__
-  alias __MODULE__.{Configuration, Registry, Loader, Profiler, Nodes}
+  alias __MODULE__.{Configuration, Registry, Loader, Nodes}
 
   # ------------- #
   # Runtime Setup #
@@ -33,9 +33,6 @@ defmodule Skitter.Runtime do
 
       check_vm_features()
       ensure_distribution_enabled(mode)
-
-      # Profiler must be started before any processes are spawned
-      if duration = Configuration.profile(), do: Profiler.profile(duration)
 
       # Mode-specific hooks + start/return supervision tree
       pre_load(mode, nodes)
