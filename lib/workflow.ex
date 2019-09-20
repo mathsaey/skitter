@@ -15,7 +15,7 @@ defmodule Skitter.Workflow do
   module defines the `defworkflow/3` macro, which can be used to create
   reactive workflows.
   """
-  alias Skitter.{Port, DSL, DefinitionError, Runtime.Registry}
+  alias Skitter.{Port, DSL, DefinitionError}
   alias Skitter.Instance.Prototype
 
   alias Skitter.Handler
@@ -117,15 +117,15 @@ defmodule Skitter.Workflow do
         nodes: nodes,
         links: links
       }
-      |> Handler.on_define()
-      |> Registry.put_if_named()
+      |> Skitter.Runtime.Handler.on_define()
+      |> Skitter.Runtime.Registry.put_if_named()
     catch
       err -> handle_error(err)
     end
   end
 
   defp expand_name({name, elem, args}) when is_atom(elem) do
-    case Registry.get(elem) do
+    case Skitter.Runtime.Registry.get(elem) do
       nil -> throw {:error, :invalid_name, elem}
       res -> {name, res, args}
     end

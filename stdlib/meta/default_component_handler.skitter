@@ -12,6 +12,13 @@ defhandler DefaultComponentHandler do
     |> require_callback(:init, state_capability: :readwrite)
     |> require_callback(:terminate, state_capability: :read)
     |> require_callback(:react, arity: length(c.in_ports), state_capability: :read, publish_capability: true)
-    ~> on_define
+    ~> elem
+  end
+
+  deploy %Prototype{elem: comp, args: args} do
+    Ubiquitous.put_result(fn ->
+      state = Component.call(comp, :init, create_empty_state(comp), args).state
+      {comp, state}
+    end) ~> reference
   end
 end

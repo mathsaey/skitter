@@ -8,6 +8,6 @@ defhandler DefaultWorkflowHandler do
   on_define w do
     w
     |> inline_workflows_with_handler(DefaultWorkflowHandler)
-    ~> on_define
+    ~> elem
   end
 end

@@ -17,7 +17,7 @@ defmodule Skitter.Runtime.MetaHandler do
     component
     |> default_callback(
       :on_define,
-      defcallback([], [:on_define], [e], do: e ~> on_define)
+      defcallback([], [:elem], [e], do: e ~> elem)
     )
     |> require_callback(:on_define, arity: 1, publish_capability: true)
 
