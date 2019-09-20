@@ -326,11 +326,6 @@ defmodule Skitter.Component do
     body =
       quote do
         unquote(imports)
-        unquote(body)
-      end
-
-    body =
-      quote do
         import unquote(__MODULE__.Callback), only: [defcallback: 4]
 
         defcallback(

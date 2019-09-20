@@ -212,7 +212,7 @@ defmodule Skitter.Component.Callback do
         quote do
           fn unquote(state_arg), unquote(args) ->
             import unquote(__MODULE__),
-              only: [read_state: 1, update_state: 2, publish: 2]
+              only: [read_state: 1, update_state: 2, publish: 2, defcallback: 4]
 
             result = unquote(body)
 

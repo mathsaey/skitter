@@ -108,13 +108,16 @@ defmodule Skitter.Handler do
       import Skitter.Component, only: [defcomponent: 3]
 
       defcomponent unquote(name),
-        in: [on_define],
-        out: [on_define] do
+        in: [elem, prototype],
+        out: [elem, reference] do
         alias Skitter.Component
-        alias Skitter.Component.{Callback, Instance}
+        alias Skitter.Component.Callback
+
+        alias Skitter.Instance
+        alias Skitter.Instance.Prototype
 
         import Skitter.Handler.Primitives
-        import Skitter.Component.Callback
+        alias Skitter.Handler.Primitives.{Ubiquitous}
 
         handler(Meta)
         unquote_splicing(body)
