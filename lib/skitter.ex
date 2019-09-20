@@ -78,6 +78,10 @@ defmodule Skitter do
   @spec mode() :: mode()
   def mode, do: Skitter.Runtime.Configuration.mode()
 
+  # ----- #
+  # Nodes #
+  # ----- #
+
   @doc """
   List the connected worker nodes.
 
@@ -117,6 +121,17 @@ defmodule Skitter do
     Skitter.Runtime.Nodes.Worker.connect_to_master(node)
   end
 
+  # -------- #
+  # Programs #
+  # -------- #
+
+  @doc """
+  Get a list of all registered names.
+  """
+  @doc mode: [:master, :local]
+  @spec identifiers() :: [atom]
+  def identifiers, do: Skitter.Runtime.Registry.get_names()
+
   @doc """
   Load the file at `path`.
 
@@ -130,4 +145,21 @@ defmodule Skitter do
   @doc mode: [:master, :local]
   @spec load_file(Path.t()) :: any()
   def load_file(path), do: Skitter.Runtime.Loader.load(path)
+
+  @doc """
+  Deploy an element with `args`.
+  """
+  @doc mode: [:master, :local]
+  def deploy(elem, args \\ [])
+
+  def deploy(elem, args) when is_atom(elem) do
+    deploy(Skitter.Runtime.Registry.get(elem), args)
+  end
+
+  def deploy(elem, args) do
+    Skitter.Runtime.Manager.create(%Skitter.Instance.Prototype{
+      elem: elem,
+      args: args
+    })
+  end
 end

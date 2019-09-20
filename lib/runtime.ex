@@ -87,7 +87,14 @@ defmodule Skitter.Runtime do
     [{Task.Supervisor, name: Skitter.Runtime.TaskSupervisor}]
   end
 
-  defp children(:master), do: [Registry, Runtime.Nodes.Supervisor]
+  defp children(:master) do
+    [
+      Registry,
+      Runtime.Nodes.Supervisor,
+      Runtime.Manager.Supervisor
+    ]
+  end
+
   defp children(:worker), do: [Runtime.Nodes.Worker]
   defp children(:local), do: children(:worker) ++ children(:master)
 
