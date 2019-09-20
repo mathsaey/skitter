@@ -10,7 +10,7 @@ defmodule Skitter.Runtime.MetaHandler do
   alias Skitter.{Component, Instance}
   alias Skitter.Instance.Prototype
 
-  import Skitter.Handler.Support
+  import Skitter.Handler.Primitives
   import Skitter.Component.Callback, only: [defcallback: 4]
 
   def on_define(component = %Component{}) do

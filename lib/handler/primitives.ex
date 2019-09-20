@@ -4,12 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Handler.Support do
+defmodule Skitter.Handler.Primitives do
   @moduledoc """
-  Library to be used by component and workflow handlers.
+  Primitives to be used by component and workflow handlers.
 
-  This module, and any other module in this namespace, provide a "standard
-  library" of functions that can be used by component or workflow handlers.
+  This module, and any other module in this namespace, provide a set of useful
+  primitive functions that can can be used by component or workflow handlers.
 
   They are included by default when a handler is defined through the use of
   `Skitter.Handler.defhandler/2`.

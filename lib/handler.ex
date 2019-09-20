@@ -113,7 +113,7 @@ defmodule Skitter.Handler do
         alias Skitter.Component
         alias Skitter.Component.{Callback, Instance}
 
-        import Skitter.Handler.Support
+        import Skitter.Handler.Primitives
         import Skitter.Component.Callback
 
         handler(Meta)
