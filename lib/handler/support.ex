@@ -30,7 +30,7 @@ defmodule Skitter.Handler.Support do
   Raise a `Skitter.HandlerError`
   """
   def error(for, message) do
-    raise(Skitter.HandlerError, for: for, message: message)
+    raise(Skitter.Handler.Error, for: for, message: message)
   end
 
   # ---------- #
@@ -100,6 +100,9 @@ defmodule Skitter.Handler.Support do
   # Inline Workflow
   # ---------------
 
+  @doc """
+  Inline any child workflow which has `handler` as its handler.
+  """
   def inline_workflows_with_handler(wf, atom) when is_atom(atom) do
     inline_workflows_with_handler(wf, Skitter.Runtime.Registry.get(atom))
   end
