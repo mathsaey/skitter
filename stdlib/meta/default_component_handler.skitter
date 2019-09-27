@@ -16,14 +16,14 @@ defhandler DefaultComponentHandler do
   end
 
   deploy %Prototype{elem: comp, args: args} do
-    Ubiquitous.put_result(fn ->
+    put_ubiquitous(fn ->
       state = Component.call(comp, :init, create_empty_state(comp), args).state
       {comp, state}
     end) ~> reference
   end
 
   react ref, args do
-    {comp, state} = Ubiquitous.get(ref)
+    {comp, state} = get_ubiquitous(ref)
     Component.call(comp, :react, state, args).publish ~> publish
   end
 end

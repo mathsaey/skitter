@@ -91,6 +91,7 @@ defmodule Skitter.Runtime do
     [
       Registry,
       Runtime.Nodes.Supervisor,
+      Runtime.Ubiquitous.Monitor,
       Runtime.Manager.Supervisor
     ]
   end

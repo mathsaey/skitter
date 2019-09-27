@@ -207,4 +207,12 @@ defmodule Skitter.Handler.Primitives do
 
   defdelegate create_empty_state(component), to: Component
   defdelegate call(component, callback_name, state, args), to: Component
+
+  # ---------- #
+  # Ubiquitous #
+  # ---------- #
+
+  def put_ubiquitous(data), do: Skitter.Runtime.Ubiquitous.put(data)
+  def get_ubiquitous(ref), do: Skitter.Runtime.Ubiquitous.get(ref)
+
 end

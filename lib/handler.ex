@@ -117,7 +117,6 @@ defmodule Skitter.Handler do
         alias Skitter.Instance.Prototype
 
         import Skitter.Handler.Primitives
-        alias Skitter.Handler.Primitives.{Ubiquitous}
 
         handler(Meta)
         unquote_splicing(body)
