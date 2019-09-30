@@ -9,6 +9,8 @@ defmodule Skitter.Runtime.Loader do
   # This module is responsible for loading .skitter files
 
   alias Skitter.Runtime.Configuration
+  alias Skitter.Runtime.TaskSupervisor, as: STS
+
   require Logger
 
   @doc """
@@ -44,7 +46,8 @@ defmodule Skitter.Runtime.Loader do
     |> Path.join(dir)
     |> Path.join("*.skitter")
     |> Path.wildcard()
-    |> Enum.each(&load/1)
+    |> Enum.map(&Task.Supervisor.async(STS, __MODULE__, :load, [&1]))
+    |> Enum.map(&Task.await(&1))
   end
 
   defp load_new(path) do
