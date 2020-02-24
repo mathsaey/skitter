@@ -5,6 +5,6 @@
   # file, You can obtain one at http://mozilla.org/MPL/2.0/. %>
 <TABLE BORDER="0">
   <%= for port <- @ports do %>
-    <TR><TD BORDER="1" STYLE="rounded" PORT="<%= @prefix %>_<%= port %>"><%= port %></TD></TR>
+  <TR><TD BORDER="1" STYLE="rounded" PORT="<%= @prefix %>_<%= port %>"><%= port %></TD></TR>
   <% end%>
 </TABLE>

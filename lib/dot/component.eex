@@ -5,8 +5,19 @@
   # file, You can obtain one at http://mozilla.org/MPL/2.0/. %>
 <%= expand_path(@path, @id) %> [shape=none label=<
   <TABLE STYLE="rounded"><TR>
-      <TD BORDER="0"><%= component_ports(ports: @component.in_ports, prefix: "in") %></TD>
-      <TD BORDER="0"><%= @id %><%= component_name(@component) %></TD>
-      <TD BORDER="0"><%= component_ports(ports: @component.out_ports, prefix: "out") %></TD>
+      <TD BORDER="0">
+        // in ports
+      <%= component_ports(ports: @component.in_ports, prefix: "in") %>
+    </TD>
+
+    // component
+    <TD BORDER="0"><%= @id %><%= component_name(@component) %></TD>
+
+    <%= unless Enum.empty?(@component.out_ports) do %>
+    <TD BORDER="0">
+      // out ports
+      <%= component_ports(ports: @component.out_ports, prefix: "out") %>
+    </TD>
+    <%end %>
   </TR></TABLE>
 >];
