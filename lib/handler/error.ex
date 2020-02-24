@@ -25,7 +25,7 @@ defmodule Skitter.Handler.Error do
   defp for_string(nil), do: ""
   defp for_string(any), do: " for " <> for_to_string(any)
 
-  defp for_to_string(%Component{name: name}), do: name
+  defp for_to_string(%Component{name: name}), do: Atom.to_string(name)
   defp for_to_string(any), do: inspect(any)
 
   defp handler_to_string(%Component{name: name}) when name != nil, do: name
