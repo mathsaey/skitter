@@ -4,13 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-root = true
+# Runtime configuration of skitter releases. Anything in this file is executed
+# after the ERTS is started, but before any skitter applications are loaded.
 
-[*.{ex,exs,skitter}]
-
-indent_size = 2
-indent_style = space
-
-end_of_line = lf
-insert_final_newline = false
-trim_trailing_whitespace = true
+import Config

@@ -1,4 +1,4 @@
-# Copyright 2018, 2019 Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -9,33 +9,27 @@ defmodule Skitter.MixProject do
 
   def project do
     [
-      app: :skitter,
       name: "Skitter",
-      version: "0.2.0-dev",
+      version: File.read!("#{__DIR__}/VERSION.txt") |> String.trim(),
       source_url: "https://github.com/mathsaey/skitter/",
       homepage_url: "https://soft.vub.ac.be/~mathsaey/skitter/",
-      elixir: "~> 1.9",
+      apps_path: "apps",
       deps: deps(),
       docs: docs(),
-      start_permanent: Mix.env() == :prod,
-      elixirc_paths: elixirc_paths(Mix.env()),
+      aliases: aliases(),
+      releases: releases(),
       dialyzer: dialyzer()
-    ]
-  end
-
-  def application do
-    [
-      mod: {Skitter.Application, []},
-      extra_applications: [:logger]
     ]
   end
 
   defp deps do
     [
-      # Dev tools
-      {:credo, "~> 1.0.0", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.6", only: :dev, runtime: false}
+      {:credo, "~> 1.4", only: :dev, runtime: false},
+      # Temporary use master until issue is in latest release
+      # https://github.com/elixir-lang/ex_doc/issues/1173
+      {:ex_doc, github: "elixir-lang/ex_doc", only: :dev, runtime: false},
+      # {:ex_doc, "~> 0.22", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: :dev, runtime: false}
     ]
   end
 
@@ -43,29 +37,84 @@ defmodule Skitter.MixProject do
     [
       source_ref: "develop",
       logo: "assets/logo-light_docs.png",
-      extras: Path.wildcard("pages/*.md"),
+      extras: Path.wildcard("app/*/pages/*.md"),
       groups_for_modules: [
-        Language: [
-          Skitter.Port,
+        core: [
           Skitter.Element,
-          Skitter.Handler,
+          Skitter.Port,
           Skitter.Instance,
-          ~r/Skitter\.Component.*/,
-          ~r/Skitter\.Workflow.*/
-        ]
-      ],
-      groups_for_functions: [
-        Hooks: &(&1[:section] == :hooks),
-        Language: &(&1[:section] == :dsl),
-        "Master/local mode": &(&1[:mode] == [:master, :local]),
-        "Master mode": &(&1[:mode] == :master),
-        "Worker mode": &(&1[:mode] == :worker)
+          Skitter.Callback,
+          Skitter.Callback.Result,
+          Skitter.Component,
+          Skitter.Workflow,
+          Skitter.Strategy
+        ],
+        utils: [Skitter.Dot],
+        dsl: ~r/Skitter.DSL.*/,
+        runtime: ~r/Skitter.(Runtime|Worker|Master).*/
       ]
     ]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp dialyzer, do: [plt_add_apps: [:mix, :iex, :eex]]
 
-  defp dialyzer, do: [plt_add_apps: [:mix, :iex]]
+  defp aliases do
+    [
+      clean: [
+        fn _ -> cookie_clean() end,
+        "clean"
+      ],
+      build: [
+        "release skitter_master --overwrite",
+        fn _ -> Mix.Task.reenable("release") end,
+        "release skitter_worker --overwrite"
+      ]
+    ]
+  end
+
+  defp releases do
+    [
+      release(:skitter_master),
+      release(:skitter_worker)
+    ]
+  end
+
+  defp release(name), do: release(name, [name])
+
+  defp release(name, applications) do
+    {name,
+     [
+       applications: for(app <- applications, do: {app, :permanent}),
+       reboot_system_after_config: false,
+       include_executables_for: [:unix],
+       steps: steps()
+     ]}
+  end
+
+  defp steps do
+    [&put_cookie/1, :assemble]
+  end
+
+  defp put_cookie(rel = %Mix.Release{}) do
+    put_in(rel.options[:cookie], cookie_get())
+  end
+
+  @cookie_path "rel/cookie"
+
+  defp cookie_get do
+    case File.read(@cookie_path) do
+      {:ok, cookie} -> cookie
+      {:error, :enoent} -> cookie_create()
+    end
+  end
+
+  defp cookie_create do
+    cookie = Base.url_encode64(:crypto.strong_rand_bytes(40))
+    File.write!(@cookie_path, cookie)
+    cookie
+  end
+
+  defp cookie_clean do
+    File.rm(@cookie_path)
+  end
 end

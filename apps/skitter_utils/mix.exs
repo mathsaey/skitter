@@ -4,13 +4,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-root = true
+defmodule Skitter.Utils.MixProject do
+  use Mix.Project
 
-[*.{ex,exs,skitter}]
+  def project do
+    {global, _} = Code.eval_file("../../global.exs")
+    [app: :skitter_utils, deps: deps()] ++ global
+  end
 
-indent_size = 2
-indent_style = space
-
-end_of_line = lf
-insert_final_newline = false
-trim_trailing_whitespace = true
+  defp deps do
+    [
+      {:skitter_core, in_umbrella: true}
+    ]
+  end
+end

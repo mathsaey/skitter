@@ -4,13 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-root = true
+defmodule Skitter.DSL.Application do
+  @moduledoc false
+  use Application
 
-[*.{ex,exs,skitter}]
-
-indent_size = 2
-indent_style = space
-
-end_of_line = lf
-insert_final_newline = false
-trim_trailing_whitespace = true
+  def start(:normal, []) do
+    children = [Skitter.DSL.Registry]
+    Supervisor.start_link(children, strategy: :one_for_one)
+  end
+end

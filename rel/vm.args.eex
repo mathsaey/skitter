@@ -1,0 +1,15 @@
+# TODO: run some benchmarks to fine-tune these parameters
+
+# Attempt to pin schedulers to processors. Don't complain if it is not possible
++stbt db
+
+# Make a scheduler busy wait for a while before going to sleep
++sbwt long
+
+# Wake up schedulers fast
++swct eager
++swt low
+
+# Buffer more messages for distribution
+# should lower latency and heighten throughput at the expense of memory use
++zdbbl 4096

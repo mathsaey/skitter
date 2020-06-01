@@ -1,3 +1,0 @@
-defhandler DefaultWorkflowHandler do
-  nil
-end
