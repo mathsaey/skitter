@@ -18,7 +18,8 @@ defmodule Skitter.MixProject do
       docs: docs(),
       aliases: aliases(),
       releases: releases(),
-      dialyzer: dialyzer()
+      dialyzer: dialyzer(),
+      preferred_cli_env: preferred_env()
     ]
   end
 
@@ -58,6 +59,13 @@ defmodule Skitter.MixProject do
 
   defp dialyzer, do: [plt_add_apps: [:mix, :iex, :eex]]
 
+  defp preferred_env do
+    [
+      build: :prod,
+      release: :prod
+    ]
+  end
+
   defp aliases do
     [
       clean: [
@@ -65,9 +73,9 @@ defmodule Skitter.MixProject do
         "clean"
       ],
       build: [
-        "release skitter_master --overwrite",
+        "release skitter_master",
         fn _ -> Mix.Task.reenable("release") end,
-        "release skitter_worker --overwrite"
+        "release skitter_worker"
       ]
     ]
   end
