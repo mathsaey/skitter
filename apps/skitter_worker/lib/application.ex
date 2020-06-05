@@ -7,12 +7,15 @@
 defmodule Skitter.Worker.Application do
   @moduledoc false
   use Application
-  alias Skitter.Runtime
+
+  alias Skitter.Worker
+  alias Skitter.Worker.MasterConnection
 
   def start(:normal, []) do
-    Runtime.set_mode(:worker)
+    children = [
+      {MasterConnection, Worker.get_env(:master)}
+    ]
 
-    children = []
     Supervisor.start_link(children, strategy: :one_for_one)
   end
 end

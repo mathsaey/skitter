@@ -1,18 +1,12 @@
 defmodule Skitter.Worker do
   @moduledoc """
-  Documentation for `Worker`.
   """
 
-  @doc """
-  Hello world.
+  def app do
+    :skitter_worker
+  end
 
-  ## Examples
-
-      iex> Worker.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  def get_env(key, default \\ nil) do
+    Application.get_env(app(), key, default)
   end
 end
