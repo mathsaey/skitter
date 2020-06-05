@@ -6,8 +6,5 @@
 
 import Config
 
-config :logger, :console,
-  format: "\n[$time][$level$levelpad] $message",
-  metadata: :all
-
-import_config "#{Mix.env()}.exs"
+# Remove all debug logs for production
+config :logger, :console, compile_time_purge_matching: [[level_lower_than: :info]]

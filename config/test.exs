@@ -6,8 +6,4 @@
 
 import Config
 
-config :logger, :console,
-  format: "\n[$time][$level$levelpad] $message",
-  metadata: :all
-
-import_config "#{Mix.env()}.exs"
+config :skitter_worker, :shutdown_with_master, false

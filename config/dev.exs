@@ -5,9 +5,3 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import Config
-
-config :logger, :console,
-  format: "\n[$time][$level$levelpad] $message",
-  metadata: :all
-
-import_config "#{Mix.env()}.exs"
