@@ -1,0 +1,286 @@
+#!/bin/sh
+
+# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Script to start skitter runtimes or systems.
+set -e
+
+# ------------- #
+# Documentation #
+# ------------- #
+
+desc="Skitter deploy script"
+
+deploy_desc="Manage a skitter deployment (a set of connected runtimes)"
+local_desc="Use skitter locally"
+worker_desc="Manage a skitter worker"
+master_desc="Manage a skitter master"
+
+function usage() {
+  printf '%s\n' "$desc"
+
+  printf '%s\n'   "Usage:"
+  printf '\t%s\n' "skitter [GLOBAL OPTIONS] MODE COMMAND [COMMAND OPTIONS]"
+  printf '\t%s\n' "skitter [-v | --version]"
+  printf '\t%s\n' "skitter help [MODE]"
+
+  printf '%s\n'         "Global Options:"
+  printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "set the distribution cookie"
+  printf '\t%s\t\t%s\n' "-v, --version"       "print the version and exit"
+
+  printf '%s\n'       "Modes:"
+  printf '\t%s\t%s\n' "d, deploy" "$deploy_desc"
+  printf '\t%s\t%s\n' "l, local"  "$local_desc"
+  printf '\t%s\t%s\n' "w, worker" "$worker_desc"
+  printf '\t%s\t%s\n' "m, master" "$master_desc"
+
+  printf '%s\n'     "Environment:"
+  printf '\t%s\n'   "SKITTER_PATH"
+  printf '\t\t%s\n' "Specifies the location of the skitter runtime release files."
+  printf '\t\t%s\n' "Defaults to the current directory."
+}
+
+function deploy_usage() {
+  printf '%s\n' "$deploy_desc"
+  printf '%s\n' "TODO"
+}
+
+function local_usage() {
+  printf '%s\n' "$local_desc"
+  printf '%s\n' "TODO"
+}
+
+function worker_usage() {
+  printf '%s\n' "$worker_desc"
+
+  printf '%s\n' "Usage:"
+  printf '\t%s\n' "skitter worker COMMAND [MASTER] [COMMAND OPTIONS]"
+
+  printf '%s\n'       "Commands:"
+  printf '\t%s\t%s\n' "s, start"      "Starts a worker"
+  printf '\t%s\t%s\n' "S, start_iex"  "Starts a worker with an iex shell"
+  printf '\t%s\t%s\n' "d, daemon"     "Starts a worker as a daemon"
+  printf '\t%s\t%s\n' "D, daemon_iex" "Starts a worker as a daemon with iex attached"
+  printf '\n'
+  printf '\t%s\t\t%s\n' "remote"  "Open an iex shell connected to the running worker daemon"
+  printf '\t%s\t\t%s\n' "restart" "Restart the worker daemon"
+  printf '\t%s\t\t%s\n' "stop"    "Stop the worker daemon"
+  printf '\t%s\t\t%s\n' "pid"     "Get the pid of the worker daemon"
+
+  printf '%s\n'       "Command Arguments:"
+  printf '\t%s\t%s\n' "MASTER" "Connect to the master node at this address. Optional."
+  printf '\t\t%s\n'            "This argument can only be passed to start, start_iex, daemon and daemon_iex."
+
+  printf '%s\n'     "Command Options:"
+  printf '\t%s\n'   "--shutdown-with-master, --no-shutdown-with-master"
+  printf '\t\t%s\n' "Automatically shut down the worker when the connected master node shuts down."
+  printf '\t\t%s\n' "This flag can only be passed to start, start_iex, daemon and daemon_iex."
+  printf '\t\t%s\n' "Defaults to true."
+
+}
+
+function master_usage() {
+  printf '%s\n' "$master_desc"
+  printf '%s\n' "TODO"
+}
+
+# --------- #
+# Utilities #
+# --------- #
+
+function echoerr() {
+  echo "$@" 1>&2
+}
+
+function argerr() {
+  echoerr "$1"
+  usage
+  exit 1
+}
+
+# ---------- #
+# Mode logic #
+# ---------- #
+
+# Help
+# ----
+
+function do_help() {
+  if [ -z $1 ]
+  then
+    usage
+  else
+    case "$1" in
+      d|deploy)
+        deploy_usage
+        ;;
+      l|local)
+        local_usage
+        ;;
+      w|worker)
+        worker_usage
+        ;;
+      m|master)
+        master_usage
+        ;;
+      *)
+        argerr "Cannot get help, '$1' is not a valid command"
+    esac
+  fi
+}
+
+# Release Logic
+# -------------
+
+# Figure out the path to the skitter releases. This is specified by
+# $SKITTER_PATH or the location of the script
+if [ -z $SKITTER_PATH ]
+then
+  SELF=$(readlink "$0" || true)
+  if [ -z "$SELF" ]; then SELF="$0"; fi
+  PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
+  SKITTER_PATH=$PARENT_DIR
+fi
+
+function rel_cmd() {
+  if [ ! -d "$SKITTER_PATH/skitter_$mode" ]
+  then
+    echoerr "Attempted to start 'skitter_$mode', but it is not present in '\$SKITTER_PATH'"
+    echoerr "Please ensure the 'skitter_$mode' release is built and present in '\$SKITTER_PATH'"
+    echoerr "SKITTER_PATH = $SKITTER_PATH"
+    exit 2
+  fi
+  $SKITTER_PATH/skitter_$mode/bin/skitter_$mode $1
+}
+
+function worker_start_parse() {
+  shift
+
+  while test $# -gt 0
+    do
+      case "$1" in
+        --shutdown-with-master)
+          unset SKITTER_NO_SHUTDOWN_WITH_MASTER
+          ;;
+        --no-shutdown-with-master)
+          export SKITTER_NO_SHUTDOWN_WITH_MASTER=""
+          ;;
+        *)
+          export SKITTER_MASTER=$1
+          ;;
+      esac
+      shift
+  done
+}
+
+function master_start_parse() {
+  shift
+
+  while test $# -gt 0
+    do
+      shift
+  done
+}
+
+function do_worker_master() {
+  mode="$1"
+  shift
+
+  if [ $# -eq 0 ]
+  then
+    argerr "Missing command"
+  fi
+
+  case $1 in
+    s|start)
+      "$mode"_start_parse $@
+      rel_cmd "start"
+      ;;
+    S|start_iex)
+      "$mode"_start_parse $@
+      rel_cmd "start_iex"
+      ;;
+    d|daemon)
+      "$mode"_start_parse $@
+      rel_cmd "daemon"
+      ;;
+    D|daemon_iex)
+      "$mode"_start_parse $@
+      rel_cmd "daemon_iex"
+      ;;
+    remote|restart|stop|pid)
+      rel_cmd $1
+      ;;
+  esac
+}
+
+# ------------ #
+# Script logic #
+# ------------ #
+
+# No arguments: print usage and quit
+if [ $# -eq 0 ]
+then
+  usage
+  exit 0
+fi
+
+## Parse global options and mode
+while test $# -gt 0
+  do
+    case "$1" in
+      -v|--version)
+        echo "skitter <%= @release.version %>"
+        exit 0
+        ;;
+      -c|--cookie)
+        test $# -lt 2 && argerr "Missing value for optional argument '--cookie'."
+        export RELEASE_COOKIE="$2"
+        shift
+        ;;
+      --cookie=*)
+        export RELEASE_COOKIE="${1##--cookie=}"
+        ;;
+      *)
+        break
+        ;;
+    esac
+    shift
+done
+
+if [ $# -eq 0 ]
+then
+  argerr "Missing command"
+  exit 0
+fi
+
+# Parse the mode
+case "$1" in
+  h|help)
+    shift
+    do_help $@
+    ;;
+  w|worker)
+    shift
+    do_worker_master "worker" $@
+    ;;
+  m|master)
+    shift
+    do_worker_master "master" $@
+    ;;
+  d|deploy)
+    shift
+    do_deploy $@
+    ;;
+  l|local)
+    shift
+    do_local $@
+    ;;
+  *)
+    argerr "'$1' is not a valid command"
+    ;;
+esac

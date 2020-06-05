@@ -7,4 +7,13 @@
 # Runtime configuration of skitter releases. Anything in this file is executed
 # after the ERTS is started, but before any skitter applications are loaded.
 
-import Config
+import Skitter.Runtime.ReleaseConfig
+
+load_env(:skitter_worker, :master, "SKITTER_MASTER", &String.to_atom/1)
+
+if_set(
+  :skitter_worker,
+  :shutdown_with_master,
+  "SKITTER_NO_SHUTDOWN_WITH_MASTER",
+  false
+)

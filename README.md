@@ -20,7 +20,7 @@ Once you have a working elixir installation, you can download and build the late
 ```
 $ git clone https://github.com/mathsaey/skitter.git
 $ cd skitter
-$ MIX_ENV=prod mix build
+$ mix build
 ```
 
 After this is done, the `_build/prod/rel/` directory should contain folders which contain the various skitter applications;

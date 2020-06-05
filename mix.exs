@@ -23,6 +23,15 @@ defmodule Skitter.MixProject do
     ]
   end
 
+  defp aliases do
+    [
+      # Test each subcommand in a fresh vm to avoid issues
+      test: "cmd mix test",
+      # Build all releases
+      build: &build_releases/1
+    ]
+  end
+
   defp deps do
     [
       {:credo, "~> 1.4", only: :dev, runtime: false},
@@ -33,6 +42,76 @@ defmodule Skitter.MixProject do
       {:dialyxir, "~> 1.0", only: :dev, runtime: false}
     ]
   end
+
+  # -------- #
+  # Releases #
+  # -------- #
+
+  defp releases, do: [release(:skitter_master), release(:skitter_worker)]
+  defp release(name), do: release(name, [name])
+
+  defp release(name, applications) do
+    {name,
+     [
+       applications: for(app <- applications, do: {app, :permanent}),
+       reboot_system_after_config: false,
+       include_executables_for: [:unix],
+       steps: steps()
+     ]}
+  end
+
+  # Release Builds
+  # --------------
+
+  defp build_releases(args) do
+    Mix.Tasks.Release.run(["skitter_worker" | args])
+    Mix.Tasks.Release.run(["skitter_master" | args])
+  end
+
+  # Always build releases in production
+  defp preferred_env, do: [build: :prod, release: :prod]
+
+  # Ensure cookie and deploy script are created along with release files
+  defp steps, do: [&put_cookie/1, :assemble, &copy_deploy_script/1]
+
+  defp copy_deploy_script(rel = %Mix.Release{}) do
+    target =
+      rel.path
+      |> Path.split()
+      |> Enum.drop(-1)
+      |> Path.join()
+      |> Path.join("skitter")
+
+    Mix.Generator.copy_template("rel/skitter.sh.eex", target, [release: rel], force: true)
+
+    File.chmod!(target, 0o744)
+    rel
+  end
+
+  # Cookie Handling
+  # ---------------
+
+  defp cookie_path, do: Path.join(Mix.Project.build_path(), "rel_cookie")
+
+  defp put_cookie(rel = %Mix.Release{}),
+    do: put_in(rel.options[:cookie], cookie_get())
+
+  defp cookie_get do
+    case File.read(cookie_path()) do
+      {:ok, cookie} -> cookie
+      {:error, :enoent} -> cookie_create()
+    end
+  end
+
+  defp cookie_create do
+    cookie = Base.url_encode64(:crypto.strong_rand_bytes(40))
+    File.write!(cookie_path(), cookie)
+    cookie
+  end
+
+  # ------------------ #
+  # Tool Configuration #
+  # ------------------ #
 
   defp docs do
     [
@@ -58,71 +137,4 @@ defmodule Skitter.MixProject do
   end
 
   defp dialyzer, do: [plt_add_apps: [:mix, :iex, :eex]]
-
-  defp preferred_env do
-    [
-      build: :prod,
-      release: :prod
-    ]
-  end
-
-  defp aliases do
-    [
-      clean: [
-        fn _ -> cookie_clean() end,
-        "clean"
-      ],
-      build: [
-        "release skitter_master",
-        fn _ -> Mix.Task.reenable("release") end,
-        "release skitter_worker"
-      ]
-    ]
-  end
-
-  defp releases do
-    [
-      release(:skitter_master),
-      release(:skitter_worker)
-    ]
-  end
-
-  defp release(name), do: release(name, [name])
-
-  defp release(name, applications) do
-    {name,
-     [
-       applications: for(app <- applications, do: {app, :permanent}),
-       reboot_system_after_config: false,
-       include_executables_for: [:unix],
-       steps: steps()
-     ]}
-  end
-
-  defp steps do
-    [&put_cookie/1, :assemble]
-  end
-
-  defp put_cookie(rel = %Mix.Release{}) do
-    put_in(rel.options[:cookie], cookie_get())
-  end
-
-  @cookie_path "rel/cookie"
-
-  defp cookie_get do
-    case File.read(@cookie_path) do
-      {:ok, cookie} -> cookie
-      {:error, :enoent} -> cookie_create()
-    end
-  end
-
-  defp cookie_create do
-    cookie = Base.url_encode64(:crypto.strong_rand_bytes(40))
-    File.write!(@cookie_path, cookie)
-    cookie
-  end
-
-  defp cookie_clean do
-    File.rm(@cookie_path)
-  end
 end
