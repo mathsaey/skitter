@@ -23,15 +23,6 @@ defmodule Skitter.MixProject do
     ]
   end
 
-  defp aliases do
-    [
-      # Test each subcommand in a fresh vm to avoid issues
-      test: "cmd mix test",
-      # Build all releases
-      build: &build_releases/1
-    ]
-  end
-
   defp deps do
     [
       {:credo, "~> 1.4", only: :dev, runtime: false},
@@ -62,6 +53,8 @@ defmodule Skitter.MixProject do
 
   # Release Builds
   # --------------
+
+  defp aliases, do: [build: &build_releases/1]
 
   defp build_releases(args) do
     Mix.Tasks.Release.run(["skitter_worker" | args])
