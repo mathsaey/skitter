@@ -15,6 +15,10 @@ defmodule Skitter.Runtime.Application do
       {Task.Supervisor, name: Skitter.Runtime.TaskSupervisor}
     ]
 
-    Supervisor.start_link(children, strategy: :one_for_one)
+    Supervisor.start_link(
+      children,
+      strategy: :one_for_one,
+      name: __MODULE__.Supervisor
+    )
   end
 end

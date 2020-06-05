@@ -14,19 +14,19 @@ defmodule Skitter.Runtime.Beacon do
   absence thereof to verify if an erlang node is a valid skitter runtime.
 
   This module defines the beacon process (a genserver) which is automatically
-  started by the `:skitter_runtime` application. It also defines `discover/1`,
-  which can be used to check if a given node is a skitter runtime (i.e. if it
-  publishes a beacon).
-
-  A runtime can specify a _mode_ through the `set_local_mode/1` procedure. This
-  mode is an atom which identifies the exact purpose this runtime serves in a
-  skitter cluster. When no mode is set, the runtime identifies itself as
-  `:not_specified`.
+  started by the `:skitter_runtime` application. Other runtimes can use this
+  process to verify if this node is a skitter runtime. Upon starting, a skitter
+  runtime should call `publish/1` to specify its mode.  Remote runtimes can call
+  `discover/1` to obtain the published data, and to verify whether or not they
+  are compatible with the local runtime.
   """
   use GenServer
+  require Logger
 
   @doc """
   Start the beacon for the current runtime.
+
+  Called automatically when the `:skitter_runtime` application is started.
   """
   @spec start_link(atom()) :: GenServer.on_start()
   def start_link(_) do
@@ -34,66 +34,102 @@ defmodule Skitter.Runtime.Beacon do
   end
 
   @doc """
-  Verify if `node` is a skitter runtime. Returns `{:ok, mode}` if it is.
+  Verify if `node` is a skitter runtime. Returns `{:ok, mode, pid}` if it is.
 
-  Note that this procedure will always connect with `node`. If the remote node
-  is not a skitter runtime, `Node.disconnect/1` is called automatically.
+  Calling this function is the first step to connecting with a remote skitter
+  runtime. This procedure will attempt to connect to a remote node, and verify
+  that this node is a compatible skitter runtime. When successful, the function
+  returns the _mode_ and _remote pid_ of the remote runtime.
 
-  The following values may be returned:
+  If the local node is not alive (`Node.alive?/0`), `{:error, :not_distributed}`
+  is returned. If connection to the remote node is not possible for some other
+  reason, `{:error, :not_connected}` is returned.
 
-  - `{:ok, mode}`: the remote node is a skitter node with mode `mode`.
-  - `{:error, :not_distributed}`: the local node is not distributed, so it was
-    not possible to connect to the remote node.
-  - `{:error, :not_connected}`: it was not possible to connect to the remote
-    node.
-  - `{:error, :not_skitter}`: the remote node is not a skitter node
+  Once the connection is established, this function verifies the remote node
+  hosts a skitter runtime (i.e. it publishes a `Skitter.Runtime.Beacon`). If
+  it does not, `{:error, :not_skitter}` is returned. If it does, the versions
+  of the remote and local node are compared, `{:error, :incompatible}` is
+  returned if there is a version mismatch between the runtimes.
+
+  Finally, if both runtimes are compatible, a `{:ok, mode}` tuple is returned.
+  The _mode_ result indicates the role the remote runtime plays in a skitter
+  cluster (e.g. `:master` or `:worker`). `{:error, :uninitialized}` is returned
+  if the remote runtime has
+  not called `publish/1` yet.
   """
-  @spec discover(node()) :: {:ok, atom()} | {:error, any()}
+  @spec discover(node()) :: {:ok, atom(), pid()} | {:error, any()}
   def discover(node) when is_atom(node) do
-    with true <- Node.connect(node),
-         p when is_pid(p) <- :rpc.call(node, GenServer, :whereis, [__MODULE__]),
-         mode <- GenServer.call(p, :mode) do
-      {:ok, mode}
-    else
-      :ignored ->
-        {:error, :not_distributed}
+    with {:ok, node} <- try_connect(node),
+         {:ok, pid} <- find_beacon(node) do
+      probe_beacon(pid)
+    end
+  end
 
-      false ->
-        {:error, :not_connected}
+  defp try_connect(node) do
+    case Node.connect(node) do
+      :ignored -> {:error, :not_distributed}
+      false -> {:error, :not_connected}
+      true -> {:ok, node}
+    end
+  end
 
+  defp find_beacon(node) do
+    case :erpc.call(node, GenServer, :whereis, [__MODULE__]) do
       nil ->
         Node.disconnect(node)
         {:error, :not_skitter}
+
+      pid ->
+        {:ok, pid}
+    end
+  end
+
+  defp probe_beacon(pid) do
+    local_vsn = version()
+
+    case GenServer.call(pid, :discover) do
+      {remote_vsn, _} when remote_vsn != local_vsn -> {:error, :incompatible}
+      {_, nil} -> {:error, :uninitialized}
+      {_, mode} -> {:ok, mode}
     end
   end
 
   @doc """
-  Set the mode of the local skitter runtime.
+  Publish the local skitter runtime.
 
-  Mode can be any atom, besides `:not_specified`, which is the mode of a runtime
-  that did not explicitly set a mode.
+  A skitter runtime needs to specify it's _mode_ in order to be published.
+  This mode will be sent to remote runtimes that attempt to `discover/1` the
+  local node.
   """
-  @spec set_local_mode(atom()) :: :ok
-  def set_local_mode(mode) when is_atom(mode) do
-    GenServer.cast(__MODULE__, {:set_mode, mode})
-  end
+  @spec publish(atom()) :: :ok
+  def publish(mode), do: GenServer.cast(__MODULE__, {:publish, mode})
 
   # ------ #
   # Server #
   # ------ #
 
   @impl true
-  def init([]) do
-    {:ok, :not_specified}
+  def init([]), do: {:ok, nil, {:continue, nil}}
+
+  @impl true
+  def handle_continue(nil, nil), do: {:noreply, {version(), nil}}
+
+  @impl true
+  def handle_cast({:publish, mode}, {version, nil}) do
+    {:noreply, {version, mode}}
+  end
+
+  def handle_cast({:publish, new_mode}, {version, old_mode}) do
+    Logger.warn("Replacing `#{old_mode}` with `#{new_mode}`")
+    {:noreply, {version, new_mode}}
   end
 
   @impl true
-  def handle_call(:mode, _, mode) do
-    {:reply, mode, mode}
+  def handle_call(:discover, _, state) do
+    {:reply, state, state}
   end
 
-  @impl true
-  def handle_cast({:set_mode, mode}, _) do
-    {:noreply, mode}
+  defp version do
+    Application.spec(:skitter_runtime, :vsn)
   end
 end

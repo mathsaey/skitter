@@ -8,6 +8,8 @@ defmodule Skitter.Runtime do
   @moduledoc """
   """
 
-  defdelegate set_mode(atom), to: Skitter.Runtime.Beacon, as: :set_local_mode
-  defdelegate discover(node), to: Skitter.Runtime.Beacon, as: :discover
+  def get_cli_opts, do: Application.get_env(:skitter_runtime, :cli_opts, [])
+
+  defdelegate discover(node), to: Skitter.Runtime.Beacon
+  defdelegate publish(atom), to: Skitter.Runtime.Beacon
 end

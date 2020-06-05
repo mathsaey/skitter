@@ -96,8 +96,6 @@ defmodule Skitter.Runtime.Test.Cluster do
   end
 
   defp spawn_args do
-    to_charlist(
-      "-loader inet -hosts #{@hostname} -setcookie #{Node.get_cookie()}"
-    )
+    to_charlist("-loader inet -hosts #{@hostname} -setcookie #{Node.get_cookie()}")
   end
 end
