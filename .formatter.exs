@@ -23,12 +23,7 @@ subdirectories =
 [
   inputs: inputs,
   subdirectories: subdirectories,
-  line_length: 80,
   locals_without_parens: [
     throw: :*,
-    info: :*,
-    debug: :*,
-    warn: :*,
-    error: :*
   ]
 ]

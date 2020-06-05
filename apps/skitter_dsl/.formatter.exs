@@ -5,7 +5,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 [
-  line_length: 80,
   inputs: ["mix.exs", "{config,lib,test}/**.{ex,exs}"],
   locals_without_parens: [
     throw: :*,
@@ -22,4 +21,3 @@
     error: :*
   ]
 ]
-
