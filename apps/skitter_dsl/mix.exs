@@ -19,7 +19,6 @@ defmodule Skitter.DSL.MixProject do
   def application do
     [
       mod: {Skitter.DSL.Application, []},
-      extra_applications: [:logger]
     ]
   end
 
