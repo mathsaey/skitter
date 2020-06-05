@@ -110,8 +110,7 @@ defmodule Skitter.DSL.Callback do
   @doc false
   defmacro publish(port, value) do
     quote do
-      unquote(@publish_var) =
-        Keyword.put(unquote(@publish_var), unquote(port), unquote(value))
+      unquote(@publish_var) = Keyword.put(unquote(@publish_var), unquote(port), unquote(value))
     end
   end
 
