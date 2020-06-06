@@ -57,8 +57,30 @@ defmodule Skitter.MixProject do
   defp aliases, do: [build: &build_releases/1]
 
   defp build_releases(args) do
-    Mix.Tasks.Release.run(["skitter_worker" | args])
-    Mix.Tasks.Release.run(["skitter_master" | args])
+    # When building all releases, we want a single top level folder with the
+    # skitter script and the various releases. The default release path
+    # includes the release name, but custom paths do not. Thus, when building
+    # a release with a custom path, we want to append the release name when
+    # individual releases are built.
+    # Other options are passed unchanged.
+    {args, path} =
+      Enum.reduce(args, {[], false}, fn
+        "--path", {lst, _} -> {lst, true}
+        val, {lst, true} -> {lst, val}
+        val, {lst, _} -> {[val | lst], false}
+      end)
+
+    args = Enum.reverse(args)
+
+    build_release("skitter_worker", args, path)
+    build_release("skitter_master", args, path)
+  end
+
+  defp build_release(rel, args, false), do: Mix.Tasks.Release.run([rel | args])
+
+  defp build_release(rel, args, path) do
+    path = Path.join(path, rel)
+    Mix.Tasks.Release.run([rel, "--path", path | args])
   end
 
   # Always build releases in production
