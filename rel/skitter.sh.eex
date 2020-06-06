@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
 
@@ -30,7 +30,9 @@ function usage() {
 
   printf '%s\n'         "Global Options:"
   printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "set the distribution cookie"
+  printf '\t%s\t%s\n'   "-n, --name NAME"     "set the local name of the node"
   printf '\t%s\t\t%s\n' "-v, --version"       "print the version and exit"
+  printf '\t%s\t\t%s\n' "-d, --debug"         "Echo commands to execute"
 
   printf '%s\n'       "Modes:"
   printf '\t%s\t%s\n' "d, deploy" "$deploy_desc"
@@ -154,7 +156,7 @@ function rel_cmd() {
     echoerr "SKITTER_PATH = $SKITTER_PATH"
     exit 2
   fi
-  $SKITTER_PATH/skitter_$mode/bin/skitter_$mode $1
+  $MAYBE_DRY_RUN $SKITTER_PATH/skitter_$mode/bin/skitter_$mode $1
 }
 
 function worker_start_parse() {
@@ -237,6 +239,9 @@ while test $# -gt 0
         echo "skitter <%= @release.version %>"
         exit 0
         ;;
+      -d|--debug)
+        export MAYBE_DRY_RUN="echo"
+        ;;
       -c|--cookie)
         test $# -lt 2 && argerr "Missing value for optional argument '--cookie'."
         export RELEASE_COOKIE="$2"
@@ -244,6 +249,14 @@ while test $# -gt 0
         ;;
       --cookie=*)
         export RELEASE_COOKIE="${1##--cookie=}"
+        ;;
+      -n|--name)
+        test $# -lt 2 && argerr "Missing value for optional argument '--name'."
+        export RELEASE_NODE="$2"
+        shift
+        ;;
+      --name=*)
+        export RELEASE_NODE="${1##--name=}"
         ;;
       *)
         break
