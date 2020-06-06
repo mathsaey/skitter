@@ -43,7 +43,7 @@ function usage() {
   printf '%s\n'     "Environment:"
   printf '\t%s\n'   "SKITTER_PATH"
   printf '\t\t%s\n' "Specifies the location of the skitter runtime release files."
-  printf '\t\t%s\n' "Defaults to the current directory."
+  printf '\t\t%s\n' "Defaults to the location of this script."
 }
 
 function deploy_usage() {
