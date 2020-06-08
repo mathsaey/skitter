@@ -4,9 +4,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Worker.MasterConnection do
+defmodule Skitter.Worker.Master do
   @moduledoc """
-  Handle connection to skitter masters.
+  Local representation of the connected skitter master.
 
   This module is responsible for connecting a worker runtime to a master. This
   can be done in two ways:
@@ -24,7 +24,7 @@ defmodule Skitter.Worker.MasterConnection do
   # --- #
 
   @doc """
-  Start the masterconnection, potentially connecting to `master`
+  Start the master server, potentially connecting to `master`
 
   If `master` is nil, node connection is attempted. If `master` is a node,
   the spawned `GenServer` will attempt to connect to `master`. If the
@@ -39,9 +39,9 @@ defmodule Skitter.Worker.MasterConnection do
   @doc """
   Attempt to connect to to `master`
 
-  Asks the `MasterConnection` `GenServer` to connect to `master`. If this fails
-  for any reason, an `{:error, reason}` tuple is returned. `reason` can be any
-  reason returned by `Skitter.Runtime.Beacon.discover/1`, but it can also be:
+  Asks the master server to connect to `master`. If this fails for any reason,
+  an `{:error, reason}` tuple is returned. `reason` can be any reason returned
+  by `Skitter.Runtime.Beacon.discover/1`, but it can also be:
 
   - `:not_master`: if `master` is not a skitter master
   - `:already_connected`: if this worker is already connected to a different
@@ -59,7 +59,7 @@ defmodule Skitter.Worker.MasterConnection do
   # Server #
   # ------ #
 
-  @master_srv Skitter.Master.WorkerConnection
+  @master_srv Skitter.Master.Workers
   @master_msg :connect
 
   defp do_connect(master) do

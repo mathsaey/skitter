@@ -9,11 +9,11 @@ defmodule Skitter.Worker.Application do
   use Application
 
   alias Skitter.Worker
-  alias Skitter.Worker.MasterConnection
+  alias Skitter.Worker.Master
 
   def start(:normal, []) do
     children = [
-      {MasterConnection, Worker.get_env(:master)}
+      {Master, Worker.get_env(:master)}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)

@@ -9,7 +9,7 @@ defmodule Skitter.Worker.Test.DummyMaster do
   alias Skitter.Runtime
 
   def start() do
-    GenServer.start(__MODULE__, [], name: Skitter.Master.WorkerConnection)
+    GenServer.start(__MODULE__, [], name: Skitter.Master.Workers)
   end
 
   def init(_) do
