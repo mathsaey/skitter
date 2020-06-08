@@ -34,6 +34,16 @@ defmodule Skitter.Runtime.Beacon do
   end
 
   @doc """
+  Publish the local skitter runtime.
+
+  A skitter runtime needs to specify it's _mode_ in order to be published.
+  This mode will be sent to remote runtimes that attempt to `discover/1` the
+  local node.
+  """
+  @spec publish(atom()) :: :ok
+  def publish(mode), do: GenServer.cast(__MODULE__, {:publish, mode})
+
+  @doc """
   Verify if `node` is a skitter runtime. Returns `{:ok, mode, pid}` if it is.
 
   Calling this function is the first step to connecting with a remote skitter
@@ -93,16 +103,6 @@ defmodule Skitter.Runtime.Beacon do
       {_, mode} -> {:ok, mode}
     end
   end
-
-  @doc """
-  Publish the local skitter runtime.
-
-  A skitter runtime needs to specify it's _mode_ in order to be published.
-  This mode will be sent to remote runtimes that attempt to `discover/1` the
-  local node.
-  """
-  @spec publish(atom()) :: :ok
-  def publish(mode), do: GenServer.cast(__MODULE__, {:publish, mode})
 
   # ------ #
   # Server #
