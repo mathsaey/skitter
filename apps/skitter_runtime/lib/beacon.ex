@@ -67,7 +67,7 @@ defmodule Skitter.Runtime.Beacon do
   if the remote runtime has
   not called `publish/1` yet.
   """
-  @spec discover(node()) :: {:ok, atom(), pid()} | {:error, any()}
+  @spec discover(node()) :: {:ok, atom()} | {:error, any()}
   def discover(node) when is_atom(node) do
     with {:ok, node} <- try_connect(node),
          {:ok, pid} <- find_beacon(node) do
