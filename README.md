@@ -23,8 +23,9 @@ $ cd skitter
 $ mix build
 ```
 
-After this is done, the `_build/prod/rel/` directory should contain folders which contain the various skitter applications;
-elixir can be safely removed after this step.
+After this is done, the `_build/prod/rel/` directory should contain the skitter runtime applications and the skitter deployment script.
+Alternatively, `mix build --path <path>` can be used to save the generated artefacts to another location.
+After running `mix build`, elixir may be removed from your system.
 
-Instructions on how to use these applications will be added here later.
-Note that Skitter currently does not support windows.
+In the generated directory, the skitter deployment script, `skitter`, can be used to start and manage a skitter runtime system.
+Run `./skitter help` to get started.

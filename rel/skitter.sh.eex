@@ -30,7 +30,7 @@ function usage() {
 
   printf '%s\n'         "Global Options:"
   printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "set the distribution cookie"
-  printf '\t%s\t%s\n'   "-n, --name NAME"     "set the local name of the node"
+  printf '\t%s\t\t%s\n' "-n, --name NAME"     "set the local name of the node"
   printf '\t%s\t\t%s\n' "-v, --version"       "print the version and exit"
   printf '\t%s\t\t%s\n' "-d, --debug"         "Echo commands to execute"
 
