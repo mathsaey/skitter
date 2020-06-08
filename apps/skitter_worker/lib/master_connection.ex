@@ -6,6 +6,13 @@
 
 defmodule Skitter.Worker.MasterConnection do
   @moduledoc """
+  Handle connection to skitter masters.
+
+  This module is responsible for connecting a worker runtime to a master. This
+  can be done in two ways:
+
+  - `start_link/1` can be called with a `master` argument.
+  - `connect/1` is called
   """
   use GenServer
   require Logger
@@ -16,10 +23,34 @@ defmodule Skitter.Worker.MasterConnection do
   # API #
   # --- #
 
+  @doc """
+  Start the masterconnection, potentially connecting to `master`
+
+  If `master` is nil, node connection is attempted. If `master` is a node,
+  the spawned `GenServer` will attempt to connect to `master`. If the
+  connection is not successfull for any reason, a message is logged but the
+  spawned `GenServer` does not exit.
+  """
+  @spec start_link(node() | nil) :: GenServer.on_start()
   def start_link(master) do
     GenServer.start_link(__MODULE__, master, name: __MODULE__)
   end
 
+  @doc """
+  Attempt to connect to to `master`
+
+  Asks the `MasterConnection` `GenServer` to connect to `master`. If this fails
+  for any reason, an `{:error, reason}` tuple is returned. `reason` can be any
+  reason returned by `Skitter.Runtime.Beacon.discover/1`, but it can also be:
+
+  - `:not_master`: if `master` is not a skitter master
+  - `:already_connected`: if this worker is already connected to a different
+    master runtime. Attempting to connect to the same master again does not
+    produce an error.
+
+  `:ok` is returned if the connection is successful.
+  """
+  @spec connect(node()) :: :ok | {:error, any()}
   def connect(master) do
     GenServer.call(__MODULE__, {:connect, master})
   end
