@@ -83,6 +83,7 @@ defmodule Skitter.Master.Workers do
 
   @impl true
   def init(workers) do
+    Runtime.publish(:skitter_master)
     Registry.start_link()
 
     case do_connect(workers) do
