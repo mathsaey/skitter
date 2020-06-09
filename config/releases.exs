@@ -9,6 +9,13 @@
 
 import Skitter.Runtime.ReleaseConfig
 
+load_env(
+  :skitter_master,
+  :workers,
+  "SKITTER_WORKERS",
+  fn str -> str |> String.split() |> Enum.map(&String.to_atom/1) end
+)
+
 load_env(:skitter_worker, :master, "SKITTER_MASTER", &String.to_atom/1)
 
 if_set(
