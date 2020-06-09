@@ -8,10 +8,12 @@ defmodule Skitter.Worker.MasterTest do
   use Skitter.Runtime.Test.ClusterCase, async: false
   import ExUnit.CaptureLog
 
-  alias Skitter.Worker.Test.DummyMaster
-
   alias Skitter.Runtime
+  alias Skitter.Runtime.Test.DummyRemote
+
   alias Skitter.Worker.Master
+
+  alias Skitter.Master.Workers, as: RemoteServer
   alias Skitter.Worker.Application.Supervisor, as: ApplicationSupervisor
 
   setup do
@@ -27,29 +29,29 @@ defmodule Skitter.Worker.MasterTest do
 
     @tag distributed: [remote: [{Runtime, :publish, [:not_a_master]}]]
     test "to a non-master fails", %{remote: remote} do
-      assert Master.connect(remote) == {:error, :not_master}
+      assert Master.connect(remote) == {:error, :mode_mismatch}
     end
 
-    @tag distributed: [master: [{DummyMaster, :start, [false]}]]
+    @tag distributed: [master: [{DummyRemote, :start, [RemoteServer, :skitter_master, false]}]]
     test "can be rejected", %{master: master} do
       assert Master.connect(master) == {:error, :rejected}
     end
 
-    @tag distributed: [master: [{DummyMaster, :start, [true]}]]
+    @tag distributed: [master: [{DummyRemote, :start, [RemoteServer, :skitter_master, true]}]]
     test "successfully", %{master: master} do
       assert Master.connect(master) == :ok
     end
 
     @tag distributed: [
-           first: [{DummyMaster, :start, [true]}],
-           second: [{DummyMaster, :start, [true]}]
+           first: [{DummyRemote, :start, [RemoteServer, :skitter_master, true]}],
+           second: [{DummyRemote, :start, [RemoteServer, :skitter_master, true]}]
          ]
     test "twice is not possible", %{first: first, second: second} do
       assert Master.connect(first) == :ok
       assert Master.connect(second) == {:error, :already_connected}
     end
 
-    @tag distributed: [master: [{DummyMaster, :start, [true]}]]
+    @tag distributed: [master: [{DummyRemote, :start, [RemoteServer, :skitter_master, true]}]]
     test "detects master failure", %{master: master} do
       assert Master.connect(master) == :ok
 

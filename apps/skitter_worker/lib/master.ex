@@ -41,15 +41,9 @@ defmodule Skitter.Worker.Master do
 
   Asks the master server to connect to `master`. If this fails for any reason,
   an `{:error, reason}` tuple is returned. `reason` can be any reason returned
-  by `Skitter.Runtime.Beacon.discover/1`, but it can also be:
-
-  - `:not_master`: if `master` is not a skitter master
-  - `:already_connected`: if this worker is already connected to a different
-    master runtime. Attempting to connect to the same master again does not
-    produce an error.
-  - `:rejected`: the master did not accept the connection.
-
-  `:ok` is returned if the connection is successful.
+  by `Skitter.Runtime.Beacon.discover/1`, `Skitter.Runtime.Connect.connect/2`,
+  or `:already_connected` is this worker is already connected to a different
+  master runtime. `:ok` is returned if the connection is successful.
   """
   @spec connect(node()) :: :ok | {:error, any()}
   def connect(master) do
@@ -60,33 +54,7 @@ defmodule Skitter.Worker.Master do
   # Server #
   # ------ #
 
-  @master_srv Skitter.Master.Workers
-  @master_msg :accept
-
-  defp do_connect(master) do
-    with {:ok, :skitter_master} <- Runtime.discover(master),
-         true <- GenServer.call({@master_srv, master}, {@master_msg, Node.self()}) do
-      Logger.info("Connected to master: `#{master}`")
-      Node.monitor(master, true)
-      {:ok, master}
-    else
-      {:error, error} -> {:error, error}
-      {:ok, _mode} -> {:error, :not_master}
-      false -> {:error, :rejected}
-    end
-  end
-
-  defp do_accept(master) do
-    case Runtime.discover(master) do
-      {:ok, :skitter_master} ->
-        Logger.info("Accepted master: `#{master}`")
-        Node.monitor(master, true)
-        true
-
-      _ ->
-        false
-    end
-  end
+  defp do_connect(master), do: Runtime.connect(master, :skitter_master, Skitter.Master.Workers)
 
   @impl true
   def init(master) do
@@ -125,7 +93,7 @@ defmodule Skitter.Worker.Master do
   def handle_call({:connect, _}, _, cur), do: {:reply, {:error, :already_connected}, cur}
 
   def handle_call({:accept, master}, _, nil) do
-    reply = do_accept(master)
+    reply = Runtime.accept(master, :skitter_master)
     state = if reply, do: master, else: nil
     {:reply, reply, state}
   end

@@ -9,11 +9,7 @@ defmodule Skitter.Worker.MixProject do
 
   def project do
     {global, _} = Code.eval_file("../../global.exs")
-    [
-      app: :skitter_worker,
-      deps: deps(),
-      elixirc_paths: elixirc_paths(Mix.env()),
-    ] ++ global
+    [app: :skitter_worker, deps: deps()] ++ global
   end
 
   def application do
@@ -29,7 +25,4 @@ defmodule Skitter.Worker.MixProject do
       {:skitter_runtime, in_umbrella: true}
     ]
   end
-
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
 end
