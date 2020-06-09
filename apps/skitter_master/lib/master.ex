@@ -1,18 +1,12 @@
-defmodule Master do
+defmodule Skitter.Master do
   @moduledoc """
-  Documentation for `Master`.
   """
 
-  @doc """
-  Hello world.
+  def app do
+    :skitter_master
+  end
 
-  ## Examples
-
-      iex> Master.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  def get_env(key, default \\ nil) do
+    Application.get_env(app(), key, default)
   end
 end
