@@ -47,6 +47,7 @@ defmodule Skitter.Worker.Master do
   - `:already_connected`: if this worker is already connected to a different
     master runtime. Attempting to connect to the same master again does not
     produce an error.
+  - `:rejected`: the master did not accept the connection.
 
   `:ok` is returned if the connection is successful.
   """
@@ -60,17 +61,30 @@ defmodule Skitter.Worker.Master do
   # ------ #
 
   @master_srv Skitter.Master.Workers
-  @master_msg :connect
+  @master_msg :accept
 
   defp do_connect(master) do
     with {:ok, :skitter_master} <- Runtime.discover(master),
-         :ok <- GenServer.call({@master_srv, master}, {@master_msg, Node.self()}) do
+         true <- GenServer.call({@master_srv, master}, {@master_msg, Node.self()}) do
       Logger.info("Connected to master: `#{master}`")
       Node.monitor(master, true)
       {:ok, master}
     else
       {:error, error} -> {:error, error}
       {:ok, _mode} -> {:error, :not_master}
+      false -> {:error, :rejected}
+    end
+  end
+
+  defp do_accept(master) do
+    case Runtime.discover(master) do
+      {:ok, :skitter_master} ->
+        Logger.info("Accepted master: `#{master}`")
+        Node.monitor(master, true)
+        true
+
+      _ ->
+        false
     end
   end
 
@@ -109,6 +123,14 @@ defmodule Skitter.Worker.Master do
 
   def handle_call({:connect, master}, _, master), do: {:reply, :ok, master}
   def handle_call({:connect, _}, _, cur), do: {:reply, {:error, :already_connected}, cur}
+
+  def handle_call({:accept, master}, _, nil) do
+    reply = do_accept(master)
+    state = if reply, do: master, else: nil
+    {:reply, reply, state}
+  end
+
+  def handle_call({:accept, _}, _, master), do: {:reply, false, master}
 
   @impl true
   def handle_info({:nodedown, master}, master) do

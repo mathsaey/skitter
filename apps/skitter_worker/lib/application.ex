@@ -16,6 +16,6 @@ defmodule Skitter.Worker.Application do
       {Master, Worker.get_env(:master)}
     ]
 
-    Supervisor.start_link(children, strategy: :one_for_one)
+    Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__.Supervisor)
   end
 end
