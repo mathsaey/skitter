@@ -5,10 +5,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime.BeaconTest do
-  use ExUnit.Case, async: false
+  use Skitter.Runtime.Test.ClusterCase, async: false
   import ExUnit.CaptureLog
 
-  alias Skitter.Runtime.Test.Cluster
   alias Skitter.Runtime.Beacon
 
   defp version do
@@ -26,9 +25,10 @@ defmodule Skitter.Runtime.BeaconTest do
     assert GenServer.call(Beacon, :discover) == {version(), :beacon_test}
 
     assert capture_log(fn ->
-      Beacon.publish(:changed)
-      :sys.get_state(Beacon) # Wait for cast to finish
-    end) =~ "Replacing `beacon_test` with `changed`"
+             Beacon.publish(:changed)
+             # Wait for cast to finish
+             :sys.get_state(Beacon)
+           end) =~ "Replacing `beacon_test` with `changed`"
 
     assert GenServer.call(Beacon, :discover) == {version(), :changed}
   end
@@ -51,12 +51,13 @@ defmodule Skitter.Runtime.BeaconTest do
       assert remote not in Node.list(:connected)
     end
 
-    @tag :distributed
-    test "can connect to skitter nodes" do
-      remote = Cluster.spawn_node(:skitter, :skitter_runtime, [])
+    @tag distributed: [remote: []]
+    test "cannot connect to uninitialized nodes", %{remote: remote} do
       assert Beacon.discover(remote) == {:error, :uninitialized}
+    end
 
-      Cluster.rpc(remote, Beacon, :publish, [:test_mode])
+    @tag distributed: [remote: [{Beacon, :publish, [:test_mode]}]]
+    test "can connect to skitter nodes", %{remote: remote} do
       assert Beacon.discover(remote) == {:ok, :test_mode}
     end
   end
