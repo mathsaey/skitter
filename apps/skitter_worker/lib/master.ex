@@ -70,7 +70,7 @@ defmodule Skitter.Worker.Master do
   def handle_continue(master, nil) do
     state =
       case do_connect(master) do
-        {:ok, master} ->
+        :ok ->
           master
 
         {:error, error} ->
@@ -84,7 +84,7 @@ defmodule Skitter.Worker.Master do
   @impl true
   def handle_call({:connect, master}, _, nil) do
     case do_connect(master) do
-      {:ok, master} -> {:reply, :ok, master}
+      :ok -> {:reply, :ok, master}
       {:error, error} -> {:reply, {:error, error}, nil}
     end
   end

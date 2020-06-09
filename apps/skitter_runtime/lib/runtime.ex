@@ -33,7 +33,7 @@ defmodule Skitter.Runtime do
          true <- GenServer.call({server, remote}, {:accept, Node.self()}) do
       Logger.info("Connected to #{mode}: `#{remote}`")
       Node.monitor(remote, true)
-      {:ok, remote}
+      :ok
     else
       {:error, error} -> {:error, error}
       {:ok, _mode} -> {:error, :mode_mismatch}

@@ -31,7 +31,7 @@ defmodule Skitter.Worker.MasterTest do
 
     @tag distributed: [remote: [{DummyRemote, :start, [RemoteServer, :mode, true]}]]
     test "successfully", %{remote: remote} do
-      assert Runtime.connect(remote, :mode, RemoteServer) == {:ok, remote}
+      assert Runtime.connect(remote, :mode, RemoteServer) == :ok
     end
   end
 
