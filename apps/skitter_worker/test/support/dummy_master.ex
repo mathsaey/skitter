@@ -8,16 +8,16 @@ defmodule Skitter.Worker.Test.DummyMaster do
   use GenServer
   alias Skitter.Runtime
 
-  def start() do
-    GenServer.start(__MODULE__, [], name: Skitter.Master.Workers)
+  def start(accept?) do
+    GenServer.start(__MODULE__, accept?, name: Skitter.Master.Workers)
   end
 
-  def init(_) do
+  def init(accept?) do
     Runtime.publish(:skitter_master)
-    {:ok, nil}
+    {:ok, accept?}
   end
 
-  def handle_call({:connect, _}, _, nil) do
-    {:reply, :ok, nil}
+  def handle_call({:accept, _}, _, accept?) do
+    {:reply, accept?, nil}
   end
 end
