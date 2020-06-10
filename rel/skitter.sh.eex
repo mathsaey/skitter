@@ -13,7 +13,7 @@ set -e
 # Documentation #
 # ------------- #
 
-deploy_desc="Manage a skitter deployment (a set of connected runtimes)"
+deploy_desc="Deploy a set of workers and a master"
 local_desc="Use skitter locally"
 worker_desc="Manage a skitter worker"
 master_desc="Manage a skitter master"
@@ -44,7 +44,20 @@ function global_usage() {
 
 function deploy_usage() {
   printf '%s\n' "$deploy_desc"
-  printf '%s\n' "TODO"
+  printf '\t%s\n' "This command spawns a set of worker nodes on the specified remote machines."
+  printf '\t%s\n' "Afterwards, it spawns a master on the local machine, which automatically"
+  printf '\t%s\n' "connects to the provided workers."
+  printf '%s\n' "Usage:"
+  printf '\t%s\n' "skitter deploy [COMMAND OPTIONS] WORKERS"
+  printf '%s\n'         "Command Options:"
+  printf '\t%s\t%s\n'   "-c, --cookie COOKIE"    "Override the default distribution cookie"
+  printf '\t%s\t%s\n'   "-w, --working-dir PATH" "Change to this directory on the workers"
+  printf '\t\t\t\t%s\n'                          "before executing any command. Defaults to"
+  printf '\t\t\t\t%s\n'                          "the current working directory."
+  printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker node. Only needed when"
+  printf '\t\t\t\t%s\n'                          "deploying fails for some reason."
+  printf '%s\n'       "Command Arguments:"
+  printf '\t%s\t%s\n' "WORKERS" "List of worker nodes to spawn, will be spawned in order"
 }
 
 function local_usage() {
@@ -64,8 +77,8 @@ function release_usage() {
   printf '\t%s\t\t%s\n' "pid"     "Get the pid of the $1 daemon"
 
   printf '%s\n'         "Command Options:"
-  printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "override the default distribution cookie"
-  printf '\t%s\t\t%s\n' "-n, --name NAME"     "override the name of the node."
+  printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "Override the default distribution cookie"
+  printf '\t%s\t\t%s\n' "-n, --name NAME"     "Override the name of the node."
 }
 
 function worker_usage() {
@@ -105,8 +118,8 @@ function echoerr() {
 }
 
 function argerr() {
-  echoerr "$1"
-  global_usage
+  echoerr "$2"
+  $1_usage
   exit 1
 }
 
@@ -136,23 +149,13 @@ function do_help() {
         master_usage
         ;;
       *)
-        argerr "Cannot get help, '$1' is not a valid command"
+        argerr "global" "Cannot get help, '$1' is not a valid command"
     esac
   fi
 }
 
 # Release Logic
 # -------------
-
-# Figure out the path to the skitter releases. This is specified by
-# $SKITTER_PATH or the location of the script
-if [ -z $SKITTER_PATH ]
-then
-  SELF=$(readlink "$0" || true)
-  if [ -z "$SELF" ]; then SELF="$0"; fi
-  PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
-  SKITTER_PATH=$PARENT_DIR
-fi
 
 function rel_cmd() {
   if [ ! -d "$SKITTER_PATH/skitter_$mode" ]
@@ -180,7 +183,7 @@ function worker_start_parse() {
           $MAYBE_DRY_RUN export SKITTER_NO_SHUTDOWN_WITH_MASTER=""
           ;;
         -c|--cookie)
-          test $# -lt 2 && argerr "Missing value for optional argument '--cookie'."
+          test $# -lt 2 && argerr "worker" "Missing value for optional argument '--cookie'."
           $MAYBE_DRY_RUN export RELEASE_COOKIE="$2"
           shift
           ;;
@@ -188,7 +191,7 @@ function worker_start_parse() {
           $MAYBE_DRY_RUN export RELEASE_COOKIE="${1##--cookie=}"
           ;;
         -n|--name)
-          test $# -lt 2 && argerr "Missing value for optional argument '--name'."
+          test $# -lt 2 && argerr "worker" "Missing value for optional argument '--name'."
           $MAYBE_DRY_RUN export RELEASE_NODE="$2"
           shift
           ;;
@@ -205,11 +208,13 @@ function worker_start_parse() {
 }
 
 function master_start_parse() {
+  local WORKERS
+
   while test $# -gt 0
     do
       case "$1" in
         -c|--cookie)
-          test $# -lt 2 && argerr "Missing value for optional argument '--cookie'."
+          test $# -lt 2 && argerr "master" "Missing value for optional argument '--cookie'."
           $MAYBE_DRY_RUN export RELEASE_COOKIE="$2"
           shift
           ;;
@@ -217,7 +222,7 @@ function master_start_parse() {
           $MAYBE_DRY_RUN export RELEASE_COOKIE="${1##--cookie=}"
           ;;
         -n|--name)
-          test $# -lt 2 && argerr "Missing value for optional argument '--name'."
+          test $# -lt 2 && argerr "master" "Missing value for optional argument '--name'."
           $MAYBE_DRY_RUN export RELEASE_NODE="$2"
           shift
           ;;
@@ -225,7 +230,7 @@ function master_start_parse() {
           $MAYBE_DRY_RUN export RELEASE_NODE="${1##--name=}"
           ;;
         *)
-          WORKERS="$WORKERS $(maybe_add_name "skitter_worker" $1)"
+          local WORKERS="$WORKERS $(maybe_add_name "skitter_worker" $1)"
           ;;
       esac
       shift
@@ -243,7 +248,7 @@ function do_worker_master() {
 
   if [ $# -eq 0 ]
   then
-    argerr "Missing command"
+    argerr "$mode" "Missing command"
   fi
 
   case $1 in
@@ -270,18 +275,100 @@ function do_worker_master() {
     remote|restart|stop|pid)
       rel_cmd $1
       ;;
+    *)
+      argerr "$mode" "Invalid command: '$1'"
   esac
+}
+
+# Deploy Logic
+# ------------
+
+function do_deploy() {
+  local WORKER_CMD="daemon"
+  local REMOTE_DIR=`pwd`
+  local WORKERS=""
+  local COOKIE=""
+
+  while test $# -gt 0
+    do
+      case "$1" in
+        -w|--working-dir)
+          test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--working-dir'."
+          REMOTE_DIR="$2"
+          shift
+          ;;
+        --working-dir=*)
+          REMOTE_DIR="${1##--working-dir=}"
+          ;;
+        -c|--cookie)
+          test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--cookie'."
+          COOKIE="--cookie $2"
+          shift
+          ;;
+        --cookie=*)
+          COOKIE="${1##--cookie=}"
+          COOKIE="--cookie $COOKIE"
+          ;;
+        -s|--stop)
+          WORKER_CMD="stop"
+          ;;
+        *)
+          local WORKERS="$WORKERS $1"
+          ;;
+      esac
+      shift
+    done
+
+    local CMD="cd ${REMOTE_DIR} && SKITTER_PATH=$SKITTER_PATH $SCRIPT worker ${WORKER_CMD} ${COOKIE}"
+
+    if [ -z "$WORKERS" ]
+    then
+      argerr "deploy" "Missing workers"
+    fi
+
+    echo "⬡⬢⬡⬢ Skitter <%= @release.version %>"
+    echo ""
+
+    for remote in $WORKERS
+    do
+      echo -n "$remote "
+      $MAYBE_DRY_RUN ssh "$remote" "$CMD"
+      echo " ✓"
+    done
+
+    if [ $WORKER_CMD != "stop" ]
+    then
+      echo ""
+      echo "Workers initialized."
+      echo "Starting master in a few seconds..."
+      echo ""
+      sleep 3
+      do_worker_master master start_iex ${COOKIE} ${WORKERS}
+    fi
 }
 
 # ------------ #
 # Script logic #
 # ------------ #
 
+# Store the script invocation so we can use it when deploying
+SCRIPT=$0
+
 # No arguments: print usage and quit
 if [ $# -eq 0 ]
 then
   global_usage
   exit 0
+fi
+
+# Figure out the path to the skitter releases. This is specified by
+# $SKITTER_PATH or the location of the script
+if [ -z $SKITTER_PATH ]
+then
+  SELF=$(readlink "$0" || true)
+  if [ -z "$SELF" ]; then SELF="$0"; fi
+  PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
+  SKITTER_PATH=$PARENT_DIR
 fi
 
 ## Parse global options and mode
@@ -304,7 +391,7 @@ done
 
 if [ $# -eq 0 ]
 then
-  argerr "Missing command"
+  argerr "global" "Missing command"
   exit 0
 fi
 
