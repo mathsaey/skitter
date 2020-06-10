@@ -28,7 +28,7 @@ function global_usage() {
 
   printf '%s\n'         "Global Options:"
   printf '\t%s\t\t%s\n' "-v, --version"       "print the version and exit"
-  printf '\t%s\t\t%s\n' "-d, --debug"         "Echo commands to execute"
+  printf '\t%s\t\t%s\n' "--debug"             "Echo commands to execute"
 
   printf '%s\n'       "Modes:"
   printf '\t%s\t%s\n' "d, deploy" "$deploy_desc"
@@ -49,9 +49,11 @@ function deploy_usage() {
   printf '\t%s\n' "connects to the provided workers."
   printf '%s\n' "Usage:"
   printf '\t%s\n' "skitter deploy [COMMAND OPTIONS] WORKERS"
+  printf '\t%s\n' "skitter deploy [COMMAND OPTIONS] --worker-file PATH [WORKERS]"
   printf '%s\n'         "Command Options:"
   printf '\t%s\t%s\n'   "-c, --cookie COOKIE"    "Override the default distribution cookie"
-  printf '\t%s\t%s\n'   "-w, --working-dir PATH" "Change to this directory on the workers"
+  printf '\t%s\t%s\n'   "-f, --worker-file PATH"  "Read the list of workers to spawn from PATH"
+  printf '\t%s\t%s\n'   "-d, --working-dir PATH" "Change to this directory on the workers"
   printf '\t\t\t\t%s\n'                          "before executing any command. Defaults to"
   printf '\t\t\t\t%s\n'                          "the current working directory."
   printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker node. Only needed when"
@@ -280,7 +282,7 @@ function do_deploy() {
   while test $# -gt 0
     do
       case "$1" in
-        -w|--working-dir)
+        -d|--working-dir)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--working-dir'."
           remote_dir="$2"
           shift
@@ -292,6 +294,14 @@ function do_deploy() {
           ;;
         -s|--stop)
           worker_cmd="stop"
+          ;;
+        -f|--worker-file)
+          test $# -lt 2 && argerr "worker" "Missing value for optional argument '--worker-file'."
+          while IFS= read -r line
+          do
+            local workers="$workers $line"
+          done < "$2"
+          shift
           ;;
         *)
           local workers="$workers $1"
@@ -358,7 +368,7 @@ while test $# -gt 0
         echo "skitter <%= @release.version %>"
         exit 0
         ;;
-      -d|--debug)
+      --debug)
         maybe_dry_run="echo"
         ;;
       *)
