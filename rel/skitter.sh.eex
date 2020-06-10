@@ -13,8 +13,8 @@ set -e
 # Documentation #
 # ------------- #
 
-deploy_desc="Deploy a set of workers and a master"
 local_desc="Use skitter locally"
+deploy_desc="Deploy a set of workers and a master"
 worker_desc="Manage a skitter worker"
 master_desc="Manage a skitter master"
 
@@ -165,7 +165,7 @@ function rel_cmd() {
     echoerr "SKITTER_PATH = $SKITTER_PATH"
     exit 2
   fi
-  $MAYBE_DRY_RUN $SKITTER_PATH/skitter_$mode/bin/skitter_$mode $1
+  $maybe_dry_run $SKITTER_PATH/skitter_$mode/bin/skitter_$mode $1
 }
 
 function maybe_add_name() {
@@ -177,30 +177,30 @@ function worker_start_parse() {
     do
       case "$1" in
         --shutdown-with-master)
-          $MAYBE_DRY_RUN unset SKITTER_NO_SHUTDOWN_WITH_MASTER
+          $maybe_dry_run unset SKITTER_NO_SHUTDOWN_WITH_MASTER
           ;;
         --no-shutdown-with-master)
-          $MAYBE_DRY_RUN export SKITTER_NO_SHUTDOWN_WITH_MASTER=""
+          $maybe_dry_run export SKITTER_NO_SHUTDOWN_WITH_MASTER=""
           ;;
         -c|--cookie)
           test $# -lt 2 && argerr "worker" "Missing value for optional argument '--cookie'."
-          $MAYBE_DRY_RUN export RELEASE_COOKIE="$2"
+          $maybe_dry_run export RELEASE_COOKIE="$2"
           shift
           ;;
         --cookie=*)
-          $MAYBE_DRY_RUN export RELEASE_COOKIE="${1##--cookie=}"
+          $maybe_dry_run export RELEASE_COOKIE="${1##--cookie=}"
           ;;
         -n|--name)
           test $# -lt 2 && argerr "worker" "Missing value for optional argument '--name'."
-          $MAYBE_DRY_RUN export RELEASE_NODE="$2"
+          $maybe_dry_run export RELEASE_NODE="$2"
           shift
           ;;
         --name=*)
-          $MAYBE_DRY_RUN export RELEASE_NODE="${1##--name=}"
+          $maybe_dry_run export RELEASE_NODE="${1##--name=}"
           ;;
         *)
           REMOTE=$(maybe_add_name "skitter_master" $1)
-          $MAYBE_DRY_RUN export SKITTER_MASTER=$REMOTE
+          $maybe_dry_run export SKITTER_MASTER=$REMOTE
           ;;
       esac
       shift
@@ -208,37 +208,37 @@ function worker_start_parse() {
 }
 
 function master_start_parse() {
-  local WORKERS
+  local workers
 
   while test $# -gt 0
     do
       case "$1" in
         -c|--cookie)
           test $# -lt 2 && argerr "master" "Missing value for optional argument '--cookie'."
-          $MAYBE_DRY_RUN export RELEASE_COOKIE="$2"
+          $maybe_dry_run export RELEASE_COOKIE="$2"
           shift
           ;;
         --cookie=*)
-          $MAYBE_DRY_RUN export RELEASE_COOKIE="${1##--cookie=}"
+          $maybe_dry_run export RELEASE_COOKIE="${1##--cookie=}"
           ;;
         -n|--name)
           test $# -lt 2 && argerr "master" "Missing value for optional argument '--name'."
-          $MAYBE_DRY_RUN export RELEASE_NODE="$2"
+          $maybe_dry_run export RELEASE_NODE="$2"
           shift
           ;;
         --name=*)
-          $MAYBE_DRY_RUN export RELEASE_NODE="${1##--name=}"
+          $maybe_dry_run export RELEASE_NODE="${1##--name=}"
           ;;
         *)
-          local WORKERS="$WORKERS $(maybe_add_name "skitter_worker" $1)"
+          local workers="$workers $(maybe_add_name "skitter_worker" $1)"
           ;;
       esac
       shift
   done
 
-  if [ -n "$WORKERS" ]
+  if [ -n "$workers" ]
   then
-    $MAYBE_DRY_RUN export SKITTER_WORKERS="$WORKERS"
+    $maybe_dry_run export SKITTER_WORKERS="$workers"
   fi
 }
 
@@ -284,44 +284,44 @@ function do_worker_master() {
 # ------------
 
 function do_deploy() {
-  local WORKER_CMD="daemon"
-  local REMOTE_DIR=`pwd`
-  local WORKERS=""
-  local COOKIE=""
+  local worker_cmd="daemon"
+  local remote_dir=`pwd`
+  local workers
+  local cookie
 
   while test $# -gt 0
     do
       case "$1" in
         -w|--working-dir)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--working-dir'."
-          REMOTE_DIR="$2"
+          remote_dir="$2"
           shift
           ;;
         --working-dir=*)
-          REMOTE_DIR="${1##--working-dir=}"
+          remote_dir="${1##--working-dir=}"
           ;;
         -c|--cookie)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--cookie'."
-          COOKIE="--cookie $2"
+          cookie="--cookie $2"
           shift
           ;;
         --cookie=*)
-          COOKIE="${1##--cookie=}"
-          COOKIE="--cookie $COOKIE"
+          cookie="${1##--cookie=}"
+          cookie="--cookie $COOKIE"
           ;;
         -s|--stop)
-          WORKER_CMD="stop"
+          worker_cmd="stop"
           ;;
         *)
-          local WORKERS="$WORKERS $1"
+          local workers="$workers $1"
           ;;
       esac
       shift
     done
 
-    local CMD="cd ${REMOTE_DIR} && SKITTER_PATH=$SKITTER_PATH $SCRIPT worker ${WORKER_CMD} ${COOKIE}"
+    local cmd="cd ${remote_dir} && SKITTER_PATH=$SKITTER_PATH $script worker ${worker_cmd} ${cookie}"
 
-    if [ -z "$WORKERS" ]
+    if [ -z "$workers" ]
     then
       argerr "deploy" "Missing workers"
     fi
@@ -329,21 +329,19 @@ function do_deploy() {
     echo "⬡⬢⬡⬢ Skitter <%= @release.version %>"
     echo ""
 
-    for remote in $WORKERS
+    for remote in $workers
     do
       echo -n "$remote "
-      $MAYBE_DRY_RUN ssh "$remote" "$CMD"
+      $maybe_dry_run ssh "$remote" "$cmd"
       echo " ✓"
     done
 
-    if [ $WORKER_CMD != "stop" ]
+    if [ $worker_cmd != "stop" ]
     then
       echo ""
-      echo "Workers initialized."
-      echo "Starting master in a few seconds..."
-      echo ""
-      sleep 3
-      do_worker_master master start_iex ${COOKIE} ${WORKERS}
+      echo "Workers initialized, starting master."
+      sleep 1
+      do_worker_master master start_iex ${cookie} ${workers}
     fi
 }
 
@@ -352,7 +350,7 @@ function do_deploy() {
 # ------------ #
 
 # Store the script invocation so we can use it when deploying
-SCRIPT=$0
+script=$0
 
 # No arguments: print usage and quit
 if [ $# -eq 0 ]
@@ -380,7 +378,7 @@ while test $# -gt 0
         exit 0
         ;;
       -d|--debug)
-        export MAYBE_DRY_RUN="echo"
+        maybe_dry_run="echo"
         ;;
       *)
         break
