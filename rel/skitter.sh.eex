@@ -187,16 +187,10 @@ function worker_start_parse() {
           $maybe_dry_run export RELEASE_COOKIE="$2"
           shift
           ;;
-        --cookie=*)
-          $maybe_dry_run export RELEASE_COOKIE="${1##--cookie=}"
-          ;;
         -n|--name)
           test $# -lt 2 && argerr "worker" "Missing value for optional argument '--name'."
           $maybe_dry_run export RELEASE_NODE="$2"
           shift
-          ;;
-        --name=*)
-          $maybe_dry_run export RELEASE_NODE="${1##--name=}"
           ;;
         *)
           REMOTE=$(maybe_add_name "skitter_master" $1)
@@ -218,16 +212,10 @@ function master_start_parse() {
           $maybe_dry_run export RELEASE_COOKIE="$2"
           shift
           ;;
-        --cookie=*)
-          $maybe_dry_run export RELEASE_COOKIE="${1##--cookie=}"
-          ;;
         -n|--name)
           test $# -lt 2 && argerr "master" "Missing value for optional argument '--name'."
           $maybe_dry_run export RELEASE_NODE="$2"
           shift
-          ;;
-        --name=*)
-          $maybe_dry_run export RELEASE_NODE="${1##--name=}"
           ;;
         *)
           local workers="$workers $(maybe_add_name "skitter_worker" $1)"
@@ -297,17 +285,10 @@ function do_deploy() {
           remote_dir="$2"
           shift
           ;;
-        --working-dir=*)
-          remote_dir="${1##--working-dir=}"
-          ;;
         -c|--cookie)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--cookie'."
           cookie="--cookie $2"
           shift
-          ;;
-        --cookie=*)
-          cookie="${1##--cookie=}"
-          cookie="--cookie $COOKIE"
           ;;
         -s|--stop)
           worker_cmd="stop"
