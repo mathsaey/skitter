@@ -16,17 +16,11 @@ defmodule Skitter.Master.Workers do
   alias __MODULE__.Registry
 
   @doc """
-  Start the workers server, connecting to all nodes in `workers`.
-
-  This function returns `{:ok, pid}` if the server managed to connect to every
-  provided worker. If the server failed to connect to some workers,
-  `{:error, list}` is returned. `list` is a list of `{worker, reason}` tuples.
-  In this list, `worker` is the name of a worker that could not be connected
-  to, while `reason` is the reason returned by `Skitter.Runtime.connect/3`.
+  Start the workers server.
   """
-  @spec start_link([node()]) :: GenServer.on_start()
-  def start_link(workers) do
-    GenServer.start_link(__MODULE__, workers, name: __MODULE__)
+  @spec start_link([]) :: GenServer.on_start()
+  def start_link([]) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   @doc """
@@ -36,6 +30,8 @@ defmodule Skitter.Master.Workers do
   successful, `:ok` is returned. If this fails, `{:error, list}` is returned.
   `list` is a list of `{worker, reason}` tuples. Reason indicates the error that
   occurred when the server attempted to connect with `worker`.
+
+  Possible reasons are documented in `Skitter.Runtime.connect/3`.
   """
   @spec connect(node() | [node()]) :: :ok | {:error, [{node(), any()}]}
   def connect(worker) when is_atom(worker), do: connect([worker])
@@ -82,14 +78,10 @@ defmodule Skitter.Master.Workers do
   end
 
   @impl true
-  def init(workers) do
+  def init([]) do
     Runtime.publish(:skitter_master)
     Registry.start_link()
-
-    case do_connect(workers) do
-      [] -> {:ok, nil}
-      lst -> {:stop, lst}
-    end
+    {:ok, nil}
   end
 
   @impl true
