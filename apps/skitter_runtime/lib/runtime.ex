@@ -27,7 +27,7 @@ defmodule Skitter.Runtime do
   Thus, the process calling this function should be prepared to handle
   `:nodedown` events.
   """
-  @spec connect(node(), module(), atom()) :: {:ok, node()} | {:error, any()}
+  @spec connect(node(), module(), atom()) :: :ok | {:error, any()}
   def connect(remote, mode, server) do
     with {:ok, ^mode} <- Beacon.discover(remote),
          true <- GenServer.call({server, remote}, {:accept, Node.self()}) do
