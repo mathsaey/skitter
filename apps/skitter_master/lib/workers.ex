@@ -56,15 +56,33 @@ defmodule Skitter.Master.Workers do
   @spec connected?(node()) :: boolean()
   def connected?(worker), do: Registry.connected?(worker)
 
+  @doc """
+  Subscribe to worker_up events.
+
+  Every time a new worker is connected, the process that called this function
+  will receive a `{:worker_up, worker}` message.
+  """
   @spec subscribe_up() :: :ok
   def subscribe_up(), do: GenServer.cast(__MODULE__, {:subscribe, self(), :worker_up})
 
+  @doc """
+  Subscribe to worker_down events.
+
+  Every time a new worker disconnects, the process that called this function
+  will receive a `{:worker_down, worker}` message.
+  """
   @spec subscribe_down() :: :ok
   def subscribe_down(), do: GenServer.cast(__MODULE__, {:subscribe, self(), :worker_down})
 
+  @doc """
+  Unsubscribe from all future worker_up events.
+  """
   @spec unsubscribe_up() :: :ok
   def unsubscribe_up(), do: GenServer.cast(__MODULE__, {:unsubscribe, self(), :worker_up})
 
+  @doc """
+  Unsubscribe from all future worker_down events.
+  """
   @spec unsubscribe_down() :: :ok
   def unsubscribe_down(), do: GenServer.cast(__MODULE__, {:unsubscribe, self(), :worker_down})
 
