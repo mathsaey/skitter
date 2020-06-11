@@ -125,6 +125,21 @@ function argerr() {
   exit 1
 }
 
+# Colors
+# ------
+
+function color() {
+  printf "$1$2${creset}"
+}
+
+creset='\033[0m'
+
+red='\033[0;31m'
+orange='\033[0;33m'
+green='\033[0;32m'
+purple='\033[0;34m'
+
+
 # ---------- #
 # Mode logic #
 # ---------- #
@@ -273,8 +288,57 @@ function do_worker_master() {
 # Deploy Logic
 # ------------
 
+function for_workers() {
+  local cmd="cd ${2} && SKITTER_PATH=$SKITTER_PATH $script worker ${4} ${3}"
+  connected=""
+
+  for remote in $1
+  do
+    if [ -z $maybe_dry_run ]
+    then
+      printf "${5} $remote "
+      if ssh -q "$remote" "$cmd"
+      then
+        printf "$(color $green ✓)\n"
+        connected="$connected $remote"
+      else
+        printf "$(color $red ✗)\n"
+        failed="$remote"
+        return 1
+      fi
+      else
+        $maybe_dry_run ssh "$remote" "$cmd"
+    fi
+  done
+}
+
+function stop_deploy() {
+  for_workers "$1" "$2" "$3" "stop" "$(color $orange "* stopping")"
+}
+
+function start_deploy() {
+  printf "⬡⬢⬡⬢ Skitter deploy <%= @release.version %>\n"
+  if [ -n "$3" ] ; then printf "> cookie: $(color $purple ${3##--cookie })\n" ; fi
+  printf "> workers: $(color $purple "$1")\n\n"
+
+  if for_workers "$1" "$2" "$3" "daemon" "$(color $green "* starting")"
+  then
+    printf "\nWorkers initialized, starting master.\n"
+    $maybe_dry_run sleep 1
+    do_worker_master master start_iex "$3" "$1"
+  else
+    printf "\nFailed to initialize some workers:\n"
+    printf "> Succeeded: $(color $green "$connected")\n"
+    printf "> Failed: $(color $red "$failed")\n"
+
+    printf "\nShutting down initialized workers:\n"
+    stop_deploy "$connected" "$2" "$3"
+  fi
+}
+
+
 function do_deploy() {
-  local worker_cmd="daemon"
+  local mode="start"
   local remote_dir=`pwd`
   local workers
   local cookie
@@ -282,6 +346,9 @@ function do_deploy() {
   while test $# -gt 0
     do
       case "$1" in
+        -s|--stop)
+          local mode="stop"
+          ;;
         -d|--working-dir)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--working-dir'."
           remote_dir="$2"
@@ -291,9 +358,6 @@ function do_deploy() {
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--cookie'."
           cookie="--cookie $2"
           shift
-          ;;
-        -s|--stop)
-          worker_cmd="stop"
           ;;
         -f|--worker-file)
           test $# -lt 2 && argerr "worker" "Missing value for optional argument '--worker-file'."
@@ -310,30 +374,8 @@ function do_deploy() {
       shift
     done
 
-    local cmd="cd ${remote_dir} && SKITTER_PATH=$SKITTER_PATH $script worker ${worker_cmd} ${cookie}"
-
-    if [ -z "$workers" ]
-    then
-      argerr "deploy" "Missing workers"
-    fi
-
-    echo "⬡⬢⬡⬢ Skitter <%= @release.version %>"
-    echo ""
-
-    for remote in $workers
-    do
-      echo -n "$remote "
-      $maybe_dry_run ssh "$remote" "$cmd"
-      echo " ✓"
-    done
-
-    if [ $worker_cmd != "stop" ]
-    then
-      echo ""
-      echo "Workers initialized, starting master."
-      sleep 1
-      do_worker_master master start_iex ${cookie} ${workers}
-    fi
+    if [ -z "$workers" ] ; then argerr "deploy" "Missing workers" ; fi
+    "$mode"_deploy "$workers" "$remote_dir" "$cookie"
 }
 
 # ------------ #
