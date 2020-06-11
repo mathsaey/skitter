@@ -40,7 +40,7 @@ defmodule Skitter.Component do
   Note that a valid component must have at least one in port.
   """
   @type t :: %__MODULE__{
-          name: String.t() | nil,
+          name: module() | nil,
           fields: [field()],
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],

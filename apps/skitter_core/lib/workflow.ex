@@ -27,7 +27,7 @@ defmodule Skitter.Workflow do
   optional name.
   """
   @type t :: %__MODULE__{
-          name: String.t() | nil,
+          name: module() | nil,
           in_ports: [Port.t(), ...],
           out_ports: [Port.t()],
           # TODO: rename this?
