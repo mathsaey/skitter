@@ -99,4 +99,26 @@ defmodule Skitter.Master.WorkersTest do
       assert not Workers.connected?(worker)
     end
   end
+
+  describe "remote code execution" do
+    @tag distributed: [worker: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}]]
+    test "on a single node", %{worker: worker} do
+      assert Workers.on(worker, Node, :self, []) == worker
+    end
+
+    @tag distributed: [
+           worker1: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}],
+           worker2: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}],
+           worker3: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}]
+         ]
+    test "on all nodes", %{worker1: worker1, worker2: worker2, worker3: worker3} do
+      Workers.connect([worker1, worker2, worker3])
+      res = Workers.on_all(Node, :self, [])
+
+      # Order depends on connection order, so cannot rely on it for test
+      assert worker1 in res
+      assert worker2 in res
+      assert worker3 in res
+    end
+  end
 end

@@ -52,6 +52,28 @@ defmodule Skitter.Master.Workers do
   @spec connected?(node()) :: boolean()
   def connected?(worker), do: Registry.connected?(worker)
 
+  @doc """
+  Execute `mod.func(args)` on `worker`, block until a result is available.
+  """
+  @spec on(node(), module(), atom(), [any()]) :: any()
+  def on(worker, mod, func, args), do: hd(on_many([worker], mod, func, args))
+
+  @doc """
+  Execute `mod.func(args)` on every worker, obtain the results in a list.
+  """
+  @spec on_all(module(), atom(), [any()]) :: [any()]
+  def on_all(mod, func, args), do: on_many(all(), mod, func, args)
+
+  @doc """
+  Execute `mod.func(args)` on every specified worker, obtain results in a list.
+  """
+  @spec on_many(node(), module(), atom(), [any()]) :: [any()]
+  defp on_many(workers, mod, func, args) do
+    workers
+    |> Enum.map(&Task.Supervisor.async({Skitter.Runtime.TaskSupervisor, &1}, mod, func, args))
+    |> Enum.map(&Task.await(&1))
+  end
+
   # ------ #
   # Server #
   # ------ #
