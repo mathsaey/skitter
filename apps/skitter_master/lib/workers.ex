@@ -15,6 +15,10 @@ defmodule Skitter.Master.Workers do
 
   alias __MODULE__.Registry
 
+  # --- #
+  # API #
+  # --- #
+
   @doc """
   Start the workers server.
   """
@@ -52,6 +56,18 @@ defmodule Skitter.Master.Workers do
   @spec connected?(node()) :: boolean()
   def connected?(worker), do: Registry.connected?(worker)
 
+  @spec subscribe_up() :: :ok
+  def subscribe_up(), do: GenServer.cast(__MODULE__, {:subscribe, self(), :worker_up})
+
+  @spec subscribe_down() :: :ok
+  def subscribe_down(), do: GenServer.cast(__MODULE__, {:subscribe, self(), :worker_down})
+
+  @spec unsubscribe_up() :: :ok
+  def unsubscribe_up(), do: GenServer.cast(__MODULE__, {:unsubscribe, self(), :worker_up})
+
+  @spec unsubscribe_down() :: :ok
+  def unsubscribe_down(), do: GenServer.cast(__MODULE__, {:unsubscribe, self(), :worker_down})
+
   @doc """
   Execute `mod.func(args)` on `worker`, block until a result is available.
   """
@@ -68,47 +84,74 @@ defmodule Skitter.Master.Workers do
   Execute `mod.func(args)` on every specified worker, obtain results in a list.
   """
   @spec on_many(node(), module(), atom(), [any()]) :: [any()]
-  defp on_many(workers, mod, func, args) do
+  def on_many(workers, mod, func, args) do
     workers
     |> Enum.map(&Task.Supervisor.async({Skitter.Runtime.TaskSupervisor, &1}, mod, func, args))
     |> Enum.map(&Task.await(&1))
   end
 
-  # ------ #
-  # Server #
-  # ------ #
+  # ------------- #
+  # Functionality #
+  # ------------- #
+
+  defp new_worker(worker, state) do
+    Node.monitor(worker, true)
+    Registry.add(worker)
+    notify(:worker_up, worker, state)
+  end
 
   defp try_connect(worker) when is_atom(worker) do
     Runtime.connect(worker, :skitter_worker, Skitter.Worker.Master)
   end
 
-  defp add_if_connected({worker, :ok}) do
-    Node.monitor(worker, true)
-    Registry.add(worker)
+  defp add_if_connected({worker, :ok}, state) do
+    new_worker(worker, state)
     {worker, :ok}
   end
 
-  defp add_if_connected(any), do: any
+  defp add_if_connected(any, _), do: any
 
-  defp do_connect(workers) when is_list(workers) do
+  defp do_connect(workers, state) when is_list(workers) do
     workers
     |> Enum.map(&Task.Supervisor.async(TaskSupervisor, fn -> {&1, try_connect(&1)} end))
     |> Enum.map(&Task.await(&1))
-    |> Enum.map(&add_if_connected/1)
+    |> Enum.map(&add_if_connected(&1, state))
     |> Enum.reject(fn {_, ret} -> ret == :ok end)
     |> Enum.map(fn {node, {:error, error}} -> {node, error} end)
   end
+
+  defp notify(topic, worker, subscriptions) do
+    subscriptions
+    |> Map.get(topic, MapSet.new())
+    |> MapSet.to_list()
+    |> Enum.each(&send(&1, {topic, worker}))
+  end
+
+  # --------- #
+  # Genserver #
+  # --------- #
 
   @impl true
   def init([]) do
     Runtime.publish(:skitter_master)
     Registry.start_link()
-    {:ok, nil}
+    {:ok, %{}}
+  end
+
+  @impl true
+  def handle_cast({:subscribe, pid, topic}, state) do
+    state = Map.update(state, topic, MapSet.new([pid]), &MapSet.put(&1, pid))
+    {:noreply, state}
+  end
+
+  def handle_cast({:unsubscribe, pid, topic}, state) do
+    state = Map.update(state, topic, MapSet.new(), &MapSet.delete(&1, pid))
+    {:noreply, state}
   end
 
   @impl true
   def handle_call({:connect, workers}, _, state) do
-    case do_connect(workers) do
+    case do_connect(workers, state) do
       [] -> {:reply, :ok, state}
       lst -> {:reply, {:error, lst}, state}
     end
@@ -116,12 +159,7 @@ defmodule Skitter.Master.Workers do
 
   def handle_call({:accept, worker}, _, state) do
     reply = Runtime.accept(worker, :skitter_worker)
-
-    if reply do
-      Node.monitor(worker, true)
-      Registry.add(worker)
-    end
-
+    if reply, do: new_worker(worker, state)
     {:reply, reply, state}
   end
 
@@ -129,7 +167,7 @@ defmodule Skitter.Master.Workers do
   def handle_info({:nodedown, worker}, state) do
     Logger.info("Worker `#{worker}` disconnected")
     Registry.remove(worker)
-    # TODO: notifier
+    notify(:worker_down, worker, state)
     {:noreply, state}
   end
 end

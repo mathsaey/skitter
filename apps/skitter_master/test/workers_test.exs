@@ -121,4 +121,26 @@ defmodule Skitter.Master.WorkersTest do
       assert worker3 in res
     end
   end
+
+  @tag distributed: [
+         worker1: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}],
+         worker2: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}]
+       ]
+  test "notifications", %{worker1: worker1, worker2: worker2} do
+    Workers.subscribe_up()
+    Workers.subscribe_down()
+
+    Workers.connect(worker1)
+    assert_receive {:worker_up, ^worker1}
+    Cluster.kill_node(worker1)
+    assert_receive {:worker_down, ^worker1}
+
+    Workers.unsubscribe_up()
+    Workers.unsubscribe_down()
+
+    Workers.connect(worker2)
+    refute_received {:worker_up, ^worker2}
+    Cluster.kill_node(worker2)
+    refute_received {:worker_down, ^worker2}
+  end
 end
