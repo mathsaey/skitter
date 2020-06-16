@@ -67,7 +67,7 @@ defmodule Skitter.MixProject do
       Enum.reduce(args, {[], false}, fn
         "--path", {lst, _} -> {lst, true}
         val, {lst, true} -> {lst, val}
-        val, {lst, _} -> {[val | lst], false}
+        val, {lst, cur} -> {[val | lst], cur}
       end)
 
     args = Enum.reverse(args)
