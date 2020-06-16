@@ -12,8 +12,12 @@ defmodule Skitter.Master.Application do
   alias Skitter.Master
 
   def start(:normal, []) do
-    children = [Master.Workers]
-    {:ok, supervisor_pid} = Supervisor.start_link(children, strategy: :one_for_one)
+    children = [
+      Master.Workers,
+      Master.ManagerSupervisor
+    ]
+
+    {:ok, supervisor_pid} = Supervisor.start_link(children, strategy: :rest_for_one)
 
     :ok = try_connect()
     {:ok, supervisor_pid}
