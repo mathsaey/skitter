@@ -10,7 +10,7 @@ defmodule Skitter.Master.WorkersTest do
   alias Skitter.Master.Workers
 
   alias Skitter.Runtime
-  alias Skitter.Runtime.Test.DummyRemote
+  alias Skitter.Runtime.Test.{DummyRemote, Func}
 
   alias Skitter.Worker.Master, as: RemoteServer
 
@@ -101,9 +101,19 @@ defmodule Skitter.Master.WorkersTest do
   end
 
   describe "remote code execution" do
-    @tag distributed: [worker: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}]]
-    test "on a single node", %{worker: worker} do
-      assert Workers.on(worker, Node, :self, []) == worker
+    @tag distributed: [
+           worker1: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}],
+           worker2: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}],
+           worker3: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}]
+         ]
+    test "using module func arity", %{worker1: worker1, worker2: worker2, worker3: worker3} do
+      Workers.connect([worker1, worker2, worker3])
+      res = Workers.on_all(Node, :self, [])
+
+      # Order depends on connection order, so cannot rely on it for test
+      assert worker1 in res
+      assert worker2 in res
+      assert worker3 in res
     end
 
     @tag distributed: [
@@ -111,9 +121,9 @@ defmodule Skitter.Master.WorkersTest do
            worker2: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}],
            worker3: [{DummyRemote, :start, [RemoteServer, :skitter_worker, true]}]
          ]
-    test "on all nodes", %{worker1: worker1, worker2: worker2, worker3: worker3} do
+    test "using closure", %{worker1: worker1, worker2: worker2, worker3: worker3} do
       Workers.connect([worker1, worker2, worker3])
-      res = Workers.on_all(Node, :self, [])
+      res = Workers.on_all(Func.get())
 
       # Order depends on connection order, so cannot rely on it for test
       assert worker1 in res
