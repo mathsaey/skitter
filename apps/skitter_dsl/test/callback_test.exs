@@ -16,8 +16,9 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "`:none` state capability" do
     c =
-      defcallback([:field], [], []) do
-        10
+      defcallback([:field], []) do
+        () ->
+          10
       end
 
     assert c.state_capability == :none
@@ -26,8 +27,9 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "`:read` state capability" do
     c =
-      defcallback([:field], [], []) do
-        field
+      defcallback([:field], []) do
+        () ->
+          field
       end
 
     assert c.state_capability == :read
@@ -39,8 +41,9 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "`:readwrite` state capability" do
     c =
-      defcallback([:field], [], []) do
-        field <~ 30
+      defcallback([:field], []) do
+        () ->
+          field <~ 30
       end
 
     assert c.state_capability == :readwrite
@@ -49,8 +52,9 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "no publish" do
     c =
-      defcallback([], [:out], []) do
-        5
+      defcallback([], [:out]) do
+        () ->
+          5
       end
 
     assert c.publish_capability == false
@@ -59,8 +63,9 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "publish" do
     c =
-      defcallback([], [:out], []) do
-        5 ~> out
+      defcallback([], [:out]) do
+        () ->
+          5 ~> out
       end
 
     assert c.publish_capability == true
@@ -69,13 +74,13 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "arguments and arity" do
     c1 =
-      defcallback([], [], [arg]) do
-        arg
+      defcallback([], []) do
+        arg -> arg
       end
 
     c2 =
-      defcallback([], [], [arg1, arg2]) do
-        arg1 + arg2
+      defcallback([], []) do
+        arg1, arg2 -> arg1 + arg2
       end
 
     assert c1.arity == 1
@@ -84,17 +89,35 @@ defmodule Skitter.DSL.CallbackTest do
     assert Callback.call(c2, %{}, [10, 20]).result == 30
   end
 
+  test "multiple clauses" do
+    c =
+      defcallback([], []) do
+        :foo -> :bar
+        %{foo: x} -> x
+      end
+
+    assert Callback.call(c, %{}, [:foo]).result == :bar
+    assert Callback.call(c, %{}, [%{foo: 10}]).result == 10
+  end
+
   test "errors" do
     assert_definition_error ~r/.*: Invalid syntax: `foo`/ do
-      defcallback([], [], [], do: 5 ~> :foo)
+      defcallback([], [], do: (() -> 5 ~> :foo))
+    end
+
+    assert_definition_error ~r/.*: Callback clauses must have the same arity/ do
+      defcallback([], []) do
+        arg -> arg
+        arg1, arg2 -> {arg1, arg2}
+      end
     end
 
     assert_definition_error ~r/.*: Invalid field: .*/ do
-      defcallback([:field], [], [], do: another_field <~ 5)
+      defcallback([:field], [], do: (() -> another_field <~ 5))
     end
 
     assert_definition_error ~r/.*: Invalid out port: .*/ do
-      defcallback([], [:out], [], do: 5 ~> wrong_port)
+      defcallback([], [:out], do: (() -> 5 ~> wrong_port))
     end
   end
 end

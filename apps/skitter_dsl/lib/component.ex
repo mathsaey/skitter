@@ -191,31 +191,46 @@ defmodule Skitter.DSL.Component do
     callbacks =
       statements
       |> Enum.reject(&is_nil(&1))
-      |> Enum.reduce([], &[transform_callback(&1, imports, fields, out) | &2])
-      |> Enum.reverse()
+      |> Enum.map(&read_callback(&1))
+      |> Enum.reduce(%{}, &merge_callback(&1, &2))
+      |> Enum.map(&build_callback(&1, imports, fields, out))
 
     {:%{}, [], callbacks}
   end
 
-  # Transform a `name args do ... end` ast node into a defcallback call.
-  # Make sure to add the imports as a part of the body.
-  defp transform_callback({name, _, args}, imports, fields, out) do
+  # Read a `name args do ... end` ast node and extract the name, args and body.
+  defp read_callback({name, _, args}) do
     {args, [[do: body]]} = Enum.split(args, -1)
+    {name, args, body}
+  end
 
-    body =
+  # Group callbacks by their names
+  defp merge_callback({name, args, body}, map) do
+    Map.update(map, name, [{args, body}], &(&1 ++ [{args, body}]))
+  end
+
+  # Build a callback from a name and a list of {args, body} tuples
+  # Ensure imports, fields and out ports are passed along
+  defp build_callback({name, bodies}, imports, fields, out) do
+    clauses =
+      Enum.flat_map(bodies, fn {args, body} ->
+        quote do
+          unquote_splicing(args) ->
+            unquote(imports)
+            unquote(body)
+        end
+      end)
+
+    callback =
       quote do
-        unquote(imports)
-        import unquote(Skitter.DSL.Callback), only: [defcallback: 4]
+        import unquote(Skitter.DSL.Callback), only: [defcallback: 3]
 
-        defcallback(
-          unquote(fields),
-          unquote(out),
-          unquote(args),
-          do: unquote(body)
-        )
+        defcallback(unquote(fields), unquote(out)) do
+          unquote(clauses)
+        end
       end
 
-    {name, body}
+    {name, callback}
   end
 
   @doc false

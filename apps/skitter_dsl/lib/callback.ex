@@ -6,7 +6,7 @@
 
 defmodule Skitter.DSL.Callback do
   @moduledoc """
-  Callback definition DSL. See `defcallback/4`.
+  Callback definition DSL. See `defcallback/3`.
   """
   alias Skitter.DSL.{DefinitionError, Utils}
 
@@ -19,77 +19,84 @@ defmodule Skitter.DSL.Callback do
   @doc """
   DSL to create `t:Skitter.Callback.t/0`.
 
-  This macro offers a DSL to create callbacks that can be used inside skitter
-  components. This macro accepts the `fields` and `out_ports` of the component
-  it will be embedded in as arguments. Any additional arguments that the
-  callback will accept must be specified as a list of arguments which should be
-  passed to `args`. Generally speaking, this macro should not be called
-  directly.  `Skitter.DSL.Component.defcomponent/3` automatically calls this
-  macro with appropriate values for `fields`, `out_ports`, and `args`.
+  This macro offers a DSL to create callbacks that can be used inside skitter components. This
+  macro accepts the `fields` and `out_ports` of the component it will be embedded in as arguments.
+  Besides this, it accepts a set of function clauses as its body.  Generally speaking, this macro
+  should not be called directly.  `Skitter.DSL.Component.defcomponent/3` automatically calls this
+  macro with appropriate values for `fields` and `out_ports`.
 
-  The `body` argument should contain the implementation of the callback. The
-  body of the callback contains standard elixir code with a few additions and
-  limitations:
+  The `body` argument should contain the actual implementation of the callback. This body consists
+  of `fn`-like clauses (`argument -> body`). The body of these clauses contain standard elixir
+  code with a few additions and limitations:
 
-  - the `~>` operator can be used to publish data to any out port provided in
-  `out_ports` (an error is raised if the port is not present in `out_ports`).
-  This is done with the following syntax: `value ~> port`. If multiple data is
-  published on the same output port, the last write will be published.
-  - the `<~` operator can be used to update the state passed to the callback.
-  `field <~ value` will update `field` of the state. The provided field should
-  be present in `fields` (an error is raised  if this is not the case).
-  - Using any field name inside of `body` will read the current value of that
-  field in the state passed to the callback activation. Thus, to avoid errors,
-  variable names inside `body` should not have the same name as a field.
+  - the `~>` operator can be used to publish data to any out port provided in `out_ports` (an
+  error is raised if the port is not present in `out_ports`).  This is done with the following
+  syntax: `value ~> port`. If multiple data is published on the same output port, the last write
+  will be published.
+  - the `<~` operator can be used to update the state passed to the callback.  `field <~ value`
+  will update `field` of the state. The provided field should be present in `fields` (an error is
+  raised  if this is not the case).
+  - Using any field name inside of `body` will read the current value of that field in the state
+  passed to the callback activation. Thus, to avoid errors, variable names inside `body` should
+  not have the same name as a field.
 
-  As a result, this macro returns a callback with the correct capabilities and a
-  function which return a `t:Skitter.Callback.Result.t/0`.
+  As a result, this macro returns a callback with the correct capabilities and a function which
+  return a `t:Skitter.Callback.Result.t/0`.
 
   ## Examples
 
-  This callback calculates an average and publishes its current value on the
-  `current` port. For educative reasons, it always returns 0.
+  This callback calculates an average and publishes its current value on the `current` port. When
+  it is called with the `:latest` argument, it returns the current average.
 
-      iex> c = defcallback([:total, :count], [:current], [value]) do
-      ...>  count <~ count + 1
-      ...>  total <~ total + value
-      ...>  total / count ~> current
-      ...>  0
+      iex> c = defcallback([:total, :count], [:current]) do
+      ...>  :latest ->
+      ...>    total / count
+      ...>  value ->
+      ...>    count <~ count + 1
+      ...>    total <~ total + value
+      ...>    total / count ~> current
+      ...>    :ok
       ...> end
       iex> c.publish_capability
       true
       iex> c.state_capability
       :readwrite
       iex> Callback.call(c, %{total: 5, count: 1}, [5])
-      %Result{state: %{count: 2, total: 10}, publish: [current: 5.0], result: 0}
+      %Result{state: %{count: 2, total: 10}, publish: [current: 5.0], result: :ok}
+      iex> Callback.call(c, %{total: 10, count: 2}, [:latest])
+      %Result{state: %{count: 2, total: 10}, publish: [], result: 5.0}
   """
   @doc section: :dsl
-  defmacro defcallback(fields, out_ports, args, do: body) do
+  defmacro defcallback(fields, out_ports, do: body) do
     try do
       body = transform_operators(fields, out_ports, body, __CALLER__)
-
       state = state_access(used?(body, :read_state), used?(body, :update_state))
       publish = used?(body, :publish)
-      arity = length(args)
 
-      {body, state_return, state_arg} = make_state_body_return(body, state)
-      {body, publish_return} = make_publish_body_return(body, publish)
+      clauses = Enum.map(body, fn {:->, _, [args, body]} -> {args, body} end)
+      arity = read_arity(clauses, __CALLER__)
 
-      func =
-        quote do
-          fn unquote(state_arg), unquote(args) ->
-            import unquote(__MODULE__),
-              only: [read_state: 1, update_state: 2, publish: 2, defcallback: 4]
+      bodies =
+        Enum.flat_map(clauses, fn {args, body} ->
+          {body, state_return, state_arg} = make_state_body_return(body, state)
+          {body, publish_return} = make_publish_body_return(body, publish)
 
-            result = unquote(body)
+          quote do
+            unquote(state_arg), unquote(args) ->
+              import unquote(__MODULE__),
+                only: [read_state: 1, update_state: 2, publish: 2, defcallback: 3]
 
-            %unquote(Skitter.Callback.Result){
-              state: unquote(state_return),
-              publish: unquote(publish_return),
-              result: result
-            }
+              result = unquote(body)
+
+              %unquote(Skitter.Callback.Result){
+                state: unquote(state_return),
+                publish: unquote(publish_return),
+                result: result
+              }
           end
-        end
+        end)
+
+      func = {:fn, [], bodies}
 
       quote do
         %unquote(Skitter.Callback){
@@ -183,6 +190,18 @@ defmodule Skitter.DSL.Callback do
   defp state_access(true, false), do: :read
   defp state_access(false, false), do: :none
 
+  # Check the arity of the various clauses, make sure they are all the same and return it
+  defp read_arity(clauses, env) do
+    arities = clauses |> Enum.map(&elem(&1, 0)) |> Enum.map(&length/1)
+    arity = hd(arities)
+
+    if Enum.all?(arities, &(&1 == arity)) do
+      arity
+    else
+      throw {:error, :arity_mismatch, env}
+    end
+  end
+
   # Create body and return value and function argument for state
   defp make_state_body_return(body, :readwrite) do
     {Utils.make_mutable_in_block(body, @state_var), @state_var, @state_var}
@@ -216,6 +235,10 @@ defmodule Skitter.DSL.Callback do
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do
     DefinitionError.inject("Invalid syntax: `#{statement}`", env)
+  end
+
+  defp handle_error({:error, :arity_mismatch, env}) do
+    DefinitionError.inject("Callback clauses must have the same arity", env)
   end
 
   defp handle_error({:error, :invalid_field, field, fields, env}) do

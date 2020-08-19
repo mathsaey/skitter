@@ -41,15 +41,16 @@ defmodule Skitter.DSL.ComponentTest do
   end
 
   test "named strategy extraction" do
-    strategy = %Component{
-      name: __MODULE__.NamedStrategy,
-      callbacks: %{
-        on_define: %Callback{
-          function: fn _, [c] -> %Result{publish: [on_define: c]} end
+    strategy =
+      %Component{
+        name: __MODULE__.NamedStrategy,
+        callbacks: %{
+          on_define: %Callback{
+            function: fn _, [c] -> %Result{publish: [on_define: c]} end
+          }
         }
       }
-    }
-    |> Registry.put_if_named()
+      |> Registry.put_if_named()
 
     comp =
       defcomponent nil, in: [] do
@@ -80,6 +81,24 @@ defmodule Skitter.DSL.ComponentTest do
     assert Map.has_key?(comp.callbacks, :react)
   end
 
+  test "callback with multiple clauses" do
+    comp =
+      defcomponent in: [] do
+        strategy DummyStrategy
+
+        cb :foo do
+          :bar
+        end
+
+        cb x do
+          x
+        end
+      end
+
+    assert Component.call(comp, :cb, %{}, [10]).result == 10
+    assert Component.call(comp, :cb, %{}, [:foo]).result == :bar
+  end
+
   test "reuse directives" do
     comp =
       defcomponent in: [pid] do
@@ -104,8 +123,7 @@ defmodule Skitter.DSL.ComponentTest do
   end
 
   test "name registration" do
-    c =
-      defcomponent(__MODULE__.Named, [in: ignore], do: strategy(DummyStrategy))
+    c = defcomponent(__MODULE__.Named, [in: ignore], do: strategy(DummyStrategy))
 
     assert Registry.get(__MODULE__.Named) == c
   end
