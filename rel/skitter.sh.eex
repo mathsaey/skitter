@@ -35,11 +35,6 @@ function global_usage() {
   printf '\t%s\t%s\n' "l, local"  "$local_desc"
   printf '\t%s\t%s\n' "w, worker" "$worker_desc"
   printf '\t%s\t%s\n' "m, master" "$master_desc"
-
-  printf '%s\n'     "Environment:"
-  printf '\t%s\n'   "SKITTER_PATH"
-  printf '\t\t%s\n' "Specifies the location of the skitter runtime release files."
-  printf '\t\t%s\n' "Defaults to the location of this script."
 }
 
 function deploy_usage() {
@@ -175,14 +170,13 @@ function do_help() {
 # -------------
 
 function rel_cmd() {
-  if [ ! -d "$SKITTER_PATH/skitter_$mode" ]
+  if [ ! -d "$SKITTER_REL_PATH/skitter_$mode" ]
   then
-    echoerr "Attempted to start 'skitter_$mode', but it is not present in '\$SKITTER_PATH'"
-    echoerr "Please ensure the 'skitter_$mode' release is built and present in '\$SKITTER_PATH'"
-    echoerr "SKITTER_PATH = $SKITTER_PATH"
+    echoerr "Attempted to start 'skitter_$mode', but it is not present in '$SKITTER_REL_PATH'"
+    echoerr "This probably means there is something wrong with your skitter installation."
     exit 2
   fi
-  $maybe_dry_run $SKITTER_PATH/skitter_$mode/bin/skitter_$mode $1
+  $maybe_dry_run $SKITTER_REL_PATH/skitter_$mode/bin/skitter_$mode $1
 }
 
 function maybe_add_name() {
@@ -289,7 +283,7 @@ function do_worker_master() {
 # ------------
 
 function for_workers() {
-  local cmd="cd ${2} && SKITTER_PATH=$SKITTER_PATH $script worker ${4} ${3}"
+  local cmd="cd ${2} && $script worker ${4} ${3}"
   connected=""
 
   for remote in $1
@@ -392,15 +386,12 @@ then
   exit 0
 fi
 
-# Figure out the path to the skitter releases. This is specified by
-# $SKITTER_PATH or the location of the script
-if [ -z $SKITTER_PATH ]
-then
-  SELF=$(readlink "$0" || true)
-  if [ -z "$SELF" ]; then SELF="$0"; fi
-  PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
-  SKITTER_PATH=$PARENT_DIR
-fi
+# We expect the release files to be store alongside this script.
+# This location is stored as SKITTER_REL_PATH
+SELF=$(readlink "$0" || true)
+if [ -z "$SELF" ]; then SELF="$0"; fi
+PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
+SKITTER_REL_PATH=$PARENT_DIR
 
 ## Parse global options and mode
 while test $# -gt 0
