@@ -9,7 +9,7 @@ defmodule Skitter.Runtime.Remote do
   Facilities to interact with remote skitter runtimes.
   """
   require Logger
-  alias Skitter.Runtime.Beacon
+  alias Skitter.Runtime.Remote.Beacon
 
   @doc """
   Connect to `remote` if is a skitter runtime with `mode`.

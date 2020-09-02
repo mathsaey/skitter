@@ -26,10 +26,9 @@ defmodule Skitter.Worker.Master do
   @doc """
   Start the master server, potentially connecting to `master`
 
-  If `master` is nil, node connection is attempted. If `master` is a node,
-  the spawned `GenServer` will attempt to connect to `master`. If the
-  connection is not successfull for any reason, a message is logged but the
-  spawned `GenServer` does not exit.
+  If `master` is nil, node connection is attempted. If `master` is a node, the spawned `GenServer`
+  will attempt to connect to `master`. If the connection is not successfull for any reason, a
+  message is logged but the spawned `GenServer` does not exit.
   """
   @spec start_link(node() | nil) :: GenServer.on_start()
   def start_link(master) do
@@ -39,11 +38,11 @@ defmodule Skitter.Worker.Master do
   @doc """
   Attempt to connect to to `master`
 
-  Asks the master server to connect to `master`. If this fails for any reason,
-  an `{:error, reason}` tuple is returned. `reason` can be any reason returned
-  by `Skitter.Runtime.Beacon.discover/1`, `Skitter.Runtime.Connect.connect/2`,
-  or `:already_connected` is this worker is already connected to a different
-  master runtime. `:ok` is returned if the connection is successful.
+  Asks the master server to connect to `master`. If this fails for any reason, an `{:error,
+  reason}` tuple is returned. `reason` can be any reason returned by
+  `Skitter.Runtime.Remote.Beacon.discover/1`, `Skitter.Runtime.Connect.connect/2`, or
+  `:already_connected` is this worker is already connected to a different master runtime. `:ok` is
+  returned if the connection is successful.
   """
   @spec connect(node()) :: :ok | {:error, any()}
   def connect(master) do

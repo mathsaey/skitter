@@ -8,7 +8,7 @@ defmodule Skitter.Runtime.BeaconTest do
   use Skitter.Runtime.Test.ClusterCase, async: false
   import ExUnit.CaptureLog
 
-  alias Skitter.Runtime.Beacon
+  alias Skitter.Runtime.Remote.Beacon
 
   defp version do
     Application.spec(:skitter_runtime, :vsn)

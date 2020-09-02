@@ -7,9 +7,9 @@
 defmodule Skitter.Runtime do
   @moduledoc """
   """
-  alias Skitter.Runtime.{Beacon, Remote}
+  alias Skitter.Runtime.Remote
 
-  defdelegate publish(atom), to: Beacon
+  defdelegate publish(atom), to: Remote.Beacon
 
   defdelegate accept(remote, mode), to: Remote
   defdelegate connect(remote, mode, server), to: Remote

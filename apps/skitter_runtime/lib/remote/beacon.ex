@@ -4,21 +4,20 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Beacon do
+defmodule Skitter.Runtime.Remote.Beacon do
   @moduledoc """
   Facilities to discover, and connect to, skitter nodes.
 
-  To start a skitter cluster, various runtimes in a network need to connect to
-  each other and ensure they can cooperate. Skitter runtimes discover each
-  other through the use of a _beacon_. Other runtimes can use this beacon or the
-  absence thereof to verify if an erlang node is a valid skitter runtime.
+  To start a skitter cluster, various runtimes in a network need to connect to each other and
+  ensure they can cooperate. Skitter runtimes discover each other through the use of a _beacon_.
+  Other runtimes can use this beacon or the absence thereof to verify if an erlang node is a valid
+  skitter runtime.
 
-  This module defines the beacon process (a genserver) which is automatically
-  started by the `:skitter_runtime` application. Other runtimes can use this
-  process to verify if this node is a skitter runtime. Upon starting, a skitter
-  runtime should call `publish/1` to specify its mode.  Remote runtimes can call
-  `discover/1` to obtain the published data, and to verify whether or not they
-  are compatible with the local runtime.
+  This module defines the beacon process (a genserver) which is automatically started by the
+  `:skitter_runtime` application. Other runtimes can use this process to verify if this node is a
+  skitter runtime. Upon starting, a skitter runtime should call `publish/1` to specify its mode.
+  Remote runtimes can call `discover/1` to obtain the published data, and to verify whether or not
+  they are compatible with the local runtime.
   """
   use GenServer
   require Logger
@@ -36,9 +35,8 @@ defmodule Skitter.Runtime.Beacon do
   @doc """
   Publish the local skitter runtime.
 
-  A skitter runtime needs to specify it's _mode_ in order to be published.
-  This mode will be sent to remote runtimes that attempt to `discover/1` the
-  local node.
+  A skitter runtime needs to specify it's _mode_ in order to be published.  This mode will be sent
+  to remote runtimes that attempt to `discover/1` the local node.
   """
   @spec publish(atom()) :: :ok
   def publish(mode), do: GenServer.cast(__MODULE__, {:publish, mode})
@@ -46,26 +44,23 @@ defmodule Skitter.Runtime.Beacon do
   @doc """
   Verify if `node` is a skitter runtime. Returns `{:ok, mode, pid}` if it is.
 
-  Calling this function is the first step to connecting with a remote skitter
-  runtime. This procedure will attempt to connect to a remote node, and verify
-  that this node is a compatible skitter runtime. When successful, the function
-  returns the _mode_ and _remote pid_ of the remote runtime.
+  Calling this function is the first step to connecting with a remote skitter runtime. This
+  procedure will attempt to connect to a remote node, and verify that this node is a compatible
+  skitter runtime. When successful, the function returns the _mode_ and _remote pid_ of the remote
+  runtime.
 
-  If the local node is not alive (`Node.alive?/0`), `{:error, :not_distributed}`
-  is returned. If connection to the remote node is not possible for some other
-  reason, `{:error, :not_connected}` is returned.
+  If the local node is not alive (`Node.alive?/0`), `{:error, :not_distributed}` is returned. If
+  connection to the remote node is not possible for some other reason, `{:error, :not_connected}`
+  is returned.
 
-  Once the connection is established, this function verifies the remote node
-  hosts a skitter runtime (i.e. it publishes a `Skitter.Runtime.Beacon`). If
-  it does not, `{:error, :not_skitter}` is returned. If it does, the versions
-  of the remote and local node are compared, `{:error, :incompatible}` is
-  returned if there is a version mismatch between the runtimes.
+  Once the connection is established, this function verifies the remote node hosts a skitter
+  runtime (i.e. it publishes a `Skitter.Runtime.Remote.Beacon`). If it does not, `{:error,
+  :not_skitter}` is returned. If it does, the versions of the remote and local node are compared,
+  `{:error, :incompatible}` is returned if there is a version mismatch between the runtimes.
 
-  Finally, if both runtimes are compatible, a `{:ok, mode}` tuple is returned.
-  The _mode_ result indicates the role the remote runtime plays in a skitter
-  cluster (e.g. `:master` or `:worker`). `{:error, :uninitialized}` is returned
-  if the remote runtime has
-  not called `publish/1` yet.
+  Finally, if both runtimes are compatible, a `{:ok, mode}` tuple is returned.  The _mode_ result
+  indicates the role the remote runtime plays in a skitter cluster (e.g. `:master` or `:worker`).
+  `{:error, :uninitialized}` is returned if the remote runtime has not called `publish/1` yet.
   """
   @spec discover(node()) :: {:ok, atom()} | {:error, any()}
   def discover(node) when is_atom(node) do

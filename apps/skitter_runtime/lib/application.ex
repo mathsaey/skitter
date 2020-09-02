@@ -11,7 +11,7 @@ defmodule Skitter.Runtime.Application do
 
   def start(:normal, []) do
     children = [
-      Runtime.Beacon,
+      Runtime.Remote.Beacon,
       {Task.Supervisor, name: Skitter.Runtime.TaskSupervisor}
     ]
 
