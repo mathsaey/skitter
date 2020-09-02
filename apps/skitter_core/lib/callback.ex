@@ -125,47 +125,52 @@ defmodule Skitter.Callback do
   # ---------
 
   @doc """
-  Verify the permissions of a callback.
+  Verify if `callback` matches the `allowed` state capability.
 
-  This function accepts a callback and a set of permissions. It verifies if the
-  callback does not exceed the given permissions. A callback exceeds permissions
-  if its `state_capability` or `publish_capability` are higher than the given
-  values.
-
-  - For state capability the following ordering is used:
-    `:none < :read < :readwrite`
-  - For publish capability, `false < true`
+  This function verifies `callback` does not exceed the `allowed` state capability. A callback
+  exceeds `allowed` if its `state_capability` is higher than `allowed`. To verify this, the
+  following order is used: `:none < :read < :readwrite`.
 
   ## Examples
 
-      iex> permission?(
-      ...>   %Callback{state_capability: :none, publish_capability: false},
-      ...>   :readwrite,
-      ...>   true
-      ...> )
+      iex> state_permission?(%Callback{state_capability: :none}, :readwrite)
       true
-      iex> permission?(
-      ...>   %Callback{state_capability: :read, publish_capability: false},
-      ...>   :none,
-      ...>   true
-      ...> )
+      iex> state_permission?(%Callback{state_capability: :readwrite}, :none)
       false
-      iex> permission?(
-      ...>   %Callback{state_capability: :none, publish_capability: true},
-      ...>   :readwrite,
-      ...>   false
-      ...> )
+      iex> state_permission?(%Callback{state_capability: :read}, :read)
+      true
+      iex> state_permission?(%Callback{state_capability: :readwrite}, :read)
       false
   """
-  @spec permission?(t(), state_capability(), publish_capability()) :: boolean()
-  def permission?(cb = %__MODULE__{}, state_capability, publish_capability) do
-    state_order(cb.state_capability) <= state_order(state_capability) and
-      (cb.publish_capability == publish_capability or publish_capability)
+  @spec state_permission?(t(), state_capability()) :: boolean()
+  def state_permission?(%__MODULE__{state_capability: capability}, allowed) do
+    state_order(capability) <= state_order(allowed)
   end
 
   defp state_order(:none), do: 0
   defp state_order(:read), do: 1
   defp state_order(:readwrite), do: 2
+
+  @doc """
+  Verify if `callback` matches the `allowed` publish capability.
+
+  This function verifies `callback` does not attempt to publish if it is not allowed to.
+
+  ## Examples
+
+      iex> publish_permission?(%Callback{publish_capability: false}, false)
+      true
+      iex> publish_permission?(%Callback{publish_capability: true}, false)
+      false
+      iex> publish_permission?(%Callback{publish_capability: true}, true)
+      true
+      iex> publish_permission?(%Callback{publish_capability: false}, true)
+      true
+  """
+  @spec publish_permission?(t(), publish_capability()) :: boolean()
+  def publish_permission?(%__MODULE__{publish_capability: _}, true), do: true
+  def publish_permission?(%__MODULE__{publish_capability: false}, false), do: true
+  def publish_permission?(%__MODULE__{publish_capability: true}, false), do: false
 
   @doc """
   Check if the arity of a callback is equal to some value.
