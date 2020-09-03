@@ -49,15 +49,12 @@ defmodule Skitter.DSL.Strategy do
     quote do
       import Skitter.DSL.Component, only: [defcomponent: 3]
 
-      defcomponent unquote(name),
-        in: [],
-        out: [on_define] do
+      defcomponent unquote(name), in: [], out: [] do
         alias Skitter.{Component, Callback, Callback.Resul, Instance}
-        import Skitter.DSL.Callback, only: [defcallback: 4]
+        import Skitter.DSL.Callback, only: [defcallback: 3]
 
         # Import runtime primitives
-        # TODO: link to runtime later
-        strategy(Meta)
+        strategy(Skitter.Runtime.Strategy)
 
         unquote_splicing(body)
       end
