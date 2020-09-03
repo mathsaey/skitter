@@ -31,7 +31,7 @@ defmodule Skitter.DSL.ComponentTest do
           name: Foo,
           callbacks: %{
             on_define: %Callback{
-              function: fn _, [c] -> %Result{publish: [on_define: c]} end
+              function: fn _, [c] -> %Result{result: c} end
             }
           }
         }
@@ -46,7 +46,7 @@ defmodule Skitter.DSL.ComponentTest do
         name: __MODULE__.NamedStrategy,
         callbacks: %{
           on_define: %Callback{
-            function: fn _, [c] -> %Result{publish: [on_define: c]} end
+            function: fn _, [c] -> %Result{result: c} end
           }
         }
       }
