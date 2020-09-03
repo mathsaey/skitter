@@ -28,11 +28,7 @@ defmodule Skitter.Strategy do
   their behaviour. Such a strategy, called a _meta strategy_ is provided by a
   runtime implementation. Such a meta strategy is therefore not a component,
   instead, it is represented by a module name which refers to a runtime meta
-  strategy.
-
-  In order to support multiple runtime implementations of Skitter, we do not
-  refer to a specific runtime module here. However, in general, a skitter
-  runtime should offer a meta strategy that is used by all components.
+  strategy. Such a module should implement the `Skitter.Strategy` behaviour.
   """
   # TODO: Write a guide that explains how to write a strategy, link to it here
   @type t :: Component.t() | module()
@@ -44,19 +40,23 @@ defmodule Skitter.Strategy do
   @doc """
   Activated on element definition, returns a (modified) element.
 
-  This hook is activated when a `t:Skitter.Element.t/0` is defined. It can be
-  used to add functionality to an element, or to ensure that it matches certain
-  constraints. This hook should publish an element on the :on_define port, or
-  raise an error.
+  This hook is activated when a `t:Skitter.Element.t/0` is defined. It can be used to add
+  functionality to an element, or to ensure that it matches certain constraints. This hook should
+  return a (potentially modified) element, or raise an error.
   """
   # Note that this hook is not activated by :skitter_core. Instead, it should be
   # invoked by any (domain-specific) language built on top of :skitter_core.
   @spec on_define(Element.t()) :: Element.t() | no_return()
   def on_define(e = %{strategy: strategy = %Component{}}) do
-    Component.call(strategy, :on_define, %{}, [e]).publish[:on_define]
+    Component.call(strategy, :on_define, %{}, [e]).result
   end
 
   def on_define(e = %{strategy: strategy}) when is_atom(strategy) do
     strategy.on_define(e)
   end
+
+  @doc """
+  Module-based implementation of `on_define/1`.
+  """
+  @callback on_define(Element.t()) :: Element.t() | no_return()
 end

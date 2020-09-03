@@ -18,7 +18,7 @@ defmodule Skitter.StrategyTest do
         callbacks: %{
           on_define: %Callback{
             function: fn _state, [component] ->
-              %Result{publish: [on_define: %{component | fields: [:foobar]}]}
+              %Result{result: %{component | fields: [:foobar]}}
             end
           }
         }
