@@ -19,9 +19,10 @@ defmodule Skitter.DSL do
   @doc false
   defmacro __using__(_opts) do
     quote do
-      import Skitter.DSL.Component, only: [defcomponent: 3]
-      import Skitter.DSL.Workflow, only: [defworkflow: 3]
-      import Skitter.DSL.Strategy, only: [defstrategy: 2]
+      import Skitter.DSL.Component
+      import Skitter.DSL.Workflow
+      import Skitter.DSL.Strategy
+      :ok
     end
   end
 end
