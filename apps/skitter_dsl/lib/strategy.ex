@@ -36,8 +36,8 @@ defmodule Skitter.DSL.Strategy do
   Define a strategy component.
 
   This macro defines a strategy component. It is a convenient shortcut for using
-  `Skitter.DSL.Component.defcomponent/3` with the correct ports, fields and
-  strategy for the definition of a strategy.
+  `Skitter.DSL.Component.defcomponent/3` with the correct ports, fields and strategy for the
+  definition of a strategy.
   """
   defmacro defstrategy(name \\ nil, do: body) do
     body =
@@ -50,11 +50,11 @@ defmodule Skitter.DSL.Strategy do
       import Skitter.DSL.Component, only: [defcomponent: 3]
 
       defcomponent unquote(name), in: [], out: [] do
-        alias Skitter.{Component, Callback, Callback.Resul, Instance}
-        import Skitter.DSL.Callback, only: [defcallback: 3]
+        alias Skitter.{Component, Callback, Callback.Result, Instance}
 
         # Import runtime primitives
         strategy(Skitter.Runtime.Strategy)
+        fields(component, deployment, invocation)
 
         unquote_splicing(body)
       end
