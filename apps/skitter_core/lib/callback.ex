@@ -97,13 +97,19 @@ defmodule Skitter.Callback do
   @type state :: %{optional(Component.field()) => any}
 
   @typedoc """
+  Arguments to a callback.
+
+  A callback is called with an arbitrary amount of arguments wrapped in a list.
+  """
+  @type args :: [any()]
+
+  @typedoc """
   Function signature of a callback.
 
-  A skitter callback accepts the state of an instance, along with an arbitrary
-  amount of arguments wrapped in a list. The return value is defined by
-  `t:result/0`.
+  A skitter callback accepts the state of an instance, along with the arguments to the call. The
+  return value is defined by `t:result/0`.
   """
-  @type signature :: (state(), [any()] -> result())
+  @type signature :: (state(), args() -> result())
 
   @typedoc """
   Defines how the callback may access the state.
@@ -200,7 +206,7 @@ defmodule Skitter.Callback do
   ...> end}, 1, [2])
   %Result{state: 1, publish: [n: 2], result: 3}
   """
-  @spec call(t(), state(), [any()]) :: result()
+  @spec call(t(), state(), args()) :: result()
   def call(%__MODULE__{function: f}, state, args), do: f.(state, args)
 end
 
