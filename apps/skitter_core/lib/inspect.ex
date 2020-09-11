@@ -21,8 +21,8 @@ defmodule Skitter.Inspect do
     end
   end
 
-  # Header: Add an inspect which calls _doc. Take care of printing the prefix
-  # and the name if needed.
+  # Header: Add an inspect which calls _doc. Take care of printing the prefix and the name if
+  # needed.
   defp header(prefix, true) do
     quote do
       def inspect(%{name: n}, o = %Inspect.Opts{custom_options: [short: true]})
@@ -48,11 +48,10 @@ defmodule Skitter.Inspect do
     end
   end
 
-  # Footer: add bases cases for `_doc`
+  # Footer: add base cases for `_doc`
   defmacro __before_compile__(_) do
     quote do
       defp _doc({atom, _}, _) when atom in [:__struct__, :name], do: empty()
-      defp _doc(Meta, o), do: to_doc(Meta, o)
 
       defp _doc({k, v}, o) when is_atom(k) do
         group(glue("#{Atom.to_string(k)}:", short(v, o)))
@@ -98,6 +97,10 @@ defmodule Skitter.Inspect do
     for el <- list_or_wrap(x), do: do_value_only(el)
   end
 
+  defmacro name_only(x) do
+    for el <- list_or_wrap(x), do: do_name_only(el)
+  end
+
   defp do_ignore(k) do
     quote do
       defp _doc({unquote(k), _}, _), do: empty()
@@ -121,6 +124,12 @@ defmodule Skitter.Inspect do
   defp do_value_only(k) do
     quote do
       defp _doc({unquote(k), v}, o), do: short(v, o)
+    end
+  end
+
+  defp do_name_only(k) do
+    quote do
+      defp _doc({unquote(k), _}, o), do: short(unquote(k), o)
     end
   end
 

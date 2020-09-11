@@ -8,55 +8,182 @@ defmodule Skitter.Strategy do
   @moduledoc """
   Strategy definition and utilities.
 
-  A strategy is a `t:Skitter.Component.t/0` or a module which determines how a
-  component or workflow behaves at compile -and runtime. This module documents
-  the strategy type (`t:Skitter.Strategy.t/0`) along with the hooks strategies
-  can use to determine the behaviour of components or workflows. Any function
-  defined by this module represents a hook.
+  A strategy is a collection of callbacks which determine how a component behaves at compile -and
+  runtime. This module documents the strategy type (`t:Skitter.Strategy.t/0`), utilities to deal
+  with strategies and the callbacks strategies use to determine the behaviour of components.
   """
-  alias Skitter.{Element, Component}
+  alias Skitter.{Component, Callback}
 
   @typedoc """
-  Determines the compile -and runtime behaviour of a workflow or component.
+  Strategy representation.
 
-  A strategy is a `t:Skitter.Component.t/0` which determines how a component or
-  workflow behaves at compile -and runtime. Strategies themselves are components
-  which implement various hooks. These hooks are implemented as component
-  callbacks.
+  A strategy is a collection of predefined callbacks, stored inside a struct.  Determines the
+  compile -and runtime behaviour of a component.
 
-  Since strategies are components, they need to have a strategy to determine
-  their behaviour. Such a strategy, called a _meta strategy_ is provided by a
-  runtime implementation. Such a meta strategy is therefore not a component,
-  instead, it is represented by a module name which refers to a runtime meta
-  strategy. Such a module should implement the `Skitter.Strategy` behaviour.
+  In order to allow hierarchies of strategies, some callbacks may remain unimplemented. These
+  unimplemented callbacks are represented as `nil`. `complete?/1` can be used to verify if a
+  strategy is complete.
   """
-  # TODO: Write a guide that explains how to write a strategy, link to it here
-  @type t :: Component.t() | module()
+  @type t :: %__MODULE__{
+          name: module(),
+          define: Callback.t() | nil,
+          deploy: Callback.t() | nil,
+          prepare: Callback.t() | nil,
+          send: Callback.t() | nil,
+          receive: Callback.t() | nil,
+          react: Callback.t() | nil,
+          drop_deployment: Callback.t() | nil,
+          drop_invocation: Callback.t() | nil
+        }
+
+  defstruct [
+    :name,
+    :define,
+    :deploy,
+    :prepare,
+    :send,
+    :receive,
+    :react,
+    :drop_deployment,
+    :drop_invocation
+  ]
+
+  # --------- #
+  # Utilities #
+  # --------- #
+
+  @doc """
+  Merge a parent strategy with a child.
+
+  This creates a new strategy where all of the missing callbacks from `parent` or added into
+  `child`. Any callbacks defined within `child` and the name of `child` will not be affected.
+
+  ## Examples
+
+      iex> dummy1 = %Callback{function: fn _, _ -> %Result{} end}
+      iex> dummy2 = %Callback{function: fn _, _ -> %Result{} end}
+      iex> parent = %Strategy{define: dummy1, deploy: dummy1}
+      #Strategy<:define, :deploy>
+      iex> child = %Strategy{deploy: dummy2, react: dummy2}
+      #Strategy<:deploy, :react>
+      iex> merged = Strategy.merge(child, parent)
+      #Strategy<:define, :deploy, :react>
+      iex> merged.define
+      dummy1
+      iex> merged.deploy
+      dummy2
+      iex> merged.react
+      dummy2
+  """
+  @spec merge(t(), t()) :: t()
+  def merge(child, parent) do
+    filtered = child |> Map.from_struct() |> Enum.reject(&(&1 |> elem(1) |> is_nil()))
+    struct(parent, filtered)
+  end
+
+  @doc """
+  Verify if a strategy has implementations for every callback.
+
+  ## Examples
+
+      iex> dummy = %Callback{function: fn _, _ -> %Result{} end}
+      iex> Strategy.complete?(%Strategy{name: Example, define: dummy})
+      false
+      iex> Strategy.complete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send: dummy, receive: dummy, react: dummy, drop_invocation: dummy, drop_deployment: dummy})
+      true
+  """
+  @spec complete?(t()) :: boolean()
+  def complete?(strategy), do: nil not in Map.values(strategy)
+
+  @doc """
+  Verify whether a strategy is missing an implementation of some callbacks.
+
+  ## Examples
+
+      iex> dummy = %Callback{function: fn _, _ -> %Result{} end}
+      iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy})
+      true
+      iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send: dummy, receive: dummy, react: dummy, drop_invocation: dummy, drop_deployment: dummy})
+      false
+  """
+  @spec incomplete?(t()) :: boolean()
+  def incomplete?(strategy), do: not complete?(strategy)
 
   # ----- #
   # Hooks #
   # ----- #
 
   @doc """
-  Activated on element definition, returns a (modified) element.
+  Activated when a component is defined. Returns a (modified) component.
 
-  This hook is activated when a `t:Skitter.Element.t/0` is defined. It can be used to add
-  functionality to an element, or to ensure that it matches certain constraints. This hook should
-  return a (potentially modified) element, or raise an error.
+  This hook is activated when a `t:Skitter.Component.t/0` is defined. It can be used to verify if
+  a component is correct (e.g. `Component.require_callback!/3`) or to add additional functionality
+  to the component (e.g. `Component.default_callback/3`). Additionally, the strategy can use this
+  opportunity to _specialise_ itself
+
+  ## Strategy Specialisation
+
+  Inside the `define` callback, a strategy can change any aspect of a component, including the
+  strategy of a component. Thus, a strategy may verify if a component meets some requirement,
+  before it replaces itself with a more specialised strategy.
   """
-  # Note that this hook is not activated by :skitter_core. Instead, it should be
-  # invoked by any (domain-specific) language built on top of :skitter_core.
-  @spec on_define(Element.t()) :: Element.t() | no_return()
-  def on_define(e = %{strategy: strategy = %Component{}}) do
-    Component.call(strategy, :on_define, %{}, [e]).result
-  end
-
-  def on_define(e = %{strategy: strategy}) when is_atom(strategy) do
-    strategy.on_define(e)
+  # NOTE: skitter_core has no way to invoke this hook. Any (domain specific) language built on top
+  # of skitter should ensure this is called at the appropriate time.
+  @doc section: :hook
+  @spec define(Component.t()) :: Component.t() | no_return()
+  def define(c = %Component{strategy: %__MODULE__{define: cb}}) do
+    Callback.call(cb, %{}, [c]).result
   end
 
   @doc """
-  Module-based implementation of `on_define/1`.
+  Activated when a worker receives data, returns the new state, published data
   """
-  @callback on_define(Element.t()) :: Element.t() | no_return()
+  # TODO: worker "tags"
+  # TODO: deployment, invocation types
+  @doc section: :hook
+  @spec react(Component.t(), any(), Callback.state(), any(), any()) ::
+          {Callback.state(), Callback.publish() | nil}
+  def react(c = %Component{strategy: %__MODULE__{react: cb}}, msg, state, d, i) do
+    res =
+      Callback.call(cb.react, %{component: c, deployment: d, invocation: i}, [msg, state]).publish
+
+    {res[:state], res[:publish]}
+  end
+end
+
+defimpl Inspect, for: Skitter.Strategy do
+  use Skitter.Inspect, prefix: "Strategy", named: true
+
+  ignore_short([
+    :define,
+    :deploy,
+    :prepare,
+    :send,
+    :receive,
+    :react,
+    :drop_deployment,
+    :drop_invocation
+  ])
+
+  ignore_empty([
+    :define,
+    :deploy,
+    :prepare,
+    :send,
+    :receive,
+    :react,
+    :drop_deployment,
+    :drop_invocation
+  ])
+
+  name_only([
+    :define,
+    :deploy,
+    :prepare,
+    :send,
+    :receive,
+    :react,
+    :drop_deployment,
+    :drop_invocation
+  ])
 end

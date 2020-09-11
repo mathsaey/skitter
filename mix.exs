@@ -144,6 +144,9 @@ defmodule Skitter.MixProject do
         utils: [Skitter.Dot],
         dsl: ~r/Skitter.DSL.*/,
         runtime: ~r/Skitter.(Runtime|Worker|Master).*/
+      ],
+      groups_for_functions: [
+        Hooks: &(&1[:section] == :hook)
       ]
     ]
   end

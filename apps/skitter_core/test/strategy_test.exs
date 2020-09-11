@@ -6,35 +6,6 @@
 
 defmodule Skitter.StrategyTest do
   use ExUnit.Case, async: true
-
-  import Skitter.Strategy
-  alias Skitter.{Component, Callback, Callback.Result}
-
+  alias Skitter.{Strategy, Callback, Callback.Result}
   doctest Skitter.Strategy
-
-  describe "component handler" do
-    test "on_define" do
-      strategy = %Component{
-        callbacks: %{
-          on_define: %Callback{
-            function: fn _state, [component] ->
-              %Result{result: %{component | fields: [:foobar]}}
-            end
-          }
-        }
-      }
-
-      assert on_define(%Component{strategy: strategy}).fields == [:foobar]
-    end
-  end
-
-  describe "module handler" do
-    test "on_define" do
-      defmodule OnDefineModule do
-        def on_define(c), do: %{c | fields: [:foobar]}
-      end
-
-      assert on_define(%Component{strategy: OnDefineModule}).fields == [:foobar]
-    end
-  end
 end

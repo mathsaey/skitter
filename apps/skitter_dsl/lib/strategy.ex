@@ -49,7 +49,7 @@ defmodule Skitter.DSL.Strategy do
     quote do
       import Skitter.DSL.Component, only: [defcomponent: 3]
 
-      defcomponent unquote(name), in: [], out: [] do
+      defcomponent unquote(name), in: [], out: [state, publish] do
         alias Skitter.{Component, Callback, Callback.Result, Instance}
 
         # Import runtime primitives
