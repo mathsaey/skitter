@@ -9,16 +9,15 @@ defmodule Skitter.DSL.Workflow do
   Workflow definition DSL. See `defworkflow/3`.
   """
   alias Skitter.{Instance, Workflow}
-  alias Skitter.DSL.{DefinitionError, Utils, Strategy}
+  alias Skitter.DSL.{DefinitionError, Utils}
 
   # ------------------ #
   # Workflow Expansion #
   # ------------------ #
 
   @doc false
-  # Expand the workflow at runtime, needed since names are not registered
-  # at compile time.
-  def _create_workflow(name, in_ports, out_ports, strategy, nodes, links) do
+  # Expand the workflow at runtime, needed since names are not registered at compile time.
+  def _create_workflow(name, in_ports, out_ports, nodes, links) do
     try do
       nodes =
         nodes
@@ -31,17 +30,13 @@ defmodule Skitter.DSL.Workflow do
         |> verify_links(nodes, in_ports, out_ports)
         |> read_links()
 
-      strategy = Strategy.expand(strategy)
-
       %Workflow{
         name: name,
         in_ports: in_ports,
         out_ports: out_ports,
-        strategy: strategy,
         nodes: nodes,
         links: links
       }
-      |> Skitter.Strategy.on_define()
       |> Skitter.DSL.Registry.put_if_named()
     catch
       err -> handle_error(err)
@@ -103,56 +98,51 @@ defmodule Skitter.DSL.Workflow do
   @doc """
   DSL to define `t:Skitter.Workflow.t/0`.
 
-  Like a component definition, a workflow definition consists of a signature
-  and a body. The first two arguments accepted by this macro (`name`, `port`)
-  make up the signature, while the final argument contains the body of the
-  workflow.
+  Like a component definition, a workflow definition consists of a signature and a body. The first
+  two arguments accepted by this macro (`name`, `port`) make up the signature, while the final
+  argument contains the body of the workflow.
 
   ## Signature
 
-  The signature of a workflow declares the externally visible information of the
-  workflow: its name and list of in -and out ports.
+  The signature of a workflow declares the externally visible information of the workflow: its
+  name and list of in -and out ports.
 
-  The name of the workflow is an atom, which is used to register the workflow.
-  Workflows are named with an elixir alias (e.g. `MyWorkflow`). The name of
-  the workflow may be omitted, in which case it is not registered.
+  The name of the workflow is an atom, which is used to register the workflow.  Workflows are
+  named with an elixir alias (e.g. `MyWorkflow`). The name of the workflow may be omitted, in
+  which case it is not registered.
 
-  The in and out ports of a workflow are provided as a list of lists of names,
-  e.g. `in: [in_port1, in_port2], out: [out_port1, out_port2]`. As a syntactic
-  convenience, the `[]` around a port list may be dropped if only a single port
-  is declared (e.g.: `out: [foo]` can be written as `out: foo`). Finally, it is
-  possible for a workflow to not define out ports. This can be specified as
-  `out: []`, or by dropping the out port sub-list altogether.
+  The in and out ports of a workflow are provided as a list of lists of names, e.g. `in:
+  [in_port1, in_port2], out: [out_port1, out_port2]`. As a syntactic convenience, the `[]` around
+  a port list may be dropped if only a single port is declared (e.g.: `out: [foo]` can be written
+  as `out: foo`). Finally, it is possible for a workflow to not define out ports. This can be
+  specified as `out: []`, or by dropping the out port sub-list altogether.
 
   ## Body
 
-  The body of a workflow contains two possible types of statements: nodes or
-  links.
+  The body of a workflow contains two possible types of statements: nodes or links.
 
   ### Nodes
 
-  Nodes specify that a specific element will be used by a workflow. A node is
-  declared with the following syntax:
+  Nodes specify that a specific element will be used by a workflow. A node is declared with the
+  following syntax:
 
   ```
   <name> = new <element>, <arg1>, <arg2>
   ```
 
-  - The name of a node uniquely identifies it in a workflow. This name is used
-  to link the node to others.
-  - `element` is either the name of an existing `Skitter.Element`, or an inline
-  definition of an element.
-  - The remaining arguments are stored along with the element as a
-  `t:Skitter.Instance/t/0`. This instance is passed to the strategy when the
-  element is deployed.
+  - The name of a node uniquely identifies it in a workflow. This name is used to link the node to
+  others.
+  - `element` is either the name of an existing `Skitter.Element`, or an inline definition of an
+  element.
+  - The remaining arguments are stored along with the element as a `t:Skitter.Instance/t/0`. This
+  instance is passed to the component strategy when the element is deployed.
 
   ### Links
 
-  The body of a workflow may contain links. A link is declared through the use
-  of the `<source> ~> <destination>` syntax. `source` and `destination` may
-  refer to any port in the workflow. The `<name>.<port>` syntax is used to
-  identify a port of a node. `<name>` is used to refer to a port of the
-  workflow.
+  The body of a workflow may contain links. A link is declared through the use of the `<source> ~>
+  <destination>` syntax. `source` and `destination` may refer to any port in the workflow. The
+  `<name>.<port>` syntax is used to identify a port of a node. `<name>` is used to refer to a port
+  of the workflow.
 
   ## Examples
 
@@ -161,8 +151,6 @@ defmodule Skitter.DSL.Workflow do
       ...>   react val, do: val ~> out_val
       ...> end
       iex> wf = defworkflow in: data do
-      ...>   strategy DummyStrategy
-      ...>
       ...>   id = new Identity
       ...>
       ...>   printer = new (defcomponent in: val do
@@ -189,8 +177,6 @@ defmodule Skitter.DSL.Workflow do
 
       # Parse body
       body = Utils.block_to_list(body)
-      {body, strategy} = Utils.extract_calls(body, [:strategy])
-      strategy = read_strategy(strategy, __CALLER__)
 
       {nodes, links} =
         body
@@ -205,7 +191,6 @@ defmodule Skitter.DSL.Workflow do
           unquote(name),
           unquote(in_ports),
           unquote(out_ports),
-          unquote(strategy),
           unquote(nodes),
           unquote(links)
         )
@@ -213,14 +198,6 @@ defmodule Skitter.DSL.Workflow do
     catch
       err -> handle_error(err)
     end
-  end
-
-  # Ensure a single strategy is present, extract it
-  defp read_strategy([], env), do: throw({:error, :missing_strategy, env})
-  defp read_strategy([{:strategy, _, [strategy]}], _), do: strategy
-
-  defp read_strategy([_, dup | _], env) do
-    throw {:error, :duplicate_strategy, dup, env}
   end
 
   # Ensure only valid workflow statements are present
@@ -283,17 +260,6 @@ defmodule Skitter.DSL.Workflow do
 
   defp handle_error({:error, :invalid_port_list, any, env}) do
     DefinitionError.inject("Invalid port list: `#{Macro.to_string(any)}`", env)
-  end
-
-  defp handle_error({:error, :missing_strategy, env}) do
-    DefinitionError.inject("Missing strategy", env)
-  end
-
-  defp handle_error({:error, :duplicate_strategy, strategy, env}) do
-    DefinitionError.inject(
-      "Only one strategy declaration is allowed: `#{Macro.to_string(strategy)}`",
-      env
-    )
   end
 
   defp handle_error({:error, :invalid_workflow_syntax, statement, env}) do

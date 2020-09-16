@@ -26,62 +26,14 @@ defmodule Skitter.DSL.WorkflowTest do
   test "name registration" do
     w =
       defworkflow __MODULE__.Named, in: ignore do
-        strategy DummyStrategy
       end
 
     assert Registry.get(__MODULE__.Named) == w
   end
 
-  test "inline strategy extraction" do
-    w =
-      defworkflow in: ignore do
-        strategy %Component{
-          name: Foo,
-          callbacks: %{
-            on_define: %Callback{
-              function: fn _, [c] -> %Result{result: c} end
-            }
-          }
-        }
-      end
-
-    assert w.strategy.name == Foo
-  end
-
-  test "named strategy extraction" do
-    strategy =
-      %Component{
-        name: __MODULE__.NamedStrategy,
-        callbacks: %{
-          on_define: %Callback{
-            function: fn _, [c] -> %Result{result: c} end
-          }
-        }
-      }
-      |> Registry.put_if_named()
-
-    w =
-      defworkflow in: ignore do
-        strategy __MODULE__.NamedStrategy
-      end
-
-    assert w.strategy == strategy
-  end
-
-  test "module strategy extraction" do
-    w =
-      defworkflow in: ignore do
-        strategy DummyStrategy
-      end
-
-    assert w.strategy == DummyStrategy
-  end
-
   test "inline components", %{component: c} do
     w =
       defworkflow in: ignore do
-        strategy DummyStrategy
-
         a = new(c)
 
         b =
@@ -103,7 +55,6 @@ defmodule Skitter.DSL.WorkflowTest do
   test "named components", %{component: c} do
     w =
       defworkflow in: ignore do
-        strategy DummyStrategy
         c = new(c.name)
       end
 
@@ -113,8 +64,6 @@ defmodule Skitter.DSL.WorkflowTest do
   test "links", %{component: c} do
     w =
       defworkflow in: [a, b, c], out: [x, y, z] do
-        strategy DummyStrategy
-
         a = new(c)
         b = new(c)
         c = new(c)
@@ -142,49 +91,29 @@ defmodule Skitter.DSL.WorkflowTest do
   test "errors", %{component: c} do
     assert_definition_error ~r/.*: Invalid syntax: `.*`/ do
       defworkflow in: ignore do
-        strategy DummyStrategy
-
         a = instance Foo
       end
     end
 
     assert_definition_error ~r/.*: Invalid port list: `.*`/ do
       defworkflow extra: ignore do
-        strategy DummyStrategy
-      end
-    end
-
-    assert_definition_error ~r/.*: Missing strategy/ do
-      defworkflow in: [] do
-      end
-    end
-
-    assert_definition_error ~r/.*: Only one strategy declaration is allowed: `.*`/ do
-      defworkflow in: ignore do
-        strategy Foo
-        strategy Bar
       end
     end
 
     assert_definition_error ~r/.*: `.*` is not allowed in a workflow/ do
       defworkflow in: ignore do
-        strategy DummyStrategy
         5 + 2
       end
     end
 
     assert_definition_error ~r/`.*` is not defined/ do
       defworkflow in: ignore do
-        strategy DummyStrategy
-
         _ = new(DoesNotExist)
       end
     end
 
     assert_definition_error ~r/`.*` is not a valid workflow port/ do
       defworkflow in: ignore do
-        strategy DummyStrategy
-
         c = new(c.name)
         doesnotexist ~> c.a
       end
@@ -192,8 +121,6 @@ defmodule Skitter.DSL.WorkflowTest do
 
     assert_definition_error ~r/`.*` is not a valid workflow port/ do
       defworkflow in: ignore do
-        strategy DummyStrategy
-
         c = new(c.name)
         c.x ~> doesnotexist
       end
@@ -201,16 +128,12 @@ defmodule Skitter.DSL.WorkflowTest do
 
     assert_definition_error ~r/`.*` does not exist/ do
       defworkflow in: ignore do
-        strategy DummyStrategy
-
         ignore ~> doesnotexist.in_port
       end
     end
 
     assert_definition_error ~r/`.*` is not a port of `.*`/ do
       defworkflow in: ignore do
-        strategy DummyStrategy
-
         c = new(c.name)
         ignore ~> c.in_port
       end

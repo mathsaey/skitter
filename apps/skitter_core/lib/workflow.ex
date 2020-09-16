@@ -14,7 +14,7 @@ defmodule Skitter.Workflow do
   as well as the `Access` behaviour which allows one to access and modify the
   elements inside a workflow.
   """
-  alias Skitter.{Port, Instance, Strategy}
+  alias Skitter.{Port, Instance}
 
   @behaviour Access
 
@@ -32,16 +32,14 @@ defmodule Skitter.Workflow do
           out_ports: [Port.t()],
           # TODO: rename this?
           nodes: %{optional(id()) => Instance.t()},
-          links: %{required(address()) => [address()]},
-          strategy: Strategy.t()
+          links: %{required(address()) => [address()]}
         }
 
   defstruct name: nil,
             in_ports: [],
             out_ports: [],
             nodes: %{},
-            links: %{},
-            strategy: nil
+            links: %{}
 
   @typedoc """
   Identifier of a node in a workflow.
