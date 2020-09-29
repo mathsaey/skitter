@@ -141,7 +141,7 @@ defmodule Skitter.MixProject do
           Skitter.Workflow,
           Skitter.Strategy
         ],
-        utils: [Skitter.Dot],
+        utils: ~r/Skitter.Utils*/,
         dsl: ~r/Skitter.DSL.*/,
         runtime: ~r/Skitter.(Runtime|Worker|Master).*/
       ],
