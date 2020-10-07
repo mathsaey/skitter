@@ -8,11 +8,11 @@
 # Eval with `Code.eval`
 
 [
-  elixir: "~> 1.10",
+  elixir: "~> 1.11",
   version: File.read!("#{__DIR__}/VERSION.txt") |> String.trim(),
   start_permanent: Mix.env() == :prod,
   lockfile: "#{__DIR__}/mix.lock",
   deps_path: "#{__DIR__}/deps",
   build_path: "#{__DIR__}/_build",
-  config_path: "#{__DIR__}/config/config.exs",
+  config_path: "#{__DIR__}/config/config.exs"
 ]

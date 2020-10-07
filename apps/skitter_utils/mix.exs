@@ -12,6 +12,12 @@ defmodule Skitter.Utils.MixProject do
     [app: :skitter_utils, deps: deps()] ++ global
   end
 
+  def application do
+    [
+      extra_applications: [:eex]
+    ]
+  end
+
   defp deps do
     [
       {:skitter_core, in_umbrella: true}
