@@ -4,11 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.Release do
+defmodule Skitter.Runtime.Config do
   @moduledoc """
-  Utilities for dealing with releases.
+  Utilities for setting up the skitter runtime application envrionment.
 
-  This module deals with loading runtime configuration of releases.
+  The functions in this file are intended to be used in the various configuration files. They can
+  be used to configure the application environment of skitter runtime applications based on
+  the values of environment variables.
   """
 
   @doc """

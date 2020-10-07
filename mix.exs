@@ -42,7 +42,7 @@ defmodule Skitter.MixProject do
     {name,
      [
        applications: for(app <- applications, do: {app, :permanent}),
-       reboot_system_after_config: false,
+       runtime_config_path: "config/#{name}.exs",
        include_executables_for: [:unix],
        steps: steps()
      ]}
@@ -105,8 +105,7 @@ defmodule Skitter.MixProject do
 
   defp cookie_path, do: Path.join(Mix.Project.build_path(), "rel_cookie")
 
-  defp put_cookie(rel = %Mix.Release{}),
-    do: put_in(rel.options[:cookie], cookie_get())
+  defp put_cookie(rel = %Mix.Release{}), do: put_in(rel.options[:cookie], cookie_get())
 
   defp cookie_get do
     case File.read(cookie_path()) do
