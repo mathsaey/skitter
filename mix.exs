@@ -139,11 +139,14 @@ defmodule Skitter.MixProject do
           Skitter.Callback.Result,
           Skitter.Component,
           Skitter.Workflow,
-          Skitter.Strategy
+          Skitter.Strategy,
+          Skitter.StrategyError
         ],
-        utils: ~r/Skitter.Utils*/,
         dsl: ~r/Skitter.DSL.*/,
-        runtime: ~r/Skitter.(Runtime|Worker|Master).*/
+        runtime: ~r/Skitter.(Runtime|Worker|Master).*/,
+        utilities: [
+          Skitter.Dot
+        ]
       ],
       groups_for_functions: [
         Hooks: &(&1[:section] == :hook)

@@ -4,12 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Utils.MixProject do
+defmodule Skitter.Dot.MixProject do
   use Mix.Project
 
   def project do
     {global, _} = Code.eval_file("../../global.exs")
-    [app: :skitter_utils, deps: deps()] ++ global
+    [app: :skitter_dot, deps: deps()] ++ global
   end
 
   def application do
