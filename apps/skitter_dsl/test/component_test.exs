@@ -8,8 +8,8 @@ defmodule Skitter.DSL.ComponentTest do
   use ExUnit.Case, async: true
   import Skitter.DSL.Test.Assertions
 
-  alias Skitter.{Component, Callback, Callback.Result}
-  alias Skitter.DSL.Registry
+  alias Skitter.{Component, Callback, Callback.Result, Strategy}
+  alias Skitter.DSL.Named
 
   import Skitter.DSL.Component
   doctest Skitter.DSL.Component
@@ -17,7 +17,7 @@ defmodule Skitter.DSL.ComponentTest do
   test "fields extraction" do
     comp =
       defcomponent in: [] do
-        strategy DummyStrategy
+        strategy TestStrategy
         fields a, b, c
       end
 
@@ -27,52 +27,26 @@ defmodule Skitter.DSL.ComponentTest do
   test "inline strategy extraction" do
     comp =
       defcomponent in: [] do
-        strategy %Component{
+        strategy %Strategy{
           name: Foo,
-          callbacks: %{
-            on_define: %Callback{
-              function: fn _, [c] -> %Result{result: c} end
-            }
-          }
+          define: %Callback{function: fn _, [component] -> %Result{result: component} end},
+          deploy: :todo,
+          prepare: :todo,
+          send_token: :todo,
+          receive_token: :todo,
+          receive_message: :todo,
+          drop_deployment: :todo,
+          drop_invocation: :todo
         }
       end
 
     assert comp.strategy.name == Foo
   end
 
-  test "named strategy extraction" do
-    strategy =
-      %Component{
-        name: __MODULE__.NamedStrategy,
-        callbacks: %{
-          on_define: %Callback{
-            function: fn _, [c] -> %Result{result: c} end
-          }
-        }
-      }
-      |> Registry.put_if_named()
-
-    comp =
-      defcomponent nil, in: [] do
-        strategy __MODULE__.NamedStrategy
-      end
-
-    assert comp.strategy == strategy
-  end
-
-  test "module strategy extraction" do
-    comp =
-      defcomponent in: [] do
-        strategy DummyStrategy
-      end
-
-    assert comp.strategy == DummyStrategy
-  end
-
   test "callback extraction" do
     comp =
       defcomponent in: [] do
-        strategy DummyStrategy
+        strategy TestStrategy
 
         react _ do
         end
@@ -84,7 +58,7 @@ defmodule Skitter.DSL.ComponentTest do
   test "callback with multiple clauses" do
     comp =
       defcomponent in: [] do
-        strategy DummyStrategy
+        strategy TestStrategy
 
         cb :foo do
           :bar
@@ -102,7 +76,7 @@ defmodule Skitter.DSL.ComponentTest do
   test "reuse directives" do
     comp =
       defcomponent in: [pid] do
-        strategy DummyStrategy
+        strategy TestStrategy
 
         require Integer
         import String, only: [to_integer: 1]
@@ -123,32 +97,32 @@ defmodule Skitter.DSL.ComponentTest do
   end
 
   test "name registration" do
-    c = defcomponent(__MODULE__.Named, [in: ignore], do: strategy(DummyStrategy))
+    c = defcomponent(__MODULE__.Named, [in: ignore], do: strategy(TestStrategy))
 
-    assert Registry.get(__MODULE__.Named) == c
+    assert Named.load(__MODULE__.Named) == c
   end
 
   test "errors" do
     assert_definition_error ~r/.*: Invalid syntax: `:foo`/ do
-      defcomponent(Test, [in: :foo], do: strategy(DummyStrategy))
+      defcomponent(Test, [in: :foo], do: strategy(TestStrategy))
     end
 
     assert_definition_error ~r/.*: Invalid syntax: `5`/ do
       defcomponent Test, in: [] do
-        strategy DummyStrategy
+        strategy TestStrategy
         fields a, b, 5
       end
     end
 
     assert_definition_error ~r/.*: Invalid port list: `.*`/ do
       defcomponent Test, extra: foo do
-        strategy DummyStrategy
+        strategy TestStrategy
       end
     end
 
     assert_definition_error ~r/.*: Only one fields declaration is allowed: `.*`/ do
       defcomponent Test, in: [] do
-        strategy DummyStrategy
+        strategy TestStrategy
         fields a, b, c
         fields x, y, z
       end
@@ -166,7 +140,7 @@ defmodule Skitter.DSL.ComponentTest do
       end
     end
 
-    assert_definition_error ~r/`.*` is not a valid component or module name/ do
+    assert_definition_error ~r/`.*` is not defined/ do
       defcomponent in: [] do
         strategy DoesNotExist
       end
@@ -175,6 +149,12 @@ defmodule Skitter.DSL.ComponentTest do
     assert_definition_error ~r/`.*` is not a valid component strategy/ do
       defcomponent in: [] do
         strategy 5
+      end
+    end
+
+    assert_definition_error ~r/`.*` is not complete/ do
+      defcomponent in: [] do
+        strategy %Skitter.Strategy{}
       end
     end
   end

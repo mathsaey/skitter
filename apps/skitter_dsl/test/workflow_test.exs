@@ -10,14 +10,14 @@ defmodule Skitter.DSL.WorkflowTest do
   import Skitter.DSL.{Component, Workflow}
 
   alias Skitter.{Component, Instance, Callback, Callback.Result}
-  alias Skitter.DSL.Registry
+  alias Skitter.DSL.Named
 
   doctest Skitter.DSL.Workflow
 
   setup_all do
     c =
       defcomponent __MODULE__.Dummy, in: [a, b, c], out: [x, y, z] do
-        strategy DummyStrategy
+        strategy TestStrategy
       end
 
     [component: c]
@@ -28,7 +28,7 @@ defmodule Skitter.DSL.WorkflowTest do
       defworkflow __MODULE__.Named, in: ignore do
       end
 
-    assert Registry.get(__MODULE__.Named) == w
+    assert Named.load(__MODULE__.Named) == w
   end
 
   test "inline components", %{component: c} do
@@ -39,7 +39,7 @@ defmodule Skitter.DSL.WorkflowTest do
         b =
           new(
             defcomponent in: ignore do
-              strategy DummyStrategy
+              strategy TestStrategy
             end
           )
       end
@@ -47,7 +47,7 @@ defmodule Skitter.DSL.WorkflowTest do
     assert w[:a] == %Instance{elem: c, args: []}
 
     assert w[:b] == %Instance{
-             elem: %Component{in_ports: [:ignore], strategy: DummyStrategy},
+             elem: %Component{in_ports: [:ignore], strategy: Named.load(TestStrategy)},
              args: []
            }
   end
@@ -58,7 +58,7 @@ defmodule Skitter.DSL.WorkflowTest do
         c = new(c.name)
       end
 
-    assert w[:c] == %Instance{elem: Registry.get(c.name), args: []}
+    assert w[:c] == %Instance{elem: Named.load(c.name), args: []}
   end
 
   test "links", %{component: c} do
@@ -109,6 +109,12 @@ defmodule Skitter.DSL.WorkflowTest do
     assert_definition_error ~r/`.*` is not defined/ do
       defworkflow in: ignore do
         _ = new(DoesNotExist)
+      end
+    end
+
+    assert_definition_error ~r/`.*` is not a valid component or workflow/ do
+      defworkflow in: ignore do
+        _ = new(5)
       end
     end
 

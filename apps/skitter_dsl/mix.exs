@@ -9,17 +9,12 @@ defmodule Skitter.DSL.MixProject do
 
   def project do
     {global, _} = Code.eval_file("../../global.exs")
+
     [
       app: :skitter_dsl,
       deps: deps(),
-      elixirc_paths: elixirc_paths(Mix.env()),
+      elixirc_paths: elixirc_paths(Mix.env())
     ] ++ global
-  end
-
-  def application do
-    [
-      mod: {Skitter.DSL.Application, []},
-    ]
   end
 
   defp deps do

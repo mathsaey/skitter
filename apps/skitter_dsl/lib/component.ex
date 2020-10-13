@@ -8,33 +8,32 @@ defmodule Skitter.DSL.Component do
   @moduledoc """
   Component definition DSL. See `defcomponent/3`.
   """
-  alias Skitter.DSL.{DefinitionError, Utils, Strategy}
+  alias Skitter.DSL.{AST, DefinitionError, Callback}
 
   @doc """
   DSL to define `t:Skitter.Component.t/0`.
 
-  This macro offers a DSL to create a Skitter component which can be embedded
-  inside a Skitter workflow or used as component strategies.
+  This macro offers a DSL to create a Skitter component which can be embedded inside a Skitter
+  workflow or used as component strategies.
 
-  A component definition consists of a signature and a body. The first two
-  arguments that this macro accepts (`name`, `ports`) make up the signature,
-  while the final argument contain the body of the component.
+  A component definition consists of a signature and a body. The first two arguments that this
+  macro accepts (`name`, `ports`) make up the signature, while the final argument contain the body
+  of the component.
 
   ## Signature
 
-  The signature of the component declares the externally visible
-  meta-information of the component: its name and list of in -and out ports.
+  The signature of the component declares the externally visible meta-information of the
+  component: its name and list of in -and out ports.
 
-  The name of the component is an atom, which is used to register the component.
-  By convention, components are named with an elixir alias (e.g. `MyComponent`).
-  The name of the component can be omitted, in which case it is not registered.
+  The name of the component is an atom, which is used to register the component.  By convention,
+  components are named with an elixir alias (e.g. `MyComponent`).  The name of the component can
+  be omitted, in which case it is not registered.
 
-  The in and out ports of a component are provided as a list of lists of names,
-  e.g. `in: [in_port1, in_port2], out: [out_port1, out_port2]`. As a syntactic
-  convenience, the `[]` around a port list may be dropped if only a single port
-  is declared (e.g.: `out: [foo]` can be written as `out: foo`). Finally, it is
-  possible for a component to not define out ports. This can be specified as
-  `out: []`, or by dropping the out port sub-list altogether.
+  The in and out ports of a component are provided as a list of lists of names, e.g. `in:
+  [in_port1, in_port2], out: [out_port1, out_port2]`. As a syntactic convenience, the `[]` around
+  a port list may be dropped if only a single port is declared (e.g.: `out: [foo]` can be written
+  as `out: foo`). Finally, it is possible for a component to not define out ports. This can be
+  specified as `out: []`, or by dropping the out port sub-list altogether.
 
   ## Body
 
@@ -47,23 +46,19 @@ defmodule Skitter.DSL.Component do
   | `import`, `alias`, `require` | Elixir import, alias, require constructs |
   | callback                     | `Skitter.Component.Callback` definition  |
 
-  The fields statement is used to define the various `t:Component.field/0` of
-  the component. This statement may be used only once inside the body of the
-  component. The statement can be omitted if the component does not have any
-  fields.
+  The fields statement is used to define the various `t:Component.field/0` of the component. This
+  statement may be used only once inside the body of the component. The statement can be omitted
+  if the component does not have any fields.
 
-  The strategy specifies the `t:Skitter.Strategy.t/0` of the component. A name
-  of a valid strategy may be used instead of an inline strategy definition.
+  The strategy specifies the name of the `t:Skitter.Strategy.t/0` of the component.
 
-  `import`, `alias`, and `require` maybe used inside of the component body as
-  if they were being used inside of a module. Note that the use of macros inside
-  of the component DSL may lead to issues due to the various code
-  transformations the DSL performs.
+  `import`, `alias`, and `require` maybe used inside of the component body as if they were being
+  used inside of a module. Note that the use of macros inside of the component DSL may lead to
+  issues due to the various code transformations the DSL performs.
 
-  The remainder of the component body should consist of
-  `Skitter.Component.Callback` definitions. Callbacks are defined with a syntax
-  similar to an elixir function definition with `def` or `defp` omitted. Thus
-  a callback named `react` which accepts two arguments would be defined with
+  The remainder of the component body should consist of `Skitter.Component.Callback` definitions.
+  Callbacks are defined with a syntax similar to an elixir function definition with `def` or
+  `defp` omitted. Thus a callback named `react` which accepts two arguments would be defined with
   the following syntax:
 
   ```
@@ -91,7 +86,7 @@ defmodule Skitter.DSL.Component do
   The following component calculates the average of all the values it receives.
 
       iex> avg = defcomponent Average, in: value, out: current do
-      ...>    strategy DummyStrategy
+      ...>    strategy TestStrategy
       ...>    fields total, count
       ...>
       ...>    init do
@@ -125,23 +120,20 @@ defmodule Skitter.DSL.Component do
   @doc section: :dsl
   defmacro defcomponent(name \\ nil, ports, do: body) do
     try do
-      # Get metadata from header
-      name = Macro.expand(name, __CALLER__)
-      {in_ports, out_ports} = Utils.parse_port_list(ports, __CALLER__)
+      {in_ports, out_ports} = AST.parse_port_list(ports, __CALLER__)
 
-      # Parse body
-      body = Utils.block_to_list(body)
-      {body, imports} = Utils.extract_calls(body, [:alias, :import, :require])
+      body = AST.block_to_list(body)
+      {body, imports} = AST.extract_calls(body, [:alias, :import, :require])
+      {body, fields} = AST.extract_calls(body, [:fields])
+      {body, strategy} = AST.extract_calls(body, [:strategy])
 
-      {body, fields} = Utils.extract_calls(body, [:fields])
       fields = verify_fields(fields, __CALLER__)
-
-      {body, strategy} = Utils.extract_calls(body, [:strategy])
       strategy = transform_strategy(strategy, imports, __CALLER__)
-
-      callbacks = extract_callbacks(body, imports, fields, out_ports)
+      callbacks = Callback.extract_callbacks(body, imports, fields, out_ports)
 
       quote do
+        require Skitter.DSL.Named
+
         %Skitter.Component{
           name: unquote(name),
           fields: unquote(fields),
@@ -150,8 +142,9 @@ defmodule Skitter.DSL.Component do
           callbacks: unquote(callbacks),
           strategy: unquote(__MODULE__).expand_strategy(unquote(strategy))
         }
-        |> Skitter.Strategy.on_define()
-        |> Skitter.DSL.Registry.put_if_named()
+        |> unquote(__MODULE__).verify_strategy()
+        |> Skitter.Strategy.define()
+        |> Skitter.DSL.Named.store(unquote(name))
       end
     catch
       err -> handle_error(err)
@@ -162,7 +155,7 @@ defmodule Skitter.DSL.Component do
   defp verify_fields([], _), do: []
 
   defp verify_fields([{:fields, _, fields}], env) do
-    Enum.map(fields, &Utils.name_to_atom(&1, env))
+    Enum.map(fields, &AST.name_to_atom(&1, env))
   end
 
   defp verify_fields([_fields, dup | _], env) do
@@ -185,68 +178,23 @@ defmodule Skitter.DSL.Component do
     end
   end
 
-  # Fetch every top level statement of the body and turn it into a map of
-  # callbacks. Ensure the creation of the map is in AST form.
-  defp extract_callbacks(statements, imports, fields, out) do
-    callbacks =
-      statements
-      |> Enum.reject(&is_nil(&1))
-      |> Enum.map(&read_callback(&1))
-      |> Enum.reduce(%{}, &merge_callback(&1, &2))
-      |> Enum.map(&build_callback(&1, imports, fields, out))
+  def expand_strategy(s = %Skitter.Strategy{}), do: s
+  def expand_strategy(name) when is_atom(name), do: Skitter.DSL.Named.load(name)
 
-    {:%{}, [], callbacks}
+  def expand_strategy(any) do
+    raise DefinitionError, "`#{inspect(any)}` is not a valid component strategy"
   end
 
-  # Read a `name args do ... end` ast node and extract the name, args and body.
-  defp read_callback({name, _, args}) do
-    {args, [[do: body]]} = Enum.split(args, -1)
-    {name, args, body}
-  end
-
-  # Group callbacks by their names
-  defp merge_callback({name, args, body}, map) do
-    Map.update(map, name, [{args, body}], &(&1 ++ [{args, body}]))
-  end
-
-  # Build a callback from a name and a list of {args, body} tuples
-  # Ensure imports, fields and out ports are passed along
-  defp build_callback({name, bodies}, imports, fields, out) do
-    clauses =
-      Enum.flat_map(bodies, fn {args, body} ->
-        quote do
-          unquote_splicing(args) ->
-            unquote(imports)
-            unquote(body)
-        end
-      end)
-
-    callback =
-      quote do
-        import unquote(Skitter.DSL.Callback), only: [defcallback: 3]
-
-        defcallback(unquote(fields), unquote(out)) do
-          unquote(clauses)
-        end
-      end
-
-    {name, callback}
-  end
-
-  @doc false
-  def expand_strategy(strategy) do
-    try do
-      Strategy.expand(strategy)
-    catch
-      err -> handle_error(err)
+  def verify_strategy(c = %Skitter.Component{strategy: strategy}) do
+    if Skitter.Strategy.complete?(strategy) do
+      c
+    else
+      raise DefinitionError, "`#{inspect(strategy)}` is not complete"
     end
   end
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do
-    DefinitionError.inject(
-      "Invalid syntax: `#{Macro.to_string(statement)}`",
-      env
-    )
+    DefinitionError.inject("Invalid syntax: `#{Macro.to_string(statement)}`", env)
   end
 
   defp handle_error({:error, :invalid_port_list, any, env}) do
@@ -269,14 +217,5 @@ defmodule Skitter.DSL.Component do
 
   defp handle_error({:error, :missing_strategy, env}) do
     DefinitionError.inject("Missing strategy", env)
-  end
-
-  defp handle_error({:error, :invalid_name, name}) do
-    raise DefinitionError, "`#{name}` is not a valid component or module name"
-  end
-
-  defp handle_error({:error, :invalid_strategy, strategy}) do
-    raise DefinitionError,
-          "`#{inspect(strategy)}` is not a valid component strategy"
   end
 end

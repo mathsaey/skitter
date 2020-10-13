@@ -8,8 +8,8 @@ defmodule Skitter.DSL.Workflow do
   @moduledoc """
   Workflow definition DSL. See `defworkflow/3`.
   """
-  alias Skitter.{Instance, Workflow}
-  alias Skitter.DSL.{DefinitionError, Utils}
+  alias Skitter.{Instance, Component, Workflow}
+  alias Skitter.DSL.{DefinitionError, AST, Named}
 
   # ------------------ #
   # Workflow Expansion #
@@ -37,24 +37,22 @@ defmodule Skitter.DSL.Workflow do
         nodes: nodes,
         links: links
       }
-      |> Skitter.DSL.Registry.put_if_named()
     catch
       err -> handle_error(err)
     end
   end
 
   defp expand_name({name, elem, args}) when is_atom(elem) do
-    case Skitter.DSL.Registry.get(elem) do
-      nil -> throw {:error, :invalid_name, elem}
-      res -> {name, res, args}
-    end
+    {name, Skitter.DSL.Named.load(elem), args}
   end
 
   defp expand_name(any), do: any
 
-  defp create_node({name, elem, args}) do
-    {name, %Instance{elem: elem, args: args}}
+  defp create_node({n, e, a}) when is_struct(e, Component) or is_struct(e, Workflow) do
+    {n, %Instance{elem: e, args: a}}
   end
+
+  defp create_node({_, any, _}), do: throw({:error, :invalid_node, any})
 
   defp verify_links(links, nodes, in_ports, out_ports) do
     Enum.each(links, fn {source, destination} ->
@@ -74,7 +72,7 @@ defmodule Skitter.DSL.Workflow do
   defp verify_port({identifier, port}, nodes, _, key) do
     element =
       case nodes[identifier] do
-        nil -> throw {:error, :invalid_node, identifier}
+        nil -> throw {:error, :invalid_name, identifier}
         %Instance{elem: element} -> element
       end
 
@@ -147,14 +145,15 @@ defmodule Skitter.DSL.Workflow do
   ## Examples
 
       iex> defcomponent Identity, in: in_val, out: out_val do
-      ...>   strategy DummyStrategy
+      ...>   strategy TestStrategy
+      ...>
       ...>   react val, do: val ~> out_val
       ...> end
       iex> wf = defworkflow in: data do
       ...>   id = new Identity
       ...>
       ...>   printer = new (defcomponent in: val do
-      ...>      strategy DummyStrategy
+      ...>      strategy TestStrategy
       ...>      react val, do: IO.inspect(val)
       ...>   end)
       ...>
@@ -171,15 +170,11 @@ defmodule Skitter.DSL.Workflow do
   @doc section: :dsl
   defmacro defworkflow(name \\ nil, ports, do: body) do
     try do
-      # Header data
-      name = Macro.expand(name, __CALLER__)
-      {in_ports, out_ports} = Utils.parse_port_list(ports, __CALLER__)
-
-      # Parse body
-      body = Utils.block_to_list(body)
+      {in_ports, out_ports} = AST.parse_port_list(ports, __CALLER__)
 
       {nodes, links} =
         body
+        |> AST.block_to_list()
         |> verify_statements(__CALLER__)
         |> split_workflow()
 
@@ -187,6 +182,8 @@ defmodule Skitter.DSL.Workflow do
       nodes = read_nodes(nodes, __CALLER__)
 
       quote do
+        require Skitter.DSL.Named
+
         unquote(__MODULE__)._create_workflow(
           unquote(name),
           unquote(in_ports),
@@ -194,6 +191,7 @@ defmodule Skitter.DSL.Workflow do
           unquote(nodes),
           unquote(links)
         )
+        |> Named.store(unquote(name))
       end
     catch
       err -> handle_error(err)
@@ -226,7 +224,7 @@ defmodule Skitter.DSL.Workflow do
 
   # Grab the data from a node declaration
   defp read_node({:=, _, [name, func]}, env) do
-    name = Utils.name_to_atom(name, env)
+    name = AST.name_to_atom(name, env)
 
     args =
       case Macro.decompose_call(func) do
@@ -246,16 +244,13 @@ defmodule Skitter.DSL.Workflow do
   end
 
   defp read_destination({{:., _, [name, port]}, _, _}, env) do
-    {Utils.name_to_atom(name, env), port}
+    {AST.name_to_atom(name, env), port}
   end
 
-  defp read_destination(port, env), do: {nil, Utils.name_to_atom(port, env)}
+  defp read_destination(port, env), do: {nil, AST.name_to_atom(port, env)}
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do
-    DefinitionError.inject(
-      "Invalid syntax: `#{Macro.to_string(statement)}`",
-      env
-    )
+    DefinitionError.inject("Invalid syntax: `#{Macro.to_string(statement)}`", env)
   end
 
   defp handle_error({:error, :invalid_port_list, any, env}) do
@@ -263,26 +258,22 @@ defmodule Skitter.DSL.Workflow do
   end
 
   defp handle_error({:error, :invalid_workflow_syntax, statement, env}) do
-    DefinitionError.inject(
-      "`#{Macro.to_string(statement)}` is not allowed in a workflow",
-      env
-    )
+    DefinitionError.inject("`#{Macro.to_string(statement)}` is not allowed in a workflow", env)
+  end
+
+  defp handle_error({:error, :invalid_node, any}) do
+    raise DefinitionError, "`#{any}` is not a valid component or workflow"
   end
 
   defp handle_error({:error, :invalid_name, name}) do
-    raise DefinitionError, "`#{name}` is not defined"
+    raise DefinitionError, "`#{name}` does not exist"
   end
 
   defp handle_error({:error, :invalid_workflow_port, port}) do
     raise DefinitionError, "`#{port}` is not a valid workflow port"
   end
 
-  defp handle_error({:error, :invalid_node, name}) do
-    raise DefinitionError, "`#{name}` does not exist"
-  end
-
   defp handle_error({:error, :invalid_element_port, port, element}) do
-    raise DefinitionError,
-          "`#{port}` is not a port of `#{inspect(element)}`"
+    raise DefinitionError, "`#{port}` is not a port of `#{inspect(element)}`"
   end
 end

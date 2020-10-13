@@ -8,56 +8,39 @@ defmodule Skitter.DSL.Strategy do
   @moduledoc """
   Strategy definition DSL, see `defstrategy/2`.
   """
-  alias Skitter.DSL.Registry
-  alias Skitter.Component
-
-  # --------- #
-  # Utilities #
-  # --------- #
-
-  @doc false
-  def expand(handler = %Component{}), do: handler
-
-  def expand(name) when is_atom(name) do
-    case Registry.get(name) || Code.ensure_loaded?(name) do
-      c = %Component{} -> c
-      true -> name
-      _ -> throw {:error, :invalid_name, name}
-    end
-  end
-
-  def expand(any), do: throw({:error, :invalid_strategy, any})
-
-  # ------ #
-  # Macros #
-  # ------ #
+  alias Skitter.DSL.{AST, Callback}
 
   @doc """
-  Define a strategy component.
-
-  This macro defines a strategy component. It is a convenient shortcut for using
-  `Skitter.DSL.Component.defcomponent/3` with the correct ports, fields and strategy for the
-  definition of a strategy.
+  Define a `Skitter.Strategy`
   """
   defmacro defstrategy(name \\ nil, do: body) do
-    body =
-      case body do
-        {:__block__, _, lst} -> lst
-        any -> [any]
-      end
+    statements = AST.block_to_list(body)
+    {statements, imports} = AST.extract_calls(statements, [:alias, :import, :require])
+
+    callbacks =
+      Callback.extract_callbacks(
+        statements,
+        imports,
+        [:component, :deployment, :invocation],
+        [],
+        %{
+          define: {[], []},
+          deploy: {[:component], []},
+          prepare: {[:component, :deployment], []},
+          send_token: {[:component, :deployment, :invocation], []},
+          receive_token: {[:component, :deployment, :invocation], []},
+          receive_message: {[:component, :deployment, :invocation], [:state, :publish]},
+          drop_invocation: {[:component, :deployment, :invocation], []},
+          drop_deployment: {[:component, :deployment], []}
+        }
+      )
 
     quote do
-      import Skitter.DSL.Component, only: [defcomponent: 3]
+      require Skitter.DSL.Named
 
-      defcomponent unquote(name), in: [], out: [state, publish] do
-        alias Skitter.{Component, Callback, Callback.Result, Instance}
-
-        # Import runtime primitives
-        strategy(Skitter.Runtime.Strategy)
-        fields(component, deployment, invocation)
-
-        unquote_splicing(body)
-      end
+      %Skitter.Strategy{name: unquote(name)}
+      |> struct!(unquote(callbacks))
+      |> Skitter.DSL.Named.store(unquote(name))
     end
   end
 end

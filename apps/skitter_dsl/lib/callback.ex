@@ -6,33 +6,24 @@
 
 defmodule Skitter.DSL.Callback do
   @moduledoc """
-  Callback definition DSL. See `defcallback/3`.
-  """
-  alias Skitter.DSL.{DefinitionError, Utils}
+  Callback definition DSL.
 
-  @publish_operator :~>
-  @update_operator :<~
+  This module offers a DSL to create a `Skitter.Callback`. A callback can be defined in two ways:
+  first, it can be directly created through the `defcallback/3` macro defined in this module. This
+  macro expects a list of fields, a list of out ports and a body as its arguments. In most cases,
+  this macro should not be called explicitly. Instead, a callback can be defined inside
+  `Skitter.DSL.Component.defcomponent/3` or `Skitter.DSL.Strategy.defstrategy/3`. These macros
+  internally use `defcallback/3`, and ensure the correct values are provided for `fields` and
+  `out_ports`.
 
-  @publish_var Utils.internal_var(:publish)
-  @state_var Utils.internal_var(:state)
+  ## Callback body
 
-  @doc """
-  DSL to create `t:Skitter.Callback.t/0`.
-
-  This macro offers a DSL to create callbacks that can be used inside skitter components. This
-  macro accepts the `fields` and `out_ports` of the component it will be embedded in as arguments.
-  Besides this, it accepts a set of function clauses as its body.  Generally speaking, this macro
-  should not be called directly.  `Skitter.DSL.Component.defcomponent/3` automatically calls this
-  macro with appropriate values for `fields` and `out_ports`.
-
-  The `body` argument should contain the actual implementation of the callback. This body consists
-  of `fn`-like clauses (`argument -> body`). The body of these clauses contain standard elixir
-  code with a few additions and limitations:
+  Inside the body of a callback, standard elixir syntax can be used; however, a few caveats apply:
 
   - the `~>` operator can be used to publish data to any out port provided in `out_ports` (an
   error is raised if the port is not present in `out_ports`).  This is done with the following
-  syntax: `value ~> port`. If multiple data is published on the same output port, the last write
-  will be published.
+  syntax: `value ~> port`. If data is published on the same out port multiple times, the last data
+  written will be published.
   - the `<~` operator can be used to update the state passed to the callback.  `field <~ value`
   will update `field` of the state. The provided field should be present in `fields` (an error is
   raised  if this is not the case).
@@ -40,8 +31,123 @@ defmodule Skitter.DSL.Callback do
   passed to the callback activation. Thus, to avoid errors, variable names inside `body` should
   not have the same name as a field.
 
-  As a result, this macro returns a callback with the correct capabilities and a function which
-  return a `t:Skitter.Callback.Result.t/0`.
+  ## Implicit callback definitions
+
+  Inside `Skitter.DSL.Component.defcomponent/3` and `Skitter.DSL.Strategy.defstrategy/3`, a
+  callback can be created using a `def`-like syntax:
+
+  ```
+  name arg1, arg2 do
+    <body>
+  end
+  ```
+
+  As with `def`, multiple clauses of the same function may be defined:
+
+  ```
+  name :foo, arg2 do
+    :bar
+  end
+  name arg1, arg2 do
+    <body>
+  end
+  ```
+
+  The different clauses will be gathered and passed to `defcallback/3`. Note that all the clauses
+  of a callback must have the same arity.
+  """
+  alias Skitter.DSL.{AST, DefinitionError, Mutable}
+
+  # -------------------- #
+  # Function-like Syntax #
+  # -------------------- #
+
+  @doc false
+  # Internal function to extract function-like callbacks from an AST.
+  #
+  # This function accepts a component or strategy body, extracts function-like callbacks from this
+  # body, and transforms them into calls to `defcallback/3`. A map is returned where the name of
+  # the callback is the key while the actual callback is the value.
+  #
+  # `fields` and `out_ports` are passed to the `defcallback/3` calls, unless
+  # `name => {fields, out_ports}` is present in `overrides`, in which case the `fields` and
+  # `out_ports` present in that tuple get passed.
+  # `imports` is added to the body passed to `defcallback`.
+  def extract_callbacks(statements, imports, fields, out_ports, overrides \\ %{}) do
+    callbacks =
+      statements
+      |> Enum.reject(&is_nil(&1))
+      |> Enum.map(&read_callback(&1))
+      |> Enum.reduce(%{}, &merge_callback(&1, &2))
+      |> Enum.map(&add_imports_fields_ports(&1, imports, fields, out_ports, overrides))
+      |> Enum.map(&build_callback(&1))
+
+    {:%{}, [], callbacks}
+  end
+
+  # Read a `name args do ... end` ast node and extract the name, args and body.
+  defp read_callback({name, _, args}) do
+    {args, [[do: body]]} = Enum.split(args, -1)
+    {name, args, body}
+  end
+
+  # Group callbacks by their names
+  defp merge_callback({name, args, body}, map) do
+    Map.update(map, name, [{args, body}], &(&1 ++ [{args, body}]))
+  end
+
+  # Add imports, fields, out, to each tuple, keeping track of possible overrides
+  defp add_imports_fields_ports({name, bodies}, imports, fields, out, overrides) do
+    {fields, out} = overrides[name] || {fields, out}
+    {name, bodies, imports, fields, out}
+  end
+
+  # Build a callback from a name and a list of {args, body} tuples
+  # Ensure imports, fields and out ports are passed along
+  defp build_callback({name, bodies, imports, fields, out}) do
+    clauses =
+      Enum.flat_map(bodies, fn {args, body} ->
+        quote do
+          unquote_splicing(args) ->
+            unquote(imports)
+            unquote(body)
+        end
+      end)
+
+    callback =
+      quote do
+        import unquote(Skitter.DSL.Callback), only: [defcallback: 3]
+
+        defcallback(unquote(fields), unquote(out)) do
+          unquote(clauses)
+        end
+      end
+
+    {name, callback}
+  end
+
+  # ----------- #
+  # defcallback #
+  # ----------- #
+
+  @publish_operator :~>
+  @update_operator :<~
+
+  @publish_var AST.internal_var(:publish)
+  @state_var AST.internal_var(:state)
+
+  @doc """
+  DSL to create `t:Skitter.Callback.t/0`.
+
+  This macro offers a DSL to create callbacks that can be used inside skitter components. This
+  macro accepts `fields`, `out_ports` and a body as its arguments. As stated in the module
+  documentation, this macro should not be called directly if it can be avoided. Instead, rely on
+  the `Skitter.DSL.Component.defcomponent/3` and `Skitter.DSL.Strategy.defstrategy/3` macros to
+  call this macro.
+
+  The `body` argument should contain the actual implementation of the callback. This body consists
+  of `fn`-like clauses (`argument -> body`). The body of these clauses contain standard elixir
+  code with a few additions and limitations described in the module documentation.
 
   ## Examples
 
@@ -152,7 +258,7 @@ defmodule Skitter.DSL.Callback do
         if(name in fields, do: quote(do: read_state(unquote(name))), else: node)
 
       {@update_operator, _, [field, value]} ->
-        field = Utils.name_to_atom(field, env)
+        field = AST.name_to_atom(field, env)
 
         if field in fields do
           quote(do: update_state(unquote(field), unquote(value)))
@@ -161,7 +267,7 @@ defmodule Skitter.DSL.Callback do
         end
 
       {@publish_operator, _, [value, port]} ->
-        port = Utils.name_to_atom(port, env)
+        port = AST.name_to_atom(port, env)
 
         if port in out_ports do
           quote(do: publish(unquote(port), unquote(value)))
@@ -204,11 +310,11 @@ defmodule Skitter.DSL.Callback do
 
   # Create body and return value and function argument for state
   defp make_state_body_return(body, :readwrite) do
-    {Utils.make_mutable_in_block(body, @state_var), @state_var, @state_var}
+    {Mutable.make_mutable_in_block(body, @state_var), @state_var, @state_var}
   end
 
   defp make_state_body_return(body, :none) do
-    {body, nil, Utils.internal_var(:_)}
+    {body, nil, AST.internal_var(:_)}
   end
 
   defp make_state_body_return(body, :read) do
@@ -217,7 +323,7 @@ defmodule Skitter.DSL.Callback do
 
   # Create body and return value for publishing values
   defp make_publish_body_return(body, true) do
-    body = Utils.make_mutable_in_block(body, @publish_var)
+    body = Mutable.make_mutable_in_block(body, @publish_var)
 
     body =
       quote do
