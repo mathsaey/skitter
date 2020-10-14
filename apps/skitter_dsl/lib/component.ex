@@ -186,13 +186,15 @@ defmodule Skitter.DSL.Component do
     end
   end
 
+  @doc false
   def expand_strategy(s = %Skitter.Strategy{}), do: s
   def expand_strategy(name) when is_atom(name), do: Skitter.DSL.Named.load(name)
 
   def expand_strategy(any) do
-    raise DefinitionError, "`#{inspect(any)}` is not a valid component strategy"
+    raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
   end
 
+  @doc false
   def verify_strategy(c = %Skitter.Component{strategy: strategy}) do
     if Skitter.Strategy.complete?(strategy) do
       c

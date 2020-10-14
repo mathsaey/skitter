@@ -180,7 +180,7 @@ defmodule Skitter.DSL.ComponentTest do
       end
     end
 
-    assert_definition_error ~r/`.*` is not a valid component strategy/ do
+    assert_definition_error ~r/`.*` is not a valid strategy/ do
       defcomponent in: [] do
         strategy 5
       end
