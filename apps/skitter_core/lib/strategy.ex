@@ -118,7 +118,7 @@ defmodule Skitter.Strategy do
 
   def merge(child, parent) do
     filtered = child |> Map.from_struct() |> Enum.reject(&(&1 |> elem(1) |> is_nil()))
-    struct(parent, filtered)
+    struct(%{parent | name: nil}, filtered)
   end
 
   @doc """
