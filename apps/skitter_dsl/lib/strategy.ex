@@ -8,12 +8,23 @@ defmodule Skitter.DSL.Strategy do
   @moduledoc """
   Strategy definition DSL, see `defstrategy/2`.
   """
-  alias Skitter.DSL.{AST, Callback}
+  alias Skitter.DSL.{AST, DefinitionError, Callback}
+  alias Skitter.Strategy
 
   @doc """
   Define a `Skitter.Strategy`
   """
-  defmacro defstrategy(name \\ nil, do: body) do
+  @doc section: :dsl
+  defmacro defstrategy(name \\ nil, opts \\ [], body)
+
+  defmacro defstrategy(name, [], do: body) when is_list(name) do
+    quote do
+      defstrategy(nil, unquote(name), do: unquote(body))
+    end
+  end
+
+  defmacro defstrategy(name, opts, do: body) do
+    parents = opts |> Keyword.get(:extends, []) |> parse_parents()
     statements = AST.block_to_list(body)
     {statements, imports} = AST.extract_calls(statements, [:alias, :import, :require])
 
@@ -40,7 +51,24 @@ defmodule Skitter.DSL.Strategy do
 
       %Skitter.Strategy{name: unquote(name)}
       |> struct!(unquote(callbacks))
+      |> Skitter.Strategy.merge(unquote(__MODULE__).expand_parents(unquote(parents)))
       |> Skitter.DSL.Named.store(unquote(name))
     end
+  end
+
+  defp parse_parents(lst) when is_list(lst), do: lst
+  defp parse_parents(any), do: [any]
+
+  @doc false
+  def expand_parents(parents), do: Enum.map(parents, &expand_parent/1)
+
+  defp expand_parent(s = %Strategy{}), do: s
+
+  defp expand_parent(name) when is_atom(name) do
+    name |> Skitter.DSL.Named.load() |> expand_parent()
+  end
+
+  defp expand_parent(any) do
+    raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
   end
 end
