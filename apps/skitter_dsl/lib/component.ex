@@ -188,7 +188,10 @@ defmodule Skitter.DSL.Component do
 
   @doc false
   def expand_strategy(s = %Skitter.Strategy{}), do: s
-  def expand_strategy(name) when is_atom(name), do: Skitter.DSL.Named.load(name)
+
+  def expand_strategy(name) when is_atom(name) do
+    name |> Skitter.DSL.Named.load() |> expand_strategy()
+  end
 
   def expand_strategy(any) do
     raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
