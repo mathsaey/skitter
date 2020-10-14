@@ -168,7 +168,15 @@ defmodule Skitter.DSL.Workflow do
       %{{nil, :data} => [id: :in_val], {:id, :out_val} => [printer: :val]}
   """
   @doc section: :dsl
-  defmacro defworkflow(name \\ nil, ports, do: body) do
+  defmacro defworkflow(name \\ nil, ports \\ [], body)
+
+  defmacro defworkflow(name, [], do: body) when is_list(name) do
+    quote do
+      defworkflow(nil, unquote(name), do: unquote(body))
+    end
+  end
+
+  defmacro defworkflow(name, ports, do: body) do
     try do
       {in_ports, out_ports} = AST.parse_port_list(ports, __CALLER__)
 

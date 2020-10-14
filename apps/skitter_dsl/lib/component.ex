@@ -118,7 +118,15 @@ defmodule Skitter.DSL.Component do
       %{count: 1, total: 10}
   """
   @doc section: :dsl
-  defmacro defcomponent(name \\ nil, ports, do: body) do
+  defmacro defcomponent(name \\ nil, ports \\ [], body)
+
+  defmacro defcomponent(name, [], do: body) when is_list(name) do
+    quote do
+      defcomponent(nil, unquote(name), do: unquote(body))
+    end
+  end
+
+  defmacro defcomponent(name, ports, do: body) do
     try do
       {in_ports, out_ports} = AST.parse_port_list(ports, __CALLER__)
 

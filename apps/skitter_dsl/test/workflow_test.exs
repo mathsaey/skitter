@@ -23,6 +23,36 @@ defmodule Skitter.DSL.WorkflowTest do
     [component: c]
   end
 
+  test "name extraction" do
+    wf =
+      defworkflow __MODULE__.TestName do
+      end
+
+    assert wf.name == __MODULE__.TestName
+
+    wf =
+      defworkflow __MODULE__.OtherTestName, in: foo, out: bar do
+      end
+
+    assert wf.name == __MODULE__.OtherTestName
+  end
+
+  test "port extraction" do
+    wf =
+      defworkflow __MODULE__.IgnoreThisName, in: foo, out: bar do
+      end
+
+    assert wf.in_ports == [:foo]
+    assert wf.out_ports == [:bar]
+
+    wf =
+      defworkflow in: foo, out: bar do
+      end
+
+    assert wf.in_ports == [:foo]
+    assert wf.out_ports == [:bar]
+  end
+
   test "name registration" do
     w =
       defworkflow __MODULE__.Named, in: ignore do

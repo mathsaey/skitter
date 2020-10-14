@@ -14,6 +14,40 @@ defmodule Skitter.DSL.ComponentTest do
   import Skitter.DSL.Component
   doctest Skitter.DSL.Component
 
+  test "name extraction" do
+    comp =
+      defcomponent __MODULE__.TestName do
+        strategy TestStrategy
+      end
+
+    assert comp.name == __MODULE__.TestName
+
+    comp =
+      defcomponent __MODULE__.OtherTestName, in: foo, out: bar do
+        strategy TestStrategy
+      end
+
+    assert comp.name == __MODULE__.OtherTestName
+  end
+
+  test "port extraction" do
+    comp =
+      defcomponent __MODULE__.IgnoreThisName, in: foo, out: bar do
+        strategy TestStrategy
+      end
+
+    assert comp.in_ports == [:foo]
+    assert comp.out_ports == [:bar]
+
+    comp =
+      defcomponent in: foo, out: bar do
+        strategy TestStrategy
+      end
+
+    assert comp.in_ports == [:foo]
+    assert comp.out_ports == [:bar]
+  end
+
   test "fields extraction" do
     comp =
       defcomponent in: [] do
