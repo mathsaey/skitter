@@ -6,6 +6,6 @@
 
 defmodule Skitter.StrategyTest do
   use ExUnit.Case, async: true
-  alias Skitter.{Strategy, Callback, Callback.Result}
+  alias Skitter.{Strategy, Callback}
   doctest Skitter.Strategy
 end

@@ -25,13 +25,13 @@ defmodule Skitter.Strategy do
   strategy is complete.
   """
   @type t :: %__MODULE__{
-          name: module(),
+          name: module() | nil,
           define: Callback.t() | nil,
           deploy: Callback.t() | nil,
           prepare: Callback.t() | nil,
-          send: Callback.t() | nil,
-          receive: Callback.t() | nil,
-          react: Callback.t() | nil,
+          send_token: Callback.t() | nil,
+          receive_token: Callback.t() | nil,
+          receive_message: Callback.t() | nil,
           drop_deployment: Callback.t() | nil,
           drop_invocation: Callback.t() | nil
         }
@@ -41,9 +41,9 @@ defmodule Skitter.Strategy do
     :define,
     :deploy,
     :prepare,
-    :send,
-    :receive,
-    :react,
+    :send_token,
+    :receive_token,
+    :receive_message,
     :drop_deployment,
     :drop_invocation
   ]
@@ -53,29 +53,69 @@ defmodule Skitter.Strategy do
   # --------- #
 
   @doc """
-  Merge a parent strategy with a child.
+  Merge a strategy or a group of strategies.
 
-  This creates a new strategy where all of the missing callbacks from `parent` or added into
-  `child`. Any callbacks defined within `child` and the name of `child` will not be affected.
+  Two strategies, a `child` and a `parent`, can be merged. When a child and parent strategy are
+  merged, every child callback that is undefined (i.e. `nil`) is replaced by the callback in the
+  parent, if it is present. Callbacks defined in the child strategy are _not_ overwritten.
 
-  ## Examples
+  Thus, if we merge a parent strategy which defines `:define` and `:deploy` with a child strategy
+  that defines `:deploy` and `:receive_message` we obtain a new strategy which has a definition for
+  `:define`, `:deploy` and `:receive_message`. The `:deploy` callback in the merged strategy is
+  equal to the `:deploy` strategy of `child`.
 
-      iex> dummy1 = %Callback{function: fn _, _ -> %Result{} end}
-      iex> dummy2 = %Callback{function: fn _, _ -> %Result{} end}
-      iex> parent = %Strategy{define: dummy1, deploy: dummy1}
+      iex> parent_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :parent} end}
+      iex> parent = %Strategy{define: parent_cb, deploy: parent_cb}
       #Strategy<:define, :deploy>
-      iex> child = %Strategy{deploy: dummy2, react: dummy2}
-      #Strategy<:deploy, :react>
+      iex> child_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :child} end}
+      iex> child = %Strategy{deploy: child_cb, receive_message: child_cb}
+      #Strategy<:deploy, :receive_message>
       iex> merged = Strategy.merge(child, parent)
-      #Strategy<:define, :deploy, :react>
-      iex> merged.define
-      dummy1
-      iex> merged.deploy
-      dummy2
-      iex> merged.react
-      dummy2
+      #Strategy<:define, :deploy, :receive_message>
+      iex> Callback.call(merged.define, %{}, [])
+      %Callback.Result{result: :parent}
+      iex> Callback.call(merged.deploy, %{}, [])
+      %Callback.Result{result: :child}
+      iex> Callback.call(merged.receive_message, %{}, [])
+      %Callback.Result{result: :child}
+
+  It is also possible to merge a child with a list of parent strategies. In this case, the child
+  is merged with the first parent in the list, after which the merged strategy is merged with the
+  next parent. This is done until no more strategies remain.
+
+  This effectively means that a merge invocation can be read left to right: any callback in the
+  returned strategy is the callback of the leftmost strategy in the list of strategies to be
+  merged (including the child).
+
+      iex> parent_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :parent} end}
+      iex> parent = %Strategy{define: parent_cb}
+      #Strategy<:define>
+      iex> other_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :other_parent} end}
+      iex> other = %Strategy{define: other_cb}
+      #Strategy<:define>
+      iex> child = %Strategy{}
+      #Strategy<>
+      iex> merged = Strategy.merge(child, [parent, other])
+      #Strategy<:define>
+      iex> Callback.call(merged.define, %{}, [])
+      %Callback.Result{result: :parent}
+      iex> merged = Strategy.merge(child, [other, parent])
+      #Strategy<:define>
+      iex> Callback.call(merged.define, %{}, [])
+      %Callback.Result{result: :other_parent}
+      iex> child_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :child} end}
+      iex> child = %Strategy{define: child_cb}
+      #Strategy<:define>
+      iex> merged = Strategy.merge(child, [parent, other])
+      #Strategy<:define>
+      iex> Callback.call(merged.define, %{}, [])
+      %Callback.Result{result: :child}
   """
-  @spec merge(t(), t()) :: t()
+  @spec merge(t(), t() | [t()]) :: t()
+  def merge(child, parents) when is_list(parents) do
+    Enum.reduce(parents, child, &merge(&2, &1))
+  end
+
   def merge(child, parent) do
     filtered = child |> Map.from_struct() |> Enum.reject(&(&1 |> elem(1) |> is_nil()))
     struct(parent, filtered)
@@ -86,28 +126,33 @@ defmodule Skitter.Strategy do
 
   ## Examples
 
-      iex> dummy = %Callback{function: fn _, _ -> %Result{} end}
+      iex> dummy = %Callback{function: fn _, _ -> %Callback.Result{} end}
       iex> Strategy.complete?(%Strategy{name: Example, define: dummy})
       false
-      iex> Strategy.complete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send: dummy, receive: dummy, react: dummy, drop_invocation: dummy, drop_deployment: dummy})
+      iex> Strategy.complete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send_token: dummy, receive_token: dummy, receive_message: dummy, drop_invocation: dummy, drop_deployment: dummy})
       true
   """
   @spec complete?(t()) :: boolean()
-  def complete?(strategy), do: nil not in Map.values(strategy)
+  def complete?(strategy), do: not incomplete?(strategy)
 
   @doc """
   Verify whether a strategy is missing an implementation of some callbacks.
 
   ## Examples
 
-      iex> dummy = %Callback{function: fn _, _ -> %Result{} end}
+      iex> dummy = %Callback{function: fn _, _ -> %Callback.Result{} end}
       iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy})
       true
-      iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send: dummy, receive: dummy, react: dummy, drop_invocation: dummy, drop_deployment: dummy})
+      iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send_token: dummy, receive_token: dummy, receive_message: dummy, drop_invocation: dummy, drop_deployment: dummy})
       false
   """
   @spec incomplete?(t()) :: boolean()
-  def incomplete?(strategy), do: not complete?(strategy)
+  def incomplete?(strategy) do
+    strategy
+    |> Map.delete(:name)
+    |> Map.values()
+    |> Enum.any?(&is_nil/1)
+  end
 
   # ----- #
   # Hooks #
@@ -135,20 +180,20 @@ defmodule Skitter.Strategy do
     Callback.call(cb, %{}, [c]).result
   end
 
-  @doc """
-  Activated when a worker receives data, returns the new state, published data
-  """
-  # TODO: worker "tags"
-  # TODO: deployment, invocation types
-  @doc section: :hook
-  @spec react(Component.t(), any(), Callback.state(), any(), any()) ::
-          {Callback.state(), Callback.publish() | nil}
-  def react(c = %Component{strategy: %__MODULE__{react: cb}}, msg, state, d, i) do
-    res =
-      Callback.call(cb.react, %{component: c, deployment: d, invocation: i}, [msg, state]).publish
+  # @doc """
+  # Activated when a worker receives data, returns the new state, published data
+  # """
+  # # TODO: worker "tags"
+  # # TODO: deployment, invocation types
+  # @doc section: :hook
+  # @spec react(Component.t(), any(), Callback.state(), any(), any()) ::
+  #         {Callback.state(), Callback.publish() | nil}
+  # def react(c = %Component{strategy: %__MODULE__{react: cb}}, msg, state, d, i) do
+  #   res =
+  #     Callback.call(cb.react, %{component: c, deployment: d, invocation: i}, [msg, state]).publish
 
-    {res[:state], res[:publish]}
-  end
+  #   {res[:state], res[:publish]}
+  # end
 end
 
 defimpl Inspect, for: Skitter.Strategy do
@@ -158,9 +203,9 @@ defimpl Inspect, for: Skitter.Strategy do
     :define,
     :deploy,
     :prepare,
-    :send,
-    :receive,
-    :react,
+    :send_token,
+    :receive_token,
+    :receive_message,
     :drop_deployment,
     :drop_invocation
   ])
@@ -169,9 +214,9 @@ defimpl Inspect, for: Skitter.Strategy do
     :define,
     :deploy,
     :prepare,
-    :send,
-    :receive,
-    :react,
+    :send_token,
+    :receive_token,
+    :receive_message,
     :drop_deployment,
     :drop_invocation
   ])
@@ -180,9 +225,9 @@ defimpl Inspect, for: Skitter.Strategy do
     :define,
     :deploy,
     :prepare,
-    :send,
-    :receive,
-    :react,
+    :send_token,
+    :receive_token,
+    :receive_message,
     :drop_deployment,
     :drop_invocation
   ])
