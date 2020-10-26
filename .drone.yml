@@ -36,3 +36,57 @@ steps:
       - mix deps.compile
       - epmd -daemon
       - mix test
+---
+kind: pipeline
+type: docker
+name: build
+
+steps:
+  - name: test
+    image: hexpm/elixir:1.11.1-erlang-23.1.1-alpine-3.12.0
+    environment:
+      MIX_ENV: prod
+    commands:
+      - mix local.hex --force
+      - mix local.rebar --force
+      - mix deps.get --only prod
+      - mix deps.compile
+      - mix build
+
+---
+kind: pipeline
+type: docker
+name: notify-failure
+
+platform:
+  os: linux
+  arch: amd64
+
+clone:
+  disable: true
+
+steps:
+- name: mail
+  image: alpine
+  commands:
+  - apk add msmtp
+  - "echo \"account build\ntls on\ntls_starttls on\nauth on\nhost $MAIL_HOST\nport 587\nuser $MAIL_USER\nfrom $MAIL_FROM\npassword $MAIL_PASS\n\naccount default : build\n\" > ~/.msmtprc"
+  - "echo \"To: $DRONE_COMMIT_AUTHOR_EMAIL\nSubject: [Drone] $DRONE_REPO build failure\n\nThe following pipelines failed when trying to build $DRONE_REPO: $DRONE_FAILED_STAGES\nCommit: $DRONE_COMMIT_MESSAGE\n\" | msmtp -t"
+  environment:
+    MAIL_HOST:
+      from_secret: mail_host
+    MAIL_USER:
+      from_secret: mail_user
+    MAIL_PASS:
+      from_secret: mail_pass
+    MAIL_FROM:
+      from_secret: mail_from
+
+trigger:
+  status:
+  - failure
+
+depends_on:
+- build
+- test
+- docs
