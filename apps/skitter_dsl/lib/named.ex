@@ -49,4 +49,13 @@ defmodule Skitter.DSL.Named do
       raise Skitter.DSL.DefinitionError, "`#{unprefix(name)}` is not defined"
     end
   end
+
+  @doc """
+  Retrieve all bound names
+  """
+  def list() do
+    :persistent_term.get()
+    |> Enum.filter(&match?({{__MODULE__, _}, _}, &1))
+    |> Enum.map(fn {{__MODULE__, name}, _} -> name end)
+  end
 end
