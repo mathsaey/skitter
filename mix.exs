@@ -126,9 +126,10 @@ defmodule Skitter.MixProject do
 
   defp docs do
     [
+      main: "README",
       source_ref: "develop",
       logo: "assets/logo-light_docs.png",
-      extras: Path.wildcard("app/*/pages/*.md"),
+      extras: doc_extras(),
       groups_for_modules: [
         core: [
           Skitter.Element,
@@ -151,6 +152,12 @@ defmodule Skitter.MixProject do
         Hooks: &(&1[:section] == :hook)
       ]
     ]
+  end
+
+  defp doc_extras do
+    "pages/*.md"
+    |> Path.wildcard()
+    |> Enum.concat(["README.md"])
   end
 
   defp dialyzer, do: [plt_add_apps: [:mix, :iex, :eex]]
