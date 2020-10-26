@@ -20,7 +20,7 @@ The earlier, effect based, version of Skitter can be found [here](https://github
 ## Getting Started
 
 To get started with Skitter, you need to have a recent version of [elixir](https://elixir-lang.org/).
-Currently, elixir version 1.10 is supported.
+Currently, elixir version 1.11 is supported.
 
 Once Elixir is installed, you can download the latest version of Skitter and use `mix` to build it:
 
