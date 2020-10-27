@@ -6,7 +6,7 @@
 
 defmodule Skitter.DSL.TestSupport.Strategies do
   @moduledoc false
-  require Skitter.DSL.Named
+  require Skitter.DSL.Registry
 
   alias Skitter.{Callback, Callback.Result, Strategy}
 
@@ -27,6 +27,6 @@ defmodule Skitter.DSL.TestSupport.Strategies do
       drop_deployment: :todo,
       drop_invocation: :todo
     }
-    |> Skitter.DSL.Named.store(TestStrategy)
+    |> Skitter.DSL.Registry.store(TestStrategy)
   end
 end

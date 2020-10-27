@@ -140,7 +140,7 @@ defmodule Skitter.DSL.Component do
       callbacks = Callback.extract_callbacks(body, imports, fields, out_ports)
 
       quote do
-        require Skitter.DSL.Named
+        require Skitter.DSL.Registry
 
         %Skitter.Component{
           name: unquote(name),
@@ -152,7 +152,7 @@ defmodule Skitter.DSL.Component do
         }
         |> unquote(__MODULE__).verify_strategy()
         |> Skitter.Strategy.define()
-        |> Skitter.DSL.Named.store(unquote(name))
+        |> Skitter.DSL.Registry.store(unquote(name))
       end
     catch
       err -> handle_error(err)
@@ -190,7 +190,7 @@ defmodule Skitter.DSL.Component do
   def expand_strategy(s = %Skitter.Strategy{}), do: s
 
   def expand_strategy(name) when is_atom(name) do
-    name |> Skitter.DSL.Named.load() |> expand_strategy()
+    name |> Skitter.DSL.Registry.lookup!() |> expand_strategy()
   end
 
   def expand_strategy(any) do

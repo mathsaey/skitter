@@ -47,12 +47,12 @@ defmodule Skitter.DSL.Strategy do
       )
 
     quote do
-      require Skitter.DSL.Named
+      require Skitter.DSL.Registry
 
       %Skitter.Strategy{name: unquote(name)}
       |> struct!(unquote(callbacks))
       |> Skitter.Strategy.merge(unquote(__MODULE__).expand_parents(unquote(parents)))
-      |> Skitter.DSL.Named.store(unquote(name))
+      |> Skitter.DSL.Registry.store(unquote(name))
     end
   end
 
@@ -65,7 +65,7 @@ defmodule Skitter.DSL.Strategy do
   defp expand_parent(s = %Strategy{}), do: s
 
   defp expand_parent(name) when is_atom(name) do
-    name |> Skitter.DSL.Named.load() |> expand_parent()
+    name |> Skitter.DSL.Registry.lookup!() |> expand_parent()
   end
 
   defp expand_parent(any) do

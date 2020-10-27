@@ -9,7 +9,7 @@ defmodule Skitter.DSL.ComponentTest do
   import Skitter.DSL.Test.Assertions
 
   alias Skitter.{Component, Callback, Callback.Result, Strategy}
-  alias Skitter.DSL.Named
+  alias Skitter.DSL.Registry
 
   import Skitter.DSL.Component
   doctest Skitter.DSL.Component
@@ -133,7 +133,7 @@ defmodule Skitter.DSL.ComponentTest do
   test "name registration" do
     c = defcomponent(__MODULE__.Named, [in: ignore], do: strategy(TestStrategy))
 
-    assert Named.load(__MODULE__.Named) == c
+    assert Registry.lookup(__MODULE__.Named) == {:ok, c}
   end
 
   test "errors" do

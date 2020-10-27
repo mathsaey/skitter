@@ -9,7 +9,7 @@ defmodule Skitter.DSL.Workflow do
   Workflow definition DSL. See `defworkflow/3`.
   """
   alias Skitter.{Instance, Component, Workflow}
-  alias Skitter.DSL.{DefinitionError, AST, Named}
+  alias Skitter.DSL.{DefinitionError, AST, Registry}
 
   # ------------------ #
   # Workflow Expansion #
@@ -43,7 +43,7 @@ defmodule Skitter.DSL.Workflow do
   end
 
   defp expand_name({name, elem, args}) when is_atom(elem) do
-    {name, Skitter.DSL.Named.load(elem), args}
+    {name, Skitter.DSL.Registry.lookup!(elem), args}
   end
 
   defp expand_name(any), do: any
@@ -190,7 +190,7 @@ defmodule Skitter.DSL.Workflow do
       nodes = read_nodes(nodes, __CALLER__)
 
       quote do
-        require Skitter.DSL.Named
+        require Skitter.DSL.Registry
 
         unquote(__MODULE__)._create_workflow(
           unquote(name),
@@ -199,7 +199,7 @@ defmodule Skitter.DSL.Workflow do
           unquote(nodes),
           unquote(links)
         )
-        |> Named.store(unquote(name))
+        |> Registry.store(unquote(name))
       end
     catch
       err -> handle_error(err)

@@ -4,21 +4,27 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.DSL.NamedTest do
+defmodule Skitter.DSL.RegistryTest do
   use ExUnit.Case, async: true
   import Skitter.DSL.Test.Assertions
 
-  import Skitter.DSL.Named
+  import Skitter.DSL.Registry
 
-  test "store and load" do
-    store(42, Foo)
+  test "bind, lookup, list" do
+    assert bind(Foo, 42) == :ok
+    assert lookup(Foo) == {:ok, 42}
+    assert Foo in names()
+  end
 
-    assert load(Foo) == 42
+  test "bind!, lookup!, list" do
+    assert bind!(Bar, 42) == 42
+    assert lookup!(Bar) == 42
+    assert Bar in names()
   end
 
   test "error when name is not defined" do
     assert_definition_error "`DoesNotExist` is not defined" do
-      load(DoesNotExist)
+      lookup!(DoesNotExist)
     end
   end
 

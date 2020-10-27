@@ -10,7 +10,7 @@ defmodule Skitter.DSL.WorkflowTest do
   import Skitter.DSL.{Component, Workflow}
 
   alias Skitter.{Component, Instance, Callback, Callback.Result}
-  alias Skitter.DSL.Named
+  alias Skitter.DSL.Registry
 
   doctest Skitter.DSL.Workflow
 
@@ -58,7 +58,7 @@ defmodule Skitter.DSL.WorkflowTest do
       defworkflow __MODULE__.Named, in: ignore do
       end
 
-    assert Named.load(__MODULE__.Named) == w
+    assert Registry.lookup(__MODULE__.Named) == {:ok, w}
   end
 
   test "inline components", %{component: c} do
@@ -77,7 +77,7 @@ defmodule Skitter.DSL.WorkflowTest do
     assert w[:a] == %Instance{elem: c, args: []}
 
     assert w[:b] == %Instance{
-             elem: %Component{in_ports: [:ignore], strategy: Named.load(TestStrategy)},
+             elem: %Component{in_ports: [:ignore], strategy: Registry.lookup!(TestStrategy)},
              args: []
            }
   end
@@ -88,7 +88,7 @@ defmodule Skitter.DSL.WorkflowTest do
         c = new(c.name)
       end
 
-    assert w[:c] == %Instance{elem: Named.load(c.name), args: []}
+    assert w[:c] == %Instance{elem: Registry.lookup!(c.name), args: []}
   end
 
   test "links", %{component: c} do

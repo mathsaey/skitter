@@ -17,6 +17,12 @@ defmodule Skitter.DSL.MixProject do
     ] ++ global
   end
 
+  def application do
+    [
+      mod: {Skitter.DSL.Application, []}
+    ]
+  end
+
   defp deps do
     [
       {:skitter_core, in_umbrella: true}
