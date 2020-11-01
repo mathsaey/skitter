@@ -67,20 +67,16 @@ clone:
 
 steps:
 - name: mail
-  image: alpine
-  commands:
-  - apk add msmtp
-  - "echo \"account build\ntls on\ntls_starttls on\nauth on\nhost $MAIL_HOST\nport 587\nuser $MAIL_USER\nfrom $MAIL_FROM\npassword $MAIL_PASS\n\naccount default : build\n\" > ~/.msmtprc"
-  - "echo \"To: $DRONE_COMMIT_AUTHOR_EMAIL\nSubject: [Drone] $DRONE_REPO build failure\n\nThe following pipelines failed when trying to build $DRONE_REPO: $DRONE_FAILED_STAGES\nCommit: $DRONE_COMMIT_MESSAGE\n\" | msmtp -t"
-  environment:
-    MAIL_HOST:
+  image: drillster/drone-email
+  settings:
+    host:
       from_secret: mail_host
-    MAIL_USER:
-      from_secret: mail_user
-    MAIL_PASS:
-      from_secret: mail_pass
-    MAIL_FROM:
+    from:
       from_secret: mail_from
+    username:
+      from_secret: mail_user
+    password:
+      from_secret: mail_pass
 
 trigger:
   status:

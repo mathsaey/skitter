@@ -12,10 +12,9 @@ defmodule Skitter.Runtime.MixProject do
 
     [
       app: :skitter_runtime,
-      deps: deps(),
+      deps: deps()
       # compilers: compilers(),
       # rustler_crates: rustler_crates(),
-      elixirc_paths: elixirc_paths(Mix.env())
     ] ++ global
   end
 
@@ -38,7 +37,4 @@ defmodule Skitter.Runtime.MixProject do
   defp rustler_crates do
     [skitter_buffer: [mode: if(Mix.env() == :prod, do: :release, else: :debug)]]
   end
-
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
 end
