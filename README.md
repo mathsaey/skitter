@@ -1,28 +1,45 @@
 ![skitter logo](https://raw.githubusercontent.com/mathsaey/skitter/develop/assets/logo.png)
 
-A domain specific language for building horizontally scalable, reactive workflow applications.
-Built in the context of my PhD at the [Software Languages Lab](https://soft.vub.ac.be/).
+A domain specific language for building horizontally scalable, reactive
+workflow applications.
+Built in the context of my PhD at the
+[Software Languages Lab](https://soft.vub.ac.be/).
 
 # Skitter
 
-Skitter is a component agnostic, reactive workflow system; it makes it possible to wrap arbitrary data processing applications into _reactive components_.
-These components can be combined into reactive workflows, which can be deployed over a cluster.
-Once deployed, a reactive workflow can process data entering the system from the outside world.
+Skitter is a component agnostic, reactive workflow system; it makes it possible
+to wrap arbitrary data processing applications into _reactive components_.
+These components can be combined into reactive workflows, which can be deployed
+over a cluster.
+Once deployed, a reactive workflow can process data entering the system from
+the outside world.
 
-In order to support the distribution of arbitrary components over a cluster, Skitter components define a _strategy_: a meta-level language construct which defines how components are distributed over a cluster.
-Through the use of these strategies, a programmer writing a Skitter application can select the most appropriate distribution strategy based on the exact properties of the reactive component.
+In order to support the distribution of arbitrary components over a cluster,
+Skitter components define a _strategy_: a meta-level language construct which
+defines how components are distributed over a cluster.
+Through the use of these strategies, a programmer writing a Skitter application
+can select the most appropriate distribution strategy based on the exact
+properties of the reactive component.
 
 ## Status
 
 __This version of skitter is a work in progress. It is currently not usable.__
-Information on using the earlier, effect based, version on Skitter can be found [here](https://soft.vub.ac.be/~mathsaey/skitter/docs/v0.1.1/).
+Information on using the earlier, effect based, version on Skitter can be found
+[here](https://soft.vub.ac.be/~mathsaey/skitter/docs/v0.1.1/).
 
-## Getting Started
+# Getting started
 
-To get started with Skitter, you need to have a recent version of [elixir](https://elixir-lang.org/).
-Currently, elixir version 1.11 is supported.
+To get started with Skitter, you can build a release from the source, build a
+docker image or pull an image from dockerhub.
 
-Once Elixir is installed, you can download the latest version of Skitter and use `mix` to build it:
+## Building the release
+
+To build Skitter, you need to have a recent version of
+[elixir](https://elixir-lang.org/).
+Currently, Skitter requires elixir version 1.11 or above.
+
+Once Elixir is installed, you can download the latest version of Skitter and use
+`mix` to build a release:
 
 ```
 $ git clone https://github.com/mathsaey/skitter.git
@@ -31,9 +48,57 @@ $ mix deps.get
 $ mix build
 ```
 
-After this is done, the `_build/prod/rel/` directory should contain the skitter runtime applications and the skitter deployment script.
-Alternatively, `mix build --path <path>` can be used to save the generated artefacts to another location.
-After running `mix build`, elixir may be removed from your system.
+This command builds a release of the various Skitter applications and packages
+them with a deployment script that can be used to start a Skitter system.
+All of these artefacts can be found in `_build/prod/rel/`.
+Alternatively, `--path <path>` can be passed to `mix build` to directly save the
+artefacts to another location.
 
-In the generated directory, the skitter deployment script, `skitter`, can be used to start and manage a skitter runtime system.
+Since Elixir releases are self-contained there is no need to have Elixir or its
+dependencies on your system after the release has been built.
+
+After building the release, navigate to its directory and use the `skitter`
+script to start and manage skitter.
 Run `./skitter help` to get started.
+
+## Building with docker
+
+If you do not wish to install any dependencies you can use the provided
+Dockerfile to build a docker image:
+
+```
+$ git clone https://github.com/mathsaey/skitter.git
+$ cd skitter
+$ docker build . -t skitter
+```
+
+Now you can directly invoke the skitter wrapper script as follows:
+
+```
+$ docker run -it skitter
+```
+
+Any arguments passed after `skitter` will be passed to the wrapper script:
+
+```
+$ docker run -it skitter help
+```
+
+will show the built-in help.
+
+## Using the dockerhub image
+
+It is also possible to simply pull the skitter image from dockerhub:
+
+```
+$ docker run -it mathsaey/skitter
+```
+
+as with the self-built docker image, any arguments passed after
+`mathsaey/skitter` will be passed to the wrapper script:
+
+```
+$ docker run -it mathsaey/skitter help
+```
+
+will show the built-in help.
