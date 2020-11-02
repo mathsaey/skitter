@@ -15,7 +15,7 @@ Through the use of these strategies, a programmer writing a Skitter application 
 ## Status
 
 __This version of skitter is a work in progress. It is currently not usable.__
-The earlier, effect based, version of Skitter can be found [here](https://github.com/mathsaey/skitter/releases/tag/v0.1).
+Information on using the earlier, effect based, version on Skitter can be found [here](https://soft.vub.ac.be/~mathsaey/skitter/docs/v0.1.1/).
 
 ## Getting Started
 
