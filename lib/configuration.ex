@@ -61,9 +61,6 @@ defmodule Skitter.Configuration do
   nodes. While starting the skitter application, the master node will attempt to
   connect to the provided worker nodes. Thus, the worker nodes should be online
   before a master node is started with a list of nodes.
-
-  Nodes can also be added at runtime through the use of
-  `Skitter.Runtime.add_node/1`.
   """
   def worker_nodes, do: get_env(:worker_nodes, [])
 
@@ -111,9 +108,6 @@ defmodule Skitter.Configuration do
   When this option is set to true (the default), skitter will automatically
   attempt to treat each node it is connected to (i.e. `Node.list()`) as a
   skitter worker node.
-
-  When this option is set to false, skitter will only treat a connected node as
-  a worker when `Skitter.Runtime.add_node/1` is called.
 
   This setting is mainly intended to enable unit tests to simulate node failure.
   Leave it at its default value if you're not sure what this does.

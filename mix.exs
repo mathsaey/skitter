@@ -11,8 +11,7 @@ defmodule Skitter.MixProject do
     [
       app: :skitter,
       name: "Skitter",
-      version: "0.1.0",
-      source_url: "https://github.com/mathsaey/skitter/",
+      version: "0.1.1",
       homepage_url: "https://soft.vub.ac.be/~mathsaey/skitter/",
       elixir: "~> 1.8",
       deps: deps(),
@@ -43,6 +42,8 @@ defmodule Skitter.MixProject do
     [
       source_ref: "develop",
       logo: "assets/logo-light_docs.png",
+      extras: ["README.md"],
+      main: "readme",
       groups_for_modules: [
         "Domain Specific Languages": [
           Skitter.Component.DSL,
