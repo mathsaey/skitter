@@ -29,11 +29,6 @@ Information on using the earlier, effect based, version on Skitter can be found
 
 # Getting started
 
-To get started with Skitter, you can build a release from the source, build a
-docker image or pull an image from dockerhub.
-
-## Building the release
-
 To build Skitter, you need to have a recent version of
 [elixir](https://elixir-lang.org/).
 Currently, Skitter requires elixir version 1.11 or above.
@@ -60,45 +55,3 @@ dependencies on your system after the release has been built.
 After building the release, navigate to its directory and use the `skitter`
 script to start and manage skitter.
 Run `./skitter help` to get started.
-
-## Building with docker
-
-If you do not wish to install any dependencies you can use the provided
-Dockerfile to build a docker image:
-
-```
-$ git clone https://github.com/mathsaey/skitter.git
-$ cd skitter
-$ docker build . -t skitter
-```
-
-Now you can directly invoke the skitter wrapper script as follows:
-
-```
-$ docker run -it skitter
-```
-
-Any arguments passed after `skitter` will be passed to the wrapper script:
-
-```
-$ docker run -it skitter help
-```
-
-will show the built-in help.
-
-## Using the dockerhub image
-
-It is also possible to simply pull the skitter image from dockerhub:
-
-```
-$ docker run -it mathsaey/skitter
-```
-
-as with the self-built docker image, any arguments passed after
-`mathsaey/skitter` will be passed to the wrapper script:
-
-```
-$ docker run -it mathsaey/skitter help
-```
-
-will show the built-in help.
