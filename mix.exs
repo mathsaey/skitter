@@ -126,7 +126,7 @@ defmodule Skitter.MixProject do
 
   defp docs do
     [
-      main: "README",
+      main: "readme",
       source_ref: "develop",
       logo: "assets/logo-light_docs.png",
       extras: doc_extras(),

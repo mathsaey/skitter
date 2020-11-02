@@ -14,11 +14,39 @@ steps:
       - mix deps.compile
       - mix docs
 
-trigger:
-  branch:
-    develop
-  event:
-    push
+  - name: publish-latest
+    image: drillster/drone-rsync
+    settings:
+      hosts: [ soft.vub.ac.be ]
+      user:
+        from_secret: docs_ssh_user
+      key:
+        from_secret: docs_ssh_key
+      source: doc/
+      target: ~/public_html/skitter/docs/latest
+      recursive: true
+      delete: true
+    when:
+      event:
+        - push
+      branch:
+        - develop
+
+  - name: publish-tagged
+    image: drillster/drone-rsync
+    settings:
+      hosts: [ soft.vub.ac.be ]
+      user:
+        from_secret: docs_ssh_user
+      key:
+        from_secret: docs_ssh_key
+      source: doc/
+      target: ~/public_html/skitter/docs/$DRONE_TAG
+      recursive: true
+    when:
+      event:
+        - tag
+
 ---
 kind: pipeline
 type: docker
@@ -36,6 +64,7 @@ steps:
       - mix deps.compile
       - epmd -daemon
       - mix test
+
 ---
 kind: pipeline
 type: docker
