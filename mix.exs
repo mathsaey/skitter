@@ -42,7 +42,7 @@ defmodule Skitter.MixProject do
     {name,
      [
        applications: for(app <- applications, do: {app, :permanent}),
-       runtime_config_path: "config/#{name}.exs",
+       runtime_config_path: "rel/#{name}_config.exs",
        include_executables_for: [:unix],
        steps: steps()
      ]}
