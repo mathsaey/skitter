@@ -43,11 +43,14 @@ defmodule Skitter.Remote.Dispatcher do
   end
 
   @doc """
-  Ask the relevant `GenServer` on `remote` to accept `self` as a remote.
+  Send `message` to the handler for `mode` on `remote`.
+
+  If no handler is found, `{:error, :unknown_mode}` is returned. Otherwise the handler will reply
+  to the dispatched message.
   """
-  @spec dispatch(node(), atom()) :: {:ok, pid()} | {:error, atom()}
-  def dispatch(remote, mode) do
-    GenServer.call({__MODULE__, remote}, {:dispatch, mode})
+  @spec dispatch(node(), atom(), any()) :: :ok | {:error, atom()}
+  def dispatch(node, mode, msg) do
+    GenServer.call({__MODULE__, node}, {:dispatch, mode, msg})
   end
 
   # ------ #
@@ -66,13 +69,13 @@ defmodule Skitter.Remote.Dispatcher do
     {:noreply, %{s | default: server}}
   end
 
-  def handle_call({:dispatch, mode}, from, s = %__MODULE__{map: map, default: default}) do
+  def handle_call({:dispatch, mode, msg}, from, s = %__MODULE__{map: map, default: default}) do
     case Map.get(map, mode, default) do
       nil ->
-        {:reply, {:error, :unknown_mode}, s}
+        {:reply, {:error, :unknown_mode, map, mode}, s}
 
       name ->
-        GenServer.cast(name, {:accept, from, mode})
+        GenServer.cast(name, {:dispatch, msg, from, mode})
         {:noreply, s}
     end
   end

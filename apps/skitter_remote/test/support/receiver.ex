@@ -29,8 +29,8 @@ defmodule Skitter.Remote.Test.Receiver do
     {:ok, nil}
   end
 
-  def handle_cast({:accept, from, _}, nil) do
-    GenServer.reply(from, {:ok, self()})
+  def handle_cast({:dispatch, _, from, _}, nil) do
+    GenServer.reply(from, :ok)
     {:noreply, nil}
   end
 end

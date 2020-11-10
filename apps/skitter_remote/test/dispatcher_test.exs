@@ -11,12 +11,12 @@ defmodule Skitter.Remote.DispatcherTest do
 
   @tag distributed: [remote: [{Receiver, :start_link, [:test_mode]}]]
   test "dispatches based on mode", %{remote: remote} do
-    assert {:ok, _} = Dispatcher.dispatch(remote, :test_mode)
+    assert :ok = Dispatcher.dispatch(remote, :test_mode, :some_message)
   end
 
   @tag distributed: [remote: [{Receiver, :start_link, [:default]}]]
   test "default dispatch", %{remote: remote} do
-    assert {:ok, _} = Dispatcher.dispatch(remote, :test_mode)
-    assert {:ok, _} = Dispatcher.dispatch(remote, :other_mode)
+    assert :ok = Dispatcher.dispatch(remote, :test_mode, :some_message)
+    assert :ok = Dispatcher.dispatch(remote, :other_mode, :some_message)
   end
 end
