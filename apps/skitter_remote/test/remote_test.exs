@@ -65,4 +65,28 @@ defmodule Skitter.RemoteTest do
       assert Remote.connect(remote) == {:error, :rejected}
     end
   end
+
+  describe "remote code execution" do
+    @tag distributed: [remote: []]
+    test "on a single node using mfa", %{remote: remote} do
+      assert Remote.on(remote, Node, :self, []) == remote
+    end
+
+    @tag distributed: [remote: []]
+    test "on a single node using func", %{remote: remote} do
+      assert Remote.on(remote, &Node.self/0) == remote
+    end
+
+    @tag distributed: [remote1: [], remote2: [], remote3: []]
+    test "on many nodes using mfa", %{remote1: remote1, remote2: remote2, remote3: remote3} do
+      res = Remote.on_many([remote1, remote2, remote3], Node, :self, [])
+      assert res == [remote1, remote2, remote3]
+    end
+
+    @tag distributed: [remote1: [], remote2: [], remote3: []]
+    test "on many nodes using funcs", %{remote1: remote1, remote2: remote2, remote3: remote3} do
+      res = Remote.on_many([remote1, remote2, remote3], &Node.self/0)
+      assert res == [remote1, remote2, remote3]
+    end
+  end
 end

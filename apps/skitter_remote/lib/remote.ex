@@ -90,4 +90,36 @@ defmodule Skitter.Remote do
   defp verify_mode(_remote, nil), do: :ok
   defp verify_mode(expected, expected), do: :ok
   defp verify_mode(_, _), do: {:error, :mode_mismatch}
+
+  @doc """
+  Execute `mod.func(args)` on every specified remote runtime, obtain results in a list.
+  """
+  @spec on_many(node(), module(), atom(), [any()]) :: [any()]
+  def on_many(remotes, mod, func, args) do
+    remotes
+    |> Enum.map(&Task.Supervisor.async({Skitter.Remote.TaskSupervisor, &1}, mod, func, args))
+    |> Enum.map(&Task.await(&1))
+  end
+
+  @doc """
+  Execute `fun` on every specified remote runtime, obtain results in a list.
+  """
+  @spec on_many(node(), (() -> any())) :: [any()]
+  def on_many(remotes, fun) do
+    remotes
+    |> Enum.map(&Task.Supervisor.async({Skitter.Remote.TaskSupervisor, &1}, fun))
+    |> Enum.map(&Task.await(&1))
+  end
+
+  @doc """
+  Execute `mod.func(args)` on `remote`, block until a result is available.
+  """
+  @spec on(node(), module(), atom(), [any()]) :: any()
+  def on(remote, mod, func, args), do: hd(on_many([remote], mod, func, args))
+
+  @doc """
+  Execute `fun` on `remote`, block until a result is available.
+  """
+  @spec on(node(), (() -> any())) :: any()
+  def on(remote, fun), do: hd(on_many([remote], fun))
 end
