@@ -9,28 +9,27 @@ defmodule Skitter.Master.Application do
   use Application
   require Logger
 
-  alias Skitter.Master
+  alias Skitter.Remote
+  alias Skitter.Master.{Config, WorkerConnection}
 
   def start(:normal, []) do
+    setup_remote()
+
     children = [
-      Master.Workers,
-      Master.ManagerSupervisor
+      Skitter.Master.ManagerSupervisor,
+      Skitter.Master.WorkerConnection.Supervisor
     ]
 
     {:ok, supervisor_pid} = Supervisor.start_link(children, strategy: :rest_for_one)
 
-    :ok = try_connect()
-    {:ok, supervisor_pid}
+    case WorkerConnection.connect(Config.get(:skitter_master, [])) do
+      :ok -> {:ok, supervisor_pid}
+      {:error, reasons} -> {:error, reasons}
+    end
   end
 
-  defp try_connect do
-    case Master.Workers.connect(Master.get_env(:workers, [])) do
-      :ok ->
-        :ok
-
-      {:error, reasons} ->
-        Logger.error("Could not connect to workers: #{inspect(reasons)}")
-        System.stop(1)
-    end
+  defp setup_remote() do
+    Remote.set_local_mode(:master)
+    Remote.setup_handlers(worker: WorkerConnection.Handler)
   end
 end

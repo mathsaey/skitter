@@ -5,8 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Master.Manager do
-  @moduledoc """
-  """
+  @moduledoc false
   use GenServer
 
   alias Skitter.Master.{ManagerSupervisor, Workers}

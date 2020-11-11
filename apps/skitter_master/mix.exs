@@ -21,9 +21,7 @@ defmodule Skitter.Master.MixProject do
 
   defp deps do
     [
-      # TODO: Probably needs DSL/utils, only in dev
-      {:skitter_core, in_umbrella: true},
-      {:skitter_runtime, in_umbrella: true}
+      {:skitter_remote, in_umbrella: true}
     ]
   end
 end
