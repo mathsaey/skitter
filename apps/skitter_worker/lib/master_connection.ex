@@ -28,7 +28,11 @@ defmodule Skitter.Worker.MasterConnection do
   end
 
   @impl true
-  def accept_connection(remote, :master, nil), do: {:ok, remote}
+  def accept_connection(remote, :master, nil) do
+    Logger.info("Connected to master: `#{remote}`")
+    {:ok, remote}
+  end
+
   def accept_connection(remote, :master, remote), do: {:error, :already_connected, remote}
   def accept_connection(_remote, :master, other), do: {:error, :has_master, other}
 

@@ -21,6 +21,7 @@ defmodule Skitter.Worker.MixProject do
 
   defp deps do
     [
+      {:skitter_runtime, in_umbrella: true},
       {:skitter_remote, in_umbrella: true}
     ]
   end

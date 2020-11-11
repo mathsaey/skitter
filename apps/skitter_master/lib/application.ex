@@ -13,23 +13,27 @@ defmodule Skitter.Master.Application do
   alias Skitter.Master.{Config, WorkerConnection}
 
   def start(:normal, []) do
-    setup_remote()
-
     children = [
       Skitter.Master.ManagerSupervisor,
       Skitter.Master.WorkerConnection.Supervisor
     ]
 
-    {:ok, supervisor_pid} = Supervisor.start_link(children, strategy: :rest_for_one)
-
-    case WorkerConnection.connect(Config.get(:skitter_master, [])) do
-      :ok -> {:ok, supervisor_pid}
-      {:error, reasons} -> {:error, reasons}
-    end
+    {:ok, sup} = Supervisor.start_link(children, strategy: :rest_for_one)
+    setup_remote()
+    {:ok, sup}
   end
 
   defp setup_remote() do
     Remote.set_local_mode(:master)
     Remote.setup_handlers(worker: WorkerConnection.Handler)
+
+    case WorkerConnection.connect(Config.get(:workers, [])) do
+      {:error, reasons} ->
+        Logger.error("Could not connect with some workers: #{inspect(reasons)}")
+        System.stop(1)
+
+      :ok ->
+        :ok
+    end
   end
 end
