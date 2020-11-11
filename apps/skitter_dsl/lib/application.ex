@@ -16,7 +16,7 @@ defmodule Skitter.DSL.Application do
       DSL.Registry
     ]
 
-    opts = [strategy: :one_for_one, name: Skitter.Remote.Supervisor]
+    opts = [strategy: :one_for_one, name: Skitter.DSL.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end
