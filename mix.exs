@@ -142,12 +142,13 @@ defmodule Skitter.MixProject do
           Skitter.Strategy,
           Skitter.StrategyError
         ],
-        dsl: ~r/Skitter.DSL.*/,
-        runtime: ~r/Skitter.(Runtime|Worker|Master).*/,
-        remote: ~r/Skitter.Remote*/,
         utilities: [
           Skitter.Dot
-        ]
+        ],
+        dsl: ~r/Skitter.DSL*/,
+        runtime: ~r/Skitter.Runtime*/,
+        remote: ~r/Skitter.Remote*/,
+        applications: ~r/Skitter.(Worker|Master).*/
       ],
       groups_for_functions: [
         Hooks: &(&1[:section] == :hook)
