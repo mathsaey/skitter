@@ -82,31 +82,31 @@ steps:
       - mix test
 
 ---
-kind: pipeline
-type: docker
-name: publish-docker-image
+# kind: pipeline
+# type: docker
+# name: publish-docker-image
 
-steps:
-- name: publish
-  image: plugins/docker
-  settings:
-    repo: mathsaey/skitter
-    auto_tag: true
-    username:
-        from_secret: dockerhub_user
-    password:
-        from_secret: dockerhub_password
+# steps:
+# - name: publish
+#   image: plugins/docker
+#   settings:
+#     repo: mathsaey/skitter
+#     auto_tag: true
+#     username:
+#         from_secret: dockerhub_user
+#     password:
+#         from_secret: dockerhub_password
 
-trigger:
-  status:
-  - success
+# trigger:
+#   status:
+#   - success
 
-depends_on:
-- build
-- test
-- docs
+# depends_on:
+# - build
+# - test
+# - docs
 
----
+# ---
 kind: pipeline
 type: docker
 name: notify-failure
