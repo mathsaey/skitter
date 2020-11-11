@@ -8,14 +8,19 @@ defmodule Skitter.Worker.Application do
   @moduledoc false
   use Application
 
-  alias Skitter.Worker
-  alias Skitter.Worker.Master
+  alias Skitter.Remote
 
   def start(:normal, []) do
-    children = [
-      {Master, Worker.get_env(:master)}
-    ]
+    setup_remote()
 
+    children = []
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__.Supervisor)
+  end
+
+  defp setup_remote() do
+    Remote.set_local_mode(:worker)
+    Remote.setup_handlers(master: Skitter.Worker.MasterConnection)
+
+    Skitter.Worker.MasterConnection.maybe_connect()
   end
 end
