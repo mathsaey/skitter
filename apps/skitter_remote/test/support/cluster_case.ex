@@ -45,12 +45,12 @@ defmodule Skitter.Remote.Test.ClusterCase do
     quote do
       alias Skitter.Remote.Test.Cluster
 
+      # Ensure state is not carried over between tests
       setup do
-        on_exit(fn ->
-          Application.stop(:skitter_remote)
-          Application.start(:skitter_remote)
-          unquote(restart)
-        end)
+        Application.stop(:skitter_remote)
+        Application.start(:skitter_remote)
+        unquote(restart)
+        :ok
       end
 
       setup context do
