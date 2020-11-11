@@ -53,7 +53,7 @@ defmodule Skitter.Remote.HandlerServer do
     {:noreply, {module, state}}
   end
 
-  def handle_cast({:dispatch, {:remove, remote}, from, mode}, {module, state}) do
+  def handle_cast({:dispatch, {:remove, remote}, from, _mode}, {module, state}) do
     state = do_remove(remote, module, state)
     GenServer.reply(from, :ok)
     {:noreply, {module, state}}
