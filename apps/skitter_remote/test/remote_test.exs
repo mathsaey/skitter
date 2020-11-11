@@ -8,17 +8,27 @@ defmodule Skitter.RemoteTest do
   use Skitter.Remote.Test.ClusterCase, async: false
   alias Skitter.Remote
 
+  setup do
+    Remote.set_local_mode(:test_mode)
+  end
+
   @tag distributed: [
          remote: [
-           {Remote.Beacon, :override_mode, [:test_mode]},
-           {Remote.Test.Receiver, :start_link, [:default]}
+           {Remote, :set_local_mode, [:test_mode]},
+           {Remote, :setup_handlers, [[test_mode: Skitter.Remote.Test.Handler]]}
          ]
        ]
   test "connect", %{remote: remote} do
-    assert {:ok, :test_mode, _} = Remote.connect(remote)
+    Remote.setup_handlers(test_mode: Skitter.Remote.Test.Handler)
+    assert {:ok, :test_mode} = Remote.connect(remote)
   end
 
   describe "errors" do
+    test "when node is not initialized" do
+      Remote.set_local_mode(nil)
+      assert Remote.connect(:"test@127.0.0.1") == {:error, :uninitialized_local}
+    end
+
     test "when node is not distributed" do
       assert Remote.connect(:"test@127.0.0.1") == {:error, :not_distributed}
     end
@@ -35,12 +45,24 @@ defmodule Skitter.RemoteTest do
 
     @tag distributed: [remote: []]
     test "when the remote node does not have a mode", %{remote: remote} do
-      assert Remote.connect(remote) == {:error, :nomode}
+      assert Remote.connect(remote) == {:error, :uninitialized_remote}
     end
 
-    @tag distributed: [remote: [{Remote.Beacon, :override_mode, [:test_mode]}]]
+    @tag distributed: [remote: [{Remote, :set_local_mode, [:wrong_mode]}]]
+    test "when the remote node does not have the correct mode", %{remote: remote} do
+      assert Remote.connect(remote, :some_mode) == {:error, :mode_mismatch}
+    end
+
+    @tag distributed: [remote: [{Remote, :set_local_mode, [:test_mode]}]]
     test "when the remote node does not have handler for the local mode", %{remote: remote} do
       assert Remote.connect(remote) == {:error, :unknown_mode}
+    end
+
+    @tag distributed: [remote: [{Remote.Test.Handler, :setup, [:remote_mode]}]]
+    test "when the remote handler rejects the connection attempt", %{remote: remote} do
+      Remote.set_local_mode(:reject)
+      Remote.setup_handlers(remote_mode: Skitter.Remote.Test.Handler)
+      assert Remote.connect(remote) == {:error, :rejected}
     end
   end
 end

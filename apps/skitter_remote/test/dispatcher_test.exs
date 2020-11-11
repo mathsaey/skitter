@@ -19,4 +19,15 @@ defmodule Skitter.Remote.DispatcherTest do
     assert :ok = Dispatcher.dispatch(remote, :test_mode, :some_message)
     assert :ok = Dispatcher.dispatch(remote, :other_mode, :some_message)
   end
+
+  test "mode based binding" do
+    Dispatcher.bind(:test_mode)
+    assert Dispatcher.get_handler(:test_mode) == self()
+  end
+
+  test "default binding" do
+    Dispatcher.default_bind()
+    assert Dispatcher.get_handler(:test_mode) == self()
+    assert Dispatcher.get_handler(:other_mode) == self()
+  end
 end

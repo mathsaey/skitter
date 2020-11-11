@@ -6,11 +6,11 @@
 
 defmodule Skitter.Remote.Test.Receiver do
   @moduledoc """
-  A module which can accept requests from a dispatcher.
+  Support for testing the dispatcher module.
 
-  Will register itself with the local `Skitter.Remote.Dispatcher` on start. The argument passed to
-  `start_link/1` determines the mode. When `:default` is used, the receiver will register itself
-  as the fallback case.
+  This module can accept requests from a dispatcher. It registers itself with the local
+  `Skitter.Remote.Dispatcher` on start. The argument passed to `start_link/1` determines the mode.
+  When `:default` is used, the receiver will register itself as the fallback case.
   """
   use GenServer
   alias Skitter.Remote.Dispatcher

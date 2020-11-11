@@ -10,9 +10,7 @@ defmodule Skitter.Remote.Beacon do
   use GenServer
   require Logger
 
-  @mode Application.compile_env(:skitter_remote, :mode)
-
-  defstruct mode: @mode, version: nil
+  defstruct [:mode, :version]
 
   @doc """
   Start the beacon for the current runtime.
@@ -23,6 +21,22 @@ defmodule Skitter.Remote.Beacon do
   @spec start_link(atom()) :: GenServer.on_start()
   def start_link(_) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  end
+
+  @doc """
+  Set the mode of the current runtime.
+  """
+  @spec set_mode(atom()) :: :ok
+  def set_mode(mode) do
+    GenServer.call(__MODULE__, {:mode, mode})
+  end
+
+  @spec verify_local() :: {:ok, atom()} | {:error, atom()}
+  def verify_local() do
+    case GenServer.call(__MODULE__, :probe).mode do
+      nil -> {:error, :uninitialized_local}
+      mode -> {:ok, mode}
+    end
   end
 
   @doc """
@@ -43,7 +57,7 @@ defmodule Skitter.Remote.Beacon do
   runtimes.
 
   Finally, if both runtimes are compatible, the _mode_ of the remote runtime is checked. If it is
-  not set, `{:error, :nomode}` is returned. If a mode is set, `{:ok, mode}` is returned.
+  not set, `{:error, :unitialized}` is returned. If a mode is set, `{:ok, mode}` is returned.
   """
   @spec verify_remote(node()) :: {:ok, atom()} | {:error, atom()}
   def verify_remote(node) when is_atom(node) do
@@ -77,18 +91,9 @@ defmodule Skitter.Remote.Beacon do
 
     case GenServer.call(pid, :probe) do
       %__MODULE__{version: remote_vsn} when remote_vsn != local_vsn -> {:error, :incompatible}
-      %__MODULE__{mode: nil} -> {:error, :nomode}
+      %__MODULE__{mode: nil} -> {:error, :uninitialized_remote}
       %__MODULE__{mode: mode} -> {:ok, mode}
     end
-  end
-
-  @doc """
-  Change the beacon mode.
-
-  This function should only be used for testing purposes.
-  """
-  def override_mode(mode) do
-    GenServer.call(__MODULE__, {:override, mode})
   end
 
   # ------ #
@@ -105,7 +110,11 @@ defmodule Skitter.Remote.Beacon do
     {:reply, state, state}
   end
 
-  def handle_call({:override, mode}, _, state) do
+  def handle_call({:mode, mode}, _, state = %__MODULE__{mode: prev}) do
+    unless is_nil(prev) do
+      Logger.warning("Overriding remote mode: `#{prev}` -> `#{mode}`")
+    end
+
     {:reply, :ok, %{state | mode: mode}}
   end
 

@@ -33,9 +33,25 @@ defmodule Skitter.Remote.Test.ClusterCase do
   """
   use ExUnit.CaseTemplate
 
-  using _ do
+  using opts do
+    restart =
+      if app = opts[:restart] do
+        quote do
+          Application.stop(unquote(app))
+          Application.start(unquote(app))
+        end
+      end
+
     quote do
       alias Skitter.Remote.Test.Cluster
+
+      setup do
+        on_exit(fn ->
+          Application.stop(:skitter_remote)
+          Application.start(:skitter_remote)
+          unquote(restart)
+        end)
+      end
 
       setup context do
         if args = context[:distributed] do

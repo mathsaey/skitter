@@ -43,6 +43,15 @@ defmodule Skitter.Remote.Dispatcher do
   end
 
   @doc """
+  Return the handler for a given mode.
+
+  Mainly useful for testing purposes.
+  """
+  def get_handler(mode) do
+    GenServer.call(__MODULE__, {:handler, mode})
+  end
+
+  @doc """
   Send `message` to the handler for `mode` on `remote`.
 
   If no handler is found, `{:error, :unknown_mode}` is returned. Otherwise the handler will reply
@@ -57,10 +66,12 @@ defmodule Skitter.Remote.Dispatcher do
   # Server #
   # ------ #
 
+  @impl true
   def init(_) do
     {:ok, %__MODULE__{}}
   end
 
+  @impl true
   def handle_cast({:add, mode, server}, s = %__MODULE__{map: map}) do
     {:noreply, %{s | map: Map.put(map, mode, server)}}
   end
@@ -69,13 +80,18 @@ defmodule Skitter.Remote.Dispatcher do
     {:noreply, %{s | default: server}}
   end
 
+  @impl true
+  def handle_call({:handler, mode}, _, s = %__MODULE__{map: map, default: default}) do
+    {:reply, Map.get(map, mode, default), s}
+  end
+
   def handle_call({:dispatch, mode, msg}, from, s = %__MODULE__{map: map, default: default}) do
     case Map.get(map, mode, default) do
       nil ->
-        {:reply, {:error, :unknown_mode, map, mode}, s}
+        {:reply, {:error, :unknown_mode}, s}
 
-      name ->
-        GenServer.cast(name, {:dispatch, msg, from, mode})
+      pid ->
+        GenServer.cast(pid, {:dispatch, msg, from, mode})
         {:noreply, s}
     end
   end

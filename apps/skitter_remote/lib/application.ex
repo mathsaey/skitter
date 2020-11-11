@@ -8,7 +8,8 @@ defmodule Skitter.Remote.Application do
   def start(_type, _args) do
     children = [
       Remote.Beacon,
-      Remote.Dispatcher
+      Remote.Dispatcher,
+      Remote.HandlerSupervisor
     ]
 
     opts = [strategy: :one_for_one, name: Skitter.Remote.Supervisor]
