@@ -15,3 +15,29 @@ def deps do
 end
 ```
 
+In `Application.start/2`, setup the local mode and possible handlers:
+
+```elixir
+defmodule Skitter.Worker.Application do
+  @moduledoc false
+
+  use Application
+  alias Skitter.Remote
+
+  def start(:normal, []) do
+    …
+    setup_remote()
+    …
+  end
+
+  defp setup_remote() do
+    Remote.set_local_mode(<your mode>)
+    Remote.setup_handlers(
+      <other mode>: <your handler>,
+      default: <your default handler>
+    )
+  end
+end
+```
+
+See `Skitter.Remote` for more details about modes and handlers.
