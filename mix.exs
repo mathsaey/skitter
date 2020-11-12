@@ -42,9 +42,9 @@ defmodule Skitter.MixProject do
     {name,
      [
        applications: for(app <- applications, do: {app, :permanent}),
-       runtime_config_path: "rel/#{name}_config.exs",
+       runtime_config_path: "config/#{name}.release.exs",
        include_executables_for: [:unix],
-       steps: steps()
+       steps: release_steps()
      ]}
   end
 
@@ -84,7 +84,7 @@ defmodule Skitter.MixProject do
   defp preferred_env, do: [build: :prod, release: :prod]
 
   # Ensure cookie and deploy script are created along with release files
-  defp steps, do: [&put_cookie/1, :assemble, &copy_deploy_script/1]
+  defp release_steps, do: [&put_cookie/1, :assemble, &copy_deploy_script/1]
 
   defp copy_deploy_script(rel = %Mix.Release{}) do
     target =

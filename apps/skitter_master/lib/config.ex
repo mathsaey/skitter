@@ -6,8 +6,5 @@
 
 defmodule Skitter.Master.Config do
   @moduledoc false
-
-  def get(key, default \\ nil) do
-    Application.get_env(:skitter_master, key, default)
-  end
+  use Skitter.Application.Config
 end

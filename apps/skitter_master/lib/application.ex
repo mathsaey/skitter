@@ -6,13 +6,17 @@
 
 defmodule Skitter.Master.Application do
   @moduledoc false
-  use Application
   require Logger
+
+  use Application
+  use Skitter.Application
 
   alias Skitter.Remote
   alias Skitter.Master.{Config, WorkerConnection}
 
   def start(:normal, []) do
+    noninteractive_skitter_app()
+
     children = [
       Skitter.Master.ManagerSupervisor,
       Skitter.Master.WorkerConnection.Supervisor

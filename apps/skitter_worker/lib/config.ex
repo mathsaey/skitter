@@ -6,8 +6,5 @@
 
 defmodule Skitter.Worker.Config do
   @moduledoc false
-
-  def get(key, default \\ nil) do
-    Application.get_env(:skitter_worker, key, default)
-  end
+  use Skitter.Application.Config
 end

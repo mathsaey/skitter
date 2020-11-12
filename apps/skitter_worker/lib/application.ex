@@ -6,11 +6,15 @@
 
 defmodule Skitter.Worker.Application do
   @moduledoc false
+  require Logger
+
   use Application
+  use Skitter.Application
 
   alias Skitter.Remote
 
   def start(:normal, []) do
+    noninteractive_skitter_app()
     setup_remote()
 
     children = []
