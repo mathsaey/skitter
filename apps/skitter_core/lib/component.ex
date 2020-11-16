@@ -84,8 +84,7 @@ defmodule Skitter.Component do
       iex> call(%Component{callbacks: %{f: cb}}, :f, %{}, [])
       %Callback.Result{state: nil, publish: nil, result: 10}
   """
-  @spec call(t(), callback_name(), Callback.state(), [any()]) ::
-          Callback.result()
+  @spec call(t(), callback_name(), Callback.state(), [any()]) :: Callback.Result.t()
   def call(component = %Component{}, callback_name, state, arguments) do
     Callback.call(component[callback_name], state, arguments)
   end
@@ -130,61 +129,33 @@ defmodule Skitter.Component do
   end
 
   @doc """
-  Verify if `component` defines a callback with `name` and correct attributes.
+  Verify if `component` defines a callback with `name` the given properties.
 
-  The attributes are defined in `opts`, which may contain the expected arity, state_capability and
-  publish_capability of the callback.
-
-  - `:arity` is checked with `Skitter.Callback.has_arity?/2` If no `arity` option is given, any
-  arity is accepted.
-  - `:state_capability` is checked with `Callback.state_permission?/2`. If no `state_capability`
-  option is given, it defaults to `:none`.
-  - `:publish_capability` is checked with `Callback.publish_permission?/2`. If no
-  `publish_capability` option is given, it defaults to `false`.
+  The properties are verified using `Skitter.Callback.verify/2`.
 
   ## Examples
 
-      iex> cb1 = %Callback{arity: 1, state_capability: :none, publish_capability: false}
+      iex> cb1 = %Callback{arity: 1, read?: false, write?: false, publish?: false}
       iex> require_callback(%Component{callbacks: %{foo: cb1}}, :foo)
       :ok
       iex> require_callback(%Component{callbacks: %{}}, :foo)
       {:error, :undefined}
       iex> require_callback(%Component{callbacks: %{foo: cb1}}, :foo, arity: 2)
       {:error, :arity, 2, 1}
-      iex> cb2 = %Callback{arity: 1, state_capability: :read, publish_capability: true}
+      iex> cb2 = %{cb1 | read?: true, write?: true, publish?: true}
       iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo)
-      {:error, :publish_capability, false, true}
-      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo, publish_capability: true)
-      {:error, :state_capability, :none, :read}
-      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo, publish_capability: true, state_capability: :readwrite)
+      {:error, :write?, false, true}
+      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo, write?: true)
+      {:error, :publish?, false, true}
+      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo, publish?: true, write?: true)
+      :ok
+      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo, publish?: true, write?: true, read?: true)
       :ok
   """
-  @spec require_callback(t(), callback_name(),
-          arity: non_neg_integer(),
-          state_capability: Callback.state_capability(),
-          publish_capability: Callback.publish_capability()
-        ) ::
-          :ok
-          | {:error, :undefined}
-          | {:error, :arity, non_neg_integer(), non_neg_integer()}
-          | {:error, :publish_capability, boolean(), boolean()}
-          | {:error, :state_capability, Callback.state_capability(), Callback.state_capability()}
+  @spec require_callback(t(), callback_name(), Callback.property_list()) ::
+          {:error, :undefined} | Callback.verify_returns()
   def require_callback(%Component{callbacks: map}, name, opts \\ []) do
-    arity = Keyword.get(opts, :arity, nil)
-    state = Keyword.get(opts, :state_capability, :none)
-    publish = Keyword.get(opts, :publish_capability, false)
-
-    with {_, cb = %Callback{}} <- {:defined, map[name]},
-         {_, true} <- {:arity, if(arity, do: arity == cb.arity, else: true)},
-         {_, true} <- {:publish, Callback.publish_permission?(cb, publish)},
-         {_, true} <- {:state, Callback.state_permission?(cb, state)} do
-      :ok
-    else
-      {:defined, _} -> {:error, :undefined}
-      {:arity, false} -> {:error, :arity, arity, map[name].arity}
-      {:state, false} -> {:error, :state_capability, state, map[name].state_capability}
-      {:publish, false} -> {:error, :publish_capability, publish, map[name].publish_capability}
-    end
+    if cb = map[name], do: Callback.verify(cb, opts), else: {:error, :undefined}
   end
 
   @doc """
@@ -196,34 +167,28 @@ defmodule Skitter.Component do
 
   Please refer to the documentation of `require_callback/3` for more information.
 
-  Please read the documentation of `require_callback/3` to obtain information about `opts`.
-
   ## Examples
 
-      iex> cb = %Callback{arity: 1, state_capability: :none, publish_capability: false}
+      iex> cb = %Callback{arity: 1, read?: false, write?: false, publish?: false}
       iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo)
-      %Component{callbacks: %{foo: %Callback{arity: 1, publish_capability: false, state_capability: :none}}}
+      %Component{callbacks: %{foo: %Callback{arity: 1, publish?: false, read?: false, write?: false}}}
 
       iex> require_callback!(%Component{callbacks: %{}}, :foo)
       ** (Skitter.StrategyError) Missing implementation of required callback: `foo`
 
-      iex> cb = %Callback{arity: 1, state_capability: :none, publish_capability: false}
+      iex> cb = %Callback{arity: 1, read?: false, write?: false, publish?: false}
       iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo, arity: 2)
       ** (Skitter.StrategyError) Incorrect arity for callback `foo`, expected 2, got 1
 
-      iex> cb = %Callback{arity: 1, state_capability: :read, publish_capability: true}
+      iex> cb = %Callback{arity: 1, read?: true, write?: false, publish?: true}
       iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo)
-      ** (Skitter.StrategyError) Incorrect publish_capability for callback `foo`, expected false, got true
+      ** (Skitter.StrategyError) Incorrect publish? for callback `foo`, expected false, got true
 
-      iex> cb = %Callback{arity: 1, state_capability: :readwrite, publish_capability: false}
-      iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo, state_capability: :read)
-      ** (Skitter.StrategyError) Incorrect state_capability for callback `foo`, expected read, got readwrite
+      iex> cb = %Callback{arity: 1, read?: true, write?: true, publish?: false}
+      iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo, read?: true, write?: false)
+      ** (Skitter.StrategyError) Incorrect write? for callback `foo`, expected false, got true
   """
-  @spec require_callback!(t(), callback_name(),
-          arity: non_neg_integer(),
-          state_capability: Callback.state_capability(),
-          publish_capability: Callback.publish_capability()
-        ) :: t() | no_return()
+  @spec require_callback!(t(), callback_name(), Callback.property_list()) :: t() | no_return()
   def require_callback!(component, name, opts \\ []) do
     case require_callback(component, name, opts) do
       :ok ->

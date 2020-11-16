@@ -163,10 +163,12 @@ defmodule Skitter.DSL.Callback do
       ...>    total / count ~> current
       ...>    :ok
       ...> end
-      iex> c.publish_capability
+      iex> c.publish?
       true
-      iex> c.state_capability
-      :readwrite
+      iex> c.read?
+      true
+      iex> c.write?
+      true
       iex> Callback.call(c, %{total: 5, count: 1}, [5])
       %Result{state: %{count: 2, total: 10}, publish: [current: 5.0], result: :ok}
       iex> Callback.call(c, %{total: 10, count: 2}, [:latest])
@@ -176,16 +178,17 @@ defmodule Skitter.DSL.Callback do
   defmacro defcallback(fields, out_ports, do: body) do
     try do
       body = transform_operators(fields, out_ports, body, __CALLER__)
-      state = state_access(used?(body, :read_state), used?(body, :update_state))
-      publish = used?(body, :publish)
+      read? = used?(body, :read_state)
+      write? = used?(body, :update_state)
+      publish? = used?(body, :publish)
 
       clauses = Enum.map(body, fn {:->, _, [args, body]} -> {args, body} end)
       arity = read_arity(clauses, __CALLER__)
 
       bodies =
         Enum.flat_map(clauses, fn {args, body} ->
-          {body, state_return, state_arg} = make_state_body_return(body, state)
-          {body, publish_return} = make_publish_body_return(body, publish)
+          {body, state_return, state_arg} = make_state_body_return(body, read?, write?)
+          {body, publish_return} = make_publish_body_return(body, publish?)
 
           quote do
             unquote(state_arg), unquote(args) ->
@@ -208,8 +211,9 @@ defmodule Skitter.DSL.Callback do
         %unquote(Skitter.Callback){
           function: unquote(func),
           arity: unquote(arity),
-          state_capability: unquote(state),
-          publish_capability: unquote(publish)
+          read?: unquote(read?),
+          write?: unquote(write?),
+          publish?: unquote(publish?)
         }
       end
     catch
@@ -291,11 +295,6 @@ defmodule Skitter.DSL.Callback do
     n >= 1
   end
 
-  # Check state access based on read / write
-  defp state_access(_, true), do: :readwrite
-  defp state_access(true, false), do: :read
-  defp state_access(false, false), do: :none
-
   # Check the arity of the various clauses, make sure they are all the same and return it
   defp read_arity(clauses, env) do
     arities = clauses |> Enum.map(&elem(&1, 0)) |> Enum.map(&length/1)
@@ -309,17 +308,12 @@ defmodule Skitter.DSL.Callback do
   end
 
   # Create body and return value and function argument for state
-  defp make_state_body_return(body, :readwrite) do
+  defp make_state_body_return(body, _, true) do
     {Mutable.make_mutable_in_block(body, @state_var), @state_var, @state_var}
   end
 
-  defp make_state_body_return(body, :none) do
-    {body, nil, AST.internal_var(:_)}
-  end
-
-  defp make_state_body_return(body, :read) do
-    {body, nil, @state_var}
-  end
+  defp make_state_body_return(body, true, false), do: {body, nil, @state_var}
+  defp make_state_body_return(body, false, false), do: {body, nil, AST.internal_var(:_)}
 
   # Create body and return value for publishing values
   defp make_publish_body_return(body, true) do

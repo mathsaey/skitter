@@ -14,40 +14,56 @@ defmodule Skitter.DSL.CallbackTest do
   import Skitter.DSL.Callback
   doctest Skitter.DSL.Callback
 
-  test "`:none` state capability" do
+  test "no state access" do
     c =
       defcallback([:field], []) do
         () ->
           10
       end
 
-    assert c.state_capability == :none
+    refute c.read?
+    refute c.write?
     assert Callback.call(c, %{field: nil}, []).state == nil
   end
 
-  test "`:read` state capability" do
+  test "readoly state" do
     c =
       defcallback([:field], []) do
         () ->
           field
       end
 
-    assert c.state_capability == :read
+    assert c.read?
 
     res = Callback.call(c, %{field: 50}, [])
     assert res.state == nil
     assert res.result == 50
   end
 
-  test "`:readwrite` state capability" do
+  test "write only state" do
     c =
       defcallback([:field], []) do
         () ->
           field <~ 30
       end
 
-    assert c.state_capability == :readwrite
+    refute c.read?
+    assert c.write?
+
     assert Callback.call(c, %{field: nil}, []).state == %{field: 30}
+  end
+
+  test "read/write state" do
+    c =
+      defcallback([:field], []) do
+        () ->
+          field <~ (field + 10)
+      end
+
+    assert c.read?
+    assert c.write?
+
+    assert Callback.call(c, %{field: 20}, []).state == %{field: 30}
   end
 
   test "no publish" do
@@ -57,7 +73,7 @@ defmodule Skitter.DSL.CallbackTest do
           5
       end
 
-    assert c.publish_capability == false
+    refute c.publish?
     assert Callback.call(c, %{}, []).publish == nil
   end
 
@@ -68,7 +84,7 @@ defmodule Skitter.DSL.CallbackTest do
           5 ~> out
       end
 
-    assert c.publish_capability == true
+    assert c.publish?
     assert Callback.call(c, %{}, []).publish == [out: 5]
   end
 

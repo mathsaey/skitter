@@ -8,12 +8,11 @@ defmodule Skitter.Callback do
   @moduledoc """
   Representation of a component callback.
 
-  A callback is a piece of code which implements some functionality of a
-  `Skitter.Component`. Internally, a callback is defined as an anonymous
-  function and some metadata.
+  A callback is a piece of code which implements some functionality of a `Skitter.Component`.
+  Internally, a callback is defined as an anonymous function and some metadata.
 
-  This module defines the internal representation of a callback and contains
-  some utilities to manipulate callbacks.
+  This module defines the internal representation of a callback and contains some utilities to
+  manipulate callbacks.
   """
   alias Skitter.Component
 
@@ -30,9 +29,9 @@ defmodule Skitter.Callback do
     @typedoc """
     Structure of published data.
 
-    When a callback publishes data it returns the published data as a keyword
-    list. The keys in this list represent the names of output ports; the values
-    of the keys represent the data to be publish on an output port.
+    When a callback publishes data it returns the published data as a keyword list. The keys in
+    this list represent the names of output ports; the values of the keys represent the data to be
+    publish on an output port.
     """
     @type publish :: [{Port.t(), any()}]
 
@@ -45,8 +44,8 @@ defmodule Skitter.Callback do
     - The updated state, or `nil` if the state has not been changed.
     """
     @type t :: %__MODULE__{
-            state: Callback.state(),
-            publish: publish(),
+            state: Callback.state() | nil,
+            publish: publish() | nil,
             result: any()
           }
 
@@ -56,43 +55,34 @@ defmodule Skitter.Callback do
   @typedoc """
   Callback representation.
 
-  A callback is defined as a function with type `t:signature`, which implements
-  the functionality of the callback and a set of metadata which define the
-  capabilities of the callback, and store its arity.
+  A callback is defined as a function with type `t:signature`, which implements the functionality
+  of the callback and a set of metadata which define the capabilities of the callback, and store
+  its arity.
 
-  The capabilities of a callback specify how a callback accesses its state and
-  wither or not it publishes data.
+  The capabilities of a callback specify if callback can read its state, write its state and if it
+  can publish data. If no capabilities are stated when creating the callback, it is assumed the
+  callback uses all of its capabilities (i.e. `read?`, `write?` and `publish?` are all set to
+  `true`).
   """
   @type t :: %__MODULE__{
           function: signature(),
           arity: non_neg_integer(),
-          state_capability: state_capability(),
-          publish_capability: publish_capability()
+          read?: boolean(),
+          write?: boolean(),
+          publish?: boolean()
         }
 
-  defstruct [:function, :arity, :state_capability, :publish_capability]
-
-  @typedoc """
-  Result returned by the invocation of a callback.
-
-  A successful callback returns a `t:Result.t/0` struct, which contains the
-  updated state, published data and result value of the callback.
-  When not successful, the callback returns an `{:error, reason}` tuple.
-  """
-  @type result :: Result.t() | {:error, any()}
+  defstruct [:function, :arity, read?: true, write?: true, publish?: true]
 
   @typedoc """
   Structure of the component state.
 
-  When a callback is executed, it may access to the state of a component
-  instance (see `t:Callback.state_capability/0`). At the end of the
-  invocation of the callback, the (possibly updated) state is returned as
-  part of the result of
-  the callback.
+  When a callback is executed, it may access to the state of a component instance. At the end of
+  the invocation of the callback, the (possibly updated) state is returned as part of the result
+  of the callback.
 
-  This state is represented as a map, where each key corresponds to a
-  `t:Component.field/0`. The value for each key corresponds to the current
-  value of the field.
+  This state is represented as a map, where each key corresponds to a `t:Component.field/0`. The
+  value for each key corresponds to the current value of the field.
   """
   @type state :: %{optional(Component.field()) => any}
 
@@ -109,90 +99,174 @@ defmodule Skitter.Callback do
   A skitter callback accepts the state of an instance, along with the arguments to the call. The
   return value is defined by `t:result/0`.
   """
-  @type signature :: (state(), args() -> result())
+  @type signature :: (state(), args() -> Result.t())
 
   @typedoc """
-  Defines how the callback may access the state.
+  Properties that can be verified using `verify/2`.
 
-  - `:none`: The callback never accesses the state.
-  - `:read`: The callback reads the state but never modifies it.
-  - `:readwrite`: The callback may read and update the state.
+  Separated into a separate type as they are used by some other functions in `Skitter.Component`.
   """
-  @type state_capability :: :none | :read | :readwrite
+  @type property_list() :: [
+          arity: non_neg_integer(),
+          read?: boolean(),
+          write?: boolean(),
+          publish?: boolean()
+        ]
 
-  @typedoc """
-  Defines if the callback can publish data.
-
-  `true` if the callback may publish data.
-  """
-  @type publish_capability :: boolean()
+  @type verify_returns ::
+          :ok
+          | {:error, :arity, non_neg_integer(), non_neg_integer()}
+          | {:error, :read?, boolean(), boolean()}
+          | {:error, :write?, boolean(), boolean()}
+          | {:error, :publish?, boolean(), boolean()}
 
   # Utilities
   # ---------
 
   @doc """
-  Verify if `callback` matches the `allowed` state capability.
+  Verify the properties of a callback.
 
-  This function verifies `callback` does not exceed the `allowed` state capability. A callback
-  exceeds `allowed` if its `state_capability` is higher than `allowed`. To verify this, the
-  following order is used: `:none < :read < :readwrite`.
+  A callback has statically known properties, such as its arity and whether it reads or writes to
+  its state, that can be statically verified. This procedure accepts a keyword list of properties
+  and verifies if the callback does not exceed them. If the callback violates a property, an
+  `{:error, <property>, <expected value>, <actual value>}` is returned. If it does not, `:ok` is
+  returned.
+
+  The following list describes the properties and the default values that are chosen if they are
+  not explicitly specified:
+
+  - `:arity`: The expected arity of the callback. If no arity is given, any arity is accepted.
+  Verified with `verify_arity/2`.
+  - `:read?`: Whether or not the callback can read from the state while being executed. Defaults
+  to `true`. Verified with `verify_read/2`.
+  - `:write?`: Whether or not the callback can modify its state while being executed, defaults to
+  `false`. Verified with `verify_write/2`.
+  - `:publish?`: Whether or not the callback can publish data. Defaults to `false`. Verified with
+  `verify_publish/2`.
+
+  Note that properties are verified in the order shown above, thus, if a callback has the wrong
+  arity and illegally modifies its state, `{:error, :arity, <expected>, <actual>}` will be
+  returned.
 
   ## Examples
 
-      iex> state_permission?(%Callback{state_capability: :none}, :readwrite)
-      true
-      iex> state_permission?(%Callback{state_capability: :readwrite}, :none)
-      false
-      iex> state_permission?(%Callback{state_capability: :read}, :read)
-      true
-      iex> state_permission?(%Callback{state_capability: :readwrite}, :read)
-      false
+      iex> verify(%Callback{arity: 1, read?: true, write?: true, publish?: true}, arity: 1, read?: true, write?: true, publish?: true)
+      :ok
+      iex> verify(%Callback{arity: 1}, arity: 2)
+      {:error, :arity, 2, 1}
+      iex> verify(%Callback{read?: true}, read?: false)
+      {:error, :read?, false, true}
+      iex> verify(%Callback{write?: true}, write?: false)
+      {:error, :write?, false, true}
+      iex> verify(%Callback{write?: true})
+      {:error, :write?, false, true}
+      iex> verify(%Callback{write?: false, publish?: true}, publish?: false)
+      {:error, :publish?, false, true}
+      iex> verify(%Callback{write?: false, publish?: true})
+      {:error, :publish?, false, true}
   """
-  @spec state_permission?(t(), state_capability()) :: boolean()
-  def state_permission?(%__MODULE__{state_capability: capability}, allowed) do
-    state_order(capability) <= state_order(allowed)
+  @spec verify(t(), property_list()) :: verify_returns()
+  def verify(cb = %__MODULE__{}, opts \\ []) do
+    arity = Keyword.get(opts, :arity, nil)
+    read? = Keyword.get(opts, :read?, true)
+    write? = Keyword.get(opts, :write?, false)
+    publish? = Keyword.get(opts, :publish?, false)
+
+    with {_, :ok} <- {:arity, verify_arity(cb, arity)},
+         {_, :ok} <- {:read?, verify_read(cb, read?)},
+         {_, :ok} <- {:write?, verify_write(cb, write?)},
+         {_, :ok} <- {:publish?, verify_publish(cb, publish?)} do
+      :ok
+    else
+      {property, {:error, expected, actual}} -> {:error, property, expected, actual}
+    end
   end
 
-  defp state_order(:none), do: 0
-  defp state_order(:read), do: 1
-  defp state_order(:readwrite), do: 2
+  @doc """
+  Verify if `callback` matches the `allowed` read capability.
+
+  This function verifies `callback` does not attempt to read the state if it is not allowed to.
+  Returns `:ok` if the read capability is not violated,
+  `{:error, <expected value>, <actual value>}` otherwise.
+
+  ## Examples
+
+      iex> verify_read(%Callback{read?: false}, false)
+      :ok
+      iex> verify_read(%Callback{read?: true}, false)
+      {:error, false, true}
+      iex> verify_read(%Callback{read?: true}, true)
+      :ok
+      iex> verify_read(%Callback{read?: false}, true)
+      :ok
+  """
+  @spec verify_read(t(), boolean()) :: :ok | {:error, boolean(), boolean()}
+  def verify_read(%__MODULE__{read?: _}, true), do: :ok
+  def verify_read(%__MODULE__{read?: false}, false), do: :ok
+  def verify_read(%__MODULE__{read?: true}, false), do: {:error, false, true}
+
+  @doc """
+  Verify if `callback` matches the `allowed` write capability.
+
+  This function verifies `callback` does not attempt to update the state  if it is not allowed to.
+  Returns `:ok` if the write capability is not violated,
+  `{:error, <expected value>, <actual value>}` otherwise.
+
+  ## Examples
+
+      iex> verify_write(%Callback{write?: false}, false)
+      :ok
+      iex> verify_write(%Callback{write?: true}, false)
+      {:error, false, true}
+      iex> verify_write(%Callback{write?: true}, true)
+      :ok
+      iex> verify_write(%Callback{write?: false}, true)
+      :ok
+  """
+  @spec verify_write(t(), boolean()) :: :ok | {:error, boolean(), boolean()}
+  def verify_write(%__MODULE__{write?: _}, true), do: :ok
+  def verify_write(%__MODULE__{write?: false}, false), do: :ok
+  def verify_write(%__MODULE__{write?: true}, false), do: {:error, false, true}
 
   @doc """
   Verify if `callback` matches the `allowed` publish capability.
 
-  This function verifies `callback` does not attempt to publish if it is not allowed to.
+  This function verifies `callback` does not attempt to publish if it is not allowed to. Returns
+  `:ok` if the publish capability is not violated, `{:error, <expected value>, <actual value>}`
+  otherwise.
 
   ## Examples
 
-      iex> publish_permission?(%Callback{publish_capability: false}, false)
-      true
-      iex> publish_permission?(%Callback{publish_capability: true}, false)
-      false
-      iex> publish_permission?(%Callback{publish_capability: true}, true)
-      true
-      iex> publish_permission?(%Callback{publish_capability: false}, true)
-      true
+      iex> verify_publish(%Callback{publish?: false}, false)
+      :ok
+      iex> verify_publish(%Callback{publish?: true}, false)
+      {:error, false, true}
+      iex> verify_publish(%Callback{publish?: true}, true)
+      :ok
+      iex> verify_publish(%Callback{publish?: false}, true)
+      :ok
   """
-  @spec publish_permission?(t(), publish_capability()) :: boolean()
-  def publish_permission?(%__MODULE__{publish_capability: _}, true), do: true
-  def publish_permission?(%__MODULE__{publish_capability: false}, false), do: true
-  def publish_permission?(%__MODULE__{publish_capability: true}, false), do: false
+  @spec verify_publish(t(), boolean()) :: :ok | {:error, boolean(), boolean()}
+  def verify_publish(%__MODULE__{publish?: _}, true), do: :ok
+  def verify_publish(%__MODULE__{publish?: false}, false), do: :ok
+  def verify_publish(%__MODULE__{publish?: true}, false), do: {:error, false, true}
 
   @doc """
   Check if the arity of a callback is equal to some value.
 
-  This function is mainly useful to check the arity of a callback when using
-  the `|>` syntax.
+  Return `:ok` if the arity is equal, `{:error, <expected value>, <actual value>}` otherwise.
 
   ## Examples
 
-      iex> has_arity?(%Callback{arity: 2}, 2)
-      true
-      iex> has_arity?(%Callback{arity: 3}, 2)
-      false
+      iex> verify_arity(%Callback{arity: 2}, 2)
+      :ok
+      iex> verify_arity(%Callback{arity: 3}, 2)
+      {:error, 2, 3}
   """
-  @spec has_arity?(t(), integer()) :: boolean()
-  def has_arity?(%__MODULE__{arity: cb}, wanted), do: cb == wanted
+  @spec verify_arity(t(), integer()) :: :ok | {:error, non_neg_integer(), non_neg_integer()}
+  def verify_arity(%__MODULE__{arity: _}, nil), do: :ok
+  def verify_arity(%__MODULE__{arity: cb}, cb), do: :ok
+  def verify_arity(%__MODULE__{arity: cb}, wanted), do: {:error, wanted, cb}
 
   @doc """
   Invoke the callback.
@@ -206,7 +280,7 @@ defmodule Skitter.Callback do
   ...> end}, 1, [2])
   %Result{state: 1, publish: [n: 2], result: 3}
   """
-  @spec call(t(), state(), args()) :: result()
+  @spec call(t(), state(), args()) :: Result.t()
   def call(%__MODULE__{function: f}, state, args), do: f.(state, args)
 end
 
@@ -215,24 +289,14 @@ defimpl Inspect, for: Skitter.Callback do
 
   ignore(:function)
 
-  match(:arity, arity, _, do: "arity[#{arity}]")
+  match(:arity, arity, _, do: "a:#{arity}")
 
-  match(:state_capability, state, _) do
-    "state_capability[#{state_cap_str(state)}]"
-  end
+  match(:read?, bool, _, do: "r:#{cap_str(bool)}")
+  match(:write?, bool, _, do: "w:#{cap_str(bool)}")
+  match(:publish?, bool, _, do: "p:#{cap_str(bool)}")
 
-  match(:publish_capability, pub, _) do
-    "publish_capability[#{publish_cap_str(pub)}]"
-  end
-
-  defp state_cap_str(:none), do: "/"
-  defp state_cap_str(:read), do: "R"
-  defp state_cap_str(:readwrite), do: "RW"
-  defp state_cap_str(_), do: "?"
-
-  defp publish_cap_str(true), do: "✓"
-  defp publish_cap_str(false), do: "x"
-  defp publish_cap_str(_), do: "?"
+  defp cap_str(true), do: "✓"
+  defp cap_str(false), do: "x"
 end
 
 defimpl Inspect, for: Skitter.Callback.Result do
