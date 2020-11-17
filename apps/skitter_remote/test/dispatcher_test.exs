@@ -6,15 +6,15 @@
 
 defmodule Skitter.Remote.DispatcherTest do
   @moduledoc false
-  use Skitter.Remote.Test.ClusterCase, async: false
-  alias Skitter.Remote.{Dispatcher, Test.Receiver}
+  use Skitter.Remote.Test.Case
+  alias(Skitter.Remote.{Dispatcher, Test.Receiver})
 
-  @tag distributed: [remote: [{Receiver, :start_link, [:test_mode]}]]
+  @tag remote: [remote: [{Receiver, :start_link, [:test_mode]}]]
   test "dispatches based on mode", %{remote: remote} do
     assert :ok = Dispatcher.dispatch(remote, :test_mode, :some_message)
   end
 
-  @tag distributed: [remote: [{Receiver, :start_link, [:default]}]]
+  @tag remote: [remote: [{Receiver, :start_link, [:default]}]]
   test "default dispatch", %{remote: remote} do
     assert :ok = Dispatcher.dispatch(remote, :test_mode, :some_message)
     assert :ok = Dispatcher.dispatch(remote, :other_mode, :some_message)

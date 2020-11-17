@@ -5,38 +5,39 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Worker.MasterConnectionTest do
-  use Skitter.Remote.Test.ClusterCase, restart: :skitter_worker, async: false
   import ExUnit.CaptureLog
 
-  alias Skitter.Remote
+  alias Skitter.{Remote, Worker.MasterConnection}
   alias Skitter.Worker.MasterConnection
 
-  @tag distributed: [master: [{Remote.Test.Handler, :setup, [:master]}]]
+  use Skitter.Remote.Test.Case,
+    mode: :worker,
+    handlers: [master: MasterConnection],
+    remote_opts: [mode: :master, handlers: [worker: Remote.Test.AcceptHandler]]
+
+  @tag remote: [master: []]
   test "connecting", %{master: master} do
     assert MasterConnection.connect(master) == :ok
   end
 
-  @tag distributed: [
-         first: [{Remote.Test.Handler, :setup, [:master]}],
-         second: [{Remote.Test.Handler, :setup, [:master]}]
-       ]
+  @tag remote: [first: [], second: []]
   test "attempting to establish two connections", %{first: first, second: second} do
     assert MasterConnection.connect(first) == :ok
     assert MasterConnection.connect(second) == {:error, :has_master}
   end
 
-  @tag distributed: [master: [{Remote.Test.Handler, :setup, [:master]}]]
+  @tag remote: [master: []]
   test "attempting to establish two connections from the same master", %{master: master} do
     assert MasterConnection.connect(master) == :ok
     assert MasterConnection.connect(master) == {:error, :already_connected}
   end
 
-  @tag distributed: [remote: [{Remote.Test.Handler, :setup, [:not_a_master]}]]
+  @tag remote: [remote: {[], mode: :not_master}]
   test "connecting to a non-master", %{remote: remote} do
     assert MasterConnection.connect(remote) == {:error, :mode_mismatch}
   end
 
-  @tag distributed: [master: [{Remote.Test.Handler, :setup, [:master]}]]
+  @tag remote: [master: []]
   test "master failure detection", %{master: master} do
     handler = Remote.Dispatcher.get_handler(:master)
     assert MasterConnection.connect(master) == :ok

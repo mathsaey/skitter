@@ -11,20 +11,12 @@ defmodule Skitter.Worker.Application do
   use Application
   use Skitter.Application
 
-  alias Skitter.Remote
-
   def start(:normal, []) do
     noninteractive_skitter_app()
-    setup_remote()
+
+    Skitter.Worker.MasterConnection.maybe_connect()
 
     children = []
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__.Supervisor)
-  end
-
-  defp setup_remote() do
-    Remote.set_local_mode(:worker)
-    Remote.setup_handlers(master: Skitter.Worker.MasterConnection)
-
-    Skitter.Worker.MasterConnection.maybe_connect()
   end
 end

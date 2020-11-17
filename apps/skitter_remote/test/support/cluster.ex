@@ -88,10 +88,7 @@ defmodule Skitter.Remote.Test.Cluster do
   end
 
   defp start_application(node, app, extra_opts) do
-    for {k, v} <- extra_opts do
-      rpc(node, Application, :put_env, [:skitter, k, v])
-    end
-
+    for {a, k, v} <- extra_opts, do: rpc(node, Application, :put_env, [a, k, v])
     rpc(node, Application, :ensure_all_started, [app])
   end
 

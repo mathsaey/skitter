@@ -17,33 +17,7 @@ defmodule Skitter.Remote do
   After a runtime has set up its mode and handlers, it can connect to other runtimes. This can be
   done with `connect/2`.
   """
-  alias __MODULE__.{Beacon, Dispatcher, HandlerServer, HandlerSupervisor}
-
-  @doc """
-  Set the mode of the local runtime.
-
-  The mode is a name which identifies the purpose the local runtime has in a Skitter cluster. It
-  needs to be set in order to interact with other runtimes.
-  """
-  @spec set_local_mode(atom()) :: :ok
-  def set_local_mode(mode) do
-    Beacon.set_mode(mode)
-  end
-
-  @doc """
-  Setup handlers.
-
-  Handlers determine how the local runtime handles connections with Skitter runtimes
-  with various modes. This function accepts a keyword list where each key is a mode, and each
-  value is a module. When a runtime with a mode attempts to connect to the local runtime, the
-  appropriate module will be called.
-
-  To create a callback module, refer to `Skitter.Remote.Handler`
-  """
-  @spec setup_handlers(keyword()) :: :ok
-  def setup_handlers(lst) do
-    HandlerSupervisor.add_handlers(lst)
-  end
+  alias __MODULE__.{Beacon, Dispatcher, HandlerServer}
 
   @doc """
   Attempt to connect to `remote`.
@@ -56,13 +30,10 @@ defmodule Skitter.Remote do
   its mode is equal to `expected_mode`.
 
   The following errors may be returned if the connection does not succeed:
-  - `{:error, :uninitialized_local}`: the local node is not set up properly (`set_local_mode/1`
-  has not been called)
   - `{:error, :not_distributed}`: the local node is not alive according to `Node.alive?/0`
   - `{:error, :not_connected}`: it was not possible to connect to the remote runtime
   - `{:error, :not_skitter}`: the remote node is not a Skitter remote
   - `{:error, :incompatible}`: the remote node is running an incompatible version of Skitter
-  - `{:error, :uninitialized_remote}`: the remote node does not have a mode
   - `{:error, :mode_mismatch}`: the mode of the remote runtime is not equal to `expected_mode`
   - `{:error, :unknown_mode}`: the remote or local runtime does not have a handler for the mode of
   the other runtime.
@@ -70,8 +41,9 @@ defmodule Skitter.Remote do
   """
   @spec connect(node()) :: {:ok, atom()} | {:error, any()}
   def connect(remote, expected_mode \\ nil) do
-    with {:ok, local_mode} <- Beacon.verify_local(),
-         {:ok, remote_mode} <- Beacon.verify_remote(remote),
+    local_mode = Application.fetch_env!(:skitter_remote, :mode)
+
+    with {:ok, remote_mode} <- Beacon.verify_remote(remote),
          :ok <- verify_mode(remote_mode, expected_mode),
          {:ok, handler} <- Dispatcher.dispatch(Node.self(), remote_mode, {:accept, remote}) do
       case Dispatcher.dispatch(remote, local_mode, {:accept, Node.self()}) do

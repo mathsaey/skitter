@@ -5,17 +5,16 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Master.WorkerConnectionTest do
-  use Skitter.Remote.Test.ClusterCase, restart: :skitter_master, async: false
-
   alias Skitter.Remote
   alias Skitter.Master.WorkerConnection
 
+  use Skitter.Remote.Test.Case,
+    mode: :master,
+    handlers: [worker: WorkerConnection.Handler],
+    remote_opts: [mode: :worker, handlers: [master: Remote.Test.AcceptHandler]]
+
   describe "connecting" do
-    @tag distributed: [
-           first: [{Remote.Test.Handler, :setup, [:bad_mode]}],
-           second: [{Remote.Test.Handler, :setup, [:worker]}],
-           third: [{Remote.Test.Handler, :setup, [:bad_mode]}]
-         ]
+    @tag remote: [first: {[], [mode: :bad_mode]}, second: [], third: {[], [mode: :bad_mode]}]
     test "handles multiple connections", %{first: first, second: second, third: third} do
       assert WorkerConnection.connect([first, second, third]) ==
                {:error, [{first, :mode_mismatch}, {third, :mode_mismatch}]}
@@ -24,21 +23,21 @@ defmodule Skitter.Master.WorkerConnectionTest do
       assert WorkerConnection.connected?(second)
     end
 
-    @tag distributed: [worker: [{Remote.Test.Handler, :setup, [:worker]}]]
+    @tag remote: [worker: []]
     test "to a single node", %{worker: worker} do
       assert WorkerConnection.connect(worker) == :ok
       assert WorkerConnection.connected?(worker)
       assert worker in WorkerConnection.all()
     end
 
-    @tag distributed: [remote: [{Remote.Test.Handler, :setup, [:wrong_mode]}]]
+    @tag remote: [remote: {[], [mode: :not_worker]}]
     test "rejects non-workers", %{remote: remote} do
       assert WorkerConnection.connect(remote) == {:error, [{remote, :mode_mismatch}]}
       assert not WorkerConnection.connected?(remote)
       assert remote not in WorkerConnection.all()
     end
 
-    @tag distributed: [worker: [{Remote.Test.Handler, :setup, [:worker]}]]
+    @tag remote: [worker: []]
     test "removes after failure", %{worker: worker} do
       handler = Remote.Dispatcher.get_handler(:worker)
       assert WorkerConnection.connect(worker) == :ok
@@ -52,11 +51,7 @@ defmodule Skitter.Master.WorkerConnectionTest do
   end
 
   describe "remote code execution" do
-    @tag distributed: [
-           worker1: [{Remote.Test.Handler, :setup, [:worker]}],
-           worker2: [{Remote.Test.Handler, :setup, [:worker]}],
-           worker3: [{Remote.Test.Handler, :setup, [:worker]}]
-         ]
+    @tag remote: [worker1: [], worker2: [], worker3: []]
     test "using module func arity", %{worker1: worker1, worker2: worker2, worker3: worker3} do
       :ok = WorkerConnection.connect([worker1, worker2, worker3])
       res = WorkerConnection.on_all(Node, :self, [])
@@ -67,11 +62,7 @@ defmodule Skitter.Master.WorkerConnectionTest do
       assert worker3 in res
     end
 
-    @tag distributed: [
-           worker1: [{Remote.Test.Handler, :setup, [:worker]}],
-           worker2: [{Remote.Test.Handler, :setup, [:worker]}],
-           worker3: [{Remote.Test.Handler, :setup, [:worker]}]
-         ]
+    @tag remote: [worker1: [], worker2: [], worker3: []]
     test "using closure", %{worker1: worker1, worker2: worker2, worker3: worker3} do
       :ok = WorkerConnection.connect([worker1, worker2, worker3])
       res = WorkerConnection.on_all(&Node.self/0)
@@ -83,10 +74,7 @@ defmodule Skitter.Master.WorkerConnectionTest do
     end
   end
 
-  @tag distributed: [
-         worker1: [{Remote.Test.Handler, :setup, [:worker]}],
-         worker2: [{Remote.Test.Handler, :setup, [:worker]}]
-       ]
+  @tag remote: [worker1: [], worker2: []]
   test "notifications", %{worker1: worker1, worker2: worker2} do
     WorkerConnection.subscribe_up()
     WorkerConnection.subscribe_down()

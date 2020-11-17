@@ -24,22 +24,6 @@ defmodule Skitter.Remote.Beacon do
   end
 
   @doc """
-  Set the mode of the current runtime.
-  """
-  @spec set_mode(atom()) :: :ok
-  def set_mode(mode) do
-    GenServer.call(__MODULE__, {:mode, mode})
-  end
-
-  @spec verify_local() :: {:ok, atom()} | {:error, atom()}
-  def verify_local() do
-    case GenServer.call(__MODULE__, :probe).mode do
-      nil -> {:error, :uninitialized_local}
-      mode -> {:ok, mode}
-    end
-  end
-
-  @doc """
   Verify if `node` is a skitter runtime. Returns `{:ok, mode}` if it is.
 
   Calling this function is the first step to connecting with a remote skitter runtime. This
@@ -54,12 +38,12 @@ defmodule Skitter.Remote.Beacon do
   runtime (i.e. it has a `GenServer` name `Skitter.Runtime.Remote.Beacon`). If it does not,
   `{:error, :not_skitter}` is returned. If it does, the versions of the remote and local node are
   compared, `{:error, :incompatible}` is returned if there is a version mismatch between the
-  runtimes.
-
-  Finally, if both runtimes are compatible, the _mode_ of the remote runtime is checked. If it is
-  not set, `{:error, :unitialized}` is returned. If a mode is set, `{:ok, mode}` is returned.
+  runtimes. If both runtimes are compatible, `{:ok, mode}` is returned, in this tuple, `mode` is
+  the mode of the remote runtime.
   """
-  @spec verify_remote(node()) :: {:ok, atom()} | {:error, atom()}
+  @spec verify_remote(node()) ::
+          {:ok, atom()}
+          | {:error, :not_distributed | :not_connected | :not_skitter | :incompatible}
   def verify_remote(node) when is_atom(node) do
     with {:ok, node} <- try_connect(node),
          {:ok, pid} <- find_beacon(node) do
@@ -91,7 +75,6 @@ defmodule Skitter.Remote.Beacon do
 
     case GenServer.call(pid, :probe) do
       %__MODULE__{version: remote_vsn} when remote_vsn != local_vsn -> {:error, :incompatible}
-      %__MODULE__{mode: nil} -> {:error, :uninitialized_remote}
       %__MODULE__{mode: mode} -> {:ok, mode}
     end
   end
@@ -102,7 +85,11 @@ defmodule Skitter.Remote.Beacon do
 
   @impl true
   def init([]) do
-    {:ok, %__MODULE__{version: version()}}
+    {:ok,
+     %__MODULE__{
+       version: version(),
+       mode: Application.fetch_env!(:skitter_remote, :mode)
+     }}
   end
 
   @impl true
@@ -110,11 +97,7 @@ defmodule Skitter.Remote.Beacon do
     {:reply, state, state}
   end
 
-  def handle_call({:mode, mode}, _, state = %__MODULE__{mode: prev}) do
-    unless is_nil(prev) do
-      Logger.warning("Overriding remote mode: `#{prev}` -> `#{mode}`")
-    end
-
+  def handle_call({:override_mode, mode}, _, state) do
     {:reply, :ok, %{state | mode: mode}}
   end
 

@@ -6,25 +6,17 @@
 
 defmodule Skitter.Remote.HandlerSupervisor do
   @moduledoc false
-  use DynamicSupervisor
+  use Supervisor
 
   def start_link([]) do
-    DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
-  end
-
-  def add_handlers(list) do
-    Enum.each(list, fn {mode, mod} -> add_handler(mode, mod) end)
-  end
-
-  def add_handler(mode, callback_module) do
-    DynamicSupervisor.start_child(
-      __MODULE__,
-      {Skitter.Remote.HandlerServer, [callback_module, mode]}
-    )
+    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   @impl true
   def init([]) do
-    DynamicSupervisor.init(strategy: :one_for_one)
+    :skitter_remote
+    |> Application.fetch_env!(:handlers)
+    |> Enum.map(fn {mode, mod} -> {Skitter.Remote.HandlerServer, [mod, mode]} end)
+    |> Supervisor.init(strategy: :one_for_one)
   end
 end
