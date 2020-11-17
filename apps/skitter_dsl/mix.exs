@@ -13,6 +13,7 @@ defmodule Skitter.DSL.MixProject do
     [
       app: :skitter_dsl,
       deps: deps(),
+      config_path: "../../config/config.exs",
       elixirc_paths: elixirc_paths(Mix.env())
     ] ++ global
   end

@@ -13,6 +13,5 @@
   start_permanent: Mix.env() == :prod,
   lockfile: "#{__DIR__}/mix.lock",
   deps_path: "#{__DIR__}/deps",
-  build_path: "#{__DIR__}/_build",
-  config_path: "#{__DIR__}/config/config.exs"
+  build_path: "#{__DIR__}/_build"
 ]

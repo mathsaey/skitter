@@ -26,6 +26,14 @@ defmodule Skitter.<your application>.Config do
 end
 ```
 
+- Create a `apps/<your app>/config/release.exs` file.
+
+```elixir
+import Skitter.<your application>.Config
+
+<config goes here>
+```
+
 - `use Skitter.Application` in your Application module, call
   `noninteractive_skitter_app()` or `interactive_skitter_app()` in
   `Application.start/2`.
@@ -50,10 +58,3 @@ end
 defp releases, do: […, release(<your app name>), …]
 ```
 
-- Create a `config/<your app name>.release.exs` file.
-
-```elixir
-import Skitter.<your application>.Config
-
-<config goes here>
-```

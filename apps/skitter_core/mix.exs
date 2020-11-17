@@ -9,6 +9,10 @@ defmodule Skitter.Core.MixProject do
 
   def project do
     {global, _} = Code.eval_file("../../global.exs")
-    [app: :skitter_core] ++ global
+
+    [
+      app: :skitter_core,
+      config_path: "../../config/config.exs"
+    ] ++ global
   end
 end

@@ -3,6 +3,10 @@ defmodule SkitterApplication.MixProject do
 
   def project do
     {global, _} = Code.eval_file("../../global.exs")
-    [app: :skitter_application] ++ global
+
+    [
+      app: :skitter_application,
+      config_path: "../../config/config.exs"
+    ] ++ global
   end
 end

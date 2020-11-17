@@ -6,6 +6,7 @@ defmodule Skitter.Remote.MixProject do
 
     [
       app: :skitter_remote,
+      config_path: "../../config/config.exs",
       elixirc_paths: elixirc_paths(Mix.env())
     ] ++ global
   end
