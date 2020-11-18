@@ -17,7 +17,6 @@ defmodule Skitter.MixProject do
       deps: deps(),
       docs: docs(),
       aliases: aliases(),
-      releases: releases(),
       dialyzer: dialyzer(),
       preferred_cli_env: preferred_env()
     ]
@@ -31,98 +30,89 @@ defmodule Skitter.MixProject do
     ]
   end
 
-  # -------- #
-  # Releases #
-  # -------- #
+  # ------- #
+  # Aliases #
+  # ------- #
 
-  defp releases, do: [release(:skitter_master), release(:skitter_worker)]
-  defp release(name), do: release(name, [name])
+  defp preferred_env, do: [build: :prod]
 
-  defp release(name, applications) do
-    {name,
-     [
-       applications: for(app <- applications, do: {app, :permanent}),
-       runtime_config_path: "apps/#{name}/config/release.exs",
-       include_executables_for: [:unix],
-       steps: release_steps()
-     ]}
+  defp aliases do
+    [
+      build: ["compile", &build/1],
+      run: ["compile", &run/1],
+      tset: [&test/1]
+    ]
+  end
+
+  defp run(_) do
+    Mix.shell().error("""
+      No applications are started when running Skitter from the umbrella root.
+      To experiment with Skitter, either build the release (`mix build`), or
+      navigate to the individual applications (such as master or worker) in
+      the `apps` directory and start an individual application from there.
+    """)
+  end
+
+  defp test(args) do
+    Mix.Project.apps_paths()
+    |> Enum.map(fn {app, path} ->
+      Mix.Project.in_project(app, path, fn _ ->
+        Mix.Tasks.Compile.run()
+        Mix.Tasks.Test.run(args)
+      end)
+    end)
   end
 
   # Release Builds
   # --------------
 
-  defp aliases, do: [build: &build_releases/1]
+  # Build all releases in the umbrella
 
-  defp build_releases(args) do
-    # When building all releases, we want a single top level folder with the
-    # skitter script and the various releases. The default release path
-    # includes the release name, but custom paths do not. Thus, when building
-    # a release with a custom path, we want to append the release name when
-    # individual releases are built.
-    # Other options are passed unchanged.
-    {args, path} =
-      Enum.reduce(args, {[], false}, fn
-        "--path", {lst, _} -> {lst, true}
-        val, {lst, true} -> {lst, val}
-        val, {lst, cur} -> {[val | lst], cur}
-      end)
+  defp build(args) do
+    path = build_path(args)
 
-    args = Enum.reverse(args)
+    Enum.each(releases(), fn app ->
+      path = Path.join(path, Atom.to_string(app))
+      build_release(app, args ++ ["--path", path])
+    end)
 
-    build_release("skitter_worker", args, path)
-    build_release("skitter_master", args, path)
+    copy_deploy_script(path)
   end
 
-  defp build_release(rel, args, false), do: Mix.Tasks.Release.run([rel | args])
-
-  defp build_release(rel, args, path) do
-    path = Path.join(path, rel)
-    Mix.Tasks.Release.run([rel, "--path", path | args])
-  end
-
-  # Always build releases in production
-  defp preferred_env, do: [build: :prod, release: :prod]
-
-  # Ensure cookie and deploy script are created along with release files
-  defp release_steps, do: [&put_cookie/1, :assemble, &copy_deploy_script/1]
-
-  defp copy_deploy_script(rel = %Mix.Release{}) do
-    target =
-      rel.path
-      |> Path.split()
-      |> Enum.drop(-1)
-      |> Path.join()
-      |> Path.join("skitter")
-
-    Mix.Generator.copy_template("rel/skitter.sh.eex", target, [release: rel], force: true)
-
-    File.chmod!(target, 0o744)
-    rel
-  end
-
-  # Cookie Handling
-  # ---------------
-
-  defp cookie_path, do: Path.join(Mix.Project.build_path(), "rel_cookie")
-
-  defp put_cookie(rel = %Mix.Release{}), do: put_in(rel.options[:cookie], cookie_get())
-
-  defp cookie_get do
-    case File.read(cookie_path()) do
-      {:ok, cookie} -> cookie
-      {:error, :enoent} -> cookie_create()
+  defp build_path(args) do
+    if idx = Enum.find_index(args, &(&1 == "--path")) do
+      Enum.at(args, idx + 1) |> Path.expand()
+    else
+      Path.join(Mix.Project.build_path(), "rel")
     end
   end
 
-  defp cookie_create do
-    cookie = Base.url_encode64(:crypto.strong_rand_bytes(40))
-    File.write!(cookie_path(), cookie)
-    cookie
+  defp releases do
+    Mix.Project.apps_paths()
+    |> Enum.map(fn {app, path} -> Mix.Project.in_project(app, path, & &1.project()[:releases]) end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(fn [{rel, _}] -> rel end)
+  end
+
+  defp build_release(app, args) do
+    Mix.Project.in_project(app, "apps/#{app}", fn _ -> Mix.Tasks.Release.run(args) end)
+  end
+
+  defp copy_deploy_script(path) do
+    path = Path.join(path, "skitter")
+    version = __MODULE__.project()[:version]
+
+    Mix.Generator.copy_template("rel/skitter.sh.eex", path, [version: version], force: true)
+
+    File.chmod!(path, 0o744)
   end
 
   # ------------------ #
   # Tool Configuration #
   # ------------------ #
+
+  # ExDoc
+  # -----
 
   defp docs do
     [
@@ -161,6 +151,9 @@ defmodule Skitter.MixProject do
     |> Path.wildcard()
     |> Enum.concat(["README.md"])
   end
+
+  # Dialyzer
+  # --------
 
   defp dialyzer, do: [plt_add_apps: [:mix, :iex, :eex]]
 end

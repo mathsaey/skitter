@@ -311,7 +311,7 @@ function stop_deploy() {
 }
 
 function start_deploy() {
-  printf "⬡⬢⬡⬢ Skitter deploy <%= @release.version %>\n"
+  printf "⬡⬢⬡⬢ Skitter deploy <%= @version %>\n"
   if [ -n "$3" ] ; then printf "> cookie: $(color $purple ${3##--cookie })\n" ; fi
   printf "> workers: $(color $purple "$1")\n\n"
 
@@ -398,7 +398,7 @@ while test $# -gt 0
   do
     case "$1" in
       -v|--version)
-        echo "skitter <%= @release.version %>"
+        echo "skitter <%= @version %>"
         exit 0
         ;;
       --debug)
