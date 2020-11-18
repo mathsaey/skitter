@@ -11,6 +11,8 @@ defmodule Skitter.Worker.MasterConnectionTest do
   alias Skitter.Worker.MasterConnection
 
   use Skitter.Remote.Test.Case,
+    mode: :worker,
+    handlers: [master: Skitter.Worker.MasterConnection],
     remote_opts: [
       mode: :master,
       handlers: [worker: Remote.Test.AcceptHandler]

@@ -34,13 +34,12 @@ defmodule Skitter.MixProject do
   # Aliases #
   # ------- #
 
-  defp preferred_env, do: [build: :prod]
+  defp preferred_env, do: [build: :prod, test: :test]
 
   defp aliases do
     [
       build: ["compile", &build/1],
-      run: ["compile", &run/1],
-      tset: [&test/1]
+      run: ["compile", &run/1]
     ]
   end
 
@@ -51,16 +50,6 @@ defmodule Skitter.MixProject do
       navigate to the individual applications (such as master or worker) in
       the `apps` directory and start an individual application from there.
     """)
-  end
-
-  defp test(args) do
-    Mix.Project.apps_paths()
-    |> Enum.map(fn {app, path} ->
-      Mix.Project.in_project(app, path, fn _ ->
-        Mix.Tasks.Compile.run()
-        Mix.Tasks.Test.run(args)
-      end)
-    end)
   end
 
   # Release Builds

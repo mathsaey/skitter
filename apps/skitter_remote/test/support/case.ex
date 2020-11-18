@@ -58,26 +58,24 @@ defmodule Skitter.Remote.Test.Case do
   use ExUnit.CaseTemplate
 
   defp local_configuration_block(opts) do
-    if opts[:mode] || opts[:handlers] do
-      test_mode = Keyword.get(opts, :mode)
-      test_handlers = Keyword.get(opts, :handlers)
+    test_mode = Keyword.get(opts, :mode, :test_mode)
+    test_handlers = Keyword.get(opts, :handlers, [])
 
-      quote do
-        setup_all do
-          original_mode = Application.fetch_env!(:skitter_remote, :mode)
-          original_handlers = Application.fetch_env!(:skitter_remote, :handlers)
+    quote do
+      setup_all do
+        original_mode = Application.fetch_env!(:skitter_remote, :mode)
+        original_handlers = Application.fetch_env!(:skitter_remote, :handlers)
 
-          Application.put_env(:skitter_remote, :mode, unquote(test_mode))
-          Application.put_env(:skitter_remote, :handlers, unquote(test_handlers))
+        Application.put_env(:skitter_remote, :mode, unquote(test_mode))
+        Application.put_env(:skitter_remote, :handlers, unquote(test_handlers))
 
-          on_exit(fn ->
-            Application.put_env(:skitter_remote, :mode, original_mode)
-            Application.put_env(:skitter_remote, :handlers, original_handlers)
-            reset_remote_app()
-          end)
+        on_exit(fn ->
+          Application.put_env(:skitter_remote, :mode, original_mode)
+          Application.put_env(:skitter_remote, :handlers, original_handlers)
+          reset_remote_app()
+        end)
 
-          :ok
-        end
+        :ok
       end
     end
   end
