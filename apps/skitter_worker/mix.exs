@@ -5,11 +5,14 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Worker.MixProject do
+  Code.require_file("../../setup.exs")
   use Mix.Project
 
   def project do
-    {global, _} = Code.eval_file("../../global.exs")
-    [app: :skitter_worker, deps: deps()] ++ global
+    Setup.rel(
+      :skitter_worker,
+      deps: deps()
+    )
   end
 
   def application do

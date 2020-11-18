@@ -5,14 +5,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Core.MixProject do
+  Code.require_file("../../setup.exs")
   use Mix.Project
 
-  def project do
-    {global, _} = Code.eval_file("../../global.exs")
-
-    [
-      app: :skitter_core,
-      config_path: "../../config/config.exs"
-    ] ++ global
-  end
+  def project, do: Setup.lib(:skitter_core)
 end
