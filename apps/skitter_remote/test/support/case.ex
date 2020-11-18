@@ -16,8 +16,8 @@ defmodule Skitter.Remote.Test.Case do
 
   The skitter_remote application relies on `mode` and `handlers` configuration, which is set
   through an application-specific config.exs file. When this template is `use`d, a setting for
-  `mode` and `handlers` may be provided, which will override the application configuration. By
-  default, the mode will be set to `:test_mode` and no `handlers` will be bound.
+  `mode` and `handlers` may be provided, which will override the application configuration. If
+  no setting is provided for `mode` or `handlers`, the configuration will not be modified.
 
   After the tests have been run, the original `mode` and `handlers` configuration will be
   restored.
@@ -57,67 +57,62 @@ defmodule Skitter.Remote.Test.Case do
   """
   use ExUnit.CaseTemplate
 
-  using opts do
-    test_mode = Keyword.get(opts, :mode, :test_mode)
-    test_handlers = Keyword.get(opts, :handlers, [])
+  defp local_configuration_block(opts) do
+    if opts[:mode] || opts[:handlers] do
+      test_mode = Keyword.get(opts, :mode)
+      test_handlers = Keyword.get(opts, :handlers)
+
+      quote do
+        setup_all do
+          original_mode = Application.fetch_env!(:skitter_remote, :mode)
+          original_handlers = Application.fetch_env!(:skitter_remote, :handlers)
+
+          Application.put_env(:skitter_remote, :mode, unquote(test_mode))
+          Application.put_env(:skitter_remote, :handlers, unquote(test_handlers))
+
+          on_exit(fn ->
+            Application.put_env(:skitter_remote, :mode, original_mode)
+            Application.put_env(:skitter_remote, :handlers, original_handlers)
+            reset_remote_app()
+          end)
+
+          :ok
+        end
+      end
+    end
+  end
+
+  defp state_reset_block(_) do
+    quote do
+      setup do
+        reset_remote_app()
+        :ok
+      end
+    end
+  end
+
+  defp remote_block(opts) do
     default_remote_opts = Keyword.get(opts, :remote_opts, [])
 
     quote do
-      alias Skitter.Remote.Test.Cluster
-
-      # Set up test-specific mode & handlers and restore when we are done
-      setup_all do
-        original_mode = Application.fetch_env!(:skitter_remote, :mode)
-        original_handlers = Application.fetch_env!(:skitter_remote, :handlers)
-
-        Application.put_env(:skitter_remote, :mode, unquote(test_mode))
-        Application.put_env(:skitter_remote, :handlers, unquote(test_handlers))
-
-        on_exit(fn ->
-          Application.put_env(:skitter_remote, :mode, original_mode)
-          Application.put_env(:skitter_remote, :handlers, original_handlers)
-          restart_remote()
-        end)
-
-        :ok
-      end
-
-      # Reset skitter_remote state after every test
-      setup do
-        restart_remote()
-        :ok
-      end
-
       setup context do
-        if args = context[:remote] do
-          distributed(args)
-        else
-          not_distributed()
+        case context[:remote] do
+          nil ->
+            Node.stop()
+            :ok
+
+          true ->
+            Cluster.ensure_distributed()
+            :ok
+
+          lst when is_list(lst) ->
+            Enum.map(lst, &setup_remote/1)
         end
       end
 
-      defp restart_remote do
-        Application.stop(:skitter_remote)
-        Application.start(:skitter_remote)
-      end
+      defp setup_remote({name, rpcs}) when is_list(rpcs), do: setup_remote({name, {rpcs, []}})
 
-      defp not_distributed do
-        Node.stop()
-        :ok
-      end
-
-      defp distributed(true) do
-        Cluster.ensure_distributed()
-        :ok
-      end
-
-      defp distributed(lst) do
-        Enum.map(lst, &remote/1)
-      end
-
-      defp remote({name, rpcs}) when is_list(rpcs), do: remote({name, {rpcs, []}})
-
-      defp remote({name, {rpcs, remote_opts}}) do
+      defp setup_remote({name, {rpcs, remote_opts}}) do
         remote_opts = unquote(default_remote_opts) ++ remote_opts
         opts = Enum.map(remote_opts, fn {key, value} -> {:skitter_remote, key, value} end)
 
@@ -126,6 +121,21 @@ defmodule Skitter.Remote.Test.Case do
         on_exit(fn -> Cluster.kill_node(remote) end)
         {name, remote}
       end
+    end
+  end
+
+  using opts do
+    quote do
+      alias Skitter.Remote.Test.Cluster
+
+      defp reset_remote_app do
+        Application.stop(:skitter_remote)
+        Application.start(:skitter_remote)
+      end
+
+      unquote(local_configuration_block(opts))
+      unquote(state_reset_block(opts))
+      unquote(remote_block(opts))
     end
   end
 end

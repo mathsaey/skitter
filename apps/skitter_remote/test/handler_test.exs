@@ -7,7 +7,7 @@
 defmodule Skitter.Remote.HandlerTest do
   @moduledoc false
   alias Skitter.Remote.{HandlerSupervisor, HandlerServer, Dispatcher, Test.MapSetHandler}
-  use Skitter.Remote.Test.Case, handlers: [test_mode: MapSetHandler]
+  use Skitter.Remote.Test.Case, mode: :test_mode, handlers: [test_mode: MapSetHandler]
 
   defp handler_pid do
     [{_, pid, _, _}] = Supervisor.which_children(HandlerSupervisor)
