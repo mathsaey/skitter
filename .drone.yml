@@ -52,6 +52,23 @@ steps:
 ---
 kind: pipeline
 type: docker
+name: typecheck
+
+steps:
+  - name: test
+    image: hexpm/elixir:1.11.2-erlang-23.1.2-alpine-3.12.1
+    environment:
+      MIX_ENV: test
+    commands:
+      - mix local.hex --force
+      - mix local.rebar --force
+      - mix deps.get --only dev
+      - mix deps.compile
+      - mix dialyzer
+
+---
+kind: pipeline
+type: docker
 name: build-x86_64-linux-musl
 
 steps:
@@ -91,12 +108,13 @@ steps:
         - refs/heads/develop
         - refs/tags/*
 
-# Only publish builds when tests pass
+# Only publish builds when tests and type checks pass
 trigger:
   status:
   - success
 depends_on:
 - test
+- typecheck
 
 ---
 kind: pipeline
@@ -141,12 +159,13 @@ steps:
         - refs/tags/*
 
 
-# Only publish builds when tests pass
+# Only publish builds when tests type checks pass
 trigger:
   status:
   - success
 depends_on:
 - test
+- typecheck
 ---
 kind: pipeline
 type: docker
@@ -175,5 +194,6 @@ trigger:
 depends_on:
 - docs
 - test
+- typecheck
 - build-x86_64-linux-gnu
 - build-x86_64-linux-musl
