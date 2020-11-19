@@ -17,7 +17,6 @@ defmodule Skitter.Master.Application do
     noninteractive_skitter_app()
 
     children = [
-      Skitter.Master.ManagerSupervisor,
       Skitter.Master.WorkerConnection.Supervisor
     ]
 
