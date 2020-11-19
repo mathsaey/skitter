@@ -1,22 +1,6 @@
 defmodule Skitter.Remote do
-  @moduledoc """
-  Module to handle interaction with other Skitter runtimes.
+  @moduledoc false
 
-  A Skitter cluster consists of various connected runtimes. This module contains the required
-  abstractions which allow the current runtime (i.e. an erlang "node") to discover other skitter
-  runtimes and to be discovered by them.
-
-  In order to interact with other runtimes, a skitter runtime needs to set up its local _mode_ and
-  some _handlers_. The mode of a skitter runtime is a tag which identifies the purpose of this
-  runtime; a Skitter worker would, for instance, use the mode `:worker`. Handlers
-  determine how the local runtime handles connecting to runtimes with varying modes. A different
-  handler can be set up for every possible mode. The local mode can be set with
-  `set_local_mode/1`, handlers can be installed with `add_handler/2` and `set_default_handler/1`.
-  Please refer to the documentation of these functions for more information.
-
-  After a runtime has set up its mode and handlers, it can connect to other runtimes. This can be
-  done with `connect/2`.
-  """
   alias __MODULE__.{Beacon, Handler}
 
   @doc """

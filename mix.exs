@@ -125,8 +125,6 @@ defmodule Skitter.MixProject do
           Skitter.Dot
         ],
         dsl: ~r/Skitter.DSL*/,
-        runtime: ~r/Skitter.Runtime*/,
-        remote: ~r/Skitter.Remote*/,
         applications: ~r/Skitter.(Worker|Master).*/
       ],
       groups_for_functions: [
