@@ -23,34 +23,59 @@ defmodule Skitter.Remote do
   the other runtime.
   - The handler of the local mode may return a custom `{:error, reason}` tuple.
   """
-  @spec connect(node()) :: {:ok, atom()} | {:error, any()}
+  @spec connect(node(), atom()) :: {:ok, atom()} | {:error, atom()}
   def connect(remote, expected_mode \\ nil) do
     local_mode = Application.fetch_env!(:skitter_remote, :mode)
 
-    with {:ok, remote_mode} <- Beacon.verify_remote(remote),
-         :ok <- verify_mode(remote_mode, expected_mode),
-         :ok <- Handler.accept_local(remote_mode, remote) do
-      case Handler.accept_remote(remote, local_mode) do
-        :ok ->
-          {:ok, remote_mode}
+    # This used to be a giant with block but it was hard to reason about, so we use a plug-like
+    # pipeline to handle this instead.
+    result =
+      %{remote: remote, remote_mode: expected_mode, local_mode: local_mode}
+      |> connect_and_verify()
+      |> handle_local()
+      |> handle_remote()
 
-        {:error, reason} ->
-          Handler.remove(remote_mode, remote)
-          {:error, reason}
-      end
-    else
-      tup -> tup
+    case result do
+      {:error, reason} -> {:error, reason}
+      %{remote_mode: mode} -> {:ok, mode}
     end
   end
 
-  defp verify_mode(_remote, nil), do: :ok
-  defp verify_mode(expected, expected), do: :ok
-  defp verify_mode(_, _), do: {:error, :mode_mismatch}
+  defp connect_and_verify(attempt = %{remote: remote, remote_mode: expected}) do
+    case {Beacon.verify_remote(remote), expected} do
+      {{:ok, asked}, asked} -> attempt
+      {{:ok, mode}, nil} -> Map.put(attempt, :remote_mode, mode)
+      {{:ok, _}, _} -> {:error, :mode_mismatch}
+      {{:error, reason}, _} -> {:error, reason}
+    end
+  end
+
+  defp handle_local({:error, reason}), do: {:error, reason}
+
+  defp handle_local(attempt = %{remote: remote, remote_mode: mode}) do
+    case Handler.accept_local(mode, remote) do
+      {:error, reason} -> {:error, reason}
+      :ok -> attempt
+    end
+  end
+
+  defp handle_remote({:error, reason}), do: {:error, reason}
+
+  defp handle_remote(attempt = %{remote: remote, local_mode: mode}) do
+    case Handler.accept_remote(remote, mode) do
+      {:error, reason} ->
+        Handler.remove(attempt[:remote_mode], remote)
+        {:error, reason}
+
+      :ok ->
+        attempt
+    end
+  end
 
   @doc """
   Execute `mod.func(args)` on every specified remote runtime, obtain results in a list.
   """
-  @spec on_many(node(), module(), atom(), [any()]) :: [any()]
+  @spec on_many([node()], module(), atom(), [any()]) :: [any()]
   def on_many(remotes, mod, func, args) do
     remotes
     |> Enum.map(&Task.Supervisor.async({Skitter.Remote.TaskSupervisor, &1}, mod, func, args))
@@ -60,7 +85,7 @@ defmodule Skitter.Remote do
   @doc """
   Execute `fun` on every specified remote runtime, obtain results in a list.
   """
-  @spec on_many(node(), (() -> any())) :: [any()]
+  @spec on_many([node()], (() -> any())) :: [any()]
   def on_many(remotes, fun) do
     remotes
     |> Enum.map(&Task.Supervisor.async({Skitter.Remote.TaskSupervisor, &1}, fun))

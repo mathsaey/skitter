@@ -21,6 +21,6 @@ defmodule Skitter.Master do
   - `:already_connected`: the remote is already connected to this node
   - `:has_master`: the remote is already connected to a different master
   """
-  @spec connect_workers(node() | [node()]) :: :ok | {:error, [{node(), any()}]}
+  @spec connect_workers(node() | [node()]) :: :ok | {:error, [{node(), atom()}]}
   def connect_workers(workers), do: Skitter.Master.WorkerConnection.connect(workers)
 end

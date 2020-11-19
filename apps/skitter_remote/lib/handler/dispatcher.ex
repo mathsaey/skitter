@@ -68,7 +68,7 @@ defmodule Skitter.Remote.Handler.Dispatcher do
   If no handler is found, `{:error, :unknown_mode}` is returned. Otherwise the handler will reply
   to the dispatched message.
   """
-  @spec dispatch(node(), atom(), any()) :: {:ok, pid()} | {:error, atom()}
+  @spec dispatch(node(), atom(), any()) :: :ok | {:error, atom()}
   def dispatch(node, mode, msg) do
     GenServer.call({__MODULE__, node}, {:dispatch, mode, msg})
   end
