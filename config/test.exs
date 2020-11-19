@@ -6,10 +6,4 @@
 
 import Config
 
-# When testing from the umbrella application, application-local configuration is not loaded.
-# Therefore, we set some application-specific configuration in this file.
-
-config :skitter_remote, :mode, :test_mode
-config :skitter_remote, :handlers, []
-
 config :skitter_worker, :shutdown_with_master, false

@@ -21,4 +21,10 @@ config :logger, :console,
   format: "\n[$time][$level$levelpad] $message",
   metadata: :all
 
+# Set some configuration defaults here to prevent issues. Note that many release applications
+# override these in their local `config.exs`!
+
+config :skitter_remote, :mode, :test_mode
+config :skitter_remote, :handlers, []
+
 import_config "#{Mix.env()}.exs"
