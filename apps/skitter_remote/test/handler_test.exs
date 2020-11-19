@@ -6,16 +6,12 @@
 
 defmodule Skitter.Remote.HandlerTest do
   @moduledoc false
-  alias Skitter.Remote.{HandlerSupervisor, HandlerServer, Dispatcher, Test.MapSetHandler}
+
+  alias Skitter.Remote.{Handler, Test.MapSetHandler}
   use Skitter.Remote.Test.Case, mode: :test_mode, handlers: [test_mode: MapSetHandler]
 
-  defp handler_pid do
-    [{_, pid, _, _}] = Supervisor.which_children(HandlerSupervisor)
-    pid
-  end
-
-  defp handler_state do
-    {_, state} = :sys.get_state(handler_pid())
+  defp handler_state(mode \\ :test_mode) do
+    {_, state} = :sys.get_state(Handler.get_pid(mode))
     state
   end
 
@@ -24,25 +20,25 @@ defmodule Skitter.Remote.HandlerTest do
   end
 
   test "can accept connections" do
-    Dispatcher.dispatch(Node.self(), :test_mode, {:accept, Node.self()})
+    Handler.accept_local(:test_mode, Node.self())
     assert Node.self() in handler_state()
   end
 
   test "can reject connections" do
-    Dispatcher.dispatch(Node.self(), :reject, {:accept, Node.self()})
+    Handler.accept_local(:reject, Node.self())
     assert handler_state() == MapSet.new()
   end
 
   test "can remove connections" do
-    Dispatcher.dispatch(Node.self(), :test_mode, {:accept, Node.self()})
+    Handler.accept_local(:test_mode, Node.self())
     assert Node.self() in handler_state()
-    HandlerServer.remove(handler_pid(), Node.self())
+    Handler.remove(:test_mode, Node.self())
     assert handler_state() == MapSet.new()
   end
 
   @tag remote: [remote: []]
   test "detects failure", %{remote: remote} do
-    Cluster.rpc(remote, Dispatcher, :dispatch, [Node.self(), :test_mode, {:accept, remote}])
+    Cluster.rpc(remote, Handler, :accept_remote, [Node.self(), :test_mode])
     assert remote in handler_state()
     Cluster.kill_node(remote)
     assert handler_state() == MapSet.new()

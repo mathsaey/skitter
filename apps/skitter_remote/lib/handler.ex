@@ -5,15 +5,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Remote.Handler do
-  @moduledoc """
-  Callback module to create a handler.
-
-  A handler determines how connections from remote Skitter runtimes with a given _mode_ are
-  handled. In order to handle a given type, create a module which calls `use
-  Skitter.Remote.ConnectionHandler` and implement the callbacks defined in this module. When
-  this is done, the `:skitter_remote` application will automatically invoke the callbacks defined
-  in this module when appropriate.
-  """
+  @moduledoc false
+  alias __MODULE__.Dispatcher
 
   defmacro __using__(_opts) do
     quote do
@@ -24,6 +17,26 @@ defmodule Skitter.Remote.Handler do
       defoverridable init: 0
     end
   end
+
+  @doc """
+  Ask the local handler for `mode` to accept `remote`.
+  """
+  @spec accept_local(atom(), node()) :: :ok | {:error, atom()}
+  def accept_local(mode, remote), do: Dispatcher.dispatch(mode, {:accept, remote})
+
+  @doc """
+  Ask the handler for `mode` on `remote` to accept the current node.
+  """
+  @spec accept_remote(node(), atom()) :: :ok | {:error, atom()}
+  def accept_remote(remote, mode), do: Dispatcher.dispatch(remote, mode, {:accept, Node.self()})
+
+  @doc """
+  Ask the local handler for `mode` to remove `remote`.
+  """
+  @spec remove(atom(), node()) :: :ok
+  def remove(mode, remote), do: Dispatcher.dispatch(mode, {:remove, remote})
+
+  defdelegate get_pid(mode), to: Dispatcher, as: :get_handler
 
   @doc """
   Create an initial state.

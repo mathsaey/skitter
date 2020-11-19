@@ -17,7 +17,7 @@ defmodule Skitter.Remote do
   After a runtime has set up its mode and handlers, it can connect to other runtimes. This can be
   done with `connect/2`.
   """
-  alias __MODULE__.{Beacon, Dispatcher, HandlerServer}
+  alias __MODULE__.{Beacon, Handler}
 
   @doc """
   Attempt to connect to `remote`.
@@ -45,13 +45,13 @@ defmodule Skitter.Remote do
 
     with {:ok, remote_mode} <- Beacon.verify_remote(remote),
          :ok <- verify_mode(remote_mode, expected_mode),
-         {:ok, handler} <- Dispatcher.dispatch(Node.self(), remote_mode, {:accept, remote}) do
-      case Dispatcher.dispatch(remote, local_mode, {:accept, Node.self()}) do
-        {:ok, _} ->
+         :ok <- Handler.accept_local(remote_mode, remote) do
+      case Handler.accept_remote(remote, local_mode) do
+        :ok ->
           {:ok, remote_mode}
 
         {:error, reason} ->
-          HandlerServer.remove(handler, remote)
+          Handler.remove(remote_mode, remote)
           {:error, reason}
       end
     else

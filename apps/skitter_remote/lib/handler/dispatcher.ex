@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Remote.Dispatcher do
+defmodule Skitter.Remote.Handler.Dispatcher do
   @moduledoc false
 
   use GenServer
@@ -49,6 +49,17 @@ defmodule Skitter.Remote.Dispatcher do
   """
   def get_handler(mode) do
     GenServer.call(__MODULE__, {:handler, mode})
+  end
+
+  @doc """
+  Send `message` to the handler for `mode` on the local node..
+
+  If no handler is found, `{:error, :unknown_mode}` is returned. Otherwise the handler will reply
+  to the dispatched message.
+  """
+  @spec dispatch(atom(), any()) :: :ok | {:error, atom()}
+  def dispatch(mode, msg) do
+    GenServer.call(__MODULE__, {:dispatch, mode, msg})
   end
 
   @doc """

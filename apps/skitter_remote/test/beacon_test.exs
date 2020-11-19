@@ -24,7 +24,7 @@ defmodule Skitter.Remote.BeaconTest do
     assert remote not in Node.list(:connected)
   end
 
-  @tag remote: [remote: [{Beacon, :set_mode, [:test_mode]}]]
+  @tag remote: [remote: {[], mode: :test_mode}]
   test "can connect to skitter nodes", %{remote: remote} do
     assert Beacon.verify_remote(remote) == {:ok, :test_mode}
   end

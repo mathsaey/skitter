@@ -42,7 +42,7 @@ defmodule Skitter.Master.WorkerConnectionTest do
 
     @tag remote: [worker: []]
     test "removes after failure", %{worker: worker} do
-      handler = Remote.Dispatcher.get_handler(:worker)
+      handler = Remote.Handler.get_pid(:worker)
       assert WorkerConnection.connect(worker) == :ok
       Cluster.kill_node(worker)
 

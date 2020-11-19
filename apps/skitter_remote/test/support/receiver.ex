@@ -13,7 +13,7 @@ defmodule Skitter.Remote.Test.Receiver do
   When `:default` is used, the receiver will register itself as the fallback case.
   """
   use GenServer
-  alias Skitter.Remote.Dispatcher
+  alias Skitter.Remote.Handler.Dispatcher
 
   def start_link(mode) do
     GenServer.start_link(__MODULE__, mode)

@@ -4,33 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Remote.HandlerServer do
+defmodule Skitter.Remote.Handler.Server do
   @moduledoc false
   use GenServer
-  alias Skitter.Remote.Dispatcher
+  alias Skitter.Remote.Handler.Dispatcher
 
   def start_link([module, mode]) do
     GenServer.start_link(__MODULE__, [module, mode])
-  end
-
-  def remove(server, remote) do
-    GenServer.cast(server, {:remove, remote})
-  end
-
-  defp do_accept(remote, mode, module, state) do
-    case module.accept_connection(remote, mode, state) do
-      {:ok, state} ->
-        Node.monitor(remote, true)
-        {{:ok, self()}, state}
-
-      {:error, reason, state} ->
-        {{:error, reason}, state}
-    end
-  end
-
-  defp do_remove(remote, module, state) do
-    Node.monitor(remote, false)
-    module.remove_connection(remote, state)
   end
 
   @impl true
@@ -48,19 +28,24 @@ defmodule Skitter.Remote.HandlerServer do
 
   @impl true
   def handle_cast({:dispatch, {:accept, remote}, from, mode}, {module, state}) do
-    {reply, state} = do_accept(remote, mode, module, state)
+    {reply, state} =
+      case module.accept_connection(remote, mode, state) do
+        {:ok, state} ->
+          Node.monitor(remote, true)
+          {:ok, state}
+
+        {:error, reason, state} ->
+          {{:error, reason}, state}
+      end
+
     GenServer.reply(from, reply)
     {:noreply, {module, state}}
   end
 
   def handle_cast({:dispatch, {:remove, remote}, from, _mode}, {module, state}) do
-    state = do_remove(remote, module, state)
+    Node.monitor(remote, false)
+    state = module.remove_connection(remote, state)
     GenServer.reply(from, :ok)
-    {:noreply, {module, state}}
-  end
-
-  def handle_cast({:remove, remote}, {module, state}) do
-    state = do_remove(remote, module, state)
     {:noreply, {module, state}}
   end
 

@@ -42,7 +42,7 @@ defmodule Skitter.Worker.MasterConnectionTest do
 
   @tag remote: [master: []]
   test "master failure detection", %{master: master} do
-    handler = Remote.Dispatcher.get_handler(:master)
+    handler = Remote.Handler.get_pid(:master)
     assert MasterConnection.connect(master) == :ok
 
     assert capture_log(fn ->
