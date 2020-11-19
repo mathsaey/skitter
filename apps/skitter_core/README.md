@@ -1,8 +1,8 @@
 # Skitter Core
 
-This library defines the primitives of skitter such as components and
-workflows. It is intended as a stable interface that the various other Skitter
-applications can use to talk to each other.
+This library defines the core abstractions offered by the Skitter language. It
+is intended to a foundation that can be used by other applications to build a
+complete Skitter runtime system.
 
 ## Use
 
