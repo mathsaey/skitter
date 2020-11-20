@@ -62,7 +62,7 @@ defmodule Skitter.MixProject do
 
     Enum.each(releases(), fn app ->
       path = Path.join(path, Atom.to_string(app))
-      build_release(app, args ++ ["--path", path])
+      build_release(app, ["--overwrite", "--quiet" | args] ++ ["--path", path])
     end)
 
     copy_deploy_script(path)
@@ -125,7 +125,7 @@ defmodule Skitter.MixProject do
           Skitter.Dot
         ],
         dsl: ~r/Skitter.DSL*/,
-        applications: ~r/Skitter.(Worker|Master).*/
+        applications: ~r/Skitter.(Worker|Master|Local).*/
       ],
       groups_for_functions: [
         Hooks: &(&1[:section] == :hook)
