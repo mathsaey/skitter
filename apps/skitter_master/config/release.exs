@@ -10,8 +10,8 @@
 # Skitter releases are configured through environment variables which are set by the skitter
 # deployment script (`rel/skitter.sh.eex`)
 
-import Skitter.Master.Config
+import Skitter.Application.Config
 
-config_from_env :workers, "SKITTER_WORKERS", fn str ->
+config_from_env skitter_master, :workers, "SKITTER_WORKERS", fn str ->
   str |> String.split() |> Enum.map(&String.to_atom/1)
 end

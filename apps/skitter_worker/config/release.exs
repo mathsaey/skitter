@@ -10,7 +10,10 @@
 # Skitter releases are configured through environment variables which are set by the skitter
 # deployment script (`rel/skitter.sh.eex`)
 
-import Skitter.Worker.Config
+import Skitter.Application.Config
 
-config_from_env :master, "SKITTER_MASTER", &String.to_atom/1
-config_enabled_unless_set :shutdown_with_master, "SKITTER_NO_SHUTDOWN_WITH_MASTER"
+config_from_env :skitter_worker, :master, "SKITTER_MASTER", &String.to_atom/1
+
+config_enabled_unless_set :skitter_worker,
+                          :shutdown_with_master,
+                          "SKITTER_NO_SHUTDOWN_WITH_MASTER"

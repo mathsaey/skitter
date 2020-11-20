@@ -26,20 +26,11 @@ def deps do
 end
 ```
 
-- Create a config module:
-
-```elixir
-defmodule Skitter.<your application>.Config do
-  @moduledoc false
-  use Skitter.Application.Config
-end
-```
-
 - Create a `apps/<your app>/config/release.exs` file which will be used to
   configure your release at runtime:
 
 ```elixir
-import Skitter.<your application>.Config
+import Skitter.Application.Config
 
 <config goes here>
 ```

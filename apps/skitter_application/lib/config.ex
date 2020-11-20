@@ -54,24 +54,13 @@ defmodule Skitter.Application.Config do
     bool_if_set(app, key, env, false)
   end
 
+  # Use this inside a module to get an easy way to read config for the current application
   defmacro __using__(_opts) do
     quote do
       defp application, do: Application.get_application(__MODULE__)
 
       def get(key, default \\ nil) do
         unquote(__MODULE__).get(application(), key, default)
-      end
-
-      def config_from_env(key, env, parse \\ fn v -> v end) do
-        unquote(__MODULE__).config_from_env(application(), key, env, parse)
-      end
-
-      def config_enabled_if_set(key, env) do
-        unquote(__MODULE__).config_enabled_if_set(application(), key, env)
-      end
-
-      def config_enabled_unless_set(key, env) do
-        unquote(__MODULE__).config_enabled_unless_set(application(), key, env)
       end
     end
   end
