@@ -14,21 +14,20 @@ set -e
 # ------------- #
 
 local_desc="Use skitter locally"
-deploy_desc="Deploy a set of workers and a master"
-worker_desc="Manage a skitter worker"
-master_desc="Manage a skitter master"
+deploy_desc="Deploy a Skitter system over a set of nodes"
+worker_desc="Manage a Skitter worker"
+master_desc="Manage a Skitter master"
 
 function global_usage() {
-  printf '%s\n' "Skitter deploy script"
+  printf '%s\n' "Skitter invocation script"
+  printf '\t%s\n' "This script is used to manage the various Skitter applications."
+  printf '\t%s\n' "It can be used to start, stop or otherwise manage the applications,"
+  printf '\t%s\n' "or it can deploy a set of Skitter applications over a cluster."
 
   printf '%s\n'   "Usage:"
-  printf '\t%s\n' "skitter [GLOBAL OPTIONS] MODE COMMAND [COMMAND OPTIONS]"
-  printf '\t%s\n' "skitter [-v | --version]"
-  printf '\t%s\n' "skitter help [MODE]"
-
-  printf '%s\n'         "Global Options:"
-  printf '\t%s\t\t%s\n' "-v, --version"       "print the version and exit"
-  printf '\t%s\t\t%s\n' "--debug"             "Echo commands to execute"
+  printf '\t%s\t%s\n'     "skitter MODE COMMAND [COMMAND OPTIONS]" "Manage skitter MODE"
+  printf '\t%s\t\t%s\n'   "skitter [-v | --version]"               "Print version and exit"
+  printf '\t%s\t\t\t%s\n' "skitter help [MODE]"                    "Print information for MODE"
 
   printf '%s\n'       "Modes:"
   printf '\t%s\t%s\n' "d, deploy" "$deploy_desc"
@@ -39,27 +38,44 @@ function global_usage() {
 
 function deploy_usage() {
   printf '%s\n' "$deploy_desc"
-  printf '\t%s\n' "This command spawns a set of worker nodes on the specified remote machines."
-  printf '\t%s\n' "Afterwards, it spawns a master on the local machine, which automatically"
-  printf '\t%s\n' "connects to the provided workers."
+  printf '\t%s\n' "This command spawns a set of worker nodes on the specified remote"
+  printf '\t%s\n' "machines. Afterwards, it spawns a master on the local machine,"
+  printf '\t%s\n' "which automatically connects to the provided workers."
   printf '%s\n' "Usage:"
   printf '\t%s\n' "skitter deploy [COMMAND OPTIONS] WORKERS"
   printf '\t%s\n' "skitter deploy [COMMAND OPTIONS] --worker-file PATH [WORKERS]"
   printf '%s\n'         "Command Options:"
-  printf '\t%s\t%s\n'   "-c, --cookie COOKIE"    "Override the default distribution cookie"
-  printf '\t%s\t%s\n'   "-f, --worker-file PATH"  "Read the list of workers to spawn from PATH"
+  printf '\t%s\t%s\n'   "-c, --cookie COOKIE"    "Set the distribution cookie"
+  printf '\t%s\t%s\n'   "-f, --worker-file PATH" "Read the list of workers to spawn from PATH"
+  printf '\t\t\t\t%s\n'                          "PATH should contain a file where every line"
+  printf '\t\t\t\t%s\n'                          "contains a single worker address."
   printf '\t%s\t%s\n'   "-d, --working-dir PATH" "Change to this directory on the workers"
   printf '\t\t\t\t%s\n'                          "before executing any command. Defaults to"
   printf '\t\t\t\t%s\n'                          "the current working directory."
-  printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker node. Only needed when"
-  printf '\t\t\t\t%s\n'                          "deploying fails for some reason."
+  printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker node. Do not start a master."
+  printf '\t\t\t\t%s\n'                          "only needed if a deployment failed."
   printf '%s\n'       "Command Arguments:"
-  printf '\t%s\t%s\n' "WORKERS" "List of worker nodes to spawn, will be spawned in order"
+  printf '\t%s\t%s\n' "WORKERS" "List of worker nodes to spawn, will be spawned in order."
+  printf '\t\t%s\n'             "A node is specified as [name@]hostname. If name is not"
+  printf '\t\t%s\n'             "specified, it defaults to skitter_worker."
 }
 
 function local_usage() {
   printf '%s\n' "$local_desc"
-  printf '%s\n' "TODO"
+  printf '\t%s\n' "This command spawns a local skitter application. A local application"
+  printf '\t%s\n' "can not connect to other skitter applications. It is intended to be"
+  printf '\t%s\n' "used to develop and test workflows locally before distributing them"
+  printf '\t%s\n' "over a cluster."
+  printf '%s\n' "Usage:"
+  printf '\t%s\n' "skitter local"
+}
+
+function release_description() {
+  printf '\t%s\n' "This command spawns a $1 application on the local node."
+  printf '\t%s\n' "Generally, you should not call this mode yourself, as deploy"
+  printf '\t%s\n' "mode will calls this script with the correct arguments."
+  printf '\t%s\n' "This script is still documented for users who cannot use the"
+  printf '\t%s\n' "the deploy script for some reason."
 }
 
 function release_usage() {
@@ -68,30 +84,32 @@ function release_usage() {
   printf '\t%s\t%s\n' "S, start_iex"  "Starts a $1 with an iex shell"
   printf '\t%s\t%s\n' "d, daemon"     "Starts a $1 as a daemon"
   printf '\t%s\t%s\n' "D, daemon_iex" "Starts a $1 as a daemon with iex attached"
-  printf '\t%s\t\t%s\n' "remote"  "Open an iex shell connected to the running $1 daemon"
+  printf '\t%s\t\t%s\n' "remote"      "Open an iex shell on the local $1 daemon"
   printf '\t%s\t\t%s\n' "restart" "Restart the $1 daemon"
   printf '\t%s\t\t%s\n' "stop"    "Stop the $1 daemon"
   printf '\t%s\t\t%s\n' "pid"     "Get the pid of the $1 daemon"
 
   printf '%s\n'         "Command Options:"
-  printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "Override the default distribution cookie"
-  printf '\t%s\t\t%s\n' "-n, --name NAME"     "Override the name of the node."
+  printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "Set the distribution cookie"
+  printf '\t%s\t\t%s\n' "-n, --name NAME"     "Set the name of the node."
 }
 
 function worker_usage() {
   printf '%s\n' "$worker_desc"
+  release_description "worker"
+
   printf '%s\n' "Usage:"
   printf '\t%s\n' "skitter worker COMMAND [COMMAND OPTIONS] [MASTER]"
 
   release_usage "worker"
   printf '\t%s\n'   "--shutdown-with-master, --no-shutdown-with-master"
-  printf '\t\t%s\n' "Automatically shut down the worker when the connected master node shuts down."
-  printf '\t\t%s\n' "This flag can only be passed to start, start_iex, daemon and daemon_iex."
-  printf '\t\t%s\n' "Defaults to true."
+  printf '\t\t%s\n' "Automatically shut down the worker when the connected"
+  printf '\t\t%s\n' "master node shuts down. Can only be passed to start,"
+  printf '\t\t%s\n' "start_iex, daemon and daemon_iex. Default to true."
 
   printf '%s\n'       "Command Arguments:"
-  printf '\t%s\t%s\n' "MASTER" "Attempt to connect to the master node at this address. Optional."
-  printf '\t\t%s\n'            "This argument can only be passed to start, start_iex, daemon and daemon_iex."
+  printf '\t%s\t%s\n' "MASTER" "Connect to the master node at this address. Optional."
+  printf '\t\t%s\n'            "Can only be passed to start, start_iex, daemon and daemon_iex."
 }
 
 function master_usage() {
@@ -103,7 +121,7 @@ function master_usage() {
   release_usage "master"
   printf '%s\n'       "Command Arguments:"
   printf '\t%s\t%s\n' "WORKERS" "Connect to the provided worker nodes, optional."
-  printf '\t\t%s\n'             "This argument can only be passed to start, start_iex, daemon and daemon_iex."
+  printf '\t\t%s\n'             "Can only be passed to start, start_iex, daemon and daemon_iex."
 }
 
 # --------- #
@@ -278,6 +296,14 @@ function do_worker_master() {
       argerr "$mode" "Invalid command: '$1'"
   esac
 }
+
+function do_local() {
+  mode="local"
+  pushd $SKITTER_REL_PATH/skitter_$mode > /dev/null
+  rel_cmd "start_iex"
+  popd > /dev/null
+}
+
 
 # Deploy Logic
 # ------------
