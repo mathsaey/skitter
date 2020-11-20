@@ -28,19 +28,22 @@ defmodule Setup do
 
   defp project(app, config, extra), do: Keyword.merge(default_project_opts(app, config), extra)
 
+  def root, do: __DIR__
+
   def lib(app, extra \\ []) do
     project(app, "#{__DIR__}/config/config.exs", extra)
   end
 
   def rel(app, extra \\ []) do
-    project(app, "config/config.exs", extra) ++ [releases: [release(app)]]
+    {rel_opts, project_opts} = Keyword.pop(extra, :release_opts, [])
+    project(app, "config/config.exs", project_opts) ++ [releases: [release(app, rel_opts)]]
   end
 
   # ------- #
   # Release #
   # ------- #
 
-  defp release(app) do
+  defp release(app, rel_opts) do
     {app,
      [
        rel_templates_path: "#{__DIR__}/rel",
@@ -48,7 +51,7 @@ defmodule Setup do
        include_executables_for: [:unix],
        validate_compile_env: false,
        steps: [&cookie/1, :assemble]
-     ]}
+     ] ++ rel_opts}
   end
 
   # Cookie
