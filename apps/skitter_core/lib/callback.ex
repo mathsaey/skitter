@@ -97,7 +97,7 @@ defmodule Skitter.Callback do
   Function signature of a callback.
 
   A skitter callback accepts the state of an instance, along with the arguments to the call. The
-  return value is defined by `t:result/0`.
+  return value is defined by `t:Result.t/0`.
   """
   @type signature :: (state(), args() -> Result.t())
 
