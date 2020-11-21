@@ -12,6 +12,6 @@
 
 import Skitter.Application.Config
 
-config_from_env skitter_master, :workers, "SKITTER_WORKERS", fn str ->
+config_from_env :skitter_master, :workers, "SKITTER_WORKERS", fn str ->
   str |> String.split() |> Enum.map(&String.to_atom/1)
 end
