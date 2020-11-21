@@ -9,94 +9,70 @@ defmodule Skitter.DSL.WorkflowTest do
   import Skitter.DSL.Test.Assertions
   import Skitter.DSL.{Component, Workflow}
 
-  alias Skitter.{Component, Instance, Callback, Callback.Result}
-  alias Skitter.DSL.Registry
+  alias Skitter.{Component, Instance}
 
   doctest Skitter.DSL.Workflow
 
-  setup_all do
-    c =
-      defcomponent __MODULE__.Dummy, in: [a, b, c], out: [x, y, z] do
-        strategy TestStrategy
-      end
+  def test_strategy do
+    Skitter.DSL.Test.Strategy.get()
+  end
 
-    [component: c]
+  def test_component do
+    component in: [a, b, c], out: [x, y, z] do
+      strategy test_strategy()
+    end
   end
 
   test "name extraction" do
-    wf =
-      defworkflow __MODULE__.TestName do
-      end
+    defworkflow testworkflow do
+    end
 
-    assert wf.name == __MODULE__.TestName
-
-    wf =
-      defworkflow __MODULE__.OtherTestName, in: foo, out: bar do
-      end
-
-    assert wf.name == __MODULE__.OtherTestName
+    assert testworkflow.name == "testworkflow"
   end
 
   test "port extraction" do
     wf =
-      defworkflow __MODULE__.IgnoreThisName, in: foo, out: bar do
+      workflow in: foo, out: bar do
       end
 
     assert wf.in_ports == [:foo]
     assert wf.out_ports == [:bar]
 
     wf =
-      defworkflow in: foo, out: bar do
+      workflow in: foo, out: bar do
       end
 
     assert wf.in_ports == [:foo]
     assert wf.out_ports == [:bar]
   end
 
-  test "name registration" do
+  test "inline components" do
     w =
-      defworkflow __MODULE__.Named, in: ignore do
-      end
-
-    assert Registry.lookup(__MODULE__.Named) == {:ok, w}
-  end
-
-  test "inline components", %{component: c} do
-    w =
-      defworkflow in: ignore do
-        a = new(c)
+      workflow in: ignore do
+        a = new(test_component())
 
         b =
           new(
-            defcomponent in: ignore do
-              strategy TestStrategy
+            component in: ignore do
+              strategy test_strategy()
             end
           )
       end
 
-    assert w[:a] == %Instance{elem: c, args: []}
+    assert w[:a] == %Instance{elem: test_component(), args: []}
 
     assert w[:b] == %Instance{
-             elem: %Component{in_ports: [:ignore], strategy: Registry.lookup!(TestStrategy)},
+             elem: %Component{in_ports: [:ignore], strategy: test_strategy()},
              args: []
            }
   end
 
-  test "named components", %{component: c} do
+  test "links" do
     w =
-      defworkflow in: ignore do
-        c = new(c.name)
-      end
-
-    assert w[:c] == %Instance{elem: Registry.lookup!(c.name), args: []}
-  end
-
-  test "links", %{component: c} do
-    w =
-      defworkflow in: [a, b, c], out: [x, y, z] do
-        a = new(c)
-        b = new(c)
-        c = new(c)
+      workflow in: [a, b, c], out: [x, y, z] do
+        a = new(test_component())
+        b = new(test_component())
+        c = new(test_component())
 
         a ~> a.a
         a ~> a.b
@@ -118,59 +94,53 @@ defmodule Skitter.DSL.WorkflowTest do
            }
   end
 
-  test "errors", %{component: c} do
+  test "errors" do
     assert_definition_error ~r/.*: Invalid syntax: `.*`/ do
-      defworkflow in: ignore do
+      workflow in: ignore do
         a = instance Foo
       end
     end
 
     assert_definition_error ~r/.*: Invalid port list: `.*`/ do
-      defworkflow extra: ignore do
+      workflow extra: ignore do
       end
     end
 
     assert_definition_error ~r/.*: `.*` is not allowed in a workflow/ do
-      defworkflow in: ignore do
+      workflow in: ignore do
         5 + 2
       end
     end
 
-    assert_definition_error ~r/`.*` is not defined/ do
-      defworkflow in: ignore do
-        _ = new(DoesNotExist)
-      end
-    end
-
     assert_definition_error ~r/`.*` is not a valid component or workflow/ do
-      defworkflow in: ignore do
+      workflow in: ignore do
         _ = new(5)
       end
     end
 
     assert_definition_error ~r/`.*` is not a valid workflow port/ do
-      defworkflow in: ignore do
-        c = new(c.name)
+      workflow in: ignore do
+        c = new(test_component())
         doesnotexist ~> c.a
       end
     end
 
     assert_definition_error ~r/`.*` is not a valid workflow port/ do
-      defworkflow in: ignore do
-        c = new(c.name)
+      workflow in: ignore do
+        c = new(test_component())
         c.x ~> doesnotexist
       end
     end
 
     assert_definition_error ~r/`.*` does not exist/ do
-      defworkflow in: ignore do
+      workflow in: ignore do
         ignore ~> doesnotexist.in_port
       end
     end
 
     assert_definition_error ~r/`.*` is not a port of `.*`/ do
-      defworkflow in: ignore do
-        c = new(c.name)
+      workflow in: ignore do
+        c = new(test_component())
         ignore ~> c.in_port
       end
     end

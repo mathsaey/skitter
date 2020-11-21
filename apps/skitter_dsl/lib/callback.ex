@@ -9,11 +9,11 @@ defmodule Skitter.DSL.Callback do
   Callback definition DSL.
 
   This module offers a DSL to create a `Skitter.Callback`. A callback can be defined in two ways:
-  first, it can be directly created through the `defcallback/3` macro defined in this module. This
+  first, it can be directly created through the `callback/3` macro defined in this module. This
   macro expects a list of fields, a list of out ports and a body as its arguments. In most cases,
   this macro should not be called explicitly. Instead, a callback can be defined inside
-  `Skitter.DSL.Component.defcomponent/3` or `Skitter.DSL.Strategy.defstrategy/3`. These macros
-  internally use `defcallback/3`, and ensure the correct values are provided for `fields` and
+  `Skitter.DSL.Component.component/2` or `Skitter.DSL.Strategy.strategy/2`. These macros
+  internally use `callback/3`, and ensure the correct values are provided for `fields` and
   `out_ports`.
 
   ## Callback body
@@ -33,8 +33,8 @@ defmodule Skitter.DSL.Callback do
 
   ## Implicit callback definitions
 
-  Inside `Skitter.DSL.Component.defcomponent/3` and `Skitter.DSL.Strategy.defstrategy/3`, a
-  callback can be created using a `def`-like syntax:
+  Inside `Skitter.DSL.Component.component/2` and `Skitter.DSL.Strategy.strategy/2`, a callback can
+  be created using a `def`-like syntax:
 
   ```
   name arg1, arg2 do
@@ -53,8 +53,8 @@ defmodule Skitter.DSL.Callback do
   end
   ```
 
-  The different clauses will be gathered and passed to `defcallback/3`. Note that all the clauses
-  of a callback must have the same arity.
+  The different clauses will be gathered and passed to `callback/3`. Note that all the clauses of
+  a callback must have the same arity.
   """
   alias Skitter.DSL.{AST, DefinitionError, Mutable}
 
@@ -66,13 +66,13 @@ defmodule Skitter.DSL.Callback do
   # Internal function to extract function-like callbacks from an AST.
   #
   # This function accepts a component or strategy body, extracts function-like callbacks from this
-  # body, and transforms them into calls to `defcallback/3`. A map is returned where the name of
+  # body, and transforms them into calls to `callback/3`. A map is returned where the name of
   # the callback is the key while the actual callback is the value.
   #
-  # `fields` and `out_ports` are passed to the `defcallback/3` calls, unless
+  # `fields` and `out_ports` are passed to the `callback/3` calls, unless
   # `name => {fields, out_ports}` is present in `overrides`, in which case the `fields` and
   # `out_ports` present in that tuple get passed.
-  # `imports` is added to the body passed to `defcallback`.
+  # `imports` is added to the body passed to `callback`.
   def extract_callbacks(statements, imports, fields, out_ports, overrides \\ %{}) do
     callbacks =
       statements
@@ -116,9 +116,9 @@ defmodule Skitter.DSL.Callback do
 
     callback =
       quote do
-        import unquote(Skitter.DSL.Callback), only: [defcallback: 3]
+        import unquote(Skitter.DSL.Callback), only: [callback: 3]
 
-        defcallback(unquote(fields), unquote(out)) do
+        callback(unquote(fields), unquote(out)) do
           unquote(clauses)
         end
       end
@@ -126,9 +126,9 @@ defmodule Skitter.DSL.Callback do
     {name, callback}
   end
 
-  # ----------- #
-  # defcallback #
-  # ----------- #
+  # -------- #
+  # callback #
+  # -------- #
 
   @publish_operator :~>
   @update_operator :<~
@@ -139,11 +139,11 @@ defmodule Skitter.DSL.Callback do
   @doc """
   DSL to create `t:Skitter.Callback.t/0`.
 
-  This macro offers a DSL to create callbacks that can be used inside skitter components. This
-  macro accepts `fields`, `out_ports` and a body as its arguments. As stated in the module
-  documentation, this macro should not be called directly if it can be avoided. Instead, rely on
-  the `Skitter.DSL.Component.defcomponent/3` and `Skitter.DSL.Strategy.defstrategy/3` macros to
-  call this macro.
+  This macro offers a DSL to create callbacks that can be used inside skitter components and
+  strategies. This macro accepts `fields`, `out_ports` and a body as its arguments. As stated in
+  the module documentation, this macro should not be called directly if it can be avoided.
+  Instead, rely on the `Skitter.DSL.Component.component/2` and `Skitter.DSL.Strategy.strategy/2`
+  macros to call this macro.
 
   The `body` argument should contain the actual implementation of the callback. This body consists
   of `fn`-like clauses (`argument -> body`). The body of these clauses contain standard elixir
@@ -154,7 +154,7 @@ defmodule Skitter.DSL.Callback do
   This callback calculates an average and publishes its current value on the `current` port. When
   it is called with the `:latest` argument, it returns the current average.
 
-      iex> c = defcallback([:total, :count], [:current]) do
+      iex> c = callback([:total, :count], [:current]) do
       ...>  :latest ->
       ...>    total / count
       ...>  value ->
@@ -175,7 +175,7 @@ defmodule Skitter.DSL.Callback do
       %Result{state: %{count: 2, total: 10}, publish: [], result: 5.0}
   """
   @doc section: :dsl
-  defmacro defcallback(fields, out_ports, do: body) do
+  defmacro callback(fields, out_ports, do: body) do
     try do
       body = transform_operators(fields, out_ports, body, __CALLER__)
       read? = used?(body, :read_state)
@@ -193,7 +193,7 @@ defmodule Skitter.DSL.Callback do
           quote do
             unquote(state_arg), unquote(args) ->
               import unquote(__MODULE__),
-                only: [read_state: 1, update_state: 2, publish: 2, defcallback: 3]
+                only: [read_state: 1, update_state: 2, publish: 2, callback: 3]
 
               result = unquote(body)
 

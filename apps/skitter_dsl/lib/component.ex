@@ -6,9 +6,56 @@
 
 defmodule Skitter.DSL.Component do
   @moduledoc """
-  Component definition DSL. See `defcomponent/3`.
+  Component definition DSL. See `component/2` and `defcomponent/3`
   """
   alias Skitter.DSL.{AST, DefinitionError, Callback}
+
+  @doc """
+  Define a component using `component/2` and bind it to `name`.
+
+  Also sets the `name` field of the generated component to `name`.
+
+  ## Examples
+
+      iex> defcomponent average, in: value, out: current do
+      ...>    strategy test_strategy()
+      ...>    fields total, count
+      ...>
+      ...>    init do
+      ...>      total <~ 0
+      ...>      count <~ 0
+      ...>    end
+      ...>
+      ...>    react value do
+      ...>      count <~ count + 1
+      ...>      total <~ total + value
+      ...>
+      ...>      total / count ~> current
+      ...>    end
+      ...>  end
+      iex> average.name
+      "average"
+      iex> average.fields
+      [:total, :count]
+      iex> average.in_ports
+      [:value]
+      iex> average.out_ports
+      [:current]
+      iex> Component.call(average, :init, Component.create_empty_state(average), []).state
+      %{count: 0, total: 0}
+      iex> res = Component.call(average, :react, %{count: 0, total: 0}, [10])
+      iex> res.publish
+      [current: 10.0]
+      iex> res.state
+      %{count: 1, total: 10}
+  """
+  defmacro defcomponent(name, opts \\ [], do: body) do
+    name_str = name |> AST.name_to_atom(__CALLER__) |> Atom.to_string()
+
+    quote do
+      unquote(name) = %{component(unquote(opts), do: unquote(body)) | name: unquote(name_str)}
+    end
+  end
 
   @doc """
   DSL to define `t:Skitter.Component.t/0`.
@@ -22,18 +69,12 @@ defmodule Skitter.DSL.Component do
 
   ## Signature
 
-  The signature of the component declares the externally visible meta-information of the
-  component: its name and list of in -and out ports.
-
-  The name of the component is an atom, which is used to register the component.  By convention,
-  components are named with an elixir alias (e.g. `MyComponent`).  The name of the component can
-  be omitted, in which case it is not registered.
-
-  The in and out ports of a component are provided as a list of lists of names, e.g. `in:
-  [in_port1, in_port2], out: [out_port1, out_port2]`. As a syntactic convenience, the `[]` around
-  a port list may be dropped if only a single port is declared (e.g.: `out: [foo]` can be written
-  as `out: foo`). Finally, it is possible for a component to not define out ports. This can be
-  specified as `out: []`, or by dropping the out port sub-list altogether.
+  The signature of the component declares the in -and out ports of the component. These are
+  provided as a list of names, e.g. `in: [in_port1, in_port2], out: [out_port1, out_port2]`. As a
+  syntactic convenience, the `[]` around a port list may be dropped if only a single port is
+  declared (e.g.: `out: [foo]` can be written as `out: foo`). Finally, it is possible for a
+  component to not define out ports. This can be specified as `out: []`, or by dropping the out
+  port sub-list altogether.
 
   ## Body
 
@@ -68,14 +109,13 @@ defmodule Skitter.DSL.Component do
   ```
 
   Internally, callback declarations are transformed into a call to the
-  `Skitter.Component.Callback.defcallback/4` macro. Please refer to its
-  documentation to learn about the constructs that may be used in the body of a
-  callback. Note that the `fields`, `out_ports`, and `args` arguments of the
-  call to `defcallback/4` will be provided automatically. As an example, the
+  `Skitter.DSL.Callback.callback/3` macro. Please refer to its documentation to learn about the
+  constructs that may be used in the body of a callback. Note that the `fields`, `out_ports`, and
+  `args` arguments of the call to `callback/3` will be provided automatically. As an example, the
   example above would be translated to the following call:
 
   ```
-  defcallback(<component fields>, <component out ports>, [arg1, arg2], body)
+  callback(<component fields>, <component out ports>, [arg1, arg2], body)
   ```
 
   The generated callback will be stored in the component callbacks field under
@@ -85,8 +125,8 @@ defmodule Skitter.DSL.Component do
 
   The following component calculates the average of all the values it receives.
 
-      iex> avg = defcomponent Average, in: value, out: current do
-      ...>    strategy TestStrategy
+      iex> avg = component in: value, out: current do
+      ...>    strategy test_strategy()
       ...>    fields total, count
       ...>
       ...>    init do
@@ -101,8 +141,6 @@ defmodule Skitter.DSL.Component do
       ...>      total / count ~> current
       ...>    end
       ...>  end
-      iex> avg.name
-      Average
       iex> avg.fields
       [:total, :count]
       iex> avg.in_ports
@@ -118,15 +156,7 @@ defmodule Skitter.DSL.Component do
       %{count: 1, total: 10}
   """
   @doc section: :dsl
-  defmacro defcomponent(name \\ nil, ports \\ [], body)
-
-  defmacro defcomponent(name, [], do: body) when is_list(name) do
-    quote do
-      defcomponent(nil, unquote(name), do: unquote(body))
-    end
-  end
-
-  defmacro defcomponent(name, ports, do: body) do
+  defmacro component(ports \\ [], do: body) do
     try do
       {in_ports, out_ports} = AST.parse_port_list(ports, __CALLER__)
 
@@ -140,19 +170,15 @@ defmodule Skitter.DSL.Component do
       callbacks = Callback.extract_callbacks(body, imports, fields, out_ports)
 
       quote do
-        require Skitter.DSL.Registry
-
         %Skitter.Component{
-          name: unquote(name),
           fields: unquote(fields),
           in_ports: unquote(in_ports),
           out_ports: unquote(out_ports),
           callbacks: unquote(callbacks),
-          strategy: unquote(__MODULE__).expand_strategy(unquote(strategy))
+          strategy: unquote(strategy)
         }
         |> unquote(__MODULE__).verify_strategy()
         |> Skitter.Strategy.define()
-        |> Skitter.DSL.Registry.store(unquote(name))
       end
     catch
       err -> handle_error(err)
@@ -187,23 +213,16 @@ defmodule Skitter.DSL.Component do
   end
 
   @doc false
-  def expand_strategy(s = %Skitter.Strategy{}), do: s
-
-  def expand_strategy(name) when is_atom(name) do
-    name |> Skitter.DSL.Registry.lookup!() |> expand_strategy()
-  end
-
-  def expand_strategy(any) do
-    raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
-  end
-
-  @doc false
-  def verify_strategy(c = %Skitter.Component{strategy: strategy}) do
+  def verify_strategy(c = %Skitter.Component{strategy: strategy = %Skitter.Strategy{}}) do
     if Skitter.Strategy.complete?(strategy) do
       c
     else
       raise DefinitionError, "`#{inspect(strategy)}` is not complete"
     end
+  end
+
+  def verify_strategy(%Skitter.Component{strategy: any}) do
+    raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
   end
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do

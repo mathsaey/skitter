@@ -6,24 +6,27 @@
 
 defmodule Skitter.DSL.Strategy do
   @moduledoc """
-  Strategy definition DSL, see `defstrategy/2`.
+  Strategy definition DSL, see `strategy/1` and `defstrategy/2`.
   """
   alias Skitter.DSL.{AST, DefinitionError, Callback}
   alias Skitter.Strategy
 
   @doc """
-  Define a `Skitter.Strategy`
+  Define a strategy using `strategy/2` and bind it to `name`.
   """
-  @doc section: :dsl
-  defmacro defstrategy(name \\ nil, opts \\ [], body)
+  defmacro defstrategy(name, opts \\ [], do: body) do
+    name_str = name |> AST.name_to_atom(__CALLER__) |> Atom.to_string()
 
-  defmacro defstrategy(name, [], do: body) when is_list(name) do
     quote do
-      defstrategy(nil, unquote(name), do: unquote(body))
+      unquote(name) = %{strategy(unquote(opts), do: unquote(body)) | name: unquote(name_str)}
     end
   end
 
-  defmacro defstrategy(name, opts, do: body) do
+  @doc """
+  Define a `Skitter.Strategy`
+  """
+  @doc section: :dsl
+  defmacro strategy(opts \\ [], do: body) do
     parents = opts |> Keyword.get(:extends, []) |> parse_parents()
     statements = AST.block_to_list(body)
     {statements, imports} = AST.extract_calls(statements, [:alias, :import, :require])
@@ -47,12 +50,9 @@ defmodule Skitter.DSL.Strategy do
       )
 
     quote do
-      require Skitter.DSL.Registry
-
-      %Skitter.Strategy{name: unquote(name)}
+      %Skitter.Strategy{}
       |> struct!(unquote(callbacks))
-      |> Skitter.Strategy.merge(unquote(__MODULE__).expand_parents(unquote(parents)))
-      |> Skitter.DSL.Registry.store(unquote(name))
+      |> Skitter.Strategy.merge(unquote(__MODULE__).verify_parents(unquote(parents)))
     end
   end
 
@@ -60,15 +60,10 @@ defmodule Skitter.DSL.Strategy do
   defp parse_parents(any), do: [any]
 
   @doc false
-  def expand_parents(parents), do: Enum.map(parents, &expand_parent/1)
-
-  defp expand_parent(s = %Strategy{}), do: s
-
-  defp expand_parent(name) when is_atom(name) do
-    name |> Skitter.DSL.Registry.lookup!() |> expand_parent()
-  end
-
-  defp expand_parent(any) do
-    raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
+  def verify_parents(parents) do
+    Enum.map(parents, fn
+      s = %Strategy{} -> s
+      other -> raise DefinitionError, "`#{inspect(other)}` is not a valid strategy"
+    end)
   end
 end

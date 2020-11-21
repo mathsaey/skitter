@@ -16,7 +16,7 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "no state access" do
     c =
-      defcallback([:field], []) do
+      callback([:field], []) do
         () ->
           10
       end
@@ -28,7 +28,7 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "readoly state" do
     c =
-      defcallback([:field], []) do
+      callback([:field], []) do
         () ->
           field
       end
@@ -42,7 +42,7 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "write only state" do
     c =
-      defcallback([:field], []) do
+      callback([:field], []) do
         () ->
           field <~ 30
       end
@@ -55,7 +55,7 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "read/write state" do
     c =
-      defcallback([:field], []) do
+      callback([:field], []) do
         () ->
           field <~ (field + 10)
       end
@@ -68,7 +68,7 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "no publish" do
     c =
-      defcallback([], [:out]) do
+      callback([], [:out]) do
         () ->
           5
       end
@@ -79,7 +79,7 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "publish" do
     c =
-      defcallback([], [:out]) do
+      callback([], [:out]) do
         () ->
           5 ~> out
       end
@@ -90,12 +90,12 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "arguments and arity" do
     c1 =
-      defcallback([], []) do
+      callback([], []) do
         arg -> arg
       end
 
     c2 =
-      defcallback([], []) do
+      callback([], []) do
         arg1, arg2 -> arg1 + arg2
       end
 
@@ -107,7 +107,7 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "multiple clauses" do
     c =
-      defcallback([], []) do
+      callback([], []) do
         :foo -> :bar
         %{foo: x} -> x
       end
@@ -118,22 +118,22 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "errors" do
     assert_definition_error ~r/.*: Invalid syntax: `foo`/ do
-      defcallback([], [], do: (() -> 5 ~> :foo))
+      callback([], [], do: (() -> 5 ~> :foo))
     end
 
     assert_definition_error ~r/.*: Callback clauses must have the same arity/ do
-      defcallback([], []) do
+      callback([], []) do
         arg -> arg
         arg1, arg2 -> {arg1, arg2}
       end
     end
 
     assert_definition_error ~r/.*: Invalid field: .*/ do
-      defcallback([:field], [], do: (() -> another_field <~ 5))
+      callback([:field], [], do: (() -> another_field <~ 5))
     end
 
     assert_definition_error ~r/.*: Invalid out port: .*/ do
-      defcallback([], [:out], do: (() -> 5 ~> wrong_port))
+      callback([], [:out], do: (() -> 5 ~> wrong_port))
     end
   end
 end

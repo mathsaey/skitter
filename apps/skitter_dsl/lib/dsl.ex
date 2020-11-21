@@ -11,9 +11,9 @@ defmodule Skitter.DSL do
   `use Skitter.DSL` can be used to automatically load all the domain-specific
   languages defined by this application:
 
-  - `Skitter.DSL.Component.defcomponent/3`
-  - `Skitter.DSL.Workflow.defworkflow/3`
-  - `Skitter.DSL.Strategy.defstrategy/2`
+  - `Skitter.DSL.Component.component/2` and `Skitter.DSL.Component.defcomponent/3`
+  - `Skitter.DSL.Workflow.workflow/2` and `Skitter.DSL.Workflow.defworkflow/3`
+  - `Skitter.DSL.Strategy.strategy/1` and `Skitter.DSL.Strategy.defstrategy/2`
   """
 
   @doc false

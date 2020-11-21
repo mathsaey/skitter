@@ -6,10 +6,10 @@
 
 defmodule Skitter.DSL.Workflow do
   @moduledoc """
-  Workflow definition DSL. See `defworkflow/3`.
+  Workflow definition DSL. See `workflow/2` and `defworkflow/3`.
   """
   alias Skitter.{Instance, Component, Workflow}
-  alias Skitter.DSL.{DefinitionError, AST, Registry}
+  alias Skitter.DSL.{DefinitionError, AST}
 
   # ------------------ #
   # Workflow Expansion #
@@ -17,21 +17,12 @@ defmodule Skitter.DSL.Workflow do
 
   @doc false
   # Expand the workflow at runtime, needed since names are not registered at compile time.
-  def _create_workflow(name, in_ports, out_ports, nodes, links) do
+  def _create_workflow(in_ports, out_ports, nodes, links) do
     try do
-      nodes =
-        nodes
-        |> Enum.map(&expand_name/1)
-        |> Enum.map(&create_node/1)
-        |> Enum.into(%{})
-
-      links =
-        links
-        |> verify_links(nodes, in_ports, out_ports)
-        |> read_links()
+      nodes = nodes |> Enum.map(&create_node/1) |> Enum.into(%{})
+      links = links |> verify_links(nodes, in_ports, out_ports) |> read_links()
 
       %Workflow{
-        name: name,
         in_ports: in_ports,
         out_ports: out_ports,
         nodes: nodes,
@@ -41,12 +32,6 @@ defmodule Skitter.DSL.Workflow do
       err -> handle_error(err)
     end
   end
-
-  defp expand_name({name, elem, args}) when is_atom(elem) do
-    {name, Skitter.DSL.Registry.lookup!(elem), args}
-  end
-
-  defp expand_name(any), do: any
 
   defp create_node({n, e, a}) when is_struct(e, Component) or is_struct(e, Workflow) do
     {n, %Instance{elem: e, args: a}}
@@ -91,23 +76,55 @@ defmodule Skitter.DSL.Workflow do
   # Macros #
   # ------ #
 
+  @doc """
+  Define a workflow using `workflow/2` and bind it to `name`.
+
+  Also sets the `name` field of the generated workflow to `name`.
+
+  ## Examples
+
+      iex> defcomponent identity, in: in_val, out: out_val do
+      ...>   strategy test_strategy()
+      ...>
+      ...>   react val, do: val ~> out_val
+      ...> end
+      iex> defworkflow workflow, in: data do
+      ...>   id = new identity
+      ...>
+      ...>   printer = new (component in: val do
+      ...>      strategy test_strategy()
+      ...>      react val, do: IO.inspect(val)
+      ...>   end)
+      ...>
+      ...>   data ~> id.in_val
+      ...>   id.out_val ~> printer.val
+      ...> end
+      iex> workflow.name
+      "workflow"
+      iex> workflow.in_ports
+      [:data]
+      iex> workflow.out_ports
+      []
+      iex> workflow.links
+      %{{nil, :data} => [id: :in_val], {:id, :out_val} => [printer: :val]}
+  """
+  defmacro defworkflow(name, opts \\ [], do: body) do
+    name_str = name |> AST.name_to_atom(__CALLER__) |> Atom.to_string()
+
+    quote do
+      unquote(name) = %{workflow(unquote(opts), do: unquote(body)) | name: unquote(name_str)}
+    end
+  end
+
   @node_keyword :new
 
   @doc """
   DSL to define `t:Skitter.Workflow.t/0`.
 
-  Like a component definition, a workflow definition consists of a signature and a body. The first
-  two arguments accepted by this macro (`name`, `port`) make up the signature, while the final
-  argument contains the body of the workflow.
+  Like a component definition, a workflow definition consists of a port list and a body. The port
+  list declares the ports of the workflow while the final argument contains the body.
 
-  ## Signature
-
-  The signature of a workflow declares the externally visible information of the workflow: its
-  name and list of in -and out ports.
-
-  The name of the workflow is an atom, which is used to register the workflow.  Workflows are
-  named with an elixir alias (e.g. `MyWorkflow`). The name of the workflow may be omitted, in
-  which case it is not registered.
+  ## Port list
 
   The in and out ports of a workflow are provided as a list of lists of names, e.g. `in:
   [in_port1, in_port2], out: [out_port1, out_port2]`. As a syntactic convenience, the `[]` around
@@ -144,16 +161,16 @@ defmodule Skitter.DSL.Workflow do
 
   ## Examples
 
-      iex> defcomponent Identity, in: in_val, out: out_val do
-      ...>   strategy TestStrategy
+      iex> identity = component in: in_val, out: out_val do
+      ...>   strategy test_strategy()
       ...>
       ...>   react val, do: val ~> out_val
       ...> end
-      iex> wf = defworkflow in: data do
-      ...>   id = new Identity
+      iex> wf = workflow in: data do
+      ...>   id = new identity
       ...>
-      ...>   printer = new (defcomponent in: val do
-      ...>      strategy TestStrategy
+      ...>   printer = new (component in: val do
+      ...>      strategy test_strategy()
       ...>      react val, do: IO.inspect(val)
       ...>   end)
       ...>
@@ -168,15 +185,7 @@ defmodule Skitter.DSL.Workflow do
       %{{nil, :data} => [id: :in_val], {:id, :out_val} => [printer: :val]}
   """
   @doc section: :dsl
-  defmacro defworkflow(name \\ nil, ports \\ [], body)
-
-  defmacro defworkflow(name, [], do: body) when is_list(name) do
-    quote do
-      defworkflow(nil, unquote(name), do: unquote(body))
-    end
-  end
-
-  defmacro defworkflow(name, ports, do: body) do
+  defmacro workflow(ports \\ [], do: body) do
     try do
       {in_ports, out_ports} = AST.parse_port_list(ports, __CALLER__)
 
@@ -190,16 +199,12 @@ defmodule Skitter.DSL.Workflow do
       nodes = read_nodes(nodes, __CALLER__)
 
       quote do
-        require Skitter.DSL.Registry
-
         unquote(__MODULE__)._create_workflow(
-          unquote(name),
           unquote(in_ports),
           unquote(out_ports),
           unquote(nodes),
           unquote(links)
         )
-        |> Registry.store(unquote(name))
       end
     catch
       err -> handle_error(err)
