@@ -37,9 +37,9 @@ defmodule Skitter.DSL.Component do
       "average"
       iex> average.fields
       [:total, :count]
-      iex> average.in_ports
+      iex> average.in
       [:value]
-      iex> average.out_ports
+      iex> average.out
       [:current]
       iex> Component.call(average, :init, Component.create_empty_state(average), []).state
       %{count: 0, total: 0}
@@ -110,7 +110,7 @@ defmodule Skitter.DSL.Component do
 
   Internally, callback declarations are transformed into a call to the
   `Skitter.DSL.Callback.callback/3` macro. Please refer to its documentation to learn about the
-  constructs that may be used in the body of a callback. Note that the `fields`, `out_ports`, and
+  constructs that may be used in the body of a callback. Note that the `fields`, `out`, and
   `args` arguments of the call to `callback/3` will be provided automatically. As an example, the
   example above would be translated to the following call:
 
@@ -143,9 +143,9 @@ defmodule Skitter.DSL.Component do
       ...>  end
       iex> avg.fields
       [:total, :count]
-      iex> avg.in_ports
+      iex> avg.in
       [:value]
-      iex> avg.out_ports
+      iex> avg.out
       [:current]
       iex> Component.call(avg, :init, Component.create_empty_state(avg), []).state
       %{count: 0, total: 0}
@@ -158,7 +158,7 @@ defmodule Skitter.DSL.Component do
   @doc section: :dsl
   defmacro component(ports \\ [], do: body) do
     try do
-      {in_ports, out_ports} = AST.parse_port_list(ports, __CALLER__)
+      {in_, out} = AST.parse_port_list(ports, __CALLER__)
 
       body = AST.block_to_list(body)
       {body, imports} = AST.extract_calls(body, [:alias, :import, :require])
@@ -167,13 +167,13 @@ defmodule Skitter.DSL.Component do
 
       fields = verify_fields(fields, __CALLER__)
       strategy = transform_strategy(strategy, imports, __CALLER__)
-      callbacks = Callback.extract_callbacks(body, imports, fields, out_ports)
+      callbacks = Callback.extract_callbacks(body, imports, fields, out)
 
       quote do
         %Skitter.Component{
           fields: unquote(fields),
-          in_ports: unquote(in_ports),
-          out_ports: unquote(out_ports),
+          in: unquote(in_),
+          out: unquote(out),
           callbacks: unquote(callbacks),
           strategy: unquote(strategy)
         }

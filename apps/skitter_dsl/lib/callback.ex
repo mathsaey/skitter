@@ -13,17 +13,16 @@ defmodule Skitter.DSL.Callback do
   macro expects a list of fields, a list of out ports and a body as its arguments. In most cases,
   this macro should not be called explicitly. Instead, a callback can be defined inside
   `Skitter.DSL.Component.component/2` or `Skitter.DSL.Strategy.strategy/2`. These macros
-  internally use `callback/3`, and ensure the correct values are provided for `fields` and
-  `out_ports`.
+  internally use `callback/3`, and ensure the correct values are provided for `fields` and `out`.
 
   ## Callback body
 
   Inside the body of a callback, standard elixir syntax can be used; however, a few caveats apply:
 
-  - the `~>` operator can be used to publish data to any out port provided in `out_ports` (an
-  error is raised if the port is not present in `out_ports`).  This is done with the following
-  syntax: `value ~> port`. If data is published on the same out port multiple times, the last data
-  written will be published.
+  - the `~>` operator can be used to publish data to any out port provided in `out` (an error is
+  raised if the port is not present in `out`).  This is done with the following syntax: `value ~>
+  port`. If data is published on the same out port multiple times, the last data written will be
+  published.
   - the `<~` operator can be used to update the state passed to the callback.  `field <~ value`
   will update `field` of the state. The provided field should be present in `fields` (an error is
   raised  if this is not the case).
@@ -69,17 +68,16 @@ defmodule Skitter.DSL.Callback do
   # body, and transforms them into calls to `callback/3`. A map is returned where the name of
   # the callback is the key while the actual callback is the value.
   #
-  # `fields` and `out_ports` are passed to the `callback/3` calls, unless
-  # `name => {fields, out_ports}` is present in `overrides`, in which case the `fields` and
-  # `out_ports` present in that tuple get passed.
-  # `imports` is added to the body passed to `callback`.
-  def extract_callbacks(statements, imports, fields, out_ports, overrides \\ %{}) do
+  # `fields` and `out` are passed to the `callback/3` calls, unless
+  # `name => {fields, out}` is present in `overrides`, in which case the `fields` and `out`
+  # present in that tuple get passed. `imports` is added to the body passed to `callback`.
+  def extract_callbacks(statements, imports, fields, out, overrides \\ %{}) do
     callbacks =
       statements
       |> Enum.reject(&is_nil(&1))
       |> Enum.map(&read_callback(&1))
       |> Enum.reduce(%{}, &merge_callback(&1, &2))
-      |> Enum.map(&add_imports_fields_ports(&1, imports, fields, out_ports, overrides))
+      |> Enum.map(&add_imports_fields_ports(&1, imports, fields, out, overrides))
       |> Enum.map(&build_callback(&1))
 
     {:%{}, [], callbacks}
@@ -140,10 +138,10 @@ defmodule Skitter.DSL.Callback do
   DSL to create `t:Skitter.Callback.t/0`.
 
   This macro offers a DSL to create callbacks that can be used inside skitter components and
-  strategies. This macro accepts `fields`, `out_ports` and a body as its arguments. As stated in
-  the module documentation, this macro should not be called directly if it can be avoided.
-  Instead, rely on the `Skitter.DSL.Component.component/2` and `Skitter.DSL.Strategy.strategy/2`
-  macros to call this macro.
+  strategies. This macro accepts `fields`, `out` and a body as its arguments. As stated in the
+  module documentation, this macro should not be called directly if it can be avoided.  Instead,
+  rely on the `Skitter.DSL.Component.component/2` and `Skitter.DSL.Strategy.strategy/2` macros to
+  call this macro.
 
   The `body` argument should contain the actual implementation of the callback. This body consists
   of `fn`-like clauses (`argument -> body`). The body of these clauses contain standard elixir
@@ -175,9 +173,9 @@ defmodule Skitter.DSL.Callback do
       %Result{state: %{count: 2, total: 10}, publish: [], result: 5.0}
   """
   @doc section: :dsl
-  defmacro callback(fields, out_ports, do: body) do
+  defmacro callback(fields, out, do: body) do
     try do
-      body = transform_operators(fields, out_ports, body, __CALLER__)
+      body = transform_operators(fields, out, body, __CALLER__)
       read? = used?(body, :read_state)
       write? = used?(body, :update_state)
       publish? = used?(body, :publish)
@@ -256,7 +254,7 @@ defmodule Skitter.DSL.Callback do
   #   if field exists.
   #   - Any use of the ~> operator is transformed into `publish(value, port)`,
   #   check if port exists.
-  defp transform_operators(fields, out_ports, body, env) do
+  defp transform_operators(fields, out, body, env) do
     Macro.prewalk(body, fn
       node = {name, _, atom} when is_atom(atom) ->
         if(name in fields, do: quote(do: read_state(unquote(name))), else: node)
@@ -273,10 +271,10 @@ defmodule Skitter.DSL.Callback do
       {@publish_operator, _, [value, port]} ->
         port = AST.name_to_atom(port, env)
 
-        if port in out_ports do
+        if port in out do
           quote(do: publish(unquote(port), unquote(value)))
         else
-          throw {:error, :invalid_out_port, port, out_ports, env}
+          throw {:error, :invalid_out_port, port, out, env}
         end
 
       any ->
@@ -348,9 +346,9 @@ defmodule Skitter.DSL.Callback do
     )
   end
 
-  defp handle_error({:error, :invalid_out_port, port, out_ports, env}) do
+  defp handle_error({:error, :invalid_out_port, port, out, env}) do
     DefinitionError.inject(
-      "Invalid out port: `#{port}` is not a part of `#{inspect(out_ports)}`",
+      "Invalid out port: `#{port}` is not a part of `#{inspect(out)}`",
       env
     )
   end

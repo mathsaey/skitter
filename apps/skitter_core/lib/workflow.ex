@@ -28,16 +28,16 @@ defmodule Skitter.Workflow do
   """
   @type t :: %__MODULE__{
           name: module() | nil,
-          in_ports: [Port.t(), ...],
-          out_ports: [Port.t()],
+          in: [Port.t(), ...],
+          out: [Port.t()],
           # TODO: rename this?
           nodes: %{optional(id()) => Instance.t()},
           links: %{required(address()) => [address()]}
         }
 
   defstruct name: nil,
-            in_ports: [],
-            out_ports: [],
+            in: [],
+            out: [],
             nodes: %{},
             links: %{}
 
@@ -84,9 +84,6 @@ end
 defimpl Inspect, for: Skitter.Workflow do
   use Skitter.Inspect, prefix: "Workflow", named: true
 
-  ignore_empty([:out_ports])
+  ignore_empty([:out])
   ignore_short([:handler, :nodes, :links])
-
-  describe(:in_ports, "in")
-  describe(:out_ports, "out")
 end

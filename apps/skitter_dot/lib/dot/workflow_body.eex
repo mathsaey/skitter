@@ -3,9 +3,9 @@
   # This Source Code Form is subject to the terms of the Mozilla Public
   # License, v. 2.0. If a copy of the MPL was not distributed with this
   # file, You can obtain one at http://mozilla.org/MPL/2.0/. %>
-<%= workflow_ports(ports: @workflow.in_ports, path: @path, prefix: "in") %>
+<%= workflow_ports(ports: @workflow.in, path: @path, prefix: "in") %>
 
-<%= workflow_ports(ports: @workflow.out_ports, path: @path, prefix: "out") %>
+<%= workflow_ports(ports: @workflow.out, path: @path, prefix: "out") %>
 
 <%= for {id, node} <- @workflow.nodes do %>
   <%= workflow_node(id, node, @path) %>

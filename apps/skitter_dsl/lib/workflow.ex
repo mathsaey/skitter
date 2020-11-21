@@ -17,14 +17,14 @@ defmodule Skitter.DSL.Workflow do
 
   @doc false
   # Expand the workflow at runtime, needed since names are not registered at compile time.
-  def _create_workflow(in_ports, out_ports, nodes, links) do
+  def _create_workflow(in_, out, nodes, links) do
     try do
       nodes = nodes |> Enum.map(&create_node/1) |> Enum.into(%{})
-      links = links |> verify_links(nodes, in_ports, out_ports) |> read_links()
+      links = links |> verify_links(nodes, in_, out) |> read_links()
 
       %Workflow{
-        in_ports: in_ports,
-        out_ports: out_ports,
+        in: in_,
+        out: out,
         nodes: nodes,
         links: links
       }
@@ -39,10 +39,10 @@ defmodule Skitter.DSL.Workflow do
 
   defp create_node({_, any, _}), do: throw({:error, :invalid_node, any})
 
-  defp verify_links(links, nodes, in_ports, out_ports) do
+  defp verify_links(links, nodes, in_, out) do
     Enum.each(links, fn {source, destination} ->
-      verify_port(source, nodes, in_ports, :out_ports)
-      verify_port(destination, nodes, out_ports, :in_ports)
+      verify_port(source, nodes, in_, :out)
+      verify_port(destination, nodes, out, :in)
     end)
 
     links
@@ -101,9 +101,9 @@ defmodule Skitter.DSL.Workflow do
       ...> end
       iex> workflow.name
       "workflow"
-      iex> workflow.in_ports
+      iex> workflow.in
       [:data]
-      iex> workflow.out_ports
+      iex> workflow.out
       []
       iex> workflow.links
       %{{nil, :data} => [id: :in_val], {:id, :out_val} => [printer: :val]}
@@ -177,9 +177,9 @@ defmodule Skitter.DSL.Workflow do
       ...>   data ~> id.in_val
       ...>   id.out_val ~> printer.val
       ...> end
-      iex> wf.in_ports
+      iex> wf.in
       [:data]
-      iex> wf.out_ports
+      iex> wf.out
       []
       iex> wf.links
       %{{nil, :data} => [id: :in_val], {:id, :out_val} => [printer: :val]}
@@ -187,7 +187,7 @@ defmodule Skitter.DSL.Workflow do
   @doc section: :dsl
   defmacro workflow(ports \\ [], do: body) do
     try do
-      {in_ports, out_ports} = AST.parse_port_list(ports, __CALLER__)
+      {in_, out} = AST.parse_port_list(ports, __CALLER__)
 
       {nodes, links} =
         body
@@ -200,8 +200,8 @@ defmodule Skitter.DSL.Workflow do
 
       quote do
         unquote(__MODULE__)._create_workflow(
-          unquote(in_ports),
-          unquote(out_ports),
+          unquote(in_),
+          unquote(out),
           unquote(nodes),
           unquote(links)
         )

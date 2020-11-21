@@ -31,8 +31,8 @@ defmodule Skitter.Component do
   | ------------- | -------------------------------------------- | --------- |
   | `name`        | The name of the component                    | `nil`     |
   | `fields`      | List of the slots of the component           | `[]`      |
-  | `in_ports`    | List of in ports of the component.           | `[]`      |
-  | `out_ports`   | List of out ports of the component           | `[]`      |
+  | `in`          | List of in ports of the component.           | `[]`      |
+  | `out`         | List of out ports of the component           | `[]`      |
   | `strategy`    | The `t:Skitter.Strategy/0` of this component | `nil`     |
 
   Note that a valid component must have at least one in port.
@@ -40,16 +40,16 @@ defmodule Skitter.Component do
   @type t :: %__MODULE__{
           name: module() | nil,
           fields: [field()],
-          in_ports: [Port.t(), ...],
-          out_ports: [Port.t()],
+          in: [Port.t(), ...],
+          out: [Port.t()],
           callbacks: %{optional(callback_name()) => Callback.t()},
           strategy: Strategy.t()
         }
 
   defstruct name: nil,
             fields: [],
-            in_ports: [],
-            out_ports: [],
+            in: [],
+            out: [],
             callbacks: %{},
             strategy: nil
 
@@ -227,8 +227,5 @@ defimpl Inspect, for: Skitter.Component do
   use Skitter.Inspect, prefix: "Component", named: true
 
   ignore_short([:callbacks, :fields, :handler])
-  ignore_empty([:fields, :out_ports])
-
-  describe(:in_ports, "in")
-  describe(:out_ports, "out")
+  ignore_empty([:fields, :out])
 end

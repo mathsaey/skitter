@@ -133,14 +133,6 @@ defmodule Skitter.Inspect do
     end
   end
 
-  defmacro describe(key, desc) do
-    quote do
-      defp _doc({unquote(key), v}, o) do
-        group(glue("#{unquote(desc)}:", short(v, o)))
-      end
-    end
-  end
-
   defmacro match(key, value, opts, do: body) do
     quote do
       defp _doc({unquote(key), unquote(value)}, unquote(opts)) do

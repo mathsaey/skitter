@@ -31,16 +31,16 @@ defmodule Skitter.DSL.ComponentTest do
         strategy test_strategy()
       end
 
-    assert comp.in_ports == [:foo]
-    assert comp.out_ports == [:bar]
+    assert comp.in == [:foo]
+    assert comp.out == [:bar]
 
     comp =
       component in: foo, out: bar do
         strategy test_strategy()
       end
 
-    assert comp.in_ports == [:foo]
-    assert comp.out_ports == [:bar]
+    assert comp.in == [:foo]
+    assert comp.out == [:bar]
   end
 
   test "fields extraction" do

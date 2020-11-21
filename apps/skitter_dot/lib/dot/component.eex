@@ -6,14 +6,14 @@
 <%= expand_path(@path, @id) %> [shape=none label=<
   <TABLE STYLE="rounded"><TR>
     <TD BORDER="0">
-      <%= component_ports(ports: @component.in_ports, prefix: "in") %>
+      <%= component_ports(ports: @component.in, prefix: "in") %>
     </TD>
 
     <TD BORDER="0"><%= @id %><%= component_name(@component) %></TD>
 
-    <%= unless Enum.empty?(@component.out_ports) do %>
+    <%= unless Enum.empty?(@component.out) do %>
     <TD BORDER="0">
-      <%= component_ports(ports: @component.out_ports, prefix: "out") %>
+      <%= component_ports(ports: @component.out, prefix: "out") %>
     </TD>
     <%end %>
   </TR></TABLE>

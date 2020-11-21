@@ -35,15 +35,15 @@ defmodule Skitter.DSL.WorkflowTest do
       workflow in: foo, out: bar do
       end
 
-    assert wf.in_ports == [:foo]
-    assert wf.out_ports == [:bar]
+    assert wf.in == [:foo]
+    assert wf.out == [:bar]
 
     wf =
       workflow in: foo, out: bar do
       end
 
-    assert wf.in_ports == [:foo]
-    assert wf.out_ports == [:bar]
+    assert wf.in == [:foo]
+    assert wf.out == [:bar]
   end
 
   test "inline components" do
@@ -62,7 +62,7 @@ defmodule Skitter.DSL.WorkflowTest do
     assert w[:a] == %Instance{elem: test_component(), args: []}
 
     assert w[:b] == %Instance{
-             elem: %Component{in_ports: [:ignore], strategy: test_strategy()},
+             elem: %Component{in: [:ignore], strategy: test_strategy()},
              args: []
            }
   end
