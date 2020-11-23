@@ -1,4 +1,4 @@
-defmodule Skitter.Local do
+defmodule Skitter.LocalNode do
   @moduledoc """
   Local Skitter Application
   """
