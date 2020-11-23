@@ -8,11 +8,10 @@ defmodule Skitter.Workflow do
   @moduledoc """
   Data processing pipeline.
 
-  A reactive workflow is a collection of connected `Skitter.Element` (i.e.
-  components or workflows) which make up a data processing pipeline. This module
-  defines the internal representation of a skitter workflow as an elixir struct,
-  as well as the `Access` behaviour which allows one to access and modify the
-  elements inside a workflow.
+  A reactive workflow is a collection of connected workflows and components. Together, these
+  workflows and components make up a data processing pipeline. This module defines the internal
+  representation of a skitter workflow as an elixir struct, as well as the `Access` behaviour
+  which allows one to access and modify the elements inside a workflow.
   """
   alias Skitter.{Port, Instance}
 

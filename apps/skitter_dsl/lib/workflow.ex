@@ -147,8 +147,7 @@ defmodule Skitter.DSL.Workflow do
 
   - The name of a node uniquely identifies it in a workflow. This name is used to link the node to
   others.
-  - `element` is either the name of an existing `Skitter.Element`, or an inline definition of an
-  element.
+  - `element` is a skitter component or workflow.
   - The remaining arguments are stored along with the element as a `t:Skitter.Instance/t/0`. This
   instance is passed to the component strategy when the element is deployed.
 

@@ -8,15 +8,16 @@ defmodule Skitter.Instance do
   @moduledoc """
   An instance represents the use of a workflow or component inside a workflow.
 
-  An instance contains the element that is used, and the arguments that are
-  passed along with it.
+  An instance contains the element that is used, and the arguments that are passed along with it.
   """
-  alias Skitter.Element
 
   @typedoc """
   Element that is being instantiated and instantiation arguments.
   """
-  @type t :: %__MODULE__{elem: Element.t(), args: [any()]}
+  @type t :: %__MODULE__{
+          elem: Skitter.Component.t() | Skitter.Workflow.t(),
+          args: [any()]
+        }
 
   defstruct elem: nil, args: []
 end

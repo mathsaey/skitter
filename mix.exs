@@ -111,7 +111,6 @@ defmodule Skitter.MixProject do
       extras: doc_extras(),
       groups_for_modules: [
         core: [
-          Skitter.Element,
           Skitter.Port,
           Skitter.Instance,
           Skitter.Callback,
