@@ -8,7 +8,7 @@ defmodule Skitter.DSL.Workflow do
   @moduledoc """
   Workflow definition DSL. See `workflow/2` and `defworkflow/3`.
   """
-  alias Skitter.{Instance, Component, Workflow}
+  alias Skitter.{Component, Workflow}
   alias Skitter.DSL.{DefinitionError, AST}
 
   # ------------------ #
@@ -34,7 +34,7 @@ defmodule Skitter.DSL.Workflow do
   end
 
   defp create_node({n, e, a}) when is_struct(e, Component) or is_struct(e, Workflow) do
-    {n, %Instance{elem: e, args: a}}
+    {n, {e, a}}
   end
 
   defp create_node({_, any, _}), do: throw({:error, :invalid_node, any})
@@ -58,7 +58,7 @@ defmodule Skitter.DSL.Workflow do
     element =
       case nodes[identifier] do
         nil -> throw {:error, :invalid_name, identifier}
-        %Instance{elem: element} -> element
+        {element, _} -> element
       end
 
     unless port in Map.get(element, key) do
@@ -148,8 +148,8 @@ defmodule Skitter.DSL.Workflow do
   - The name of a node uniquely identifies it in a workflow. This name is used to link the node to
   others.
   - `element` is a skitter component or workflow.
-  - The remaining arguments are stored along with the element as a `t:Skitter.Instance/t/0`. This
-  instance is passed to the component strategy when the element is deployed.
+  - The remaining arguments are stored along with the element inside a list. These are passed as
+  arguments when the element is deployed.
 
   ### Links
 

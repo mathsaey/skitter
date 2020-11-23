@@ -13,24 +13,24 @@ defmodule Skitter.Workflow do
   representation of a skitter workflow as an elixir struct, as well as the `Access` behaviour
   which allows one to access and modify the elements inside a workflow.
   """
-  alias Skitter.{Port, Instance}
+  alias Skitter.{Component, Port}
 
   @behaviour Access
 
   @typedoc """
   Internal workflow representation.
 
-  A workflow is a directed acyclic graph where each node is a named
-  `t:Instance.t/0`. Connections between nodes are stored as a map of
-  `t:address/0`. Like a component, a workflow has in -and out ports and an
-  optional name.
+  A workflow is a directed acyclic graph where each node is a tuple containing a
+  `t:Skitter.Component.t()` or `t:Skitter.Workflow.t()` along with initialisation arguments.
+  Connections between nodes are stored as a map of `t:address/0`. Like a component, a workflow has
+  in -and out ports and an optional name.
   """
   @type t :: %__MODULE__{
           name: module() | nil,
           in: [Port.t(), ...],
           out: [Port.t()],
           # TODO: rename this?
-          nodes: %{optional(id()) => Instance.t()},
+          nodes: %{optional(id()) => {Component.t() | Workflow.t(), [any()]}},
           links: %{required(address()) => [address()]}
         }
 

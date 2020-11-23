@@ -14,7 +14,7 @@ defmodule Skitter.Dot do
   string. If dot is installed on the system, the `export/3` function can be used
   to export the generated graph in a variety of formats.
   """
-  alias Skitter.{Component, Workflow, Instance}
+  alias Skitter.{Component, Workflow}
 
   @doc """
   Return the dot representation of a workflow as a string.
@@ -85,11 +85,11 @@ defmodule Skitter.Dot do
   defp port_path(path, prefix, port), do: "#{path}_#{prefix}_#{port}"
 
   # Pattern match to treat workflows and components differently
-  defp workflow_node(id, %Instance{elem: c = %Component{}}, path) do
+  defp workflow_node(id, {c = %Component{}, _}, path) do
     component(id: id, component: c, path: path)
   end
 
-  defp workflow_node(id, %Instance{elem: w = %Workflow{}}, path) do
+  defp workflow_node(id, {w = %Workflow{}, _}, path) do
     workflow_nested(id: id, workflow: w, path: expand_path(path, id))
   end
 

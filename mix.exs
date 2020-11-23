@@ -112,19 +112,22 @@ defmodule Skitter.MixProject do
       groups_for_modules: [
         core: [
           Skitter.Port,
-          Skitter.Instance,
           Skitter.Callback,
           Skitter.Callback.Result,
           Skitter.Component,
           Skitter.Workflow,
           Skitter.Strategy,
-          Skitter.StrategyError
+          Skitter.StrategyError,
+          Skitter.Worker,
+          Skitter.Buffer,
+          Skitter.Deployment,
+          Skitter.Invocation
         ],
         utilities: [
           Skitter.Dot
         ],
         dsl: ~r/Skitter.DSL*/,
-        applications: ~r/Skitter.(Worker|Master|Local).*/
+        applications: ~r/Skitter.(Worker|Master|Local)*/
       ],
       groups_for_functions: [
         Hooks: &(&1[:section] == :hook)

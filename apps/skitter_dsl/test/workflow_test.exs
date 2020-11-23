@@ -9,7 +9,7 @@ defmodule Skitter.DSL.WorkflowTest do
   import Skitter.DSL.Test.Assertions
   import Skitter.DSL.{Component, Workflow}
 
-  alias Skitter.{Component, Instance}
+  alias Skitter.Component
 
   doctest Skitter.DSL.Workflow
 
@@ -59,12 +59,8 @@ defmodule Skitter.DSL.WorkflowTest do
           )
       end
 
-    assert w[:a] == %Instance{elem: test_component(), args: []}
-
-    assert w[:b] == %Instance{
-             elem: %Component{in: [:ignore], strategy: test_strategy()},
-             args: []
-           }
+    assert w[:a] == {test_component(), []}
+    assert w[:b] == {%Component{in: [:ignore], strategy: test_strategy()}, []}
   end
 
   test "links" do

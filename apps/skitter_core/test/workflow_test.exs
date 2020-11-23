@@ -7,35 +7,34 @@
 defmodule Skitter.WorkflowTest do
   use ExUnit.Case, async: true
 
-  alias Skitter.Workflow
-  alias Skitter.Instance
+  alias Skitter.{Component, Workflow}
 
   doctest Skitter.Workflow
 
   test "fetch" do
-    w = %Workflow{nodes: %{inst: %Instance{}}}
+    w = %Workflow{nodes: %{inst: {%Component{}, []}}}
 
     assert w[:doesnotexist] == nil
-    assert w[:inst] == %Instance{}
+    assert w[:inst] == {%Component{}, []}
   end
 
   test "pop" do
-    w = %Workflow{nodes: %{inst: %Instance{}}}
+    w = %Workflow{nodes: %{inst: {%Component{}, []}}}
 
     {v, w} = Access.pop(w, :doesnotexist)
-    assert w[:inst] == %Instance{}
+    assert w[:inst] == {%Component{}, []}
     assert v == nil
 
     {v, w} = Access.pop(w, :inst)
-    assert v == %Instance{}
+    assert v == {%Component{}, []}
     assert w[:inst] == nil
   end
 
   test "get_and_update" do
-    w = %Workflow{nodes: %{inst: %Instance{}}}
+    w = %Workflow{nodes: %{inst: {%Component{}, []}}}
 
     {v, w} = Access.get_and_update(w, :inst, fn _ -> :pop end)
-    assert v == %Instance{}
+    assert v == {%Component{}, []}
     assert w[:inst] == nil
   end
 end
