@@ -5,13 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 [
-  inputs: [
-    "mix.exs",
-    ".formatter.exs",
-    "config/*.exs",
-    "apps/*/mix.exs",
-    "apps/*/{lib,test}/**/*.{ex, exs}"
-  ],
+  inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
   locals_without_parens: [
     # Elixir
     throw: :*,
@@ -26,7 +20,7 @@
     strategy: :*,
     instance: :*,
     fields: :*,
-    # Skitter runtime
+    # Skitter config
     config_from_env: :*,
     config_enabled_if_set: :*,
     config_enabled_unless_set: :*

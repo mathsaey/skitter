@@ -65,7 +65,7 @@ steps:
       - mix local.rebar --force
       - mix deps.get --only prod
       - mix deps.compile
-      - mix build --path _build_target
+      - mix release --path _build_target
 
   - name: tar
     image: alpine:3.12
@@ -114,7 +114,7 @@ steps:
       - mix local.rebar --force
       - mix deps.get --only prod
       - mix deps.compile
-      - mix build --path _build_target
+      - mix release --path _build_target
 
   - name: tar
     image: alpine:3.12

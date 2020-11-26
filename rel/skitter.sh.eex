@@ -188,13 +188,12 @@ function do_help() {
 # -------------
 
 function rel_cmd() {
-  if [ ! -d "$SKITTER_REL_PATH/skitter_$mode" ]
+  if [ ! -d "$SKITTER_REL_PATH" ]
   then
-    echoerr "Attempted to start 'skitter_$mode', but it is not present in '$SKITTER_REL_PATH'"
-    echoerr "This probably means there is something wrong with your skitter installation."
+    echoerr "$SKITTER_REL_PATH does not exist"
     exit 2
   fi
-  $maybe_dry_run $SKITTER_REL_PATH/skitter_$mode/bin/skitter_$mode $1
+  $maybe_dry_run $SKITTER_REL_PATH/bin/<%= @release.name %> $1
 }
 
 function maybe_add_name() {
@@ -260,6 +259,7 @@ function master_start_parse() {
 }
 
 function do_worker_master() {
+  export SKITTER_MODE="$1"
   mode="$1"
   shift
 
@@ -337,7 +337,7 @@ function stop_deploy() {
 }
 
 function start_deploy() {
-  printf "⬡⬢⬡⬢ Skitter deploy <%= @version %>\n"
+  printf "⬡⬢⬡⬢ Skitter deploy <%= @release.version %>\n"
   if [ -n "$3" ] ; then printf "> cookie: $(color $purple ${3##--cookie })\n" ; fi
   printf "> workers: $(color $purple "$1")\n\n"
 
@@ -412,19 +412,19 @@ then
   exit 0
 fi
 
-# We expect the release files to be store alongside this script.
-# This location is stored as SKITTER_REL_PATH
+# We expect the release files to be stored alongside this script.
+# Store the location of the release as SKITTER_REL_PATH
 SELF=$(readlink "$0" || true)
 if [ -z "$SELF" ]; then SELF="$0"; fi
 PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
-SKITTER_REL_PATH=$PARENT_DIR
+SKITTER_REL_PATH=$PARENT_DIR/<%= @release.name %>
 
 ## Parse global options and mode
 while test $# -gt 0
   do
     case "$1" in
       -v|--version)
-        echo "skitter <%= @version %>"
+        echo "skitter <%= @release.version %>"
         exit 0
         ;;
       --debug)

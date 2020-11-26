@@ -17,14 +17,15 @@ RUN mix local.hex --force && \
 
 ENV MIX_ENV=prod
 
-COPY mix.exs mix.lock VERSION.txt ./
+COPY mix.exs mix.lock ./
 COPY config config
 RUN mix do deps.get, deps.compile
 
-COPY global.exs ./
 COPY rel rel
-COPY apps apps
-RUN mix build
+COPY lib lib
+
+RUN mkdir /target
+RUN mix release --path /target
 
 # --- #
 # Run #
@@ -39,7 +40,7 @@ WORKDIR /skitter
 RUN chown nobody:nobody /skitter
 USER nobody:nobody
 
-COPY --from=build --chown=nobody:nobody /skitter/_build/prod/rel/ ./
+COPY --from=build --chown=nobody:nobody /target ./
 
 ENTRYPOINT ["sh", "skitter"]
 CMD ["help"]

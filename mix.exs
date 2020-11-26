@@ -1,24 +1,30 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
-
-# This Source Code Form is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 defmodule Skitter.MixProject do
   use Mix.Project
 
   def project do
     [
+      app: :skitter,
       name: "Skitter",
-      version: File.read!("#{__DIR__}/VERSION.txt") |> String.trim(),
+      elixir: "~> 1.11",
+      version: "0.3.0-dev",
       source_url: "https://github.com/mathsaey/skitter/",
       homepage_url: "https://soft.vub.ac.be/~mathsaey/skitter/",
-      apps_path: "apps",
+      start_permanent: Mix.env() == :prod,
+      elixirc_paths: elixirc_paths(Mix.env()),
+      preferred_cli_env: preferred_env(),
       deps: deps(),
       docs: docs(),
+      xref: xref(),
       aliases: aliases(),
-      dialyzer: dialyzer(),
-      preferred_cli_env: preferred_env()
+      releases: releases(),
+      dialyzer: dialyzer()
+    ]
+  end
+
+  def application do
+    [
+      mod: {Skitter.Application, []},
+      extra_applications: [:logger, :eex]
     ]
   end
 
@@ -30,87 +36,75 @@ defmodule Skitter.MixProject do
     ]
   end
 
-  # ------- #
-  # Aliases #
-  # ------- #
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
-  defp preferred_env, do: [build: :prod, test: :test]
+  defp preferred_env, do: [release: :prod]
+
+  # ------- #
+  # Release #
+  # ------- #
 
   defp aliases do
     [
-      build: ["compile", &build/1],
-      run: ["compile", &run/1]
+      release: &release/1
     ]
   end
 
-  defp run(_) do
-    Mix.shell().error("""
-      No applications are started when running Skitter from the umbrella root.
-      To experiment with Skitter, either build the release (`mix build`), or
-      navigate to the individual applications (such as master or worker) in
-      the `apps` directory and start an individual application from there.
-    """)
-  end
-
-  # Release Builds
-  # --------------
-
-  # Build all releases in the umbrella
-
-  defp build(args) do
-    path = build_path(args)
-
-    Enum.each(releases(), fn app ->
-      path = Path.join(path, Atom.to_string(app))
-      build_release(app, ["--overwrite", "--quiet" | args] ++ ["--path", path])
-    end)
-
-    copy_deploy_script(path)
-  end
-
-  defp build_path(args) do
-    if idx = Enum.find_index(args, &(&1 == "--path")) do
-      Enum.at(args, idx + 1) |> Path.expand()
-    else
-      Path.join(Mix.Project.build_path(), "rel")
-    end
-  end
-
   defp releases do
-    Mix.Project.apps_paths()
-    |> Enum.map(fn {app, path} -> Mix.Project.in_project(app, path, & &1.project()[:releases]) end)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.map(fn [{rel, _}] -> rel end)
+    [
+      skitter_rel: [
+        include_executables_for: [:unix],
+        runtime_config_path: "config/release.exs",
+        steps: [:assemble, &copy_deploy_script/1]
+      ]
+    ]
   end
 
-  defp build_release(app, args) do
-    Mix.Project.in_project(app, "apps/#{app}", fn _ -> Mix.Tasks.Release.run(args) end)
+  defp copy_deploy_script(rel = %Mix.Release{}) do
+    target = rel.path |> Path.split() |> Enum.drop(-1) |> Path.join() |> Path.join("skitter")
+    Mix.Generator.copy_template("rel/skitter.sh.eex", target, [release: rel], force: true)
+    File.chmod!(target, 0o744)
+    rel
   end
 
-  defp copy_deploy_script(path) do
-    path = Path.join(path, "skitter")
-    version = __MODULE__.project()[:version]
+  defp release(args) do
+    # We want to add the release script in the folder where the release is placed. Thus, if a
+    # custom path is given, we add the release name to the path so the actual release will be
+    # placed there.
+    {args, _} =
+      Enum.map_reduce(args, false, fn
+        "--path", _ -> {"--path", true}
+        el, true -> {Path.join(el, "skitter_rel"), false}
+        el, _ -> {el, false}
+      end)
 
-    Mix.Generator.copy_template("rel/skitter.sh.eex", path, [version: version], force: true)
-
-    File.chmod!(path, 0o744)
+    Mix.Tasks.Release.run(args)
   end
 
-  # ------------------ #
-  # Tool Configuration #
-  # ------------------ #
+  # ----- #
+  # Tools #
+  # ----- #
 
-  # ExDoc
-  # -----
+  defp dialyzer do
+    [plt_add_apps: [:mix, :iex, :eex]]
+  end
+
+  defp xref do
+    [exclude: IEx]
+  end
 
   defp docs do
     [
       main: "readme",
+      extras: ["README.md"],
+      authors: ["Mathijs Saey"],
+      api_reference: false,
       source_ref: "develop",
       logo: "assets/logo-light_docs.png",
-      extras: doc_extras(),
+      formatters: ["html"],
       groups_for_modules: [
-        core: [
+        "Language Constructs": [
           Skitter.Port,
           Skitter.Callback,
           Skitter.Callback.Result,
@@ -123,26 +117,11 @@ defmodule Skitter.MixProject do
           Skitter.Deployment,
           Skitter.Invocation
         ],
+        dsl: ~r/Skitter.DSL*/,
         utilities: [
           Skitter.Dot
-        ],
-        dsl: ~r/Skitter.DSL*/,
-        applications: ~r/Skitter.(Worker|Master|Local)*/
-      ],
-      groups_for_functions: [
-        Hooks: &(&1[:section] == :hook)
+        ]
       ]
     ]
   end
-
-  defp doc_extras do
-    "pages/*.md"
-    |> Path.wildcard()
-    |> Enum.concat(["README.md"])
-  end
-
-  # Dialyzer
-  # --------
-
-  defp dialyzer, do: [plt_add_apps: [:mix, :iex, :eex]]
 end

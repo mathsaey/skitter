@@ -51,7 +51,7 @@ Once Elixir is installed, you can download the latest version of Skitter and use
 $ git clone https://github.com/mathsaey/skitter.git
 $ cd skitter
 $ mix deps.get
-$ mix build
+$ mix release
 ```
 
 This command builds a release of the various Skitter applications and packages
