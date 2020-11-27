@@ -17,6 +17,15 @@ defmodule Skitter.Config do
   end
 
   @doc """
+  Store `value` under `key` in the application environment.
+
+  Should only be used from inside a config.exs file!
+  """
+  def put(key, value) do
+    Config.config(:skitter, key, value)
+  end
+
+  @doc """
   Store the value of `env` in the application environment with `key`.
 
   `parse` can be used to transform the key (a string obtained from environment variable `env`)
@@ -24,15 +33,15 @@ defmodule Skitter.Config do
   """
   def config_from_env(key, env, parse) do
     case System.fetch_env(env) do
-      {:ok, val} -> Application.put_env(:skitter, key, parse.(val))
+      {:ok, val} -> put(key, parse.(val))
       :error -> :ok
     end
   end
 
   defp bool_if_set(key, env, bool) do
     case System.fetch_env(env) do
-      {:ok, _} -> Application.put_env(:skitter, key, bool)
-      :error -> Application.put_env(:skitter, key, not bool)
+      {:ok, _} -> put(key, bool)
+      :error -> put(key, not bool)
     end
   end
 

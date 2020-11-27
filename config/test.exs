@@ -7,6 +7,8 @@
 import Config
 
 config :logger, level: :notice
-
 config :ex_unit, capture_log: true
-config :skitter, :worker_shutdown_with_master, false
+
+config :skitter,
+  interactive: false,
+  shutdown_with_master: false

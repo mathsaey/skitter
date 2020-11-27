@@ -5,21 +5,18 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 # Runtime configuration of the Skitter release.
+# To configure Skitter when started through mix, use one of the skitter mix tasks.
 
 import Skitter.Config
 
 config_from_env :mode, "SKITTER_MODE", &String.to_atom/1
+config_enabled_if_set :interactive, "SKITTER_INTERACTIVE"
 
 # Worker
-# ------
-
 config_from_env :master, "SKITTER_MASTER", &String.to_atom/1
-
-config_enabled_unless_set :worker_shutdown_with_master, "SKITTER_NO_SHUTDOWN_WITH_MASTER"
+config_enabled_unless_set :shutdown_with_master, "SKITTER_NO_SHUTDOWN_WITH_MASTER"
 
 # Master
-# ------
-
 config_from_env :workers, "SKITTER_WORKERS", fn str ->
   str |> String.split() |> Enum.map(&String.to_atom/1)
 end

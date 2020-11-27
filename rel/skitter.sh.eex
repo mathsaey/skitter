@@ -196,6 +196,10 @@ function rel_cmd() {
   $maybe_dry_run $SKITTER_REL_PATH/bin/<%= @release.name %> $1
 }
 
+function interactive() {
+  export SKITTER_INTERACTIVE=""
+}
+
 function maybe_add_name() {
   echo $2 | awk -v default_name=$1 '!/@/ {printf "%s@%s", default_name, $0} /@/ {print}'
 }
@@ -277,6 +281,7 @@ function do_worker_master() {
     S|start_iex)
       shift
       "$mode"_start_parse $@
+      interactive
       rel_cmd "start_iex"
       ;;
     d|daemon)
@@ -299,11 +304,9 @@ function do_worker_master() {
 
 function do_local() {
   mode="local"
-  pushd $SKITTER_REL_PATH/skitter_$mode > /dev/null
+  interactive
   rel_cmd "start_iex"
-  popd > /dev/null
 }
-
 
 # Deploy Logic
 # ------------

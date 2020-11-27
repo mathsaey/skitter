@@ -9,7 +9,7 @@ defmodule Skitter.Application do
   require Logger
   use Application
 
-  alias Skitter.Remote
+  alias Skitter.{Config, Remote}
   alias Skitter.Mode.{Master, Worker, Local}
 
   def start(:normal, []) do
@@ -60,7 +60,6 @@ defmodule Skitter.Application do
 
   defp post_start(:master) do
     Master.WorkerConnection.connect()
-    :ok
   end
 
   defp post_start(_), do: :ok
@@ -85,7 +84,10 @@ defmodule Skitter.Application do
   defp logline(mode) do
     Logger.info("Skitter #{version()}")
     Logger.info("Starting in #{mode} mode")
+    if Node.alive?(), do: Logger.info("Reachable at `#{Node.self()}`")
   end
 
-  defp banner_or_log(mode), do: if(IEx.started?(), do: banner(mode), else: logline(mode))
+  defp banner_or_log(mode) do
+    if(Config.get(:interactive), do: banner(mode), else: logline(mode))
+  end
 end

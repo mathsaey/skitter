@@ -10,6 +10,8 @@ config :logger, :console,
   format: "\n[$time][$level$levelpad] $message",
   metadata: :all
 
-config :skitter, mode: :local
+config :skitter,
+  mode: :local,
+  interactive: true
 
 import_config "#{Mix.env()}.exs"

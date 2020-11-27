@@ -21,7 +21,7 @@ defmodule Skitter.Mode.Worker.MasterConnection do
         :ok
 
       {:error, reason} ->
-        Logger.notice("Could not connect to `#{remote}`: #{reason}")
+        Logger.warn("Could not connect to `#{remote}`: #{reason}")
         {:error, reason}
     end
   end
@@ -42,7 +42,7 @@ defmodule Skitter.Mode.Worker.MasterConnection do
   def remote_down(remote, remote) do
     Logger.notice("Master `#{remote}` disconnected")
 
-    if Config.get(:worker_shutdown_with_master, true) do
+    if Config.get(:shutdown_with_master, true) do
       Logger.notice("Lost connection to master, shutting down...")
       System.stop()
     end
