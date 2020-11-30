@@ -12,7 +12,7 @@ defmodule Skitter.Strategy do
   runtime. This module documents the strategy type (`t:Skitter.Strategy.t/0`), utilities to deal
   with strategies and the callbacks strategies use to determine the behaviour of components.
   """
-  alias Skitter.{Component, Callback, Deployment, Invocation}
+  alias Skitter.{Component, Callback, Deployment, Invocation, Worker}
 
   @typedoc """
   Strategy representation.

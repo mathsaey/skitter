@@ -48,12 +48,18 @@ defmodule Skitter.Application do
 
   defp sup(:local) do
     Supervisor.start_link(
-      [],
+      [
+        Local.WorkerSupervisor
+      ],
       strategy: :one_for_one,
       name: __MODULE__
     )
   end
 
+  defp pre_start(:local) do
+    Skitter.Worker.set_create_module(Local.WorkerSupervisor)
+    :ok
+  end
 
   defp pre_start(_), do: :ok
 
