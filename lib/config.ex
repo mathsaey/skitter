@@ -21,8 +21,17 @@ defmodule Skitter.Config do
 
   Should only be used from inside a config.exs file!
   """
-  def put(key, value) do
+  def put_loadtime(key, value) do
     Config.config(:skitter, key, value)
+  end
+
+  @doc """
+  Store `value` under `key` in the application environment.
+
+  Should be used when setting values at runtime.
+  """
+  def put_runtime(key, value) do
+    Application.put_env(:skitter, key, value, persistent: true)
   end
 
   @doc """
@@ -33,15 +42,15 @@ defmodule Skitter.Config do
   """
   def config_from_env(key, env, parse) do
     case System.fetch_env(env) do
-      {:ok, val} -> put(key, parse.(val))
+      {:ok, val} -> put_loadtime(key, parse.(val))
       :error -> :ok
     end
   end
 
   defp bool_if_set(key, env, bool) do
     case System.fetch_env(env) do
-      {:ok, _} -> put(key, bool)
-      :error -> put(key, not bool)
+      {:ok, _} -> put_loadtime(key, bool)
+      :error -> put_loadtime(key, not bool)
     end
   end
 

@@ -16,10 +16,11 @@ defmodule Skitter.Application do
     mode = Application.fetch_env!(:skitter, :mode)
     banner_or_log(mode)
 
-    {:ok, pid} = sup(mode)
-
-    case post_start(mode) do
-      :ok -> {:ok, pid}
+    with :ok <- pre_start(mode),
+         {:ok, pid} <- sup(mode),
+         :ok <- post_start(mode) do
+      {:ok, pid}
+    else
       any -> any
     end
   end
@@ -52,6 +53,9 @@ defmodule Skitter.Application do
       name: __MODULE__
     )
   end
+
+
+  defp pre_start(_), do: :ok
 
   defp post_start(:worker) do
     Worker.MasterConnection.connect()
