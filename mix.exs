@@ -121,6 +121,9 @@ defmodule Skitter.MixProject do
         utilities: [
           Skitter.Dot
         ]
+      ],
+      groups_for_functions: [
+        Hooks: &(&1[:section] == :hook)
       ]
     ]
   end

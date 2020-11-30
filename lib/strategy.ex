@@ -188,7 +188,7 @@ defmodule Skitter.Strategy do
           any(),
           any(),
           Worker.tag()
-        ) :: {Callback.state(), Callback.Result.publish()}
+        ) :: {Callback.state() | nil, Callback.Result.publish() | nil}
   def receive_message(component, deployment, invocation, message, state, tag) do
     %Component{strategy: %__MODULE__{receive_message: cb}} = component
 
