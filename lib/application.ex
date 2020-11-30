@@ -14,7 +14,6 @@ defmodule Skitter.Application do
 
   def start(:normal, []) do
     mode = Application.fetch_env!(:skitter, :mode)
-    banner_or_log(mode)
 
     with :ok <- pre_start(mode),
          {:ok, pid} <- sup(mode),
@@ -57,11 +56,15 @@ defmodule Skitter.Application do
   end
 
   defp pre_start(:local) do
+    banner(:local)
     Skitter.Worker.set_create_module(Local.WorkerSupervisor)
     :ok
   end
 
-  defp pre_start(_), do: :ok
+  defp pre_start(mode) do
+    logline(mode)
+    :ok
+  end
 
   defp post_start(:worker) do
     Worker.MasterConnection.connect()
@@ -88,16 +91,12 @@ defmodule Skitter.Application do
         "Skitter"
       end
 
-    IO.puts("#{logo} #{version()} (#{mode} mode)\n")
+    IO.puts("#{logo} (#{mode}) #{version()}\n")
   end
 
   defp logline(mode) do
     Logger.info("Skitter #{version()}")
     Logger.info("Starting in #{mode} mode")
     if Node.alive?(), do: Logger.info("Reachable at `#{Node.self()}`")
-  end
-
-  defp banner_or_log(mode) do
-    if(Config.get(:interactive), do: banner(mode), else: logline(mode))
   end
 end

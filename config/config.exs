@@ -8,10 +8,9 @@ import Config
 
 config :logger, :console,
   format: "\n[$time][$level$levelpad] $message",
+  device: :standard_error,
   metadata: :all
 
-config :skitter,
-  mode: :local,
-  interactive: true
+config :skitter, mode: :local
 
 import_config "#{Mix.env()}.exs"

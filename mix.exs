@@ -30,9 +30,13 @@ defmodule Skitter.MixProject do
 
   defp deps do
     [
+      # Dev
       {:credo, "~> 1.4.1", only: :dev, runtime: false},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0", only: :dev, runtime: false}
+      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+
+      # Runtime
+      {:logger_file_backend, "~> 0.0.11"}
     ]
   end
 

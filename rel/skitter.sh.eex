@@ -54,6 +54,7 @@ function deploy_usage() {
   printf '\t\t\t\t%s\n'                          "the current working directory."
   printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker node. Do not start a master."
   printf '\t\t\t\t%s\n'                          "only needed if a deployment failed."
+  printf '\t%s\t\t%s\n' "--no-log"               "Do not write logs to log/<nodename>.log"
   printf '%s\n'       "Command Arguments:"
   printf '\t%s\t%s\n' "WORKERS" "List of worker nodes to spawn, will be spawned in order."
   printf '\t\t%s\n'             "A node is specified as [name@]hostname. If name is not"
@@ -92,6 +93,7 @@ function release_usage() {
   printf '%s\n'         "Command Options:"
   printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "Set the distribution cookie"
   printf '\t%s\t\t%s\n' "-n, --name NAME"     "Set the name of the node."
+  printf '\t%s\t\t%s\n' "--no-log"            "Do not write logs to log/<nodename>.log"
 }
 
 function worker_usage() {
@@ -196,8 +198,8 @@ function rel_cmd() {
   $maybe_dry_run $SKITTER_REL_PATH/bin/<%= @release.name %> $1
 }
 
-function interactive() {
-  export SKITTER_INTERACTIVE=""
+function log() {
+  export SKITTER_LOG=""
 }
 
 function maybe_add_name() {
@@ -224,6 +226,9 @@ function worker_start_parse() {
           $maybe_dry_run export RELEASE_NODE="$2"
           shift
           ;;
+        --no-log)
+          $maybe_dry_run unset SKITTER_LOG
+          ;;
         *)
           REMOTE=$(maybe_add_name "skitter_master" $1)
           $maybe_dry_run export SKITTER_MASTER=$REMOTE
@@ -249,6 +254,9 @@ function master_start_parse() {
           $maybe_dry_run export RELEASE_NODE="$2"
           shift
           ;;
+        --no-log)
+          $maybe_dry_run unset SKITTER_LOG
+          ;;
         *)
           local workers="$workers $(maybe_add_name "skitter_worker" $1)"
           ;;
@@ -264,6 +272,7 @@ function master_start_parse() {
 
 function do_worker_master() {
   export SKITTER_MODE="$1"
+  export SKITTER_LOG=""
   mode="$1"
   shift
 
@@ -281,7 +290,6 @@ function do_worker_master() {
     S|start_iex)
       shift
       "$mode"_start_parse $@
-      interactive
       rel_cmd "start_iex"
       ;;
     d|daemon)
@@ -304,7 +312,6 @@ function do_worker_master() {
 
 function do_local() {
   mode="local"
-  interactive
   rel_cmd "start_iex"
 }
 
@@ -312,14 +319,14 @@ function do_local() {
 # ------------
 
 function for_workers() {
-  local cmd="cd ${2} && $script worker ${4} ${3}"
+  local cmd="cd ${2} && $script worker ${5} ${3} ${4}"
   connected=""
 
   for remote in $1
   do
     if [ -z $maybe_dry_run ]
     then
-      printf "${5} $remote "
+      printf "${6} $remote "
       if ssh -q "$remote" "$cmd"
       then
         printf "$(color $green ✓)\n"
@@ -342,13 +349,14 @@ function stop_deploy() {
 function start_deploy() {
   printf "⬡⬢⬡⬢ Skitter deploy <%= @release.version %>\n"
   if [ -n "$3" ] ; then printf "> cookie: $(color $purple ${3##--cookie })\n" ; fi
+  if [ -n "$4" ] ; then printf "> extra options: $(color $purple ${4})\n" ; fi
   printf "> workers: $(color $purple "$1")\n\n"
 
-  if for_workers "$1" "$2" "$3" "daemon" "$(color $green "* starting")"
+  if for_workers "$1" "$2" "$3" "$4" "daemon" "$(color $green "* starting")"
   then
     printf "\nWorkers initialized, starting master.\n"
     $maybe_dry_run sleep 1
-    do_worker_master master start_iex "$3" "$1"
+    do_worker_master master start_iex "$3" "$4" "$1"
   else
     printf "\nFailed to initialize some workers:\n"
     printf "> Succeeded: $(color $green "$connected")\n"
@@ -365,6 +373,7 @@ function do_deploy() {
   local remote_dir=`pwd`
   local workers
   local cookie
+  local opts
 
   while test $# -gt 0
     do
@@ -390,6 +399,9 @@ function do_deploy() {
           done < "$2"
           shift
           ;;
+        --no-log)
+          opts="$opts --no-log"
+          ;;
         *)
           local workers="$workers $1"
           ;;
@@ -398,7 +410,7 @@ function do_deploy() {
     done
 
     if [ -z "$workers" ] ; then argerr "deploy" "Missing workers" ; fi
-    "$mode"_deploy "$workers" "$remote_dir" "$cookie"
+    "$mode"_deploy "$workers" "$remote_dir" "$cookie" "$opts"
 }
 
 # ------------ #
