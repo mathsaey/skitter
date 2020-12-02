@@ -8,8 +8,8 @@ defmodule Skitter.DSL.Strategy do
   @moduledoc """
   Strategy definition DSL, see `strategy/1` and `defstrategy/2`.
   """
-  alias Skitter.DSL.{AST, DefinitionError, Callback}
-  alias Skitter.Strategy
+  alias Skitter.DSL.{AST, Callback}
+  alias Skitter.{Strategy, DefinitionError}
 
   @doc """
   Define a strategy using `strategy/2` and bind it to `name`.

@@ -8,7 +8,8 @@ defmodule Skitter.DSL.Component do
   @moduledoc """
   Component definition DSL. See `component/2` and `defcomponent/3`
   """
-  alias Skitter.DSL.{AST, DefinitionError, Callback}
+  alias Skitter.DSL.{AST, Callback}
+  alias Skitter.DefinitionError
 
   @doc """
   Define a component using `component/2` and bind it to `name`.

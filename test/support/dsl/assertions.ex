@@ -15,7 +15,7 @@ defmodule Skitter.DSL.Test.Assertions do
              do: body
            ) do
     quote do
-      assert_raise Skitter.DSL.DefinitionError, unquote(msg), fn ->
+      assert_raise Skitter.DefinitionError, unquote(msg), fn ->
         unquote(body)
       end
     end

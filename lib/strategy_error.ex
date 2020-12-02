@@ -6,7 +6,11 @@
 
 defmodule Skitter.StrategyError do
   @moduledoc """
-  This error can be raised by a strategy implementation.
+  Raised when a strategy encounters an error.
+
+  This error can be raised by a `Skitter.Strategy` hook. It generally occurs when a strategy
+  wishes to enforce a certain property (e.g. `Component.require_callback!/3`) which is not met by
+  a component.
   """
   defexception [:message]
 

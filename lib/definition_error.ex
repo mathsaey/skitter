@@ -4,9 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.DSL.DefinitionError do
+defmodule Skitter.DefinitionError do
   @moduledoc """
-  This error is raised when invalid syntax was encountered in a Skitter DSL.
+  Raised when an error is encountered in a Component, Workflow or Strategy.
+
+  This error can be raised by a Skitter DSL or by a skitter data type. It is raised when invalid
+  syntax is encountered or when a semantic error is present in a `Skitter.Component`,
+  `Skitter.Workflow` or `Skitter.Strategy`.
   """
   defexception [:message, :env]
 
@@ -27,6 +31,6 @@ defmodule Skitter.DSL.DefinitionError do
   @doc false
   def inject(msg, env \\ nil) do
     env = Macro.escape(env)
-    quote(do: raise(Skitter.DSL.DefinitionError, {unquote(msg), unquote(env)}))
+    quote(do: raise(Skitter.DefinitionError, {unquote(msg), unquote(env)}))
   end
 end

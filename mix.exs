@@ -115,7 +115,6 @@ defmodule Skitter.MixProject do
           Skitter.Component,
           Skitter.Workflow,
           Skitter.Strategy,
-          Skitter.StrategyError,
           Skitter.Worker,
           Skitter.Buffer,
           Skitter.Deployment,

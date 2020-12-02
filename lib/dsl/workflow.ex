@@ -8,8 +8,8 @@ defmodule Skitter.DSL.Workflow do
   @moduledoc """
   Workflow definition DSL. See `workflow/2` and `defworkflow/3`.
   """
-  alias Skitter.{Component, Workflow}
-  alias Skitter.DSL.{DefinitionError, AST}
+  alias Skitter.{Component, Workflow, DefinitionError}
+  alias Skitter.DSL.AST
 
   # ------------------ #
   # Workflow Expansion #

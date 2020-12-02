@@ -55,7 +55,8 @@ defmodule Skitter.DSL.Callback do
   The different clauses will be gathered and passed to `callback/3`. Note that all the clauses of
   a callback must have the same arity.
   """
-  alias Skitter.DSL.{AST, DefinitionError, Mutable}
+  alias Skitter.DSL.{AST, Mutable}
+  alias Skitter.DefinitionError
 
   # -------------------- #
   # Function-like Syntax #
