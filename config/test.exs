@@ -10,5 +10,5 @@ config :logger, level: :notice
 config :ex_unit, capture_log: true
 
 config :skitter,
-  interactive: false,
+  banner: false,
   shutdown_with_master: false

@@ -84,14 +84,16 @@ defmodule Skitter.Application do
   defp version, do: "v#{Application.spec(:skitter, :vsn)}"
 
   defp banner(mode) do
-    logo =
-      if IO.ANSI.enabled?() do
-        "⬡⬢⬡⬢ #{IO.ANSI.italic()}Skitter#{IO.ANSI.reset()}"
-      else
-        "Skitter"
-      end
+    if Config.get(:banner, true) do
+      logo =
+        if IO.ANSI.enabled?() do
+          "⬡⬢⬡⬢ #{IO.ANSI.italic()}Skitter#{IO.ANSI.reset()}"
+        else
+          "Skitter"
+        end
 
-    IO.puts("#{logo} (#{mode}) #{version()}\n")
+      IO.puts("#{logo} (#{mode}) #{version()}\n")
+    end
   end
 
   defp logline(mode) do
