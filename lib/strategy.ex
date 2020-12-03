@@ -181,6 +181,11 @@ defmodule Skitter.Strategy do
   end
 
   @doc section: :hook
+  def deploy(c = %Component{strategy: %__MODULE__{deploy: cb}}, args) do
+    Callback.call(cb, %{component: c}, [args])
+  end
+
+  @doc section: :hook
   @spec receive_message(
           Component.t(),
           Deployment.ref(),
