@@ -15,7 +15,7 @@ defmodule Skitter.Component do
   (`t:t/0`), some utilities to manipulate components and the `Access` behaviour for `t:t/0`. This
   behaviour can be used to access and modify a callback with a given name.
   """
-  alias Skitter.{Port, Callback, Component, Strategy}
+  alias Skitter.{Port, Callback, Component, Strategy, DefinitionError}
 
   @behaviour Access
 
@@ -201,6 +201,31 @@ defmodule Skitter.Component do
         raise Skitter.StrategyError,
               "Incorrect #{attr} for callback `#{name}`, expected #{wanted}, got #{actual}"
     end
+  end
+
+  @doc """
+  Finish defining the component
+
+  Verifies if the component strategy is a valid, complete strategy and calls `Strategy.define/1`
+  on the component.
+  """
+  @spec finalize(t()) :: t() | no_return()
+  def finalize(component) do
+    component
+    |> verify_strategy()
+    |> Strategy.define()
+  end
+
+  defp verify_strategy(c = %Skitter.Component{strategy: strategy = %Skitter.Strategy{}}) do
+    if Skitter.Strategy.complete?(strategy) do
+      c
+    else
+      raise DefinitionError, "`#{inspect(strategy)}` is not complete"
+    end
+  end
+
+  defp verify_strategy(%Skitter.Component{strategy: any}) do
+    raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
   end
 
   # Access

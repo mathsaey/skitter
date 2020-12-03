@@ -178,8 +178,7 @@ defmodule Skitter.DSL.Component do
           callbacks: unquote(callbacks),
           strategy: unquote(strategy)
         }
-        |> unquote(__MODULE__).verify_strategy()
-        |> Skitter.Strategy.define()
+        |> Skitter.Component.finalize()
       end
     catch
       err -> handle_error(err)
@@ -211,19 +210,6 @@ defmodule Skitter.DSL.Component do
       unquote(imports)
       unquote(strategy)
     end
-  end
-
-  @doc false
-  def verify_strategy(c = %Skitter.Component{strategy: strategy = %Skitter.Strategy{}}) do
-    if Skitter.Strategy.complete?(strategy) do
-      c
-    else
-      raise DefinitionError, "`#{inspect(strategy)}` is not complete"
-    end
-  end
-
-  def verify_strategy(%Skitter.Component{strategy: any}) do
-    raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
   end
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do
