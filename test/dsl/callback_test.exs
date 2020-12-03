@@ -23,10 +23,9 @@ defmodule Skitter.DSL.CallbackTest do
 
     refute c.read?
     refute c.write?
-    assert Callback.call(c, %{field: nil}, []).state == nil
   end
 
-  test "readoly state" do
+  test "readonly state" do
     c =
       callback([:field], []) do
         () ->
@@ -34,10 +33,8 @@ defmodule Skitter.DSL.CallbackTest do
       end
 
     assert c.read?
-
-    res = Callback.call(c, %{field: 50}, [])
-    assert res.state == nil
-    assert res.result == 50
+    refute c.write?
+    assert Callback.call(c, %{field: 50}, []).result == 50
   end
 
   test "write only state" do
@@ -74,7 +71,7 @@ defmodule Skitter.DSL.CallbackTest do
       end
 
     refute c.publish?
-    assert Callback.call(c, %{}, []).publish == nil
+    assert Callback.call(c, %{}, []).publish == []
   end
 
   test "publish" do

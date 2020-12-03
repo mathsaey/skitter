@@ -186,19 +186,21 @@ defmodule Skitter.DSL.Callback do
 
       bodies =
         Enum.flat_map(clauses, fn {args, body} ->
-          {body, state_return, state_arg} = make_state_body_return(body, read?, write?)
-          {body, publish_return} = make_publish_body_return(body, publish?)
+          body =
+            body
+            |> make_mutable_if(@state_var, write?)
+            |> make_mutable_if(@publish_var, publish?)
 
           quote do
-            unquote(state_arg), unquote(args) ->
-              import unquote(__MODULE__),
-                only: [read_state: 1, update_state: 2, publish: 2, callback: 3]
+            unquote(@state_var), unquote(args) ->
+              import unquote(__MODULE__), only: [read_state: 1, update_state: 2, publish: 2]
 
+              unquote(@publish_var) = []
               result = unquote(body)
 
               %unquote(Skitter.Callback.Result){
-                state: unquote(state_return),
-                publish: unquote(publish_return),
+                state: unquote(@state_var),
+                publish: unquote(@publish_var),
                 result: result
               }
           end
@@ -306,28 +308,8 @@ defmodule Skitter.DSL.Callback do
     end
   end
 
-  # Create body and return value and function argument for state
-  defp make_state_body_return(body, _, true) do
-    {Mutable.make_mutable_in_block(body, @state_var), @state_var, @state_var}
-  end
-
-  defp make_state_body_return(body, true, false), do: {body, nil, @state_var}
-  defp make_state_body_return(body, false, false), do: {body, nil, AST.internal_var(:_)}
-
-  # Create body and return value for publishing values
-  defp make_publish_body_return(body, true) do
-    body = Mutable.make_mutable_in_block(body, @publish_var)
-
-    body =
-      quote do
-        unquote(@publish_var) = []
-        unquote(body)
-      end
-
-    {body, @publish_var}
-  end
-
-  defp make_publish_body_return(body, false), do: {body, nil}
+  defp make_mutable_if(body, _, false), do: body
+  defp make_mutable_if(body, var, true), do: Mutable.make_mutable_in_block(body, var)
 
   # Error Handling
   # --------------

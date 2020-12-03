@@ -44,11 +44,7 @@ defmodule Skitter.Runtime.Worker do
   @impl true
   def handle_cast({:msg, m, i}, g = %__MODULE__{deployment: d, component: c, state: s, tag: t}) do
     {state, _publish} = Skitter.Strategy.receive_message(c, d, i, m, s, t)
-
-    case state do
-      nil -> {:noreply, g}
-      any -> {:noreply, %{g | state: any}}
-    end
+    {:noreply, %{g | state: state}}
   end
 
   def handle_cast(:stop, state), do: {:stop, :normal, state}

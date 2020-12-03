@@ -40,12 +40,12 @@ defmodule Skitter.Callback do
 
     A callback returns:
     - The result of the callback
-    - The published data or `nil` if no data has been published.
-    - The updated state, or `nil` if the state has not been changed.
+    - The published data.
+    - The (potentially updated) state.
     """
     @type t :: %__MODULE__{
-            state: Callback.state() | nil,
-            publish: publish() | nil,
+            state: Callback.state(),
+            publish: publish(),
             result: any()
           }
 
