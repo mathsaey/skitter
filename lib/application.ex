@@ -37,10 +37,10 @@ defmodule Skitter.Application do
   defp sup(:master) do
     Supervisor.start_link(
       [
-        {Remote.Supervisor, [:master, [worker: Master.WorkerConnection.Handler]]},
-        Master.WorkerConnection.Supervisor
+        Master.RemoteSupervisor,
+        Master.ManagerSupervisor
       ],
-      strategy: :rest_for_one,
+      strategy: :one_for_one,
       name: __MODULE__
     )
   end
@@ -48,7 +48,8 @@ defmodule Skitter.Application do
   defp sup(:local) do
     Supervisor.start_link(
       [
-        Local.WorkerSupervisor
+        Local.WorkerSupervisor,
+        Local.ManagerSupervisor
       ],
       strategy: :one_for_one,
       name: __MODULE__
@@ -58,6 +59,13 @@ defmodule Skitter.Application do
   defp pre_start(:local) do
     banner(:local)
     Skitter.Worker.set_create_module(Local.WorkerSupervisor)
+    Skitter.set_manager_module(Local.Manager)
+    :ok
+  end
+
+  defp pre_start(:master) do
+    logline(:master)
+    Skitter.set_manager_module(Master.Manager)
     :ok
   end
 

@@ -4,10 +4,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Mode.Master.WorkerConnection.Supervisor do
+defmodule Skitter.Mode.Master.RemoteSupervisor do
   @moduledoc false
   use Supervisor
-  alias Skitter.Mode.Master.WorkerConnection
+  alias Skitter.{Remote, Mode.Master}
 
   def start_link([]) do
     Supervisor.start_link(__MODULE__, [], name: __MODULE__)
@@ -16,9 +16,10 @@ defmodule Skitter.Mode.Master.WorkerConnection.Supervisor do
   @impl true
   def init([]) do
     children = [
-      WorkerConnection.Notifier
+      {Remote.Supervisor, [:master, [worker: Master.WorkerConnection.Handler]]},
+      Master.WorkerConnection.Notifier
     ]
 
-    Supervisor.init(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :rest_for_one)
   end
 end
