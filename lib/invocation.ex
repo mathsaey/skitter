@@ -6,6 +6,11 @@
 
 defmodule Skitter.Invocation do
   @moduledoc """
+  Resources available while a workflow process a single (set of) input(s).
+
+  An invocation contains all the state that is available while a workflow or component processes a
+  single data record. Like a deployment, an invocation is globablly available and therefore
+  immutable.
   """
   alias Skitter.Deployment
 
