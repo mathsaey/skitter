@@ -96,10 +96,18 @@ defmodule Skitter.DSL.CallbackTest do
         arg1, arg2 -> arg1 + arg2
       end
 
+    c3 =
+      callback([], []) do
+        arg1, arg2 -> arg1 + arg2
+        arg1, arg2, arg3 -> arg1 + arg2 + arg3
+      end
+
     assert c1.arity == 1
     assert c2.arity == 2
+    assert c3.arity == nil
     assert Callback.call(c1, %{}, [10]).result == 10
     assert Callback.call(c2, %{}, [10, 20]).result == 30
+    assert Callback.call(c3, %{}, [10, 20, 30]).result == 60
   end
 
   test "multiple clauses" do
@@ -116,13 +124,6 @@ defmodule Skitter.DSL.CallbackTest do
   test "errors" do
     assert_definition_error ~r/.*: Invalid syntax: `foo`/ do
       callback([], [], do: (() -> 5 ~> :foo))
-    end
-
-    assert_definition_error ~r/.*: Callback clauses must have the same arity/ do
-      callback([], []) do
-        arg -> arg
-        arg1, arg2 -> {arg1, arg2}
-      end
     end
 
     assert_definition_error ~r/.*: Invalid field: .*/ do

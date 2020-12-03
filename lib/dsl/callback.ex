@@ -182,7 +182,7 @@ defmodule Skitter.DSL.Callback do
       publish? = used?(body, :publish)
 
       clauses = Enum.map(body, fn {:->, _, [args, body]} -> {args, body} end)
-      arity = read_arity(clauses, __CALLER__)
+      arity = read_arity(clauses)
 
       bodies =
         Enum.flat_map(clauses, fn {args, body} ->
@@ -296,15 +296,12 @@ defmodule Skitter.DSL.Callback do
     n >= 1
   end
 
-  # Check the arity of the various clauses, make sure they are all the same and return it
-  defp read_arity(clauses, env) do
+  defp read_arity(clauses) do
     arities = clauses |> Enum.map(&elem(&1, 0)) |> Enum.map(&length/1)
     arity = hd(arities)
 
     if Enum.all?(arities, &(&1 == arity)) do
       arity
-    else
-      throw {:error, :arity_mismatch, env}
     end
   end
 
@@ -316,10 +313,6 @@ defmodule Skitter.DSL.Callback do
 
   defp handle_error({:error, :invalid_syntax, statement, env}) do
     DefinitionError.inject("Invalid syntax: `#{statement}`", env)
-  end
-
-  defp handle_error({:error, :arity_mismatch, env}) do
-    DefinitionError.inject("Callback clauses must have the same arity", env)
   end
 
   defp handle_error({:error, :invalid_field, field, fields, env}) do
