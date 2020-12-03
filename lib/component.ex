@@ -195,12 +195,11 @@ defmodule Skitter.Component do
         component
 
       {:error, :undefined} ->
-        Skitter.StrategyError.raise("Missing implementation of required callback: `#{name}`")
+        raise Skitter.StrategyError, "Missing implementation of required callback: `#{name}`"
 
       {:error, attr, wanted, actual} ->
-        Skitter.StrategyError.raise(
-          "Incorrect #{attr} for callback `#{name}`, expected #{wanted}, got #{actual}"
-        )
+        raise Skitter.StrategyError,
+              "Incorrect #{attr} for callback `#{name}`, expected #{wanted}, got #{actual}"
     end
   end
 

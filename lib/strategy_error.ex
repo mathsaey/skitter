@@ -13,8 +13,4 @@ defmodule Skitter.StrategyError do
   a component.
   """
   defexception [:message]
-
-  def raise(message) do
-    raise __MODULE__, message: message
-  end
 end
