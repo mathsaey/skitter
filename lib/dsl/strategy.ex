@@ -40,12 +40,12 @@ defmodule Skitter.DSL.Strategy do
         %{
           define: {[], []},
           deploy: {[:component], []},
-          prepare: {[:component, :deployment_ref], []},
-          send_token: {[:component, :deployment_ref, :invocation_ref], []},
-          receive_token: {[:component, :deployment_ref, :invocation_ref], []},
-          receive_message: {[:component, :deployment_ref, :invocation_ref], [:state, :publish]},
-          drop_invocation: {[:component, :deployment_ref, :invocation_ref], []},
-          drop_deployment: {[:component, :deployment_ref], []}
+          prepare: {[:component, :deployment], []},
+          send_token: {[:component, :deployment, :invocation_ref], []},
+          receive_token: {[:component, :deployment, :invocation_ref], []},
+          receive_message: {[:component, :deployment, :invocation_ref], [:state, :publish]},
+          drop_invocation: {[:component, :deployment, :invocation_ref], []},
+          drop_deployment: {[:component, :deployment], []}
         }
       )
 

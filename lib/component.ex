@@ -34,6 +34,7 @@ defmodule Skitter.Component do
   | `in`          | List of in ports of the component.           | `[]`      |
   | `out`         | List of out ports of the component           | `[]`      |
   | `strategy`    | The `t:Skitter.Strategy/0` of this component | `nil`     |
+  | `_rt`         | Reserved for runtime data.                   |           |
 
   Note that a valid component must have at least one in port.
   """
@@ -43,7 +44,8 @@ defmodule Skitter.Component do
           in: [Port.t(), ...],
           out: [Port.t()],
           callbacks: %{optional(callback_name()) => Callback.t()},
-          strategy: Strategy.t()
+          strategy: Strategy.t(),
+          _rt: any()
         }
 
   defstruct name: nil,
@@ -51,7 +53,8 @@ defmodule Skitter.Component do
             in: [],
             out: [],
             callbacks: %{},
-            strategy: nil
+            strategy: nil,
+            _rt: nil
 
   @typedoc """
   Data storage "slot" of a component.
@@ -204,6 +207,18 @@ defmodule Skitter.Component do
   end
 
   @doc """
+  Modify the strategy of a component
+
+  Intended to be used inside `Skitter.Strategy.define/1`. This function changes the strategy of a
+  component. Afterwards, it calls `finalize/1` on the updated component.
+  """
+  @spec specialize(t(), Strategy.t()) :: t() | no_return()
+  def specialize(component, strategy) do
+    %{component | strategy: strategy}
+    |> finalize()
+  end
+
+  @doc """
   Finish defining the component
 
   Verifies if the component strategy is a valid, complete strategy and calls `Strategy.define/1`
@@ -213,7 +228,7 @@ defmodule Skitter.Component do
   def finalize(component) do
     component
     |> verify_strategy()
-    |> Strategy.define()
+    |> Skitter.Runtime.Strategy.define()
   end
 
   defp verify_strategy(c = %Skitter.Component{strategy: strategy = %Skitter.Strategy{}}) do

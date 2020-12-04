@@ -8,7 +8,7 @@ defmodule Skitter.Worker do
   @moduledoc """
   Data processor which can perform work for a component.
   """
-  alias Skitter.{Component, Deployment, Invocation, Runtime}
+  alias Skitter.{Component, Invocation, Runtime}
 
   # ----- #
   # Types #
@@ -42,11 +42,10 @@ defmodule Skitter.Worker do
   Workers may need to put some constraints on the node on which they are spawned. These
   constraints are represented by this type. The following constraints are currently supported:
 
-  - `:with` place the worker on the same location as the given worker or buffer.
-  - `:avoid` try to place the worker on a different node as the given worker or buffer.
+  - `:with` place the worker on the same location as the given worker.
+  - `:avoid` try to place the worker on a different node as the given worker.
   - `:on` place the worker on the specified location.
   """
-  # TODO: make sure with can also handle buffer references
   @type constraints :: [with: ref(), avoid: ref(), on: node()]
 
   # --- #
@@ -61,18 +60,10 @@ defmodule Skitter.Worker do
   @doc """
   Create a new worker.
   """
-  @spec create(
-          Deployment.ref(),
-          Component.t(),
-          any() | (() -> any()),
-          tag(),
-          lifetime(),
-          constraints()
-        ) ::
-          ref()
-  def create(deployment, component, state, tag, lifetime, constraints \\ []) do
+  @spec create(Component.t(), any() | (() -> any()), tag(), lifetime(), constraints()) :: ref()
+  def create(component, state, tag, lifetime, constraints \\ []) do
     mod = :persistent_term.get(@ps_key)
-    mod.create(deployment, component, state, tag, lifetime, constraints)
+    mod.create(component, state, tag, lifetime, constraints)
   end
 
   @doc """

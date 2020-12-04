@@ -9,7 +9,7 @@ defmodule Skitter.Application do
   require Logger
   use Application
 
-  alias Skitter.{Config, Remote}
+  alias Skitter.{Config, Remote, Runtime}
   alias Skitter.Mode.{Master, Worker, Local}
 
   def start(:normal, []) do
@@ -27,6 +27,8 @@ defmodule Skitter.Application do
   defp sup(:worker) do
     Supervisor.start_link(
       [
+        Runtime.DeploymentStore,
+        Runtime.Worker.Supervisor,
         {Remote.Supervisor, [:worker, [master: Worker.MasterConnection]]}
       ],
       strategy: :one_for_one,
@@ -38,6 +40,8 @@ defmodule Skitter.Application do
     Supervisor.start_link(
       [
         Master.RemoteSupervisor,
+        {Runtime.DeploymentStore, Master.DeploymentDistributor},
+        Master.DeploymentDistributor,
         Master.ManagerSupervisor
       ],
       strategy: :one_for_one,
@@ -48,8 +52,9 @@ defmodule Skitter.Application do
   defp sup(:local) do
     Supervisor.start_link(
       [
-        Local.WorkerSupervisor,
-        Local.ManagerSupervisor
+        Runtime.DeploymentStore,
+        Runtime.Worker.Supervisor,
+        Runtime.Manager.Supervisor
       ],
       strategy: :one_for_one,
       name: __MODULE__
@@ -58,14 +63,7 @@ defmodule Skitter.Application do
 
   defp pre_start(:local) do
     banner(:local)
-    Skitter.Worker.set_create_module(Local.WorkerSupervisor)
-    Skitter.set_manager_module(Local.Manager)
-    :ok
-  end
-
-  defp pre_start(:master) do
-    logline(:master)
-    Skitter.set_manager_module(Master.Manager)
+    Skitter.Worker.set_create_module(Local.Worker)
     :ok
   end
 
@@ -80,6 +78,7 @@ defmodule Skitter.Application do
   end
 
   defp post_start(:master) do
+    Skitter.Worker.set_create_module(Master.Worker)
     Master.WorkerConnection.connect()
   end
 

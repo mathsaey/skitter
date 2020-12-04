@@ -8,17 +8,9 @@ defmodule Skitter.Runtime.Worker do
   @moduledoc false
   use GenServer, restart: :transient
 
-  @type t :: %__MODULE__{
-          # TODO
-          deployment: any(),
-          component: Skitter.Component.t(),
-          state: any(),
-          tag: atom()
-        }
+  defstruct [:dep_ref, :comp, :state, :tag, :wf_ref, :wf_id]
 
-  defstruct [:deployment, :component, :state, :tag]
-
-  def start_link(lst = [_deployment, _component, _state, _tag]) do
+  def start_link(lst = [_component, _state, _tag]) do
     GenServer.start_link(__MODULE__, lst)
   end
 
@@ -28,12 +20,27 @@ defmodule Skitter.Runtime.Worker do
   def stop(ref), do: GenServer.cast(ref, :stop)
 
   @impl true
-  def init([deployment, component, state, tag]) when is_function(state, 0) do
-    {:ok, %__MODULE__{deployment: deployment, component: component, tag: tag}, {:continue, state}}
+  def init([comp, state, tag]) when is_function(state, 0) do
+    {:ok,
+     %__MODULE__{
+       dep_ref: comp._rt[:deployment_ref],
+       wf_ref: comp._rt[:wf_ref],
+       wf_id: comp._rt[:wf_id],
+       comp: comp,
+       tag: tag
+     }, {:continue, state}}
   end
 
-  def init([deployment, component, state, tag]) do
-    {:ok, %__MODULE__{deployment: deployment, component: component, state: state, tag: tag}}
+  def init([comp, state, tag]) do
+    {:ok,
+     %__MODULE__{
+       dep_ref: comp._rt[:deployment_ref],
+       wf_ref: comp._rt[:wf_ref],
+       wf_id: comp._rt[:wf_id],
+       comp: comp,
+       state: state,
+       tag: tag
+     }}
   end
 
   @impl true
@@ -42,8 +49,8 @@ defmodule Skitter.Runtime.Worker do
   end
 
   @impl true
-  def handle_cast({:msg, m, i}, g = %__MODULE__{deployment: d, component: c, state: s, tag: t}) do
-    {state, _publish} = Skitter.Strategy.receive_message(c, d, i, m, s, t)
+  def handle_cast({:msg, m, i}, g = %__MODULE__{dep_ref: d, comp: c, state: s, tag: t}) do
+    {state, _publish} = Skitter.Runtime.Strategy.receive_message(c, d, i, m, s, t)
     {:noreply, %{g | state: state}}
   end
 

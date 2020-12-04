@@ -6,14 +6,22 @@
 
 defmodule Skitter.Mode.Master.ManagerSupervisor do
   @moduledoc false
-  use DynamicSupervisor
+  use Supervisor
 
-  def start_link(_) do
-    DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
+  alias Skitter.Runtime.Manager
+  alias Skitter.Mode.Master.WorkflowStoreDistributor
+
+  def start_link([]) do
+    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   @impl true
-  def init(_) do
-    DynamicSupervisor.init(strategy: :one_for_one)
+  def init([]) do
+    children = [
+      {Manager.Supervisor, &WorkflowStoreDistributor.distribute/1},
+      WorkflowStoreDistributor.Supervisor
+    ]
+
+    Supervisor.init(children, strategy: :rest_for_one)
   end
 end

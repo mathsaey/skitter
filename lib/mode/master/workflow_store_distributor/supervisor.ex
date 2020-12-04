@@ -4,16 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Mode.Local.ManagerSupervisor do
+defmodule Skitter.Mode.Master.WorkflowStoreDistributor.Supervisor do
   @moduledoc false
   use DynamicSupervisor
 
-  def start_link(_) do
-    DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
-  end
+  def start_link(_), do: DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
 
   @impl true
-  def init(_) do
-    DynamicSupervisor.init(strategy: :one_for_one)
-  end
+  def init([]), do: DynamicSupervisor.init(strategy: :one_for_one)
 end

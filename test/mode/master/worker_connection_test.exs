@@ -14,7 +14,7 @@ defmodule Skitter.Mode.Master.WorkerConnectionTest do
     remote_config: [mode: :worker]
 
   setup do
-    start_supervised(WorkerConnection.Supervisor)
+    start_supervised(WorkerConnection.Notifier)
     :ok
   end
 

@@ -4,10 +4,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Buffer do
-  @moduledoc """
-  Buffer that gathers inputs for a component
-  """
-  def create(deployment, component, lifetime, constraints) do
+defmodule Skitter.Mode.Master.WorkflowStoreDistributor do
+  @moduledoc false
+
+  def distribute(ref) do
+    {:ok, _} = DynamicSupervisor.start_child(__MODULE__.Supervisor, {__MODULE__.Server, ref})
+    :ok
   end
 end

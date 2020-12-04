@@ -12,7 +12,7 @@ defmodule Skitter.Strategy do
   runtime. This module documents the strategy type (`t:Skitter.Strategy.t/0`), utilities to deal
   with strategies and the callbacks strategies use to determine the behaviour of components.
   """
-  alias Skitter.{Component, Callback, Deployment, Invocation, Worker}
+  alias Skitter.Callback
 
   @typedoc """
   Strategy representation.
@@ -152,59 +152,6 @@ defmodule Skitter.Strategy do
     |> Map.delete(:name)
     |> Map.values()
     |> Enum.any?(&is_nil/1)
-  end
-
-  # ----- #
-  # Hooks #
-  # ----- #
-
-  @doc """
-  Activated when a component is defined. Returns a (modified) component.
-
-  This hook is activated when a `t:Skitter.Component.t/0` is defined. It can be used to verify if
-  a component is correct (e.g. `Component.require_callback!/3`) or to add additional functionality
-  to the component (e.g. `Component.default_callback/3`). Additionally, the strategy can use this
-  opportunity to _specialise_ itself
-
-  ## Strategy Specialisation
-
-  Inside the `define` callback, a strategy can change any aspect of a component, including the
-  strategy of a component. Thus, a strategy may verify if a component meets some requirement,
-  before it replaces itself with a more specialised strategy.
-  """
-  # NOTE: skitter_core has no way to invoke this hook. Any (domain specific) language built on top
-  # of skitter should ensure this is called at the appropriate time.
-  @doc section: :hook
-  @spec define(Component.t()) :: Component.t() | no_return()
-  def define(c = %Component{strategy: %__MODULE__{define: cb}}) do
-    Callback.call(cb, %{}, [c]).result
-  end
-
-  @doc section: :hook
-  def deploy(c = %Component{strategy: %__MODULE__{deploy: cb}}, args) do
-    Callback.call(cb, %{component: c}, [args])
-  end
-
-  @doc section: :hook
-  @spec receive_message(
-          Component.t(),
-          Deployment.ref(),
-          Invocation.ref(),
-          any(),
-          any(),
-          Worker.tag()
-        ) :: {Callback.state() | nil, Callback.Result.publish() | nil}
-  def receive_message(component, deployment, invocation, message, state, tag) do
-    %Component{strategy: %__MODULE__{receive_message: cb}} = component
-
-    res =
-      Callback.call(
-        cb,
-        %{component: component, deployment_ref: deployment, invocation_ref: invocation},
-        [message, state, tag]
-      )
-
-    {res.state, res.publish}
   end
 end
 

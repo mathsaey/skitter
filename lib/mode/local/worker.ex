@@ -4,14 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime.WorkflowStore do
+defmodule Skitter.Mode.Local.Worker do
   @moduledoc false
 
-  def put(w = %Skitter.Workflow{}, key) do
-    :persistent_term.put({__MODULE__, key}, w)
-    :ok
-  end
+  alias Skitter.Runtime.{Worker, Worker.Supervisor}
 
-  def get(ref), do: :persistent_term.get({__MODULE__, ref})
-  def del(ref), do: :persistent_term.erase({__MODULE__, ref})
+  def create(component, state, tag, _, _) do
+    {:ok, pid} = DynamicSupervisor.start_child(Supervisor, {Worker, [component, state, tag]})
+    pid
+  end
 end

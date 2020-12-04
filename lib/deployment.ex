@@ -19,6 +19,8 @@ defmodule Skitter.Deployment do
   """
   @type ref :: reference()
 
+  @type t :: %{}
+
   # @type t :: %__MODULE__{
   #         parent: ref() | nil,
   #         data: any(),
