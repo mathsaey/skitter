@@ -7,22 +7,27 @@
 defmodule Skitter.Runtime do
   @moduledoc false
 
-  alias Skitter.{Component, Workflow}
+  alias Skitter.{Context, Workflow}
   alias Skitter.Runtime.{DeploymentStore, Strategy}
 
-  def deploy(wf = %Workflow{}) do
+  def deploy(wf = %Workflow{}, wf_ref) do
     ref = make_ref()
 
     data =
       wf.nodes
-      |> Enum.map(fn {name, tup} -> {name, deploy(tup, ref)} end)
+      |> Enum.map(fn {name, {comp, args}} ->
+        {
+          name,
+          Strategy.deploy(
+            comp,
+            %Context{deployment_ref: ref, workflow_ref: wf_ref, workflow_id: name},
+            args
+          )
+        }
+      end)
       |> Map.new()
 
     DeploymentStore.add(ref, data)
     ref
-  end
-
-  defp deploy({c = %Component{}, args}, ref) do
-    Strategy.deploy(%{c | _rt: Map.put(c._rt, :deployment_ref, ref)}, args)
   end
 end

@@ -7,6 +7,12 @@
 defmodule Skitter.Runtime.WorkflowStore do
   @moduledoc false
 
+  def put(w = %Skitter.Workflow{}) do
+    key = make_ref()
+    :persistent_term.put({__MODULE__, key}, w)
+    key
+  end
+
   def put(w = %Skitter.Workflow{}, key) do
     :persistent_term.put({__MODULE__, key}, w)
     :ok

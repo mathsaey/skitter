@@ -31,6 +31,13 @@ defmodule Skitter.DSL.Strategy do
     statements = AST.block_to_list(body)
     {statements, imports} = AST.extract_calls(statements, [:alias, :import, :require])
 
+    imports =
+      quote do
+        import Skitter.DSL.Callback
+        alias Skitter.{Component, Worker}
+        unquote(imports)
+      end
+
     callbacks =
       Callback.extract_callbacks(
         statements,
@@ -39,7 +46,7 @@ defmodule Skitter.DSL.Strategy do
         [],
         %{
           define: {[], []},
-          deploy: {[:component], []},
+          deploy: {[:context, :component], []},
           prepare: {[:component, :deployment], []},
           send_token: {[:component, :deployment, :invocation_ref], []},
           receive_token: {[:component, :deployment, :invocation_ref], []},

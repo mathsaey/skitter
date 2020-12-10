@@ -8,7 +8,7 @@ defmodule Skitter.Worker do
   @moduledoc """
   Data processor which can perform work for a component.
   """
-  alias Skitter.{Component, Invocation, Runtime}
+  alias Skitter.{Context, Component, Invocation, Runtime}
 
   # ----- #
   # Types #
@@ -60,10 +60,17 @@ defmodule Skitter.Worker do
   @doc """
   Create a new worker.
   """
-  @spec create(Component.t(), any() | (() -> any()), tag(), lifetime(), constraints()) :: ref()
-  def create(component, state, tag, lifetime, constraints \\ []) do
+  @spec create(
+          Component.t(),
+          Context.t(),
+          any() | (() -> any()),
+          tag(),
+          lifetime(),
+          constraints()
+        ) :: ref()
+  def create(component, context, state, tag, lifetime, constraints \\ []) do
     mod = :persistent_term.get(@ps_key)
-    mod.create(component, state, tag, lifetime, constraints)
+    mod.create(component, context, state, tag, lifetime, constraints)
   end
 
   @doc """

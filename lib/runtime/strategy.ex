@@ -13,8 +13,8 @@ defmodule Skitter.Runtime.Strategy do
     Callback.call(cb, %{}, [c]).result
   end
 
-  def deploy(c = %Component{strategy: %S{deploy: cb}}, args) do
-    Callback.call(cb, %{component: c}, [args]).result
+  def deploy(c = %Component{strategy: %S{deploy: cb}}, context, args) do
+    Callback.call(cb, %{component: c, context: context}, [args]).result
   end
 
   def receive_message(component, deployment_ref, invocation_ref, message, state, tag) do

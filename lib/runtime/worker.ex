@@ -10,7 +10,7 @@ defmodule Skitter.Runtime.Worker do
 
   defstruct [:dep_ref, :comp, :state, :tag, :wf_ref, :wf_id]
 
-  def start_link(lst = [_component, _state, _tag]) do
+  def start_link(lst = [_component, _context, _state, _tag]) do
     GenServer.start_link(__MODULE__, lst)
   end
 
@@ -20,23 +20,23 @@ defmodule Skitter.Runtime.Worker do
   def stop(ref), do: GenServer.cast(ref, :stop)
 
   @impl true
-  def init([comp, state, tag]) when is_function(state, 0) do
+  def init([comp, ctx, state, tag]) when is_function(state, 0) do
     {:ok,
      %__MODULE__{
-       dep_ref: comp._rt[:deployment_ref],
-       wf_ref: comp._rt[:wf_ref],
-       wf_id: comp._rt[:wf_id],
+       dep_ref: ctx.deployment_ref,
+       wf_ref: ctx.workflow_ref,
+       wf_id: ctx.workflow_id,
        comp: comp,
        tag: tag
      }, {:continue, state}}
   end
 
-  def init([comp, state, tag]) do
+  def init([comp, ctx, state, tag]) do
     {:ok,
      %__MODULE__{
-       dep_ref: comp._rt[:deployment_ref],
-       wf_ref: comp._rt[:wf_ref],
-       wf_id: comp._rt[:wf_id],
+       dep_ref: ctx.deployment_ref,
+       wf_ref: ctx.workflow_ref,
+       wf_id: ctx.workflow_id,
        comp: comp,
        state: state,
        tag: tag

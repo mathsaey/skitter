@@ -8,7 +8,6 @@ defmodule Skitter.Runtime.Manager do
   @moduledoc false
   use GenServer, restart: :transient
 
-  alias Skitter.Component
   alias Skitter.Runtime.{WorkflowStore, Manager.Supervisor}
 
   defstruct [:wf, :dep]
@@ -30,21 +29,9 @@ defmodule Skitter.Runtime.Manager do
   end
 
   defp store_workflow(workflow) do
-    wf_ref = make_ref()
-    wf = add_ref_to_components(workflow, wf_ref)
-    WorkflowStore.put(wf, wf_ref)
-
-    dep_ref = Skitter.Runtime.deploy(wf)
+    wf_ref = WorkflowStore.put(workflow)
+    dep_ref = Skitter.Runtime.deploy(workflow, wf_ref)
 
     %__MODULE__{wf: wf_ref, dep: dep_ref}
-  end
-
-  defp add_ref_to_components(workflow, ref) do
-    nodes =
-      Enum.map(workflow.nodes, fn {name, {c = %Component{}, args}} ->
-        {name, {%{c | _rt: %{wf_ref: ref, wf_id: name}}, args}}
-      end)
-
-    %{workflow | nodes: nodes}
   end
 end

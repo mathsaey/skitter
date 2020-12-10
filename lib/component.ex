@@ -34,7 +34,6 @@ defmodule Skitter.Component do
   | `in`          | List of in ports of the component.           | `[]`      |
   | `out`         | List of out ports of the component           | `[]`      |
   | `strategy`    | The `t:Skitter.Strategy/0` of this component | `nil`     |
-  | `_rt`         | Reserved for runtime data.                   |           |
 
   Note that a valid component must have at least one in port.
   """
@@ -44,8 +43,7 @@ defmodule Skitter.Component do
           in: [Port.t(), ...],
           out: [Port.t()],
           callbacks: %{optional(callback_name()) => Callback.t()},
-          strategy: Strategy.t(),
-          _rt: any()
+          strategy: Strategy.t()
         }
 
   defstruct name: nil,
@@ -53,8 +51,7 @@ defmodule Skitter.Component do
             in: [],
             out: [],
             callbacks: %{},
-            strategy: nil,
-            _rt: nil
+            strategy: nil
 
   @typedoc """
   Data storage "slot" of a component.
