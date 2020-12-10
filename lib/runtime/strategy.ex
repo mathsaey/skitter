@@ -8,6 +8,7 @@ defmodule Skitter.Runtime.Strategy do
   @moduledoc false
   alias Skitter.Strategy, as: S
   alias Skitter.{Component, Callback}
+  alias Skitter.Runtime.DeploymentStore
 
   def define(c = %Component{strategy: %S{define: cb}}) do
     Callback.call(cb, %{}, [c]).result
@@ -17,16 +18,27 @@ defmodule Skitter.Runtime.Strategy do
     Callback.call(cb, %{component: c, context: context}, [args]).result
   end
 
-  def receive_message(component, deployment_ref, invocation_ref, message, state, tag) do
-    %Component{strategy: %S{receive_message: cb}} = component
+  def send(c = %Component{strategy: %S{send: cb}}, context, datum, port, invocation) do
+    deployment = DeploymentStore.get(context.deployment_ref)[context.component_id]
 
-    res =
-      Callback.call(
-        cb,
-        %{component: component, deployment_ref: deployment_ref, invocation_ref: invocation_ref},
-        [message, state, tag]
-      )
+    Callback.call(
+      cb,
+      %{component: c, context: context, deployment: deployment, invocation: invocation},
+      [datum, port]
+    )
+  end
 
-    {res.state, res.publish}
+  def receive(component, context, message, invocation, state, tag) do
+    deployment = DeploymentStore.get(context.deployment_ref)[context.component_id]
+
+    Callback.call(
+      component.strategy.receive,
+      %{component: component, context: context, deployment: deployment, invocation: invocation},
+      [message, state, tag]
+    ).result
+  end
+
+  def drop_deployment(c = %Component{strategy: %S{drop_deployment: cb}}, deployment) do
+    Callback.call(cb, %{component: c, deployment: deployment}, [])
   end
 end

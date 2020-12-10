@@ -29,9 +29,8 @@ defmodule Skitter.Strategy do
           define: Callback.t() | nil,
           deploy: Callback.t() | nil,
           prepare: Callback.t() | nil,
-          send_token: Callback.t() | nil,
-          receive_token: Callback.t() | nil,
-          receive_message: Callback.t() | nil,
+          send: Callback.t() | nil,
+          receive: Callback.t() | nil,
           drop_deployment: Callback.t() | nil,
           drop_invocation: Callback.t() | nil
         }
@@ -41,9 +40,8 @@ defmodule Skitter.Strategy do
     :define,
     :deploy,
     :prepare,
-    :send_token,
-    :receive_token,
-    :receive_message,
+    :send,
+    :receive,
     :drop_deployment,
     :drop_invocation
   ]
@@ -60,23 +58,23 @@ defmodule Skitter.Strategy do
   parent, if it is present. Callbacks defined in the child strategy are _not_ overwritten.
 
   Thus, if we merge a parent strategy which defines `:define` and `:deploy` with a child strategy
-  that defines `:deploy` and `:receive_message` we obtain a new strategy which has a definition for
-  `:define`, `:deploy` and `:receive_message`. The `:deploy` callback in the merged strategy is
-  equal to the `:deploy` strategy of `child`.
+  that defines `:deploy` and `:receive` we obtain a new strategy which has a definition for
+  `:define`, `:deploy` and `:receive`. The `:deploy` callback in the merged strategy is equal to
+  the `:deploy` strategy of `child`.
 
       iex> parent_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :parent} end}
       iex> parent = %Strategy{define: parent_cb, deploy: parent_cb}
       #Strategy<:define, :deploy>
       iex> child_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :child} end}
-      iex> child = %Strategy{deploy: child_cb, receive_message: child_cb}
-      #Strategy<:deploy, :receive_message>
+      iex> child = %Strategy{deploy: child_cb, receive: child_cb}
+      #Strategy<:deploy, :receive>
       iex> merged = Strategy.merge(child, parent)
-      #Strategy<:define, :deploy, :receive_message>
+      #Strategy<:define, :deploy, :receive>
       iex> Callback.call(merged.define, %{}, [])
       %Callback.Result{result: :parent}
       iex> Callback.call(merged.deploy, %{}, [])
       %Callback.Result{result: :child}
-      iex> Callback.call(merged.receive_message, %{}, [])
+      iex> Callback.call(merged.receive, %{}, [])
       %Callback.Result{result: :child}
 
   It is also possible to merge a child with a list of parent strategies. In this case, the child
@@ -129,7 +127,7 @@ defmodule Skitter.Strategy do
       iex> dummy = %Callback{function: fn _, _ -> %Callback.Result{} end}
       iex> Strategy.complete?(%Strategy{name: Example, define: dummy})
       false
-      iex> Strategy.complete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send_token: dummy, receive_token: dummy, receive_message: dummy, drop_invocation: dummy, drop_deployment: dummy})
+      iex> Strategy.complete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send: dummy, receive: dummy, drop_invocation: dummy, drop_deployment: dummy})
       true
   """
   @spec complete?(t()) :: boolean()
@@ -143,7 +141,7 @@ defmodule Skitter.Strategy do
       iex> dummy = %Callback{function: fn _, _ -> %Callback.Result{} end}
       iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy})
       true
-      iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send_token: dummy, receive_token: dummy, receive_message: dummy, drop_invocation: dummy, drop_deployment: dummy})
+      iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send: dummy, receive: dummy, drop_invocation: dummy, drop_deployment: dummy})
       false
   """
   @spec incomplete?(t()) :: boolean()
@@ -162,9 +160,8 @@ defimpl Inspect, for: Skitter.Strategy do
     :define,
     :deploy,
     :prepare,
-    :send_token,
-    :receive_token,
-    :receive_message,
+    :send,
+    :receive,
     :drop_deployment,
     :drop_invocation
   ])
@@ -173,9 +170,8 @@ defimpl Inspect, for: Skitter.Strategy do
     :define,
     :deploy,
     :prepare,
-    :send_token,
-    :receive_token,
-    :receive_message,
+    :send,
+    :receive,
     :drop_deployment,
     :drop_invocation
   ])
@@ -184,9 +180,8 @@ defimpl Inspect, for: Skitter.Strategy do
     :define,
     :deploy,
     :prepare,
-    :send_token,
-    :receive_token,
-    :receive_message,
+    :send,
+    :receive,
     :drop_deployment,
     :drop_invocation
   ])

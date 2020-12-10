@@ -8,19 +8,23 @@ defmodule Skitter.Runtime do
   @moduledoc false
 
   alias Skitter.{Context, Workflow}
-  alias Skitter.Runtime.{DeploymentStore, Strategy}
+  alias Skitter.Runtime.{DeploymentStore, Strategy, WorkflowStore}
 
-  def deploy(wf = %Workflow{}, wf_ref) do
+  def deploy(%Workflow{nodes: nodes}, wf_ref, manager) do
     ref = make_ref()
 
     data =
-      wf.nodes
-      |> Enum.map(fn {name, {comp, args}} ->
+      Enum.map(nodes, fn {name, {comp, args}} ->
         {
           name,
           Strategy.deploy(
             comp,
-            %Context{deployment_ref: ref, workflow_ref: wf_ref, workflow_id: name},
+            %Context{
+              deployment_ref: ref,
+              workflow_ref: wf_ref,
+              component_id: name,
+              manager: manager
+            },
             args
           )
         }
@@ -29,5 +33,28 @@ defmodule Skitter.Runtime do
 
     DeploymentStore.add(ref, data)
     ref
+  end
+
+  def send(ctx, tokens) do
+    wf = WorkflowStore.get(ctx.workflow_ref)
+    source = wf.links[ctx.component_id]
+
+    for {port, value} <- tokens do
+      for {dst_name, dst_port} <- source[port] || [] do
+        case wf[dst_name] do
+          {comp, _} -> Strategy.send(comp, %{ctx | component_id: dst_name}, value, dst_port, nil)
+          nil -> :ok
+        end
+      end
+    end
+  end
+
+  def drop_deployment(%Workflow{nodes: nodes}, dep_ref) do
+    deployment = DeploymentStore.get(dep_ref)
+    DeploymentStore.del(dep_ref)
+
+    Enum.each(nodes, fn {name, {component, _}} ->
+      Strategy.drop_deployment(component, deployment[name])
+    end)
   end
 end

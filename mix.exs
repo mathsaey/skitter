@@ -114,9 +114,12 @@ defmodule Skitter.MixProject do
           Skitter.Callback.Result,
           Skitter.Component,
           Skitter.Workflow,
-          Skitter.Strategy,
+          Skitter.Strategy
+        ],
+        "Runtime Concepts": [
+          Skitter.Context,
+          Skitter.Manager,
           Skitter.Worker,
-          Skitter.Buffer,
           Skitter.Deployment,
           Skitter.Invocation
         ],

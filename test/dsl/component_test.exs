@@ -61,9 +61,8 @@ defmodule Skitter.DSL.ComponentTest do
           define: %Callback{function: fn _, [component] -> %Result{result: component} end},
           deploy: :todo,
           prepare: :todo,
-          send_token: :todo,
-          receive_token: :todo,
-          receive_message: :todo,
+          send: :todo,
+          receive: :todo,
           drop_deployment: :todo,
           drop_invocation: :todo
         }

@@ -7,11 +7,11 @@
 defmodule Skitter.Mode.Local.Worker do
   @moduledoc false
 
-  alias Skitter.Runtime.{Worker, Worker.Supervisor}
+  alias Skitter.Runtime.Worker.{Server, Supervisor}
 
   def create(component, context, state, tag, _, _) do
     {:ok, pid} =
-      DynamicSupervisor.start_child(Supervisor, {Worker, [component, context, state, tag]})
+      DynamicSupervisor.start_child(Supervisor, {Server, [component, context, state, tag]})
 
     pid
   end

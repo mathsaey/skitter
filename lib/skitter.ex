@@ -8,13 +8,9 @@ defmodule Skitter do
   @moduledoc """
   Interface to the Skitter system.
   """
+  alias Skitter.Manager
 
-  defp mode, do: Skitter.Config.get(:mode)
-
-  def deploy(wf = %Skitter.Workflow{}) do
-    case mode() do
-      :master -> Skitter.Runtime.Manager.create(wf)
-      :local -> Skitter.Runtime.Manager.create(wf)
-    end
-  end
+  defdelegate deploy(workflow), to: Manager, as: :create
+  defdelegate send(manager, records), to: Manager
+  defdelegate stop(manager), to: Manager
 end

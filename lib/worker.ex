@@ -8,7 +8,7 @@ defmodule Skitter.Worker do
   @moduledoc """
   Data processor which can perform work for a component.
   """
-  alias Skitter.{Context, Component, Invocation, Runtime}
+  alias Skitter.{Context, Component, Invocation}
 
   # ----- #
   # Types #
@@ -21,10 +21,6 @@ defmodule Skitter.Worker do
 
   @typedoc """
   Worker identification tag.
-
-  A strategy may manage multiple workers with different roles. Since every message that a worker
-  receives is handled by the same function (`Skitter.Strategy.receive_message/6`), a worker has a
-  unique _tag_ that is passed to this function, which can be used to identify the worker.
   """
   @type tag :: atom()
 
@@ -77,11 +73,11 @@ defmodule Skitter.Worker do
   Send a message to a worker reference.
   """
   @spec send(ref(), any(), Invocation.ref()) :: :ok
-  def send(ref, message, invocation), do: Runtime.Worker.send(ref, message, invocation)
+  def send(ref, message, invocation), do: GenServer.cast(ref, {:msg, message, invocation})
 
   @doc """
   Stop the referenced worker.
   """
   @spec stop(ref()) :: :ok
-  def stop(ref), do: Runtime.Worker.stop(ref)
+  def stop(ref), do: GenServer.cast(ref, :stop)
 end

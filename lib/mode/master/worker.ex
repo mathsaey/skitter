@@ -8,7 +8,9 @@ defmodule Skitter.Mode.Master.Worker do
   @moduledoc false
 
   alias Skitter.Mode.Master.WorkerConnection
-  alias Skitter.Runtime.{Worker, Worker.Supervisor, Location}
+
+  alias Skitter.Runtime.Worker.{Server, Supervisor}
+  alias Skitter.Runtime.Location
 
   def create(component, state, tag, _, constraints) do
     available = WorkerConnection.all() |> Location.resolve(constraints)
@@ -22,7 +24,7 @@ defmodule Skitter.Mode.Master.Worker do
     {:ok, pid} =
       DynamicSupervisor.start_child(
         {Supervisor, node},
-        {Worker, [component, state, tag]}
+        {Server, [component, state, tag]}
       )
 
     pid

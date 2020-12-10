@@ -18,8 +18,9 @@ defmodule Skitter.Context do
   @opaque t :: %__MODULE__{
             deployment_ref: Deployment.ref(),
             workflow_ref: reference(),
-            workflow_id: Workflow.id()
+            component_id: Workflow.id(),
+            manager: pid()
           }
 
-  defstruct [:deployment_ref, :workflow_ref, :workflow_id]
+  defstruct [:deployment_ref, :manager, :workflow_ref, :component_id]
 end
