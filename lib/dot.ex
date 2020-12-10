@@ -103,17 +103,13 @@ defmodule Skitter.Dot do
   defp address({nil, port}, prefix, path, _), do: port_path(path, prefix, port)
 
   defp address({id, port}, prefix, path, workflow) do
-    case workflow[id].elem do
-      %Component{} -> "#{expand_path(path, id)}:#{prefix}_#{port}"
-      %Workflow{} -> path |> expand_path(id) |> port_path(prefix, port)
+    case workflow[id] do
+      {%Component{}, _} -> "#{expand_path(path, id)}:#{prefix}_#{port}"
+      {%Workflow{}, _} -> path |> expand_path(id) |> port_path(prefix, port)
     end
   end
 
   # Print identifier and name if components is named
   defp component_name(%Component{name: nil}), do: ""
-
-  defp component_name(%Component{name: n}) do
-    str = n |> Module.split() |> Enum.join(".")
-    "<BR/>(#{str})"
-  end
+  defp component_name(%Component{name: n}), do: "<BR/>(#{n})"
 end
