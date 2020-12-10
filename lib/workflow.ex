@@ -31,7 +31,7 @@ defmodule Skitter.Workflow do
           out: [Port.t()],
           # TODO: rename this?
           nodes: %{optional(id()) => {Component.t() | t(), [any()]}},
-          links: %{required(address()) => [address()]}
+          links: %{required(id()) => %{required(Port.t()) => [{id(), Port.t()}]}}
         }
 
   defstruct name: nil,
@@ -44,21 +44,6 @@ defmodule Skitter.Workflow do
   Identifier of a node in a workflow.
   """
   @type id() :: atom()
-
-  @typedoc """
-  Address of a port in a workflow.
-
-  An address can refer to a `t:Skitter.Port.t/0` of a node in the workflow, or
-  to a port of the workflow itself.
-
-  An address is a tuple which identifies a node in the workflow, and a port of
-  this node. When the address refers to a workflow port, the node name is
-  replaced by `nil`.
-
-  Note that it is possible for an in -and out port in a workflow to share an
-  address.
-  """
-  @type address() :: {id() | nil, Port.t()}
 
   # --------- #
   # Utilities #

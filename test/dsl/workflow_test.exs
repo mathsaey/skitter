@@ -82,11 +82,9 @@ defmodule Skitter.DSL.WorkflowTest do
       end
 
     assert w.links == %{
-             {nil, :a} => [{:a, :b}, {:a, :a}],
-             {nil, :b} => [{:a, :c}],
-             {:a, :x} => [b: :b, b: :a],
-             {:b, :x} => [nil: :x],
-             {:b, :y} => [nil: :y]
+             nil: %{a: [{:a, :b}, {:a, :a}], b: [{:a, :c}]},
+             a: %{x: [b: :b, b: :a]},
+             b: %{x: [nil: :x], y: [nil: :y]}
            }
   end
 

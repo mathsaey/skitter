@@ -67,8 +67,13 @@ defmodule Skitter.DSL.Workflow do
   end
 
   defp read_links(links) do
-    Enum.reduce(links, %{}, fn {source, destination}, links ->
-      Map.update(links, source, [destination], &[destination | &1])
+    Enum.reduce(links, %{}, fn {{comp, port}, destination}, links ->
+      Map.update(
+        links,
+        comp,
+        %{port => [destination]},
+        fn map -> Map.update(map, port, [destination], &[destination | &1]) end
+      )
     end)
   end
 
@@ -106,7 +111,7 @@ defmodule Skitter.DSL.Workflow do
       iex> workflow.out
       []
       iex> workflow.links
-      %{{nil, :data} => [id: :in_val], {:id, :out_val} => [printer: :val]}
+      %{nil: %{data: [id: :in_val]}, id: %{out_val: [printer: :val]}}
   """
   defmacro defworkflow(name, opts \\ [], do: body) do
     name_str = name |> AST.name_to_atom(__CALLER__) |> Atom.to_string()
@@ -181,7 +186,7 @@ defmodule Skitter.DSL.Workflow do
       iex> wf.out
       []
       iex> wf.links
-      %{{nil, :data} => [id: :in_val], {:id, :out_val} => [printer: :val]}
+      %{nil: %{data: [id: :in_val]}, id: %{out_val: [printer: :val]}}
   """
   @doc section: :dsl
   defmacro workflow(ports \\ [], do: body) do
