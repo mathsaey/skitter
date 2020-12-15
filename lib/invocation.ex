@@ -24,4 +24,6 @@ defmodule Skitter.Invocation do
   #   data: any(),
   #   ref: ref()
   # }
+
+  def new, do: make_ref()
 end

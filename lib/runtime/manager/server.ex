@@ -8,7 +8,7 @@ defmodule Skitter.Runtime.Manager.Server do
   @moduledoc false
   use GenServer, restart: :transient
 
-  alias Skitter.Context
+  alias Skitter.{Context, Invocation}
   alias Skitter.Runtime.WorkflowStore
 
   defstruct [:wf_ref, :wf, :dep]
@@ -28,7 +28,8 @@ defmodule Skitter.Runtime.Manager.Server do
   def handle_cast({:data, records}, s = %__MODULE__{wf_ref: wf_ref, dep: dep_ref}) do
     Skitter.Runtime.send(
       %Context{deployment_ref: dep_ref, workflow_ref: wf_ref, component_id: nil, manager: self()},
-      records
+      records,
+      Invocation.new()
     )
 
     {:noreply, s}

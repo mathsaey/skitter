@@ -73,6 +73,22 @@ defmodule Skitter.Component do
   # --------- #
 
   @doc """
+  Call a specific callback of the component with an initial state.
+
+  This is the same as calling `call/4` with `create_empty_state/1` as the state.
+
+  ## Examples
+
+      iex> cb = %Callback{function: fn _, _ -> %Result{result: 10} end}
+      iex> call(%Component{callbacks: %{f: cb}}, :f, [])
+      %Callback.Result{state: nil, publish: nil, result: 10}
+  """
+  @spec call(t(), callback_name(), [any()]) :: Callback.Result.t()
+  def call(component = %Component{}, callback_name, arguments) do
+    call(component, callback_name, create_empty_state(component), arguments)
+  end
+
+  @doc """
   Call a specific callback of the component.
 
   Call the callback named `callback_name` of `component` with the arguments defined in
@@ -224,7 +240,7 @@ defmodule Skitter.Component do
   @spec finalize(t()) :: t() | no_return()
   def finalize(component) do
     component
-    |> verify_strategy()
+    # |> verify_strategy()
     |> Skitter.Runtime.Strategy.define()
   end
 

@@ -49,7 +49,7 @@ defmodule Skitter.DSL.Strategy do
           deploy: {[:context, :component], []},
           prepare: {[:component, :deployment], []},
           send: {[:component, :context, :deployment, :invocation], []},
-          receive: {[:component, :deployment, :invocation_ref], [:state, :publish]},
+          receive: {[:context, :component, :deployment, :invocation], [:state, :publish]},
           drop_invocation: {[:component, :deployment, :invocation_ref], []},
           drop_deployment: {[:component, :deployment], []}
         }

@@ -6,7 +6,6 @@
 
 defmodule Skitter.Runtime do
   @moduledoc false
-
   alias Skitter.{Context, Workflow}
   alias Skitter.Runtime.{DeploymentStore, Strategy, WorkflowStore}
 
@@ -35,26 +34,36 @@ defmodule Skitter.Runtime do
     ref
   end
 
-  def send(ctx, tokens) do
-    wf = WorkflowStore.get(ctx.workflow_ref)
-    source = wf.links[ctx.component_id]
-
-    for {port, value} <- tokens do
-      for {dst_name, dst_port} <- source[port] || [] do
-        case wf[dst_name] do
-          {comp, _} -> Strategy.send(comp, %{ctx | component_id: dst_name}, value, dst_port, nil)
-          nil -> :ok
-        end
-      end
-    end
-  end
-
   def drop_deployment(%Workflow{nodes: nodes}, dep_ref) do
     deployment = DeploymentStore.get(dep_ref)
     DeploymentStore.del(dep_ref)
 
     Enum.each(nodes, fn {name, {component, _}} ->
       Strategy.drop_deployment(component, deployment[name])
+    end)
+  end
+
+  def send(context, tokens, invocation) do
+    wf = WorkflowStore.get(context.workflow_ref)
+    links = wf.links[context.component_id] || %{}
+    Enum.each(tokens, &send_token(&1, links, wf, context, invocation))
+  end
+
+  def send_token({out_port, value, invocation}, links, workflow, context, _) do
+    send_token({out_port, value}, links, workflow, context, invocation)
+  end
+
+  def send_token({out_port, value}, links, workflow, context, invocation) do
+    links
+    |> Map.get(out_port, [])
+    |> Enum.each(fn {dst_name, dst_port} ->
+      case workflow[dst_name] do
+        {c, _} ->
+          Strategy.send(c, %{context | component_id: dst_name}, value, dst_port, invocation)
+
+        nil ->
+          :ok
+      end
     end)
   end
 end

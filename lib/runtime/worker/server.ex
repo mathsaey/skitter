@@ -31,7 +31,7 @@ defmodule Skitter.Runtime.Worker.Server do
   @impl true
   def handle_cast({:msg, m, i}, g = %__MODULE__{comp: comp, ctx: ctx, state: s, tag: t}) do
     {state, publish} = Skitter.Runtime.Strategy.receive(comp, ctx, m, i, s, t)
-    Skitter.Runtime.send(ctx, publish)
+    Skitter.Runtime.send(ctx, publish, i)
 
     {:noreply, %{g | state: state}}
   end
