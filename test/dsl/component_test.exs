@@ -162,16 +162,16 @@ defmodule Skitter.DSL.ComponentTest do
       end
     end
 
-    assert_definition_error ~r/`.*` is not a valid strategy/ do
-      component in: [] do
-        strategy 5
-      end
-    end
+    # assert_definition_error ~r/`.*` is not a valid strategy/ do
+    #   component in: [] do
+    #     strategy 5
+    #   end
+    # end
 
-    assert_definition_error ~r/`.*` is not complete/ do
-      component in: [] do
-        strategy %Skitter.Strategy{}
-      end
-    end
+    # assert_definition_error ~r/`.*` is not complete/ do
+    #   component in: [] do
+    #     strategy %Skitter.Strategy{}
+    #   end
+    # end
   end
 end

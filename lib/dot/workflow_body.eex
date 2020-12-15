@@ -9,10 +9,10 @@
 
 <%= for {id, node} <- @workflow.nodes do %>
   <%= workflow_node(id, node, @path) %>
-
 <% end %>
 
-<%= for {src, dst_lst} <- @workflow.links do %>
-  <%= workflow_links(src: src, dst_lst: dst_lst, workflow: @workflow, path: @path) %>
-
+<%= for {src, ports} <- @workflow.links do %>
+  <%= for {port, dst_lst} <- ports do %>
+    <%= workflow_links(src: {src, port}, dst_lst: dst_lst, workflow: @workflow, path: @path) %>
+  <% end %>
 <% end %>
