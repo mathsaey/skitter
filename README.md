@@ -135,7 +135,7 @@ along the name of the worker node (`worker@<your-hostname-here>`) and a command
 to evaluate (`Skitter.Example.load_and_react()` in our case):
 
 ```
-$ mix skitter.master worker@hostname --eval "Skitter.Example.load_and_react()"
+$ mix skitter.master worker@hostname --eval "SkitterExample.load_and_react()"
 ```
 
 If everything is set up correctly, converted temperatures should be visible in
