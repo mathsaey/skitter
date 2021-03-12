@@ -7,9 +7,22 @@
 defmodule Skitter.CallbackTest do
   use ExUnit.Case, async: true
 
-  alias Skitter.Callback
-  alias Skitter.Callback.Result
+  defmodule ModuleWithCallbacks do
+    @behaviour Skitter.Callback
+    alias Skitter.Callback.{Result, Info}
 
+    def _sk_callback_list, do: [:example]
+
+    def _sk_callback_info(:example) do
+      %Info{arity: 1, read?: true, write?: false, publish?: true}
+    end
+
+    def example(state, [arg1]) do
+      %Result{state: state, publish: [arg1: arg1], result: :some_value}
+    end
+  end
+
+  alias Skitter.Callback.{Result, Info}
   import Skitter.Callback
   doctest Skitter.Callback
 end
