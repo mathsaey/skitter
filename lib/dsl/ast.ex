@@ -19,6 +19,29 @@ defmodule Skitter.DSL.AST do
   def name_to_atom(any, env), do: throw({:error, :invalid_syntax, any, env})
 
   @doc """
+  Check if `symbol` is used as an operator in `ast`.
+  """
+  def used?(ast, symbol) do
+    {_, n} =
+      Macro.prewalk(ast, 0, fn
+        ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
+        ast, acc -> {ast, acc}
+      end)
+
+    n >= 1
+  end
+
+  @doc """
+  Generate a variable name only usable by macros
+  """
+  def internal_var(name) do
+    var = Macro.var(name, __MODULE__)
+    quote(do: var!(unquote(var), unquote(__MODULE__)))
+  end
+
+  # ====
+
+  @doc """
   Convert the AST that should be behind `do` into a list of statements.
 
   This works regardless of whether or not the `do: ...` or `do ... end` syntax

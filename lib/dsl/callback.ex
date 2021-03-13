@@ -8,324 +8,224 @@ defmodule Skitter.DSL.Callback do
   @moduledoc """
   Callback definition DSL.
 
-  This module offers a DSL to create a `Skitter.Callback`. A callback can be defined in two ways:
-  first, it can be directly created through the `callback/3` macro defined in this module. This
-  macro expects a list of fields, a list of out ports and a body as its arguments. In most cases,
-  this macro should not be called explicitly. Instead, a callback can be defined inside
-  `Skitter.DSL.Component.component/2` or `Skitter.DSL.Strategy.strategy/2`. These macros
-  internally use `callback/3`, and ensure the correct values are provided for `fields` and `out`.
-
-  ## Callback body
-
-  Inside the body of a callback, standard elixir syntax can be used; however, a few caveats apply:
-
-  - the `~>` operator can be used to publish data to any out port provided in `out` (an error is
-  raised if the port is not present in `out`).  This is done with the following syntax: `value ~>
-  port`. If data is published on the same out port multiple times, the last data written will be
-  published.
-  - the `<~` operator can be used to update the state passed to the callback.  `field <~ value`
-  will update `field` of the state. The provided field should be present in `fields` (an error is
-  raised  if this is not the case).
-  - Using any field name inside of `body` will read the current value of that field in the state
-  passed to the callback activation. Thus, to avoid errors, variable names inside `body` should
-  not have the same name as a field.
-
-  ## Implicit callback definitions
-
-  Inside `Skitter.DSL.Component.component/2` and `Skitter.DSL.Strategy.strategy/2`, a callback can
-  be created using a `def`-like syntax:
-
-  ```
-  name arg1, arg2 do
-    <body>
-  end
-  ```
-
-  As with `def`, multiple clauses of the same function may be defined:
-
-  ```
-  name :foo, arg2 do
-    :bar
-  end
-  name arg1, arg2 do
-    <body>
-  end
-  ```
-
-  The different clauses will be gathered and passed to `callback/3`. Note that all the clauses of
-  a callback must have the same arity.
+  This module offers a DSL which enables the definition of `Skitter.Callback` inside a module. In
+  order to use this module, `use Skitter.DSL.Callback` needs to be added to the module definition.
+  Afterwards, `defcb/2` can be used to define callbacks. Using this macro ensures the correct
+  information is automatically added to `c:Skitter.Callback._sk_callback_info/1` and
+  `c:Skitter.Callback._sk_callback_list/0`.
   """
-  alias Skitter.DSL.{AST, Mutable}
-  alias Skitter.DefinitionError
 
-  # -------------------- #
-  # Function-like Syntax #
-  # -------------------- #
+  alias Skitter.DSL.AST
+  alias Skitter.Callback.Info
+
+  # ------------------- #
+  # Behaviour Callbacks #
+  # ------------------- #
+
+  defmacro __using__(_opts) do
+    quote do
+      import unquote(__MODULE__), only: [defcb: 2]
+
+      @behaviour Skitter.Callback
+      @before_compile {unquote(__MODULE__), :generate_behaviour_callbacks}
+      Module.register_attribute(__MODULE__, :_sk_callbacks, accumulate: true)
+    end
+  end
 
   @doc false
-  # Internal function to extract function-like callbacks from an AST.
-  #
-  # This function accepts a component or strategy body, extracts function-like callbacks from this
-  # body, and transforms them into calls to `callback/3`. A map is returned where the name of
-  # the callback is the key while the actual callback is the value.
-  #
-  # `fields` and `out` are passed to the `callback/3` calls, unless
-  # `name => {fields, out}` is present in `overrides`, in which case the `fields` and `out`
-  # present in that tuple get passed. `imports` is added to the body passed to `callback`.
-  def extract_callbacks(statements, imports, fields, out, overrides \\ %{}) do
-    callbacks =
-      statements
-      |> Enum.reject(&is_nil(&1))
-      |> Enum.map(&read_callback(&1))
-      |> Enum.reduce(%{}, &merge_callback(&1, &2))
-      |> Enum.map(&add_imports_fields_ports(&1, imports, fields, out, overrides))
-      |> Enum.map(&build_callback(&1))
+  defmacro generate_behaviour_callbacks(env) do
+    names =
+      env.module
+      |> Module.get_attribute(:_sk_callbacks)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.uniq()
 
-    {:%{}, [], callbacks}
-  end
+    quote bind_quoted: [names: names] do
+      @impl true
+      def _sk_callback_list, do: unquote(names)
 
-  # Read a `name args do ... end` ast node and extract the name, args and body.
-  defp read_callback({name, _, args}) do
-    {args, [[do: body]]} = Enum.split(args, -1)
-    {name, args, body}
-  end
+      # Prevent a warning if no callbacks are defined
+      @impl true
+      def _sk_callback_info(nil), do: %Skitter.Callback.Info{}
 
-  # Group callbacks by their names
-  defp merge_callback({name, args, body}, map) do
-    Map.update(map, name, [{args, body}], &(&1 ++ [{args, body}]))
-  end
-
-  # Add imports, fields, out, to each tuple, keeping track of possible overrides
-  defp add_imports_fields_ports({name, bodies}, imports, fields, out, overrides) do
-    {fields, out} = overrides[name] || {fields, out}
-    {name, bodies, imports, fields, out}
-  end
-
-  # Build a callback from a name and a list of {args, body} tuples
-  # Ensure imports, fields and out ports are passed along
-  defp build_callback({name, bodies, imports, fields, out}) do
-    clauses =
-      Enum.flat_map(bodies, fn {args, body} ->
-        quote do
-          unquote_splicing(args) ->
-            unquote(imports)
-            unquote(body)
-        end
-      end)
-
-    callback =
-      quote do
-        import unquote(Skitter.DSL.Callback), only: [callback: 3]
-
-        callback(unquote(fields), unquote(out)) do
-          unquote(clauses)
-        end
+      for {name, info} <- @_sk_callbacks do
+        def _sk_callback_info(unquote(name)), do: unquote(info)
       end
-
-    {name, callback}
+    end
   end
 
-  # -------- #
-  # callback #
-  # -------- #
+  # ------------------------- #
+  # State & Publish Operators #
+  # ------------------------- #
 
-  @publish_operator :~>
-  @update_operator :<~
+  @publish :_sk_publish
+  @state :_sk_state
 
-  @publish_var AST.internal_var(:publish)
-  @state_var AST.internal_var(:state)
+  @state_read_op :sigil_f
+  @state_write_op :<~
+  @publish_op :~>
 
   @doc """
-  DSL to create `t:Skitter.Callback.t/0`.
+  Read the state of a field.
 
-  This macro offers a DSL to create callbacks that can be used inside skitter components and
-  strategies. This macro accepts `fields`, `out` and a body as its arguments. As stated in the
-  module documentation, this macro should not be called directly if it can be avoided.  Instead,
-  rely on the `Skitter.DSL.Component.component/2` and `Skitter.DSL.Strategy.strategy/2` macros to
-  call this macro.
+  This macro reads the current value of `field` in the state passed to `Skitter.Callback.call/4`.
 
-  The `body` argument should contain the actual implementation of the callback. This body consists
-  of `fn`-like clauses (`argument -> body`). The body of these clauses contain standard elixir
-  code with a few additions and limitations described in the module documentation.
+  This macro should only be used inside the body of `defcb/2`.
 
   ## Examples
 
-  This callback calculates an average and publishes its current value on the `current` port. When
-  it is called with the `:latest` argument, it returns the current average.
-
-      iex> c = callback([:total, :count], [:current]) do
-      ...>  :latest ->
-      ...>    total / count
-      ...>  value ->
-      ...>    count <~ count + 1
-      ...>    total <~ total + value
-      ...>    total / count ~> current
-      ...>    :ok
+      iex> defmodule ReadExample do
+      ...>   use Skitter.DSL.Callback
+      ...>   defcb read(), do: ~f{field}
       ...> end
-      iex> c.publish?
-      true
-      iex> c.read?
-      true
-      iex> c.write?
-      true
-      iex> Callback.call(c, %{total: 5, count: 1}, [5])
-      %Result{state: %{count: 2, total: 10}, publish: [current: 5.0], result: :ok}
-      iex> Callback.call(c, %{total: 10, count: 2}, [:latest])
-      %Result{state: %{count: 2, total: 10}, publish: [], result: 5.0}
+      iex> Callback.call(ReadExample, :read, %{field: 5}, []).result
+      5
+      iex> Callback.call(ReadExample, :read, %{field: :foo}, []).result
+      :foo
   """
-  @doc section: :dsl
-  defmacro callback(fields, out, do: body) do
-    try do
-      body = transform_operators(fields, out, body, __CALLER__)
-      read? = used?(body, :read_state)
-      write? = used?(body, :update_state)
-      publish? = used?(body, :publish)
+  defmacro sigil_f({:<<>>, _, [str]}, _) do
+    quote do
+      Process.get(unquote(@state)).unquote(String.to_existing_atom(str))
+    end
+  end
 
-      clauses = Enum.map(body, fn {:->, _, [args, body]} -> {args, body} end)
-      arity = read_arity(clauses)
+  @doc """
+  Update the state of a field.
 
-      bodies =
-        Enum.flat_map(clauses, fn {args, body} ->
-          body =
-            body
-            |> make_mutable_if(@state_var, write?)
-            |> make_mutable_if(@publish_var, publish?)
+  This macro should only be used inside the body of `defcallback/4`. It updates the value of
+  `field` to `value` and returns `value` as its result. Note that `field` needs to exist inside
+  `state`. If it does not exist, a `KeyError` will be raised.
 
-          quote do
-            unquote(@state_var), unquote(args) ->
-              import unquote(__MODULE__), only: [read_state: 1, update_state: 2, publish: 2]
+  ## Examples
 
-              unquote(@publish_var) = []
-              result = unquote(body)
+      iex> defmodule WriteExample do
+      ...>   use Skitter.DSL.Callback
+      ...>   defcb write(), do: field <~ :bar
+      ...> end
+      iex> Callback.call(WriteExample, :write, %{field: :foo}, []).state[:field]
+      :bar
+      iex> Callback.call(WriteExample, :write, %{field: :foo}, [])
+      %Result{result: :bar, state: %{field: :bar}, publish: []}
+      iex> Callback.call(WriteExample, :write, %{}, [])
+      ** (KeyError) key :field not found
+  """
+  defmacro field <~ value do
+    quote bind_quoted: [state: @state, field: AST.name_to_atom(field, __CALLER__), value: value] do
+      Process.put(state, %{Process.get(state) | field => value})
+      value
+    end
+  end
 
-              %unquote(Skitter.Callback.Result){
-                state: unquote(@state_var),
-                publish: unquote(@publish_var),
-                result: result
-              }
-          end
-        end)
+  @doc """
+  Publish `value` to `port`
 
-      func = {:fn, [], bodies}
+  This macro is used to specify `value` should be published on `port`. It should only be used
+  inside the body of `defcb/2`. If a previous value was specified for `port`, it is overridden.
 
-      quote do
-        %unquote(Skitter.Callback){
-          function: unquote(func),
-          arity: unquote(arity),
-          read?: unquote(read?),
-          write?: unquote(write?),
-          publish?: unquote(publish?)
+  ## Examples
+
+      iex> defmodule PublishExample do
+      ...>   use Skitter.DSL.Callback
+      ...>   defcb publish(value) do
+      ...>     value ~> some_port
+      ...>     ~f{field} ~> some_other_port
+      ...>   end
+      ...> end
+      iex> Callback.call(PublishExample, :publish, %{field: :foo}, [:bar]).publish
+      [some_other_port: :foo, some_port: :bar]
+  """
+  defmacro value ~> port do
+    port = AST.name_to_atom(port, __CALLER__)
+
+    quote bind_quoted: [publish: @publish, port: port, value: value] do
+      Process.put(publish, Keyword.put(Process.get(publish), port, value))
+      value
+    end
+  end
+
+  # ----------- #
+  # defcallback #
+  # ----------- #
+
+  @doc """
+  Define a callback.
+
+  This macro is used to define a callback function. Using this macro, a callback can be defined
+  similar to a regular procedure. Inside the body of the procedure, `~>/2`, `<~/2` and `sigil_f/2`
+  can be used to access the state and to publish output. Afterwards, the macro will ensure:
+
+  - The function returns a `t:Skitter.Callback.result/0` with the correct state (as updated by
+  `<~/2`), publish (as updated by `~>/2`) and result (which contains the value of the last
+  expression in `body`).
+
+  - `c:Skitter.Callback._sk_callback_info/1` and `c:Skitter.Callback._sk_callback_list/0` of the
+  parent module contains the required information about the defined callback.
+
+  Note that, under the hood, `defcb/2` generates a regular elixir function. Therefore, pattern
+  matching may still be used in the argument list of the callback. Attributes such as `@doc` may
+  also be used as usual.
+
+  ## Examples
+
+      iex> defmodule CbExample do
+      ...>   use Skitter.DSL.Callback
+      ...>
+      ...>   defcb simple(), do: nil
+      ...>   defcb arguments(arg1, arg2), do: arg1 + arg2
+      ...>   defcb state(), do: counter <~ ~f{counter} + 1
+      ...>   defcb publish(), do: ~D[1991-12-08] ~> out_port
+      ...> end
+      iex> Callback.info(CbExample, :simple)
+      %Info{arity: 0, read?: false, write?: false, publish?: false}
+      iex> Callback.info(CbExample, :arguments)
+      %Info{arity: 2, read?: false, write?: false, publish?: false}
+      iex> Callback.info(CbExample, :state)
+      %Info{arity: 0, read?: true, write?: true, publish?: false}
+      iex> Callback.info(CbExample, :publish)
+      %Info{arity: 0, read?: false, write?: false, publish?: true}
+      iex> Callback.call(CbExample, :simple, %{}, [])
+      %Result{result: nil, publish: [], state: %{}}
+      iex> Callback.call(CbExample, :arguments, %{}, [10, 20])
+      %Result{result: 30, publish: [], state: %{}}
+      iex> Callback.call(CbExample, :arguments, %{}, [10, 20, 30])
+      ** (FunctionClauseError) no function clause matching in Skitter.DSL.CallbackTest.CbExample.arguments/2
+      iex> Callback.call(CbExample, :state, %{counter: 10, other: :foo}, [])
+      %Result{result: 11, publish: [], state: %{counter: 11, other: :foo}}
+      iex> Callback.call(CbExample, :publish, %{}, [])
+      %Result{result: ~D[1991-12-08], publish: [out_port: ~D[1991-12-08]], state: %{}}
+  """
+  defmacro defcb(signature, do: body) do
+    {name, args} = Macro.decompose_call(signature)
+    state_var = AST.internal_var(:state)
+
+    # Need to escape this twice for some reason
+    info = info(body, args) |> Macro.escape() |> Macro.escape()
+
+    quote do
+      @_sk_callbacks {unquote(name), unquote(info)}
+      def unquote(name)(unquote(state_var), unquote(args)) do
+        import unquote(__MODULE__), only: [sigil_f: 2, ~>: 2, <~: 2]
+
+        Process.put(unquote(@state), unquote(state_var))
+        Process.put(unquote(@publish), [])
+
+        result = unquote(body)
+
+        %Skitter.Callback.Result{
+          result: result,
+          state: Process.delete(unquote(@state)),
+          publish: Process.delete(unquote(@publish))
         }
       end
-    catch
-      err -> handle_error(err)
     end
   end
 
-  # Private Macros
-  # --------------
-
-  @doc false
-  defmacro publish(port, value) do
-    quote do
-      unquote(@publish_var) = Keyword.put(unquote(@publish_var), unquote(port), unquote(value))
-    end
-  end
-
-  @doc false
-  defmacro update_state(field, value) do
-    quote do
-      unquote(@state_var) = %{
-        unquote(@state_var)
-        | unquote(field) => unquote(value)
-      }
-    end
-  end
-
-  @doc false
-  defmacro read_state(field) do
-    quote(do: unquote(@state_var)[unquote(field)])
-  end
-
-  # AST Transformations
-  # -------------------
-
-  # Makes the following changes to the body:
-  #   - any variable with a name in `fields` is transformed into
-  #   `read_state(field)`
-  #   - Any use of <~ is transformed into `update_state(field, value)`, check
-  #   if field exists.
-  #   - Any use of the ~> operator is transformed into `publish(value, port)`,
-  #   check if port exists.
-  defp transform_operators(fields, out, body, env) do
-    Macro.prewalk(body, fn
-      node = {name, _, atom} when is_atom(atom) ->
-        if(name in fields, do: quote(do: read_state(unquote(name))), else: node)
-
-      {@update_operator, _, [field, value]} ->
-        field = AST.name_to_atom(field, env)
-
-        if field in fields do
-          quote(do: update_state(unquote(field), unquote(value)))
-        else
-          throw {:error, :invalid_field, field, fields, env}
-        end
-
-      {@publish_operator, _, [value, port]} ->
-        port = AST.name_to_atom(port, env)
-
-        if port in out do
-          quote(do: publish(unquote(port), unquote(value)))
-        else
-          throw {:error, :invalid_out_port, port, out, env}
-        end
-
-      any ->
-        any
-    end)
-  end
-
-  # Check if `symbol` is used in `ast`
-  defp used?(ast, symbol) do
-    {_, n} =
-      Macro.prewalk(ast, 0, fn
-        ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
-        ast, acc -> {ast, acc}
-      end)
-
-    n >= 1
-  end
-
-  defp read_arity(clauses) do
-    arities = clauses |> Enum.map(&elem(&1, 0)) |> Enum.map(&length/1)
-    arity = hd(arities)
-
-    if Enum.all?(arities, &(&1 == arity)) do
-      arity
-    end
-  end
-
-  defp make_mutable_if(body, _, false), do: body
-  defp make_mutable_if(body, var, true), do: Mutable.make_mutable_in_block(body, var)
-
-  # Error Handling
-  # --------------
-
-  defp handle_error({:error, :invalid_syntax, statement, env}) do
-    DefinitionError.inject("Invalid syntax: `#{statement}`", env)
-  end
-
-  defp handle_error({:error, :invalid_field, field, fields, env}) do
-    DefinitionError.inject(
-      "Invalid field: `#{field}` is not a part of `#{inspect(fields)}`",
-      env
-    )
-  end
-
-  defp handle_error({:error, :invalid_out_port, port, out, env}) do
-    DefinitionError.inject(
-      "Invalid out port: `#{port}` is not a part of `#{inspect(out)}`",
-      env
-    )
+  defp info(body, args) do
+    %Info{
+      arity: length(args),
+      read?: AST.used?(body, @state_read_op),
+      write?: AST.used?(body, @state_write_op),
+      publish?: AST.used?(body, @publish_op)
+    }
   end
 end
