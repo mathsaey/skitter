@@ -6,278 +6,179 @@
 
 defmodule Skitter.Component do
   @moduledoc """
-  Reactive Component definition and utilities.
+  Component type definition and utilities.
 
-  A Reactive Component is one of the core building blocks of skitter.  It defines a single data
-  processing step which can be embedded inside a reactive workflow.
+  A component is a reusable data processing step that can be embedded inside of a workflow. It is
+  defined as the combination of metadata and callbacks. The metadata contains information about
+  the component used in workflow definitions and at runtime, while the callbacks define how the
+  component processes data.
 
-  This module defines the internal representation of a skitter component as an elixir struct
-  (`t:t/0`), some utilities to manipulate components and the `Access` behaviour for `t:t/0`. This
-  behaviour can be used to access and modify a callback with a given name.
+  A skitter component is defined as an elixir module which implements the `Skitter.Component`
+  behaviour and defines a struct. The behaviour defines the `c:_sk_component_info/1` callback,
+  which is used to store the component metadata. The struct is used to store the state of the
+  component. It is not recommended to write a component by hand. Instead, use
+  `Skitter.DSL.Component.defcomponent/3`.
+
+  This module defines the component type, the callbacks of the component behaviour and some
+  utilities to handle components.
+
+  ## Examples
+
+  Since components need to be defined in a module the example code shown in this module's
+  documentation assumes the following module is defined:
+
+  ```
+  defmodule ComponentModule do
+    @behaviour Skitter.Component
+    @behaviour Skitter.Callback
+
+    alias Skitter.Callback.{Info, Result}
+
+    defstruct [:field]
+
+    def _sk_component_info(:strategy), do: Strategy
+    def _sk_component_info(:in_ports), do: [:input]
+    def _sk_component_info(:out_ports), do: [:output]
+
+    def _sk_callback_list, do: [:example]
+
+    def _sk_callback_info(:example) do
+      %Info{arity: 1, read?: true, write?: false, publish?: false}
+    end
+
+    def example(state, args) do
+      %Result{result: args, state: state, publish: []}
+    end
+  end
+  ```
+
   """
-  alias Skitter.{Port, Callback, Component, Strategy, DefinitionError}
+  @compile {:inline, create_empty_state: 1, call: 3, call: 4}
 
-  @behaviour Access
+  alias Skitter.{Port, Callback, Strategy}
+
+  # ---------------- #
+  # Type & Behaviour #
+  # ---------------- #
 
   @typedoc """
-  A component is defined as a collection of _metadata_ and _callbacks_.
-
-  The metadata provides additional information about a component, while the various `Callback`
-  implement the functionality of a component.
-
-  The following metadata is stored:
-
-  | Name          | Description                                  | Default   |
-  | ------------- | -------------------------------------------- | --------- |
-  | `name`        | The name of the component                    | `nil`     |
-  | `fields`      | List of the slots of the component           | `[]`      |
-  | `in`          | List of in ports of the component.           | `[]`      |
-  | `out`         | List of out ports of the component           | `[]`      |
-  | `strategy`    | The `t:Skitter.Strategy/0` of this component | `nil`     |
-
-  Note that a valid component must have at least one in port.
+  A component is defined as a module which implements `Skitter.Component`.
   """
-  @type t :: %__MODULE__{
-          name: module() | nil,
-          fields: [field()],
-          in: [Port.t(), ...],
-          out: [Port.t()],
-          callbacks: %{optional(callback_name()) => Callback.t()},
-          strategy: Strategy.t()
-        }
+  @type t :: module()
 
-  defstruct name: nil,
-            fields: [],
-            in: [],
-            out: [],
-            callbacks: %{},
-            strategy: nil
+  @doc """
+  Returns the meta-information of the component.
 
-  @typedoc """
-  Data storage "slot" of a component.
+  The following information is stored:
 
-  The state of a component instance is divided into various named slots.  In skitter, these slots
-  are called _fields_. The fields of a component are statically defined and are stored as atoms.
+  - `:in_ports`: A list of port names which represents in ports through which the component
+  receives incoming data.
+
+  - `:out_ports`: A list of out ports names which represents the out ports the component can use
+  to publish data.
+
+  - `:strategy`: The `Skitter.Strategy` of the component.
+
+  A component should also implement the `Skitter.Callback` behaviour.
   """
-  @type field :: atom()
-
-  @typedoc """
-  Callback identifiers.
-
-  The callbacks of a skitter component are named.  These names are stored as atoms.
-  """
-  @type callback_name :: atom()
+  @callback _sk_component_info(:in_ports) :: [Port.t(), ...]
+  @callback _sk_component_info(:out_ports) :: [Port.t()]
+  @callback _sk_component_info(:strategy) :: Strategy.t()
 
   # --------- #
   # Utilities #
   # --------- #
 
   @doc """
-  Call a specific callback of the component with an initial state.
-
-  This is the same as calling `call/4` with `create_empty_state/1` as the state.
+  Check if a given value refers to a component module.
 
   ## Examples
 
-      iex> cb = %Callback{function: fn _, _ -> %Result{result: 10} end}
-      iex> call(%Component{callbacks: %{f: cb}}, :f, [])
-      %Callback.Result{state: nil, publish: nil, result: 10}
+      iex> component?(5)
+      false
+      iex> component?(String)
+      false
+      iex> component?(ComponentModule)
+      true
   """
-  @spec call(t(), callback_name(), [any()]) :: Callback.Result.t()
-  def call(component = %Component{}, callback_name, arguments) do
-    call(component, callback_name, create_empty_state(component), arguments)
+  @spec component?(any()) :: boolean()
+  def component?(atom) when is_atom(atom) do
+    :erlang.function_exported(atom, :_sk_component_info, 1)
   end
 
-  @doc """
-  Call a specific callback of the component.
+  def component?(_), do: false
 
-  Call the callback named `callback_name` of `component` with the arguments defined in
-  `t:Callback.signature/0`.
+  @doc """
+  Create an empty state struct for the given component.
 
   ## Examples
 
-      iex> cb = %Callback{function: fn _, _ -> %Result{result: 10} end}
-      iex> call(%Component{callbacks: %{f: cb}}, :f, %{}, [])
-      %Callback.Result{state: nil, publish: nil, result: 10}
+      iex> create_empty_state(ComponentModule)
+      %ComponentModule{field: nil}
   """
-  @spec call(t(), callback_name(), Callback.state(), [any()]) :: Callback.Result.t()
-  def call(component = %Component{}, callback_name, state, arguments) do
-    Callback.call(component[callback_name], state, arguments)
-  end
+  @spec create_empty_state(t()) :: Callback.state()
+  def create_empty_state(component), do: component.__struct__()
 
   @doc """
-  Create an initial `t:Callback.state/0` for a given component.
+  Call callback `callback_name` with `state` and `arguments`.
+
+  See `Skitter.Callback.call/4`.
 
   ## Examples
 
-      iex> create_empty_state(%Component{fields: [:a_field, :another_field]})
-      %{a_field: nil, another_field: nil}
-      iex> create_empty_state(%Component{fields: []})
-      %{}
+      iex> call(ComponentModule, :example, %ComponentModule{field: 30}, [42])
+      %Skitter.Callback.Result{state: %ComponentModule{field: 30}, result: [42], publish: []}
   """
-  @spec create_empty_state(Component.t()) :: Callback.state()
-  def create_empty_state(%Component{fields: fields}) do
-    Map.new(fields, &{&1, nil})
+  @spec call(t(), atom(), Callback.state(), Callback.args()) :: Callback.result()
+  def call(component, callback_name, state, arguments) do
+    Callback.call(component, callback_name, state, arguments)
   end
 
   @doc """
-  Add `callback` to `component` with `name`, if `component[name]` is undefined.
+  Call callback `callback_name` with and empty state and `arguments`.
+
+  This function calls `Skitter.Callback.call/4` with the state created by `create_empty_state/1`.
 
   ## Examples
 
-      iex> foo_cb = %Callback{function: fn _, _ -> %Result{result: :foo} end}
-      iex> bar_cb = %Callback{function: fn _, _ -> %Result{result: :bar} end}
-      iex> comp = %Component{callbacks: %{foo: foo_cb}}
-      ...>   |> default_callback(:foo, bar_cb)
-      ...>   |> default_callback(:bar, bar_cb)
-      iex> call(comp, :foo, %{}, []).result
-      :foo
-      iex> call(comp, :bar, %{}, []).result
-      :bar
+      iex> call(ComponentModule, :example, [42])
+      %Skitter.Callback.Result{state: %ComponentModule{field: nil}, result: [42], publish: []}
   """
-  @spec default_callback(t(), callback_name(), Callback.t()) :: t()
-  def default_callback(component = %Component{callbacks: map}, name, callback) do
-    if map[name] do
-      component
-    else
-      %{component | callbacks: Map.put(map, name, callback)}
-    end
+  @spec call(t(), atom(), Callback.args()) :: Callback.result()
+  def call(component, callback_name, arguments) do
+    Callback.call(component, callback_name, create_empty_state(component), arguments)
   end
 
   @doc """
-  Verify if `component` defines a callback with `name` the given properties.
-
-  The properties are verified using `Skitter.Callback.verify/2`.
+  Obtain the strategy of `component`.
 
   ## Examples
 
-      iex> cb1 = %Callback{arity: 1, read?: false, write?: false, publish?: false}
-      iex> require_callback(%Component{callbacks: %{foo: cb1}}, :foo)
-      :ok
-      iex> require_callback(%Component{callbacks: %{}}, :foo)
-      {:error, :undefined}
-      iex> require_callback(%Component{callbacks: %{foo: cb1}}, :foo, arity: 2)
-      {:error, :arity, 2, 1}
-      iex> cb2 = %{cb1 | read?: true, write?: true, publish?: true}
-      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo)
-      {:error, :write?, false, true}
-      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo, write?: true)
-      {:error, :publish?, false, true}
-      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo, publish?: true, write?: true)
-      :ok
-      iex> require_callback(%Component{callbacks: %{foo: cb2}}, :foo, publish?: true, write?: true, read?: true)
-      :ok
+      iex> strategy(ComponentModule)
+      Strategy
   """
-  @spec require_callback(t(), callback_name(), Callback.property_list()) ::
-          {:error, :undefined} | Callback.verify_returns()
-  def require_callback(%Component{callbacks: map}, name, opts \\ []) do
-    if cb = map[name], do: Callback.verify(cb, opts), else: {:error, :undefined}
-  end
+  @spec strategy(t()) :: Strategy.t()
+  def strategy(component), do: component._sk_component_info(:strategy)
 
   @doc """
-  Return `component` if it defines a callback with `name`, raise otherwise.
-
-  This function uses `require_callback/3` under the hood. However, since it returns `component`
-  when successful it can easily be used inside `|>` pipelines. If `require_callback/3` is not
-  successful, a `Skitter.StrategyError` is raised.
-
-  Please refer to the documentation of `require_callback/3` for more information.
+  Obtain the list of in ports of `component`.
 
   ## Examples
 
-      iex> cb = %Callback{arity: 1, read?: false, write?: false, publish?: false}
-      iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo)
-      %Component{callbacks: %{foo: %Callback{arity: 1, publish?: false, read?: false, write?: false}}}
-
-      iex> require_callback!(%Component{callbacks: %{}}, :foo)
-      ** (Skitter.StrategyError) Missing implementation of required callback: `foo`
-
-      iex> cb = %Callback{arity: 1, read?: false, write?: false, publish?: false}
-      iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo, arity: 2)
-      ** (Skitter.StrategyError) Incorrect arity for callback `foo`, expected 2, got 1
-
-      iex> cb = %Callback{arity: 1, read?: true, write?: false, publish?: true}
-      iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo)
-      ** (Skitter.StrategyError) Incorrect publish? for callback `foo`, expected false, got true
-
-      iex> cb = %Callback{arity: 1, read?: true, write?: true, publish?: false}
-      iex> require_callback!(%Component{callbacks: %{foo: cb}}, :foo, read?: true, write?: false)
-      ** (Skitter.StrategyError) Incorrect write? for callback `foo`, expected false, got true
+      iex> in_ports(ComponentModule)
+      [:input]
   """
-  @spec require_callback!(t(), callback_name(), Callback.property_list()) :: t() | no_return()
-  def require_callback!(component, name, opts \\ []) do
-    case require_callback(component, name, opts) do
-      :ok ->
-        component
-
-      {:error, :undefined} ->
-        raise Skitter.StrategyError, "Missing implementation of required callback: `#{name}`"
-
-      {:error, attr, wanted, actual} ->
-        raise Skitter.StrategyError,
-              "Incorrect #{attr} for callback `#{name}`, expected #{wanted}, got #{actual}"
-    end
-  end
+  @spec in_ports(t()) :: [Port.t(), ...]
+  def in_ports(component), do: component._sk_component_info(:in_ports)
 
   @doc """
-  Modify the strategy of a component
+  Obtain the list of out ports of `component`.
 
-  Intended to be used inside `Skitter.Strategy.define/1`. This function changes the strategy of a
-  component. Afterwards, it calls `finalize/1` on the updated component.
+  ## Examples
+
+      iex> out_ports(ComponentModule)
+      [:output]
   """
-  @spec specialize(t(), Strategy.t()) :: t() | no_return()
-  def specialize(component, strategy) do
-    %{component | strategy: strategy}
-    |> finalize()
-  end
-
-  @doc """
-  Finish defining the component
-
-  Verifies if the component strategy is a valid, complete strategy and calls `Strategy.define/1`
-  on the component.
-  """
-  @spec finalize(t()) :: t() | no_return()
-  def finalize(component) do
-    component
-    # |> verify_strategy()
-    |> Skitter.Runtime.Strategy.define()
-  end
-
-  defp verify_strategy(c = %Skitter.Component{strategy: strategy = %Skitter.Strategy{}}) do
-    if Skitter.Strategy.complete?(strategy) do
-      c
-    else
-      raise DefinitionError, "`#{inspect(strategy)}` is not complete"
-    end
-  end
-
-  defp verify_strategy(%Skitter.Component{strategy: any}) do
-    raise DefinitionError, "`#{inspect(any)}` is not a valid strategy"
-  end
-
-  # Access
-  # ------
-
-  @impl true
-  def fetch(comp, key), do: Access.fetch(comp.callbacks, key)
-
-  @impl true
-  def pop(comp, key) do
-    {val, cbs} = Access.pop(comp.callbacks, key)
-    {val, %{comp | callbacks: cbs}}
-  end
-
-  @impl true
-  def get_and_update(comp, key, f) do
-    {val, cbs} = Access.get_and_update(comp.callbacks, key, f)
-    {val, %{comp | callbacks: cbs}}
-  end
-end
-
-defimpl Inspect, for: Skitter.Component do
-  use Skitter.Inspect, prefix: "Component", named: true
-
-  ignore_short([:callbacks, :fields, :handler])
-  ignore_empty([:fields, :out])
+  @spec out_ports(t()) :: [Port.t()]
+  def out_ports(component), do: component._sk_component_info(:out_ports)
 end

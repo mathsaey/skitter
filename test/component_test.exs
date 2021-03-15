@@ -7,36 +7,30 @@
 defmodule Skitter.ComponentTest do
   use ExUnit.Case, async: true
 
-  alias Skitter.Callback
-  alias Skitter.Callback.Result
-
-  alias Skitter.Component
   import Skitter.Component
+
+  defmodule ComponentModule do
+    @behaviour Skitter.Component
+    @behaviour Skitter.Callback
+
+    alias Skitter.Callback.{Info, Result}
+
+    defstruct [:field]
+
+    def _sk_component_info(:strategy), do: Strategy
+    def _sk_component_info(:in_ports), do: [:input]
+    def _sk_component_info(:out_ports), do: [:output]
+
+    def _sk_callback_list, do: [:example]
+
+    def _sk_callback_info(:example) do
+      %Info{arity: 1, read?: true, write?: false, publish?: false}
+    end
+
+    def example(state, args) do
+      %Result{result: args, state: state, publish: []}
+    end
+  end
+
   doctest Skitter.Component
-
-  test "fetch" do
-    c = %Component{callbacks: %{callback: %Callback{}}}
-    assert c[:doesnotexist] == nil
-    assert %Callback{} = c[:callback]
-  end
-
-  test "pop" do
-    c = %Component{callbacks: %{callback: %Callback{}}}
-
-    {val, comp} = Access.pop(c, :doesnotexist)
-    assert %Callback{} = comp[:callback]
-    assert val == nil
-
-    {val, comp} = Access.pop(c, :callback)
-    assert comp[:callback] == nil
-    assert %Callback{} = val
-  end
-
-  test "get_and_update" do
-    c = %Component{callbacks: %{callback: %Callback{}}}
-
-    {val, comp} = Access.get_and_update(c, :callback, fn _ -> :pop end)
-    assert comp[:callback] == nil
-    assert %Callback{} = val
-  end
 end
