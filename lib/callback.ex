@@ -231,7 +231,7 @@ defmodule Skitter.Callback do
   """
   @spec verify(parent(), atom(), [{atom(), any()}]) ::
           :ok | [{:invalid, atom()} | {:mismatch, atom(), any(), any()}]
-  def verify(parent, name, properties \\ []) do
+  def verify(parent, name, properties) do
     properties
     |> Enum.map(fn {property, expected} -> verify(parent, name, property, expected) end)
     |> Enum.reject(&(&1 == :ok))
@@ -259,7 +259,7 @@ defmodule Skitter.Callback do
 
   """
   @spec verify!(parent(), atom(), [{atom(), any()}]) :: :ok | no_return()
-  def verify!(parent, name, properties \\ []) do
+  def verify!(parent, name, properties) do
     case verify(parent, name, properties) do
       :ok ->
         :ok
