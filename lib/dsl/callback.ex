@@ -13,6 +13,10 @@ defmodule Skitter.DSL.Callback do
   Afterwards, `defcb/2` can be used to define callbacks. Using this macro ensures the correct
   information is automatically added to `c:Skitter.Callback._sk_callback_info/1` and
   `c:Skitter.Callback._sk_callback_list/0`.
+
+  Note that it is generally not needed to `import` or `use` this module manually, as
+  `Skitter.DSL.Component.defcomponent/3` and `Skitter.DSL.Strategy.defstrategy/3` do this
+  automatically.
   """
 
   alias Skitter.DSL.AST
@@ -152,7 +156,7 @@ defmodule Skitter.DSL.Callback do
 
   This macro is used to define a callback function. Using this macro, a callback can be defined
   similar to a regular procedure. Inside the body of the procedure, `~>/2`, `<~/2` and `sigil_f/2`
-  can be used to access the state and to publish output. Afterwards, the macro will ensure:
+  can be used to access the state and to publish output. The macro ensures:
 
   - The function returns a `t:Skitter.Callback.result/0` with the correct state (as updated by
   `<~/2`), publish (as updated by `~>/2`) and result (which contains the value of the last

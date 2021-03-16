@@ -19,17 +19,27 @@ defmodule Skitter.DSL.AST do
   def name_to_atom(any, env), do: throw({:error, :invalid_syntax, any, env})
 
   @doc """
+  Convert a list of AST names into a list of atoms using `name_to_atom/2`
+  """
+  def names_to_atoms(lst, env) when is_list(lst), do: Enum.map(lst, &name_to_atom(&1, env))
+  def names_to_atoms(any, env), do: names_to_atoms([any], env)
+
+  @doc """
+  Count how many times `symbol` occurs in `ast`.
+  """
+  def count_uses(ast, symbol) do
+    ast
+    |> Macro.prewalk(0, fn
+      ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
+      ast, acc -> {ast, acc}
+    end)
+    |> elem(1)
+  end
+
+  @doc """
   Check if `symbol` is used as an operator in `ast`.
   """
-  def used?(ast, symbol) do
-    {_, n} =
-      Macro.prewalk(ast, 0, fn
-        ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
-        ast, acc -> {ast, acc}
-      end)
-
-    n >= 1
-  end
+  def used?(ast, symbol), do: count_uses(ast, symbol) >= 1
 
   @doc """
   Generate a variable name only usable by macros
@@ -39,44 +49,34 @@ defmodule Skitter.DSL.AST do
     quote(do: var!(unquote(var), unquote(__MODULE__)))
   end
 
-  # ====
+  # @doc """
+  # Convert the AST that should be behind `do` into a list of statements.
 
-  @doc """
-  Convert the AST that should be behind `do` into a list of statements.
+  # This works regardless of whether or not the `do: ...` or `do ... end` syntax
+  # is used.
+  # """
+  # def block_to_list({:__block__, _, statements}), do: statements
+  # def block_to_list(nil), do: []
+  # def block_to_list(statement), do: [statement]
 
-  This works regardless of whether or not the `do: ...` or `do ... end` syntax
-  is used.
-  """
-  def block_to_list({:__block__, _, statements}), do: statements
-  def block_to_list(nil), do: []
-  def block_to_list(statement), do: [statement]
+  # @doc """
+  # Remove certain calls from the body.
 
-  @doc """
-  Generate a variable name only usable by macros
-  """
-  def internal_var(name) do
-    var = Macro.var(name, __MODULE__)
-    quote(do: var!(unquote(var), unquote(__MODULE__)))
-  end
+  # Returns the modified body and the extracted calls.
+  # """
+  # def extract_calls(body, statements) do
+  #   {body, statements} =
+  #     Enum.map_reduce(body, [], fn
+  #       node = {call, _, _}, acc ->
+  #         if(call in statements, do: {nil, [node | acc]}, else: {node, acc})
 
-  @doc """
-  Remove certain calls from the body.
+  #       any, acc ->
+  #         {any, acc}
+  #     end)
 
-  Returns the modified body and the extracted calls.
-  """
-  def extract_calls(body, statements) do
-    {body, statements} =
-      Enum.map_reduce(body, [], fn
-        node = {call, _, _}, acc ->
-          if(call in statements, do: {nil, [node | acc]}, else: {node, acc})
-
-        any, acc ->
-          {any, acc}
-      end)
-
-    body = Enum.reject(body, &is_nil/1)
-    {body, statements}
-  end
+  #   body = Enum.reject(body, &is_nil/1)
+  #   {body, statements}
+  # end
 
   @doc """
   Parse a list of port names into a list of atoms.

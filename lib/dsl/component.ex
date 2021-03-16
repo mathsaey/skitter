@@ -6,235 +6,153 @@
 
 defmodule Skitter.DSL.Component do
   @moduledoc """
-  Component definition DSL. See `component/2` and `defcomponent/3`
+  Component definition DSL. See `defcomponent/3`.
+
+  This module offers the `defcomponent/3` macro, which enables the definition of a
+  `Skitter.Component` module. To use this macro, simply `import` this module, after which
+  `defcomponent/3` can be used.
   """
-  alias Skitter.DSL.{AST, Callback}
+  alias Skitter.DSL.AST
   alias Skitter.DefinitionError
 
   @doc """
-  Define a component using `component/2` and bind it to `name`.
+  Define the fields of the component's state.
 
-  Also sets the `name` field of the generated component to `name`.
+  This macro defines the various fields that make up the state of a component. It is used
+  similarly to `defstruct/1`. You should only use this macro once inside the body of a component.
+  Note that an empty state will automatically be generated if this macro is not used.
+
+  ## Internal representation as a struct
+
+  Currently, this macro is syntactic sugar for directly calling `defstruct/1`. Programmers should
+  not rely on this property however, as it may change in the future. The use of `fields/1` is
+  preferred as it decouples the definition of the layout of a state from its internal
+  representation as an elixir struct.
 
   ## Examples
 
-      iex> defcomponent average, in: value, out: current do
-      ...>    strategy test_strategy()
-      ...>    fields total, count
-      ...>
-      ...>    init do
-      ...>      total <~ 0
-      ...>      count <~ 0
-      ...>    end
-      ...>
-      ...>    react value do
-      ...>      count <~ count + 1
-      ...>      total <~ total + value
-      ...>
-      ...>      total / count ~> current
-      ...>    end
-      ...>  end
-      iex> average.name
-      "average"
-      iex> average.fields
-      [:total, :count]
-      iex> average.in
-      [:value]
-      iex> average.out
-      [:current]
-      iex> Component.call(average, :init, Component.create_empty_state(average), []).state
-      %{count: 0, total: 0}
-      iex> res = Component.call(average, :react, %{count: 0, total: 0}, [10])
-      iex> res.publish
-      [current: 10.0]
-      iex> res.state
-      %{count: 1, total: 10}
-  """
-  defmacro defcomponent(name, opts \\ [], do: body) do
-    name_str = name |> AST.name_to_atom(__CALLER__) |> Atom.to_string()
+  Assume the definition of a `FieldsExample` component with fields: `fields foo: 42`:
 
+      iex> Component.create_empty_state(FieldsExample)
+      %FieldsExample{foo: 42}
+
+  If a component `NoFields` does not specify a fields declaration:
+
+      iex> Component.create_empty_state(NoFields)
+      %NoFields{}
+
+  When multiple `fields` declarations are present, a `Skitter.DefinitionError` will be raised.
+  """
+  defmacro fields(lst) do
     quote do
-      unquote(name) = %{component(unquote(opts), do: unquote(body)) | name: unquote(name_str)}
+      defstruct unquote(lst)
     end
   end
 
   @doc """
-  DSL to define `t:Skitter.Component.t/0`.
+  Define a component module.
 
-  This macro offers a DSL to create a Skitter component which can be embedded inside a Skitter
-  workflow or used as component strategies.
+  This macro is used to define a component module. Using this macro, a component can be defined
+  similar to a normal module. The macro will automatically include the callback DSL, ensure a
+  struct is defined to represent the component's state and provide implementations for
+  `c:Skitter.Component._sk_component_info/1`.
 
-  A component definition consists of a signature and a body. The first two arguments that this
-  macro accepts (`name`, `ports`) make up the signature, while the final argument contain the body
-  of the component.
+  ## Component strategy and ports
 
-  ## Signature
+  The component Strategy and its in -and out ports can be defined in the header of the component
+  declaration as follows:
 
-  The signature of the component declares the in -and out ports of the component. These are
-  provided as a list of names, e.g. `in: [in_port1, in_port2], out: [out_port1, out_port2]`. As a
-  syntactic convenience, the `[]` around a port list may be dropped if only a single port is
-  declared (e.g.: `out: [foo]` can be written as `out: foo`). Finally, it is possible for a
-  component to not define out ports. This can be specified as `out: []`, or by dropping the out
-  port sub-list altogether.
+      iex> defcomponent SignatureExample, in: [a, b, c], out: [y, z], strategy: SomeStrategy do
+      ...> end
+      iex> Component.strategy(SignatureExample)
+      SomeStrategy
+      iex> Component.in_ports(SignatureExample)
+      [:a, :b, :c]
+      iex> Component.out_ports(SignatureExample)
+      [:y, :z]
 
-  ## Body
+  If a component has no `in`, or `out` ports, it can be omitted from the component's header.
+  Furthermore, if only a single `in` or `out` port, the list notation can be omitted:
 
-  The body of a component may contain any of the following elements:
+      iex> defcomponent PortExample, in: a, strategy: SomeStrategy do
+      ...> end
+      iex> Component.in_ports(PortExample)
+      [:a]
+      iex> Component.out_ports(PortExample)
+      []
 
-  | Name                         | Description                              |
-  | ---------------------------- | ---------------------------------------  |
-  | fields                       | List of the fields of the component      |
-  | strategy                     | Specify the strategy of the component    |
-  | `import`, `alias`, `require` | Elixir import, alias, require constructs |
-  | callback                     | `Skitter.Component.Callback` definition  |
-
-  The fields statement is used to define the various `t:Component.field/0` of the component. This
-  statement may be used only once inside the body of the component. The statement can be omitted
-  if the component does not have any fields.
-
-  The strategy specifies the name of the `t:Skitter.Strategy.t/0` of the component.
-
-  `import`, `alias`, and `require` maybe used inside of the component body as if they were being
-  used inside of a module. Note that the use of macros inside of the component DSL may lead to
-  issues due to the various code transformations the DSL performs.
-
-  The remainder of the component body should consist of `Skitter.Component.Callback` definitions.
-  Callbacks are defined with a syntax similar to an elixir function definition with `def` or
-  `defp` omitted. Thus a callback named `react` which accepts two arguments would be defined with
-  the following syntax:
+  Finally, note that it is mandatory to specify the component's strategy:
 
   ```
-  react arg1, arg2 do
-  <body>
+  defcomponent NoStrategy do
   end
   ```
 
-  Internally, callback declarations are transformed into a call to the
-  `Skitter.DSL.Callback.callback/3` macro. Please refer to its documentation to learn about the
-  constructs that may be used in the body of a callback. Note that the `fields`, `out`, and
-  `args` arguments of the call to `callback/3` will be provided automatically. As an example, the
-  example above would be translated to the following call:
-
-  ```
-  callback(<component fields>, <component out ports>, [arg1, arg2], body)
-  ```
-
-  The generated callback will be stored in the component callbacks field under
-  its name (e.g. `:react`).
+  will raise a `Skitter.DefinitionError`
 
   ## Examples
 
-  The following component calculates the average of all the values it receives.
+  ```
+  defcomponent Average, in: value, out: current, strategy: SomeStrategy do
+    fields total: 0, count: 0
 
-      iex> avg = component in: value, out: current do
-      ...>    strategy test_strategy()
-      ...>    fields total, count
-      ...>
-      ...>    init do
-      ...>      total <~ 0
-      ...>      count <~ 0
-      ...>    end
-      ...>
-      ...>    react value do
-      ...>      count <~ count + 1
-      ...>      total <~ total + value
-      ...>
-      ...>      total / count ~> current
-      ...>    end
-      ...>  end
-      iex> avg.fields
-      [:total, :count]
-      iex> avg.in
+    defcb react(value) do
+      total <~ ~f{total} + value
+      count <~ ~f{count} + 1
+
+      ~f{total} / ~f{count} ~> current
+    end
+  end
+  ```
+
+      iex> Component.in_ports(Average)
       [:value]
-      iex> avg.out
+      iex> Component.out_ports(Average)
       [:current]
-      iex> Component.call(avg, :init, Component.create_empty_state(avg), []).state
-      %{count: 0, total: 0}
-      iex> res = Component.call(avg, :react, %{count: 0, total: 0}, [10])
-      iex> res.publish
-      [current: 10.0]
-      iex> res.state
-      %{count: 1, total: 10}
+      iex> Component.strategy(Average)
+      SomeStrategy
+      iex> Component.call(Average, :react, [10])
+      %Result{result: 10.0, publish: [current: 10.0], state: %Average{count: 1, total: 10}}
+      iex> Component.call(Average, :react, %Average{count: 1, total: 10}, [10])
+      %Result{result: 10.0, publish: [current: 10.0], state: %Average{count: 2, total: 20}}
+
   """
-  @doc section: :dsl
-  defmacro component(ports \\ [], do: body) do
-    try do
-      {in_, out} = AST.parse_port_list(ports, __CALLER__)
+  defmacro defcomponent(name, opts \\ [], do: body) do
+    in_ = opts |> Keyword.get(:in, []) |> AST.names_to_atoms(__CALLER__)
+    out = opts |> Keyword.get(:out, []) |> AST.names_to_atoms(__CALLER__)
 
-      body = AST.block_to_list(body)
-      {body, imports} = AST.extract_calls(body, [:alias, :import, :require])
-      {body, fields} = AST.extract_calls(body, [:fields])
-      {body, strategy} = AST.extract_calls(body, [:strategy])
+    strategy = opts |> Keyword.get(:strategy) |> read_strategy(__CALLER__)
 
-      fields = verify_fields(fields, __CALLER__)
-      strategy = transform_strategy(strategy, imports, __CALLER__)
-      callbacks = Callback.extract_callbacks(body, imports, fields, out)
-
-      quote do
-        %Skitter.Component{
-          fields: unquote(fields),
-          in: unquote(in_),
-          out: unquote(out),
-          callbacks: unquote(callbacks),
-          strategy: unquote(strategy)
-        }
-        |> Skitter.Component.finalize()
+    fields_ast =
+      case AST.count_uses(body, :fields) do
+        0 -> quote do: defstruct([])
+        1 -> quote do: nil
+        _ -> DefinitionError.inject("Only one fields declaration is allowed", __CALLER__)
       end
-    catch
-      err -> handle_error(err)
-    end
-  end
 
-  # Parse field names, ensure only one field declaration is present
-  defp verify_fields([], _), do: []
-
-  defp verify_fields([{:fields, _, fields}], env) do
-    Enum.map(fields, &AST.name_to_atom(&1, env))
-  end
-
-  defp verify_fields([_fields, dup | _], env) do
-    throw {:error, :duplicate_fields, dup, env}
-  end
-
-  # Ensure no duplicate strategy is present, add needed imports
-  defp transform_strategy([], _, env) do
-    throw {:error, :missing_strategy, env}
-  end
-
-  defp transform_strategy([_, dup | _], _, env) do
-    throw {:error, :duplicate_strategy, dup, env}
-  end
-
-  defp transform_strategy([{:strategy, _, [strategy]}], imports, _) do
     quote do
-      unquote(imports)
-      unquote(strategy)
+      defmodule unquote(name) do
+        use Skitter.DSL.Callback
+        @behaviour Skitter.Component
+
+        import unquote(__MODULE__), only: [fields: 1]
+
+        unquote(strategy)
+        def _sk_component_info(:in_ports), do: unquote(in_)
+        def _sk_component_info(:out_ports), do: unquote(out)
+
+        unquote(fields_ast)
+        unquote(body)
+      end
     end
   end
 
-  defp handle_error({:error, :invalid_syntax, statement, env}) do
-    DefinitionError.inject("Invalid syntax: `#{Macro.to_string(statement)}`", env)
-  end
+  defp read_strategy(nil, env), do: DefinitionError.inject("Missing strategy", env)
 
-  defp handle_error({:error, :invalid_port_list, any, env}) do
-    DefinitionError.inject("Invalid port list: `#{Macro.to_string(any)}`", env)
-  end
-
-  defp handle_error({:error, :duplicate_fields, fields, env}) do
-    DefinitionError.inject(
-      "Only one fields declaration is allowed: `#{Macro.to_string(fields)}`",
-      env
-    )
-  end
-
-  defp handle_error({:error, :duplicate_strategy, strategy, env}) do
-    DefinitionError.inject(
-      "Only one strategy declaration is allowed: `#{Macro.to_string(strategy)}`",
-      env
-    )
-  end
-
-  defp handle_error({:error, :missing_strategy, env}) do
-    DefinitionError.inject("Missing strategy", env)
+  defp read_strategy(mod, env) do
+    case Macro.expand(mod, env) do
+      mod when is_atom(mod) -> quote do: def(_sk_component_info(:strategy), do: unquote(mod))
+      any -> DefinitionError.inject("Invalid strategy: `#{inspect(any)}`", env)
+    end
   end
 end

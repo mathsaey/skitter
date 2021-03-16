@@ -81,7 +81,7 @@ defmodule Skitter.Component do
 
   A component should also implement the `Skitter.Callback` behaviour.
   """
-  @callback _sk_component_info(:in_ports) :: [Port.t(), ...]
+  @callback _sk_component_info(:in_ports) :: [Port.t()]
   @callback _sk_component_info(:out_ports) :: [Port.t()]
   @callback _sk_component_info(:strategy) :: Strategy.t()
 
@@ -168,7 +168,7 @@ defmodule Skitter.Component do
       iex> in_ports(ComponentModule)
       [:input]
   """
-  @spec in_ports(t()) :: [Port.t(), ...]
+  @spec in_ports(t()) :: [Port.t()]
   def in_ports(component), do: component._sk_component_info(:in_ports)
 
   @doc """
