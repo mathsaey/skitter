@@ -11,18 +11,28 @@ defmodule Skitter.CallbackTest do
     @behaviour Skitter.Callback
     alias Skitter.Callback.{Result, Info}
 
-    def _sk_callback_list, do: [:example]
+    def _sk_callback_list, do: [example: 1]
 
-    def _sk_callback_info(:example) do
-      %Info{arity: 1, read?: true, write?: false, publish?: true}
+    def _sk_callback_info(:example, 1) do
+      %Info{read: [:field], write: [], publish: [:arg]}
     end
 
-    def example(state, [arg1]) do
-      %Result{state: state, publish: [arg1: arg1], result: :some_value}
+    def example(state, arg) do
+      result = Map.get(state, :field)
+      %Result{state: state, publish: [arg: arg], result: result}
     end
   end
 
   alias Skitter.Callback.{Result, Info}
   import Skitter.Callback
   doctest Skitter.Callback
+
+  test "call_inlined" do
+    assert call_inlined(ModuleWithCallbacks, :example, %{field: "Skitter"}, [:some_argument]) ==
+             %Result{
+               state: %{field: "Skitter"},
+               publish: [arg: :some_argument],
+               result: "Skitter"
+             }
+  end
 end
