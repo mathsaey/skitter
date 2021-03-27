@@ -37,26 +37,8 @@ defmodule Skitter.DSL.Callback do
 
   @doc false
   defmacro generate_behaviour_callbacks(env) do
-    names =
-      env.module
-      |> Module.get_attribute(:_sk_callbacks)
-      |> Enum.map(&elem(&1, 0))
-      |> Enum.uniq()
-
-    metadata =
-      env.module
-      |> Module.get_attribute(:_sk_callbacks)
-      |> Enum.reduce(%{}, fn {{name, arity}, info}, map ->
-        Map.update(map, {name, arity}, info, fn s = %Info{} ->
-          %{
-            s
-            | read: Enum.uniq(s.read ++ info.read),
-              write: Enum.uniq(s.write ++ info.write),
-              publish: Enum.uniq(s.publish ++ info.publish)
-          }
-        end)
-      end)
-      |> Macro.escape()
+    names = env.module |> get_info_before_compile() |> Map.keys()
+    metadata = env.module |> get_info_before_compile() |> Macro.escape()
 
     quote bind_quoted: [names: names, metadata: metadata] do
       @impl true
@@ -246,6 +228,8 @@ defmodule Skitter.DSL.Callback do
       ...>   defcb state(), do: counter <~ ~f{counter} + 1
       ...>   defcb publish(), do: ~D[1991-12-08] ~> out_port
       ...> end
+      iex> Callback.list(CbExample)
+      [arguments: 2, publish: 0, simple: 0, state: 0]
       iex> Callback.info(CbExample, :simple, 0)
       %Info{read: [], write: [], publish: []}
       iex> Callback.info(CbExample, :arguments, 2)
@@ -299,5 +283,112 @@ defmodule Skitter.DSL.Callback do
   # Compile Hooks #
   # ------------- #
 
-  # Code to insert quoted code to ensure a callback exists or to add one
+  @doc false
+  def get_info_before_compile(module) do
+    module
+    |> Module.get_attribute(:_sk_callbacks)
+    |> Enum.reduce(%{}, fn {{name, arity}, info}, map ->
+      Map.update(map, {name, arity}, info, fn s = %Info{} ->
+        %{
+          s
+          | read: Enum.uniq(s.read ++ info.read),
+            write: Enum.uniq(s.write ++ info.write),
+            publish: Enum.uniq(s.publish ++ info.publish)
+        }
+      end)
+    end)
+  end
+
+  @doc """
+  Add a callback if it does not exist yet.
+
+  This macro defines a callback using `defcb/2`, if a callback with the same signature does not
+  exist (i.e. if there is no callback with the same name and arity present in the module where
+  this macro is used).
+
+  Note that this macro is not imported by default by `use Skitter.DSL.Callback`.
+
+  ## Examples
+
+      iex> defmodule DefaultExample do
+      ...>   use Skitter.DSL.Callback
+      ...>
+      ...>   defcb foo(), do: :foo
+      ...>
+      ...>   Skitter.DSL.Callback.default_cb foo(), do: :default
+      ...>   Skitter.DSL.Callback.default_cb bar(), do: :default
+      ...> end
+      iex> Callback.list(DefaultExample)
+      [bar: 0, foo: 0]
+      iex> Callback.call(DefaultExample, :foo, %{}, [])
+      %Result{result: :foo, publish: [], state: %{}}
+      iex> Callback.call(DefaultExample, :bar, %{}, [])
+      %Result{result: :default, publish: [], state: %{}}
+  """
+  defmacro default_cb(signature, do: body) do
+    {name, args} = Macro.decompose_call(signature)
+    arity = length(args)
+
+    quote do
+      import Skitter.DSL.Callback, only: [get_info_before_compile: 1, defcb: 2]
+
+      unless Map.has_key?(get_info_before_compile(__MODULE__), {unquote(name), unquote(arity)}) do
+        defcb(unquote(signature), do: unquote(body))
+      end
+    end
+  end
+
+  @doc """
+  Ensure a callback exists and verify its properties.
+
+  This macro injects code that ensures a callback with `name` and `arity` exists. If the callback
+  does not exist, a `Skitter.DefinitionError` is raised. If the callback exists, its properties
+  are verified using `Skitter.Callback.verify!/3`.
+
+  ## Examples
+
+      The following example will compile without issues:
+
+      iex> defmodule RequireExample do
+      ...>   use Skitter.DSL.Callback
+      ...>
+      ...>   defcb foo(), do: :foo ~> out
+      ...>
+      ...>   Skitter.DSL.Callback.require_cb(:foo, 0)
+      ...> end
+
+      The following examples will not compile:
+
+      iex> defmodule MissingRequireExample do
+      ...>   use Skitter.DSL.Callback
+      ...>
+      ...>   Skitter.DSL.Callback.require_cb(:foo, 0)
+      ...> end
+      ** (Skitter.DefinitionError) Missing required callback foo with arity 0
+
+      iex> defmodule VerifyRequireExample do
+      ...>   use Skitter.DSL.Callback
+      ...>
+      ...>   defcb foo(), do: :foo ~> out
+      ...>
+      ...>   Skitter.DSL.Callback.require_cb(:foo, 0, publish?: false)
+      ...> end
+      ** (Skitter.DefinitionError) Incorrect publish for callback foo, expected [], got [:out]
+
+  """
+  defmacro require_cb(name, arity, properties \\ []) do
+    quote do
+      __MODULE__
+      |> Skitter.DSL.Callback.get_info_before_compile()
+      |> Map.get({unquote(name), unquote(arity)})
+      |> case do
+        nil ->
+          raise Skitter.DefinitionError,
+                "Missing required callback #{unquote(name)} with arity #{unquote(arity)}"
+
+        info ->
+          Skitter.Callback.verify!(info, unquote(name), unquote(properties))
+      end
+    end
+  end
 end

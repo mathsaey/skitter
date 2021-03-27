@@ -171,10 +171,10 @@ defmodule Skitter.Callback do
   def list(parent), do: parent._sk_callback_list()
 
   @doc """
-  Verify if the `property` of a callback satisfies `property`
+  Verify if the `property` of the provided `info` satisfies `property`
 
-  This function will lookup the property of a callback in its `t:info/0` struct and compare it to
-  an expected value.
+  This function will lookup the property of a callback in the provided `t:info/0` struct and
+  compare it to an expected value.
 
   - If the property is not present in `t:info/0`, `:invalid` is returned.
 
@@ -190,38 +190,38 @@ defmodule Skitter.Callback do
 
   ## Examples
 
-      iex> verify(ModuleWithCallbacks, :example, 1, :read, [:field])
+      iex> verify(%Info{read: [:field]}, :read, [:field])
       :ok
 
-      iex> verify(ModuleWithCallbacks, :example, 1, :read, [])
+      iex> verify(%Info{read: [:field]}, :read, [])
       [:field]
 
-      iex> verify(ModuleWithCallbacks, :example, 1, :red, [:field])
+      iex> verify(%Info{read: [:field]}, :red, [:field])
       :invalid
 
-      iex> verify(ModuleWithCallbacks, :example, 1, :read?, true)
+      iex> verify(%Info{read: [:field]}, :read?, true)
       :ok
 
-      iex> verify(ModuleWithCallbacks, :example, 1, :read?, false)
+      iex> verify(%Info{read: [:field]}, :read?, false)
       [:field]
 
-      iex> verify(ModuleWithCallbacks, :example, 1, :write?, true)
+      iex> verify(%Info{write: []}, :write?, true)
       :ok
 
-      iex> verify(ModuleWithCallbacks, :example, 1, :write?, false)
+      iex> verify(%Info{write: []}, :write?, false)
       :ok
 
   """
-  @spec verify(parent(), atom(), arity(), atom(), any()) :: :ok | :invalid | any()
+  @spec verify(info(), atom(), any()) :: :ok | :invalid | any()
 
-  def verify(_, _, _, property, true) when property in [:read?, :write?, :publish?], do: :ok
+  def verify(_, property, true) when property in [:read?, :write?, :publish?], do: :ok
 
-  def verify(parent, name, arity, :read?, false), do: verify(parent, name, arity, :read, [])
-  def verify(parent, name, arity, :write?, false), do: verify(parent, name, arity, :write, [])
-  def verify(parent, name, arity, :publish?, false), do: verify(parent, name, arity, :publish, [])
+  def verify(info = %Info{}, :read?, false), do: verify(info, :read, [])
+  def verify(info = %Info{}, :write?, false), do: verify(info, :write, [])
+  def verify(info = %Info{}, :publish?, false), do: verify(info, :publish, [])
 
-  def verify(parent, name, arity, property, expected) do
-    case Map.get(info(parent, name, arity), property) do
+  def verify(info = %Info{}, property, expected) do
+    case Map.get(info, property) do
       nil -> :invalid
       ^expected -> :ok
       value -> value
@@ -231,54 +231,55 @@ defmodule Skitter.Callback do
   @doc """
   Verify if the `property` of a callback satisfies `property`
 
-  Works like `verify/4`, but raises a `Skitter.DefinitionError` if the properties do not match. If
-  the properties do match, the module name of the callback module is returned.
+  Works like `verify/3`, but raises a `Skitter.DefinitionError` if the properties do not match.
+  `:ok` is returned if the properties match.
 
   ## Examples
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, :write, [])
-      ModuleWithCallbacks
+      iex> verify!(%Info{write: []}, :write, [], "example")
+      :ok
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, :write, [:field])
-      ** (Skitter.DefinitionError) Incorrect write for callback `example`, expected [:field], got []
+      iex> verify!(%Info{write: []}, :write, [:field], "example")
+      ** (Skitter.DefinitionError) Incorrect write for callback example, expected [:field], got []
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, :wrte, [])
+      iex> verify!(%Info{write: []}, :wrte, [], "example")
       ** (Skitter.DefinitionError) `wrte` is not a valid property name
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, :read?, true)
-      ModuleWithCallbacks
+      iex> verify!(%Info{read: []}, :read?, true, "example")
+      :ok
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, :read?, false)
-      ** (Skitter.DefinitionError) Incorrect read for callback `example`, expected [], got [:field]
+      iex> verify!(%Info{read: [:field]}, :read?, false, "example")
+      ** (Skitter.DefinitionError) Incorrect read for callback example, expected [], got [:field]
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, :write?, true)
-      ModuleWithCallbacks
+      iex> verify!(%Info{read: []}, :write?, true, "example")
+      :ok
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, :write?, false)
-      ModuleWithCallbacks
+      iex> verify!(%Info{read: []}, :write?, false, "example")
+      :ok
 
   """
-  @spec verify!(parent(), atom(), arity(), atom(), any()) :: parent() | no_return()
+  @spec verify!(info(), atom(), any(), String.t()) :: :ok | no_return()
 
-  def verify!(parent, _, prop, _, true) when prop in [:read?, :write?, :publish?], do: parent
+  def verify!(_, property, true, _) when property in [:read?, :write?, :publish?], do: :ok
 
-  def verify!(p, n, a, :read?, false), do: verify!(p, n, a, :read, [])
-  def verify!(p, n, a, :write?, false), do: verify!(p, n, a, :write, [])
-  def verify!(p, n, a, :publish?, false), do: verify!(p, n, a, :publish, [])
+  def verify!(info = %Info{}, :read?, false, name), do: verify!(info, :read, [], name)
+  def verify!(info = %Info{}, :write?, false, name), do: verify!(info, :write, [], name)
+  def verify!(info = %Info{}, :publish?, false, name), do: verify!(info, :publish, [], name)
 
-  def verify!(parent, name, arity, property, value) do
-    case verify(parent, name, arity, property, value) do
+  def verify!(info = %Info{}, property, value, name) do
+    case verify(info, property, value) do
       :ok ->
-        parent
+        :ok
 
       :invalid ->
         raise DefinitionError, "`#{property}` is not a valid property name"
 
       actual ->
+        value = inspect(value)
+        actual = inspect(actual)
+
         raise DefinitionError,
-              "Incorrect #{property} for callback `#{name}`, expected #{inspect(value)}, got #{
-                inspect(actual)
-              }"
+              "Incorrect #{property} for callback #{name}, expected #{value}, got #{actual}"
     end
   end
 
@@ -290,19 +291,20 @@ defmodule Skitter.Callback do
 
   ## Examples
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, read?: true, write?: true)
-      ModuleWithCallbacks
+      iex> verify!(%Info{read: [], write: [:field]}, "example", read?: true, write?: true)
+      :ok
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, publish?: true, wrt: [])
+      iex> verify!(%Info{read: [], write: [:field]}, "example")
+      :ok
+
+      iex> verify!(%Info{write: [:field]}, "example", publish?: true, wrt: [])
       ** (Skitter.DefinitionError) `wrt` is not a valid property name
 
-      iex> verify!(ModuleWithCallbacks, :example, 1, publish?: false)
-      ** (Skitter.DefinitionError) Incorrect publish for callback `example`, expected [], got [:arg]
+      iex> verify!(%Info{publish: [:port]}, "example", publish?: false)
+      ** (Skitter.DefinitionError) Incorrect publish for callback example, expected [], got [:port]
   """
-  @spec verify!(parent(), atom(), arity(), [{atom(), any()}]) :: parent() | no_return()
-  def verify!(parent, name, arity, properties) do
-    properties
-    |> Enum.map(fn {property, value} -> verify!(parent, name, arity, property, value) end)
-    |> hd()
+  @spec verify!(info(), String.t(), [{atom(), any()}]) :: :ok | no_return()
+  def verify!(info = %Info{}, name, properties \\ []) do
+    Enum.each(properties, fn {property, value} -> verify!(info, property, value, name) end)
   end
 end

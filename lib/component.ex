@@ -40,14 +40,14 @@ defmodule Skitter.Component do
     def _sk_component_info(:in_ports), do: [:input]
     def _sk_component_info(:out_ports), do: [:output]
 
-    def _sk_callback_list, do: [:example]
+    def _sk_callback_list, do: [example: 1]
 
-    def _sk_callback_info(:example) do
-      %Info{arity: 1, read?: true, write?: false, publish?: false}
+    def _sk_callback_info(:example, 1) do
+      %Info{read: [], write: [], publish: []}
     end
 
-    def example(state, args) do
-      %Result{result: args, state: state, publish: []}
+    def example(state, arg) do
+      %Result{result: arg, state: state, publish: []}
     end
   end
   ```
@@ -127,7 +127,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> call(ComponentModule, :example, %ComponentModule{field: 30}, [42])
-      %Skitter.Callback.Result{state: %ComponentModule{field: 30}, result: [42], publish: []}
+      %Skitter.Callback.Result{state: %ComponentModule{field: 30}, result: 42, publish: []}
   """
   @spec call(t(), atom(), Callback.state(), Callback.args()) :: Callback.result()
   def call(component, callback_name, state, arguments) do
@@ -142,7 +142,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> call(ComponentModule, :example, [42])
-      %Skitter.Callback.Result{state: %ComponentModule{field: nil}, result: [42], publish: []}
+      %Skitter.Callback.Result{state: %ComponentModule{field: nil}, result: 42, publish: []}
   """
   @spec call(t(), atom(), Callback.args()) :: Callback.result()
   def call(component, callback_name, arguments) do

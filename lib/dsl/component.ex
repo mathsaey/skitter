@@ -118,8 +118,8 @@ defmodule Skitter.DSL.Component do
 
   """
   defmacro defcomponent(name, opts \\ [], do: body) do
-    in_ = opts |> Keyword.get(:in, []) |> AST.names_to_atoms(__CALLER__)
-    out = opts |> Keyword.get(:out, []) |> AST.names_to_atoms(__CALLER__)
+    in_ = opts |> Keyword.get(:in, []) |> AST.names_to_atoms()
+    out = opts |> Keyword.get(:out, []) |> AST.names_to_atoms()
 
     strategy = opts |> Keyword.get(:strategy) |> read_strategy(__CALLER__)
 
