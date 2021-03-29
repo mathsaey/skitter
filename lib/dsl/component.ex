@@ -1,4 +1,4 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -132,7 +132,7 @@ defmodule Skitter.DSL.Component do
 
     quote do
       defmodule unquote(name) do
-        use Skitter.DSL.Callback
+        use Skitter.DSL.Component.Callback
         @behaviour Skitter.Component
 
         import unquote(__MODULE__), only: [fields: 1]

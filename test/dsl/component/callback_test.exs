@@ -1,21 +1,21 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.DSL.CallbackTest do
+defmodule Skitter.DSL.Component.CallbackTest do
   use ExUnit.Case, async: true
   import Skitter.DSL.Test.Assertions
 
-  alias Skitter.Callback
-  alias Skitter.Callback.{Result, Info}
+  alias Skitter.Component.Callback
+  alias Skitter.Component.Callback.{Result, Info}
 
-  doctest Skitter.DSL.Callback
+  doctest Skitter.DSL.Component.Callback
 
   test "different arities" do
     defmodule Arity do
-      use Skitter.DSL.Callback
+      use Skitter.DSL.Component.Callback
 
       defcb f(), do: nil
       defcb f(arg1), do: arg1
@@ -33,7 +33,7 @@ defmodule Skitter.DSL.CallbackTest do
 
   test "multiple clauses" do
     defmodule Clauses do
-      use Skitter.DSL.Callback
+      use Skitter.DSL.Component.Callback
 
       defcb f(:foo), do: x <~ :foo
       defcb f(:bar), do: y <~ :bar
@@ -64,7 +64,7 @@ defmodule Skitter.DSL.CallbackTest do
   describe "if rewrite" do
     test "does not influence normal ifs" do
       defmodule NormalIf do
-        use Skitter.DSL.Callback
+        use Skitter.DSL.Component.Callback
 
         defcb test1() do
           if true, do: 10
@@ -86,7 +86,7 @@ defmodule Skitter.DSL.CallbackTest do
 
     test "allows state and publish updates" do
       defmodule StateIf do
-        use Skitter.DSL.Callback
+        use Skitter.DSL.Component.Callback
 
         defcb publish(arg) do
           if arg do
@@ -115,7 +115,7 @@ defmodule Skitter.DSL.CallbackTest do
     test "throws when fields are incompatible" do
       assert_definition_error ~r/Incompatible writes in control structure..*/ do
         defmodule ErrorIf do
-          use Skitter.DSL.Callback
+          use Skitter.DSL.Component.Callback
 
           defcb test() do
             if true do
@@ -132,7 +132,7 @@ defmodule Skitter.DSL.CallbackTest do
   describe "case rewrite" do
     test "does not influece normal case" do
       defmodule NormalCase do
-        use Skitter.DSL.Callback
+        use Skitter.DSL.Component.Callback
 
         defcb test() do
           case 5 do
@@ -146,7 +146,7 @@ defmodule Skitter.DSL.CallbackTest do
 
     test "can update state" do
       defmodule StateCase do
-        use Skitter.DSL.Callback
+        use Skitter.DSL.Component.Callback
 
         defcb test() do
           case 5 do
@@ -161,7 +161,7 @@ defmodule Skitter.DSL.CallbackTest do
 
     test "can publish" do
       defmodule PublishCase do
-        use Skitter.DSL.Callback
+        use Skitter.DSL.Component.Callback
 
         defcb test(arg) do
           case arg do
@@ -178,7 +178,7 @@ defmodule Skitter.DSL.CallbackTest do
     test "throws when fields are incompatible" do
       assert_definition_error ~r/Incompatible writes in control structure..*/ do
         defmodule ErrorCase do
-          use Skitter.DSL.Callback
+          use Skitter.DSL.Component.Callback
 
           defcb test() do
             case arg do

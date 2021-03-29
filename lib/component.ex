@@ -1,4 +1,4 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -9,18 +9,26 @@ defmodule Skitter.Component do
   Component type definition and utilities.
 
   A component is a reusable data processing step that can be embedded inside of a workflow. It is
-  defined as the combination of metadata and callbacks. The metadata contains information about
-  the component used in workflow definitions and at runtime, while the callbacks define how the
-  component processes data.
+  defined as the combination of a set of callbacks, which implement the logic of the component,
+  and some metadata, which define how the component is embedded inside a workflow and how it is
+  distributed over the cluster at runtime.
 
-  A skitter component is defined as an elixir module which implements the `Skitter.Component`
-  behaviour and defines a struct. The behaviour defines the `c:_sk_component_info/1` callback,
-  which is used to store the component metadata. The struct is used to store the state of the
-  component. It is not recommended to write a component by hand. Instead, use
-  `Skitter.DSL.Component.defcomponent/3`.
+  A skitter component is defined as an elixir module which implements the `Skitter.Component` and
+  `Skitter.Component.Callback` behaviours. The first behaviour defines the
+  `c:_sk_component_info/1` callback, which is used to store the component metadata. The other
+  behaviour is used to store the callbacks of the component. At runtime, a component handles
+  component-specific state. This state is represented by a struct. In short, each component module
+  should:
 
-  This module defines the component type, the callbacks of the component behaviour and some
-  utilities to handle components.
+  - Implement the `Skitter.Component` behaviour.
+  - Implement the `Skitter.Component.Callback` behaviour.
+  - Define a struct.
+
+  Instead of doing this manually, it is recommend to use `Skitter.DSL.Component.defcomponent/3`,
+  which handles most of these steps automatically.
+
+  This module defines the component type and behaviour along with some utilities to handle
+  components.
 
   ## Examples
 
@@ -30,9 +38,9 @@ defmodule Skitter.Component do
   ```
   defmodule ComponentModule do
     @behaviour Skitter.Component
-    @behaviour Skitter.Callback
+    @behaviour Skitter.Component.Callback
 
-    alias Skitter.Callback.{Info, Result}
+    alias Skitter.Component.Callback.{Info, Result}
 
     defstruct [:field]
 
@@ -55,14 +63,18 @@ defmodule Skitter.Component do
   """
   @compile {:inline, create_empty_state: 1, call: 3, call: 4}
 
-  alias Skitter.{Port, Callback, Strategy}
+  alias Skitter.{Port, Strategy}
+  alias Skitter.Component.Callback
 
   # ---------------- #
   # Type & Behaviour #
   # ---------------- #
 
   @typedoc """
-  A component is defined as a module which implements `Skitter.Component`.
+  A component is defined as a module.
+
+  This module should implement the `Skitter.Component` behaviour, implement the
+  `Skitter.Component.Callback` behaviour and define a struct.
   """
   @type t :: module()
 
@@ -78,8 +90,6 @@ defmodule Skitter.Component do
   to publish data.
 
   - `:strategy`: The `Skitter.Strategy` of the component.
-
-  A component should also implement the `Skitter.Callback` behaviour.
   """
   @callback _sk_component_info(:in_ports) :: [Port.t()]
   @callback _sk_component_info(:out_ports) :: [Port.t()]
@@ -122,12 +132,12 @@ defmodule Skitter.Component do
   @doc """
   Call callback `callback_name` with `state` and `arguments`.
 
-  See `Skitter.Callback.call/4`.
+  See `Skitter.Component.Callback.call/4`.
 
   ## Examples
 
       iex> call(ComponentModule, :example, %ComponentModule{field: 30}, [42])
-      %Skitter.Callback.Result{state: %ComponentModule{field: 30}, result: 42, publish: []}
+      %Skitter.Component.Callback.Result{state: %ComponentModule{field: 30}, result: 42, publish: []}
   """
   @spec call(t(), atom(), Callback.state(), Callback.args()) :: Callback.result()
   def call(component, callback_name, state, arguments) do
@@ -137,12 +147,13 @@ defmodule Skitter.Component do
   @doc """
   Call callback `callback_name` with and empty state and `arguments`.
 
-  This function calls `Skitter.Callback.call/4` with the state created by `create_empty_state/1`.
+  This function calls `Skitter.Component.Callback.call/4` with the state created by
+  `create_empty_state/1`.
 
   ## Examples
 
       iex> call(ComponentModule, :example, [42])
-      %Skitter.Callback.Result{state: %ComponentModule{field: nil}, result: 42, publish: []}
+      %Skitter.Component.Callback.Result{state: %ComponentModule{field: nil}, result: 42, publish: []}
   """
   @spec call(t(), atom(), Callback.args()) :: Callback.result()
   def call(component, callback_name, arguments) do

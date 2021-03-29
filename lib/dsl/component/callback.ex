@@ -4,22 +4,22 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.DSL.Callback do
+defmodule Skitter.DSL.Component.Callback do
   @moduledoc """
   Callback definition DSL.
 
-  This module offers a DSL which enables the definition of `Skitter.Callback` inside a module. In
-  order to use this module, `use Skitter.DSL.Callback` needs to be added to the module definition.
-  Afterwards, `defcb/2` can be used to define callbacks. Using this macro ensures the correct
-  information is automatically added to `c:Skitter.Callback._sk_callback_info/2` and
-  `c:Skitter.Callback._sk_callback_list/0`.
+  This module offers a DSL which enables the definition of `Skitter.Component.Callback` inside a
+  module. In order to use this module, `use Skitter.DSL.Component.Callback` needs to be added to
+  the module definition.  Afterwards, `defcb/2` can be used to define callbacks. Using this macro
+  ensures the correct information is automatically added to
+  `c:Skitter.Component.Callback._sk_callback_info/2` and
+  `c:Skitter.Component.Callback._sk_callback_list/0`.
 
   Note that it is generally not needed to `import` or `use` this module manually, as
-  `Skitter.DSL.Component.defcomponent/3` and `Skitter.DSL.Strategy.defstrategy/3` do this
-  automatically.
+  `Skitter.DSL.Component.defcomponent/3` does this automatically.
   """
 
-  alias Skitter.Callback.Info
+  alias Skitter.Component.Callback.Info
 
   # ------------------- #
   # Behaviour Callbacks #
@@ -29,7 +29,7 @@ defmodule Skitter.DSL.Callback do
     quote do
       import unquote(__MODULE__), only: [defcb: 2]
 
-      @behaviour Skitter.Callback
+      @behaviour Skitter.Component.Callback
       @before_compile {unquote(__MODULE__), :generate_behaviour_callbacks}
       Module.register_attribute(__MODULE__, :_sk_callbacks, accumulate: true)
     end
@@ -46,7 +46,7 @@ defmodule Skitter.DSL.Callback do
 
       # Prevent a warning if no callbacks are defined
       @impl true
-      def _sk_callback_info(nil, 0), do: %Skitter.Callback.Info{}
+      def _sk_callback_info(nil, 0), do: %Skitter.Component.Callback.Info{}
 
       for {{name, arity}, info} <- metadata do
         def _sk_callback_info(unquote(name), unquote(arity)), do: unquote(Macro.escape(info))
@@ -73,14 +73,15 @@ defmodule Skitter.DSL.Callback do
   @doc """
   Read the state of a field.
 
-  This macro reads the current value of `field` in the state passed to `Skitter.Callback.call/4`.
+  This macro reads the current value of `field` in the state passed to
+  `Skitter.Component.Callback.call/4`.
 
   This macro should only be used inside the body of `defcb/2`.
 
   ## Examples
 
       iex> defmodule ReadExample do
-      ...>   use Skitter.DSL.Callback
+      ...>   use Skitter.DSL.Component.Callback
       ...>   defcb read(), do: ~f{field}
       ...> end
       iex> Callback.call(ReadExample, :read, %{field: 5}, []).result
@@ -100,7 +101,7 @@ defmodule Skitter.DSL.Callback do
   ## Examples
 
       iex> defmodule WriteExample do
-      ...>   use Skitter.DSL.Callback
+      ...>   use Skitter.DSL.Component.Callback
       ...>   defcb write(), do: field <~ :bar
       ...> end
       iex> Callback.call(WriteExample, :write, %{field: :foo}, []).state[:field]
@@ -165,7 +166,7 @@ defmodule Skitter.DSL.Callback do
   ## Examples
 
       iex> defmodule PublishExample do
-      ...>   use Skitter.DSL.Callback
+      ...>   use Skitter.DSL.Component.Callback
       ...>   defcb publish(value) do
       ...>     value ~> some_port
       ...>     ~f{field} ~> some_other_port
@@ -207,12 +208,13 @@ defmodule Skitter.DSL.Callback do
   similar to a regular procedure. Inside the body of the procedure, `~>/2`, `<~/2` and `sigil_f/2`
   can be used to access the state and to publish output. The macro ensures:
 
-  - The function returns a `t:Skitter.Callback.result/0` with the correct state (as updated by
-  `<~/2`), publish (as updated by `~>/2`) and result (which contains the value of the last
-  expression in `body`).
+  - The function returns a `t:Skitter.Component.Callback.result/0` with the correct state (as
+  updated by `<~/2`), publish (as updated by `~>/2`) and result (which contains the value of the
+  last expression in `body`).
 
-  - `c:Skitter.Callback._sk_callback_info/2` and `c:Skitter.Callback._sk_callback_list/0` of the
-  parent module contains the required information about the defined callback.
+  - `c:Skitter.Component.Callback._sk_callback_info/2` and
+  `c:Skitter.Component.Callback._sk_callback_list/0` of the parent module contains the required
+  information about the defined callback.
 
   Note that, under the hood, `defcb/2` generates a regular elixir function. Therefore, pattern
   matching may still be used in the argument list of the callback. Attributes such as `@doc` may
@@ -221,7 +223,7 @@ defmodule Skitter.DSL.Callback do
   ## Examples
 
       iex> defmodule CbExample do
-      ...>   use Skitter.DSL.Callback
+      ...>   use Skitter.DSL.Component.Callback
       ...>
       ...>   defcb simple(), do: nil
       ...>   defcb arguments(arg1, arg2), do: arg1 + arg2
@@ -270,7 +272,7 @@ defmodule Skitter.DSL.Callback do
 
         result = unquote(body)
 
-        %Skitter.Callback.Result{
+        %Skitter.Component.Callback.Result{
           result: result,
           state: unquote(state_return(writes, state_var)),
           publish: unquote(publish_return(body))
@@ -306,17 +308,17 @@ defmodule Skitter.DSL.Callback do
   exist (i.e. if there is no callback with the same name and arity present in the module where
   this macro is used).
 
-  Note that this macro is not imported by default by `use Skitter.DSL.Callback`.
+  Note that this macro is not imported by default by `use Skitter.DSL.Component.Callback`.
 
   ## Examples
 
       iex> defmodule DefaultExample do
-      ...>   use Skitter.DSL.Callback
+      ...>   use Skitter.DSL.Component.Callback
       ...>
       ...>   defcb foo(), do: :foo
       ...>
-      ...>   Skitter.DSL.Callback.default_cb foo(), do: :default
-      ...>   Skitter.DSL.Callback.default_cb bar(), do: :default
+      ...>   Skitter.DSL.Component.Callback.default_cb foo(), do: :default
+      ...>   Skitter.DSL.Component.Callback.default_cb bar(), do: :default
       ...> end
       iex> Callback.list(DefaultExample)
       [bar: 0, foo: 0]
@@ -330,7 +332,7 @@ defmodule Skitter.DSL.Callback do
     arity = length(args)
 
     quote do
-      import Skitter.DSL.Callback, only: [get_info_before_compile: 1, defcb: 2]
+      import Skitter.DSL.Component.Callback, only: [get_info_before_compile: 1, defcb: 2]
 
       unless Map.has_key?(get_info_before_compile(__MODULE__), {unquote(name), unquote(arity)}) do
         defcb(unquote(signature), do: unquote(body))
@@ -343,35 +345,35 @@ defmodule Skitter.DSL.Callback do
 
   This macro injects code that ensures a callback with `name` and `arity` exists. If the callback
   does not exist, a `Skitter.DefinitionError` is raised. If the callback exists, its properties
-  are verified using `Skitter.Callback.verify!/3`.
+  are verified using `Skitter.Component.Callback.verify!/3`.
 
   ## Examples
 
       The following example will compile without issues:
 
       iex> defmodule RequireExample do
-      ...>   use Skitter.DSL.Callback
+      ...>   use Skitter.DSL.Component.Callback
       ...>
       ...>   defcb foo(), do: :foo ~> out
       ...>
-      ...>   Skitter.DSL.Callback.require_cb(:foo, 0)
+      ...>   Skitter.DSL.Component.Callback.require_cb(:foo, 0)
       ...> end
 
       The following examples will not compile:
 
       iex> defmodule MissingRequireExample do
-      ...>   use Skitter.DSL.Callback
+      ...>   use Skitter.DSL.Component.Callback
       ...>
-      ...>   Skitter.DSL.Callback.require_cb(:foo, 0)
+      ...>   Skitter.DSL.Component.Callback.require_cb(:foo, 0)
       ...> end
       ** (Skitter.DefinitionError) Missing required callback foo with arity 0
 
       iex> defmodule VerifyRequireExample do
-      ...>   use Skitter.DSL.Callback
+      ...>   use Skitter.DSL.Component.Callback
       ...>
       ...>   defcb foo(), do: :foo ~> out
       ...>
-      ...>   Skitter.DSL.Callback.require_cb(:foo, 0, publish?: false)
+      ...>   Skitter.DSL.Component.Callback.require_cb(:foo, 0, publish?: false)
       ...> end
       ** (Skitter.DefinitionError) Incorrect publish for callback foo, expected [], got [:out]
 
@@ -379,7 +381,7 @@ defmodule Skitter.DSL.Callback do
   defmacro require_cb(name, arity, properties \\ []) do
     quote do
       __MODULE__
-      |> Skitter.DSL.Callback.get_info_before_compile()
+      |> Skitter.DSL.Component.Callback.get_info_before_compile()
       |> Map.get({unquote(name), unquote(arity)})
       |> case do
         nil ->
@@ -387,7 +389,7 @@ defmodule Skitter.DSL.Callback do
                 "Missing required callback #{unquote(name)} with arity #{unquote(arity)}"
 
         info ->
-          Skitter.Callback.verify!(info, unquote(name), unquote(properties))
+          Skitter.Component.Callback.verify!(info, unquote(name), unquote(properties))
       end
     end
   end

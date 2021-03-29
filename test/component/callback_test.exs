@@ -1,15 +1,15 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.CallbackTest do
+defmodule Skitter.Component.CallbackTest do
   use ExUnit.Case, async: true
 
   defmodule ModuleWithCallbacks do
-    @behaviour Skitter.Callback
-    alias Skitter.Callback.{Result, Info}
+    @behaviour Skitter.Component.Callback
+    alias Skitter.Component.Callback.{Result, Info}
 
     def _sk_callback_list, do: [example: 1]
 
@@ -23,9 +23,9 @@ defmodule Skitter.CallbackTest do
     end
   end
 
-  alias Skitter.Callback.{Result, Info}
-  import Skitter.Callback
-  doctest Skitter.Callback
+  alias Skitter.Component.Callback.{Result, Info}
+  import Skitter.Component.Callback
+  doctest Skitter.Component.Callback
 
   test "call_inlined" do
     assert call_inlined(ModuleWithCallbacks, :example, %{field: "Skitter"}, [:some_argument]) ==
