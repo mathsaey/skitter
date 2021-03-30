@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.DSL.Component.Callback.ControlFlowOperators do
+defmodule Skitter.DSL.Component.ControlFlowOperators do
   @moduledoc false
   # State updates in `defcb` are handled by creating hidden variables which keep track of the
   # various parts of the callback state. This is a lot faster than using the process dictionary.
@@ -12,10 +12,9 @@ defmodule Skitter.DSL.Component.Callback.ControlFlowOperators do
   #
   # To solve this, we introduce our own version of common control flow constructs and ensure the
   # modified fields are returned as a part of the result of the control flow construct. These
-  # constructs are defined here, to avoid name clashes with the Kernel in
-  # `Skitter.DSL.Component.Callback`.
+  # constructs are defined here, to avoid name clashes with the Kernel in `Skitter.DSL.Component`.
 
-  alias Skitter.DSL.Component.Callback
+  alias Skitter.DSL.Component
   import Kernel, except: [if: 2]
 
   # Imports the constructs defined in this module, and ensures those in the kernel are not
@@ -88,13 +87,13 @@ defmodule Skitter.DSL.Component.Callback.ControlFlowOperators do
   end
 
   defp fields(branches) do
-    writes = Enum.map(branches, &Callback.get_writes/1)
+    writes = Enum.map(branches, &Component.get_writes/1)
     fields = writes |> Enum.map(&MapSet.new/1) |> Enum.dedup()
-    publish? = Enum.any?(branches, &(Callback.get_published(&1) != []))
+    publish? = Enum.any?(branches, &(Component.get_published(&1) != []))
 
     Kernel.if length(fields) == 1 do
-      fields = fields |> hd() |> Enum.to_list() |> Enum.map(&Callback.state_var/1)
-      Kernel.if(publish?, do: [Callback.publish_var() | fields], else: fields)
+      fields = fields |> hd() |> Enum.to_list() |> Enum.map(&Component.state_var/1)
+      Kernel.if(publish?, do: [Component.publish_var() | fields], else: fields)
     else
       incompatible_writes(writes)
     end
