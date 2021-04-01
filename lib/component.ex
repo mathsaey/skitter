@@ -225,6 +225,19 @@ defmodule Skitter.Component do
   def strategy(component), do: component._sk_component_info(:strategy)
 
   @doc """
+  Obtain the arity of `component`.
+
+  The arity is defined as the amount of in ports the component defines.
+
+  ## Examples
+
+      iex> arity(ComponentModule)
+      1
+  """
+  @spec arity(t()) :: arity()
+  def arity(component), do: component |> in_ports() |> length()
+
+  @doc """
   Obtain the list of in ports of `component`.
 
   ## Examples

@@ -57,6 +57,19 @@ defmodule Skitter.Strategy do
   end
 
   @doc """
+  Add code to a component defined with `Skitter.DSL.Component.defcomponent/3`
+
+  This hook is called when a component is defined by the skitter component dsl. It should return a
+  quoted expression which is added to the component definition before it is compiled. This hook is
+  mainly used to verify the properties of a component or to add default callbacks
+  (`Skitter.DSL.Component.require_cb/3` and `Skitter.DSL.Component.default_cb/2`).
+  """
+  @callback define(context(), any()) :: [tuple()]
+
+  # replace this with before and after compile? Not a priority!
+  # info in map / struct steken, extra code toevoegen en later extracten en uithalen?
+
+  @doc """
   Deploy a component over the cluster.
   """
   @callback deploy(%{component: Component.t()}, [any()]) :: any()

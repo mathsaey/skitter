@@ -104,6 +104,21 @@ defmodule Skitter.DSL.Strategy do
         Module.register_attribute(__MODULE__, :_sk_hook, accumulate: true)
 
         import unquote(__MODULE__), only: [defhook: 2]
+        import unquote(__MODULE__).Helpers
+
+        # define helpers
+        import Skitter.DSL.Component,
+          only: [
+            default_cb: 3,
+            require_cb: 4,
+            arity: 1,
+            in_ports: 1,
+            out_ports: 1,
+            strategy: 1,
+            modify_in_ports: 2,
+            modify_out_ports: 2,
+            modify_strategy: 2
+          ]
 
         unquote(body)
       end
