@@ -1,4 +1,5 @@
 # Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
+# me
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -8,7 +9,7 @@ defmodule Skitter.DSL.Component do
   @moduledoc """
   Callback and Component definition DSL.
 
-  This module offers macro to define component modules and callbacks. To define a component, use
+  This module offers macros to define component modules and callbacks. To define a component, use
   `defcomponent/3`. Inside the component body, `defcb/2` can be used to define callbacks. Inside
   the body of `defcb/2`, `sigil_f/2`, `<~/2` and `~>/2` can be used to respectively read the
   state, update the state or publish data.
@@ -40,7 +41,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent FieldsExample, strategy: SomeStrategy do
+  defcomponent FieldsExample, strategy: Dummy do
     fields foo: 42
   end
   ```
@@ -49,7 +50,7 @@ defmodule Skitter.DSL.Component do
       %FieldsExample{foo: 42}
 
   ```
-  defcomponent NoFields, strategy: SomeStrategy do
+  defcomponent NoFields, strategy: Dummy do
   end
   ```
 
@@ -76,10 +77,10 @@ defmodule Skitter.DSL.Component do
   The component Strategy and its in -and out ports can be defined in the header of the component
   declaration as follows:
 
-      iex> defcomponent SignatureExample, in: [a, b, c], out: [y, z], strategy: SomeStrategy do
+      iex> defcomponent SignatureExample, in: [a, b, c], out: [y, z], strategy: Dummy do
       ...> end
       iex> Component.strategy(SignatureExample)
-      SomeStrategy
+      Dummy
       iex> Component.in_ports(SignatureExample)
       [:a, :b, :c]
       iex> Component.out_ports(SignatureExample)
@@ -88,7 +89,7 @@ defmodule Skitter.DSL.Component do
   If a component has no `in`, or `out` ports, it can be omitted from the component's header.
   Furthermore, if only a single `in` or `out` port, the list notation can be omitted:
 
-      iex> defcomponent PortExample, in: a, strategy: SomeStrategy do
+      iex> defcomponent PortExample, in: a, strategy: Dummy do
       ...> end
       iex> Component.in_ports(PortExample)
       [:a]
@@ -107,7 +108,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent Average, in: value, out: current, strategy: SomeStrategy do
+  defcomponent Average, in: value, out: current, strategy: Dummy do
     fields total: 0, count: 0
 
     defcb react(value) do
@@ -126,7 +127,7 @@ defmodule Skitter.DSL.Component do
 
 
       iex> Component.strategy(Average)
-      SomeStrategy
+      Dummy
 
       iex> Component.call(Average, :react, [10])
       %Result{result: 10.0, publish: [current: 10.0], state: %Average{count: 1, total: 10}}
@@ -245,7 +246,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent ReadExample, strategy: SomeStrategy do
+  defcomponent ReadExample, strategy: Dummy do
     fields [:field]
     defcb read(), do: ~f{field}
   end
@@ -269,7 +270,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent WriteExample, strategy: SomeStrategy do
+  defcomponent WriteExample, strategy: Dummy do
     fields [:field]
     defcb write(), do: field <~ :bar
   end
@@ -278,7 +279,7 @@ defmodule Skitter.DSL.Component do
       :bar
 
   ```
-  defcomponent WrongWriteExample, strategy: SomeStrategy do
+  defcomponent WrongWriteExample, strategy: Dummy do
     fields [:field]
     defcb write(), do: doesnotexist <~ :bar
   end
@@ -341,7 +342,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent PublishExample, strategy: SomeStrategy do
+  defcomponent PublishExample, strategy: Dummy do
     defcb publish(value) do
       value ~> some_port
       :foo ~> some_other_port
@@ -374,9 +375,8 @@ defmodule Skitter.DSL.Component do
     end)
   end
 
-  # ----------- #
-  # defcallback #
-  # ----------- #
+  # defcallback
+  # -----------
 
   @doc """
   Define a callback.
@@ -399,7 +399,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent CbExample, strategy: SomeStrategy do
+  defcomponent CbExample, strategy: Dummy do
     defcb simple(), do: nil
     defcb arguments(arg1, arg2), do: arg1 + arg2
     defcb state(), do: counter <~ (~f{counter} + 1)
@@ -462,6 +462,94 @@ defmodule Skitter.DSL.Component do
           state: unquote(state_return(writes, state_var)),
           publish: unquote(publish_return(body))
         }
+      end
+    end
+  end
+
+  # Utilities
+  # ---------
+
+  @doc """
+  Add a callback if it does not exist yet.
+
+  This macro defines a callback using `defcb/2`, if a callback with the same signature does not
+  exist (i.e. if there is no callback with the same name and arity present in the module where
+  this macro is used).
+
+  Note that this macro is not imported by default by `defcomponent/3`.
+
+  ## Examples
+
+      iex> defcomponent DefaultExample, strategy: Dummy do
+      ...>   defcb foo(), do: :foo
+      ...>
+      ...>   Skitter.DSL.Component.default_cb foo(), do: :default
+      ...>   Skitter.DSL.Component.default_cb bar(), do: :default
+      ...> end
+      iex> Component.callback_list(DefaultExample)
+      [bar: 0, foo: 0]
+      iex> Component.call(DefaultExample, :foo, %{}, [])
+      %Result{result: :foo, publish: [], state: %{}}
+      iex> Component.call(DefaultExample, :bar, %{}, [])
+      %Result{result: :default, publish: [], state: %{}}
+  """
+  defmacro default_cb(signature, do: body) do
+    {name, args} = Macro.decompose_call(signature)
+    arity = length(args)
+
+    quote do
+      import Skitter.DSL.Component, only: [get_info_before_compile: 1, defcb: 2]
+
+      unless Map.has_key?(get_info_before_compile(__MODULE__), {unquote(name), unquote(arity)}) do
+        defcb(unquote(signature), do: unquote(body))
+      end
+    end
+  end
+
+  @doc """
+  Ensure a callback exists and verify its properties.
+
+  This macro injects code that ensures a callback with `name` and `arity` exists. If the callback
+  does not exist, a `Skitter.DefinitionError` is raised. If the callback exists, its properties
+  are verified using `Skitter.Component.verify!/3`.
+
+  ## Examples
+
+      The following example will compile without issues:
+
+      iex> defcomponent RequireExample, strategy: Dummy do
+      ...>   defcb foo(), do: :foo ~> out
+      ...>
+      ...>   Skitter.DSL.Component.require_cb(:foo, 0)
+      ...> end
+
+      The following examples will not compile:
+
+      iex> defcomponent MissingRequireExample, strategy: Dummy do
+      ...>   Skitter.DSL.Component.require_cb(:foo, 0)
+      ...> end
+      ** (Skitter.DefinitionError) Missing required callback foo with arity 0
+
+      iex> defcomponent VerifyRequireExample, strategy: Dummy do
+      ...>   defcb foo(), do: :foo ~> out
+      ...>
+      ...>   Skitter.DSL.Component.require_cb(:foo, 0, publish?: false)
+      ...> end
+      ** (Skitter.DefinitionError) Incorrect publish for callback foo, expected [], got [:out]
+
+  """
+  defmacro require_cb(name, arity, properties \\ []) do
+    quote do
+      __MODULE__
+      |> Skitter.DSL.Component.get_info_before_compile()
+      |> Map.get({unquote(name), unquote(arity)})
+      |> case do
+        nil ->
+          raise Skitter.DefinitionError,
+                "Missing required callback #{unquote(name)} with arity #{unquote(arity)}"
+
+        info ->
+          Skitter.Component.verify!(info, unquote(name), unquote(properties))
       end
     end
   end

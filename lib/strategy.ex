@@ -6,183 +6,58 @@
 
 defmodule Skitter.Strategy do
   @moduledoc """
-  Strategy definition and utilities.
+  Strategy type definition and utilities.
 
-  A strategy is a collection of callbacks which determine how a component behaves at compile -and
-  runtime. This module documents the strategy type (`t:Skitter.Strategy.t/0`), utilities to deal
-  with strategies and the callbacks strategies use to determine the behaviour of components.
+  A strategy is a reusable strategy which determines how a component is distributed at runtime. It
+  is defined as a collection of _hooks_: functions which each define an aspect of the distributed
+  behaviour of a component.
+
+  A strategy is defined as an elixir module which implements the `Skitter.Strategy` behaviour.
+  Each callback in this behaviour defines a hook that needs to be implemented by the callback. It
+  is recommended to define a strategy with `Skitter.DSL.Strategy.defstrategy/3`.
+
+  This module defines the strategy type and behaviour along with functions to call the various
+  strategy hooks.
   """
-  alias Skitter.Callback
+  alias Skitter.Component
 
   @typedoc """
-  Strategy representation.
-
-  A strategy is a collection of predefined callbacks, stored inside a struct.  Determines the
-  compile -and runtime behaviour of a component.
-
-  In order to allow hierarchies of strategies, some callbacks may remain unimplemented. These
-  unimplemented callbacks are represented as `nil`. `complete?/1` can be used to verify if a
-  strategy is complete.
+  A strategy is defined as a module.
   """
-  @type t :: %__MODULE__{
-          name: module() | nil,
-          define: Callback.t() | nil,
-          deploy: Callback.t() | nil,
-          prepare: Callback.t() | nil,
-          send: Callback.t() | nil,
-          receive: Callback.t() | nil,
-          drop_deployment: Callback.t() | nil,
-          drop_invocation: Callback.t() | nil
+  @type t :: module()
+
+  @typedoc """
+  Context information for strategy hooks.
+
+  A strategy hook often needs information about the context in which it is being called. Relevant
+  information about the context is stored inside the context, which is passed as the first
+  argument to every hook.
+
+  The following information is stored:
+
+  - `component`: The component for which the hook is called.
+  - `strategy`: The strategy of the component.
+  - `deployment`: The current deployment data. `nil` if the deployment is not created yet (e.g. in
+  `deploy`)
+  - `invocation`: The current invocation data. `nil` for hooks that do not have access to the
+  invocation.
+  """
+  @type context :: %__MODULE__.Context{
+          component: Component.t(),
+          strategy: t(),
+          # TODO
+          deployment: any() | nil,
+          # TODO
+          invocation: any() | nil
         }
 
-  defstruct [
-    :name,
-    :define,
-    :deploy,
-    :prepare,
-    :send,
-    :receive,
-    :drop_deployment,
-    :drop_invocation
-  ]
-
-  # --------- #
-  # Utilities #
-  # --------- #
-
-  @doc """
-  Merge a strategy or a group of strategies.
-
-  Two strategies, a `child` and a `parent`, can be merged. When a child and parent strategy are
-  merged, every child callback that is undefined (i.e. `nil`) is replaced by the callback in the
-  parent, if it is present. Callbacks defined in the child strategy are _not_ overwritten.
-
-  Thus, if we merge a parent strategy which defines `:define` and `:deploy` with a child strategy
-  that defines `:deploy` and `:receive` we obtain a new strategy which has a definition for
-  `:define`, `:deploy` and `:receive`. The `:deploy` callback in the merged strategy is equal to
-  the `:deploy` strategy of `child`.
-
-      iex> parent_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :parent} end}
-      iex> parent = %Strategy{define: parent_cb, deploy: parent_cb}
-      #Strategy<:define, :deploy>
-      iex> child_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :child} end}
-      iex> child = %Strategy{deploy: child_cb, receive: child_cb}
-      #Strategy<:deploy, :receive>
-      iex> merged = Strategy.merge(child, parent)
-      #Strategy<:define, :deploy, :receive>
-      iex> Callback.call(merged.define, %{}, [])
-      %Callback.Result{result: :parent}
-      iex> Callback.call(merged.deploy, %{}, [])
-      %Callback.Result{result: :child}
-      iex> Callback.call(merged.receive, %{}, [])
-      %Callback.Result{result: :child}
-
-  It is also possible to merge a child with a list of parent strategies. In this case, the child
-  is merged with the first parent in the list, after which the merged strategy is merged with the
-  next parent. This is done until no more strategies remain.
-
-  This effectively means that a merge invocation can be read left to right: any callback in the
-  returned strategy is the callback of the leftmost strategy in the list of strategies to be
-  merged (including the child).
-
-      iex> parent_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :parent} end}
-      iex> parent = %Strategy{define: parent_cb}
-      #Strategy<:define>
-      iex> other_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :other_parent} end}
-      iex> other = %Strategy{define: other_cb}
-      #Strategy<:define>
-      iex> child = %Strategy{}
-      #Strategy<>
-      iex> merged = Strategy.merge(child, [parent, other])
-      #Strategy<:define>
-      iex> Callback.call(merged.define, %{}, [])
-      %Callback.Result{result: :parent}
-      iex> merged = Strategy.merge(child, [other, parent])
-      #Strategy<:define>
-      iex> Callback.call(merged.define, %{}, [])
-      %Callback.Result{result: :other_parent}
-      iex> child_cb = %Callback{function: fn _, _ -> %Callback.Result{result: :child} end}
-      iex> child = %Strategy{define: child_cb}
-      #Strategy<:define>
-      iex> merged = Strategy.merge(child, [parent, other])
-      #Strategy<:define>
-      iex> Callback.call(merged.define, %{}, [])
-      %Callback.Result{result: :child}
-  """
-  @spec merge(t(), t() | [t()]) :: t()
-  def merge(child, parents) when is_list(parents) do
-    Enum.reduce(parents, child, &merge(&2, &1))
-  end
-
-  def merge(child, parent) do
-    filtered = child |> Map.from_struct() |> Enum.reject(&(&1 |> elem(1) |> is_nil()))
-    struct(%{parent | name: nil}, filtered)
+  defmodule Context do
+    @moduledoc false
+    defstruct [:component, :strategy, :deployment, :invocation]
   end
 
   @doc """
-  Verify if a strategy has implementations for every callback.
-
-  ## Examples
-
-      iex> dummy = %Callback{function: fn _, _ -> %Callback.Result{} end}
-      iex> Strategy.complete?(%Strategy{name: Example, define: dummy})
-      false
-      iex> Strategy.complete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send: dummy, receive: dummy, drop_invocation: dummy, drop_deployment: dummy})
-      true
+  Deploy a component over the cluster.
   """
-  @spec complete?(t()) :: boolean()
-  def complete?(strategy), do: not incomplete?(strategy)
-
-  @doc """
-  Verify whether a strategy is missing an implementation of some callbacks.
-
-  ## Examples
-
-      iex> dummy = %Callback{function: fn _, _ -> %Callback.Result{} end}
-      iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy})
-      true
-      iex> Strategy.incomplete?(%Strategy{name: Example, define: dummy, deploy: dummy, prepare: dummy, send: dummy, receive: dummy, drop_invocation: dummy, drop_deployment: dummy})
-      false
-  """
-  @spec incomplete?(t()) :: boolean()
-  def incomplete?(strategy) do
-    strategy
-    |> Map.delete(:name)
-    |> Map.values()
-    |> Enum.any?(&is_nil/1)
-  end
-end
-
-defimpl Inspect, for: Skitter.Strategy do
-  use Skitter.Inspect, prefix: "Strategy", named: true
-
-  ignore_short([
-    :define,
-    :deploy,
-    :prepare,
-    :send,
-    :receive,
-    :drop_deployment,
-    :drop_invocation
-  ])
-
-  ignore_empty([
-    :define,
-    :deploy,
-    :prepare,
-    :send,
-    :receive,
-    :drop_deployment,
-    :drop_invocation
-  ])
-
-  name_only([
-    :define,
-    :deploy,
-    :prepare,
-    :send,
-    :receive,
-    :drop_deployment,
-    :drop_invocation
-  ])
+  @callback deploy(%{component: Component.t()}, [any()]) :: any()
 end
