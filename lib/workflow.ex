@@ -1,4 +1,4 @@
-# Copyright 2018, 2019 Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,68 +6,90 @@
 
 defmodule Skitter.Workflow do
   @moduledoc """
-  Data processing pipeline.
+  Workflow type definition and utilities.
 
-  A reactive workflow is a collection of connected workflows and components. Together, these
-  workflows and components make up a data processing pipeline. This module defines the internal
-  representation of a skitter workflow as an elixir struct, as well as the `Access` behaviour
-  which allows one to access and modify the elements inside a workflow.
+  A reactive workflow defines a data processing pipeline. It is defined as a set of components
+  connected through various links. A workflow stores these components and links, along with some
+  additional information about the workflow.
+
+  In order to enable the reuse of workflows, workflows may define in -and out ports. When this is
+  done, these workflows may be embedded inside another workflow. Note that a runtime is always
+  flattened using `flatten/1` before it is deployed.
+
+  This module defines the workflow type along with some utilities to work with this type. It is
+  not recommended to define a workflow manually. Instead, the use of `Skitter.DSL.workflow/2` is
+  preferred.
   """
   alias Skitter.{Component, Port}
-
-  @behaviour Access
 
   @typedoc """
   Internal workflow representation.
 
-  A workflow is a directed acyclic graph where each node is a tuple containing a
-  `t:Skitter.Component.t()` or `t:Skitter.Workflow.t()` along with initialisation arguments.
-  Connections between nodes are stored as a map of `t:address/0`. Like a component, a workflow has
-  in -and out ports and an optional name.
+  A workflow is stored as a map, where each name refers to a single node, which is either a
+  `t:component/0` or `t:workflow/0`. Besides this, the in -and out ports of the workflow are
+  stored. The outgoing links of the in ports of a workflow are stored along with the in ports.
   """
   @type t :: %__MODULE__{
-          name: module() | nil,
-          in: [Port.t(), ...],
+          in: links(),
           out: [Port.t()],
-          # TODO: rename this?
-          nodes: %{optional(id()) => {Component.t() | t(), [any()]}},
-          links: %{required(id()) => %{required(Port.t()) => [{id(), Port.t()}]}}
+          nodes: %{name() => component() | workflow()}
         }
 
-  defstruct name: nil,
-            in: [],
-            out: [],
-            nodes: %{},
-            links: %{}
+  defstruct in: [], out: [], nodes: %{}
 
   @typedoc """
-  Identifier of a node in a workflow.
+  Component embedded inside a workflow.
+
+  A component in a workflow is stored along with its initialization arguments (which are passed to
+  `c:Skitter.Strategy.deploy/2`) and the outgoing links of each of its out ports.
   """
-  @type id() :: atom()
+  @type component :: %__MODULE__.Component{
+          component: Component.t(),
+          args: any(),
+          links: links()
+        }
 
-  # --------- #
-  # Utilities #
-  # --------- #
+  @typedoc """
+  Workflow embedded inside a workflow.
 
-  @impl true
-  def fetch(wf, key), do: Access.fetch(wf.nodes, key)
+  A workflow nested inside a workflow is stored along with the outgoing links of its out ports.
+  """
+  @type workflow :: %__MODULE__.Workflow{
+          workflow: t(),
+          links: links()
+        }
 
-  @impl true
-  def pop(wf, key) do
-    {val, nodes} = Access.pop(wf.nodes, key)
-    {val, %{wf | nodes: nodes}}
+  @typedoc """
+  Collection of outgoing links.
+
+  Links are stored as a keyword list. Each key in this list represents an out port, while the
+  value of this key is a list which references the destinations of this out port.
+  """
+  @type links :: [{Port.t(), [destination()]}]
+
+  @typedoc """
+  Link destination.
+
+  This type stores the destination of a link. A link can point to a component or to an out port of
+  the workflow. In the first case, the name of the component and the name of the out port are
+  stored, in the second, only the name of the out port is stored.
+  """
+  @type destination :: {name(), Port.t()} | Port.t()
+
+  @typedoc """
+  Instance name
+
+  A name is used to refer to a component embedded inside a workflow.
+  """
+  @type name :: atom()
+
+  defmodule Component do
+    @moduledoc false
+    defstruct [:component, :args, links: []]
   end
 
-  @impl true
-  def get_and_update(wf, key, f) do
-    {val, nodes} = Access.get_and_update(wf.nodes, key, f)
-    {val, %{wf | nodes: nodes}}
+  defmodule Workflow do
+    @moduledoc false
+    defstruct [:workflow, links: []]
   end
-end
-
-defimpl Inspect, for: Skitter.Workflow do
-  use Skitter.Inspect, prefix: "Workflow", named: true
-
-  ignore_empty([:out])
-  ignore_short([:handler, :nodes, :links])
 end

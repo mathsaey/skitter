@@ -1,18 +1,25 @@
-<%# Copyright 2018, 2019 Mathijs Saey, Vrije Universiteit Brussel
+<%# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
   # This Source Code Form is subject to the terms of the Mozilla Public
   # License, v. 2.0. If a copy of the MPL was not distributed with this
   # file, You can obtain one at http://mozilla.org/MPL/2.0/. %>
-<%= workflow_ports(ports: @workflow.in, path: @path, prefix: "in") %>
-
+<%= workflow_ports(ports: Enum.map(@workflow.in, &elem(&1, 0)), path: @path, prefix: "in") %>
 <%= workflow_ports(ports: @workflow.out, path: @path, prefix: "out") %>
 
 <%= for {id, node} <- @workflow.nodes do %>
   <%= workflow_node(id, node, @path) %>
 <% end %>
 
-<%= for {src, ports} <- @workflow.links do %>
-  <%= for {port, dst_lst} <- ports do %>
-    <%= workflow_links(src: {src, port}, dst_lst: dst_lst, workflow: @workflow, path: @path) %>
+<%= for {src, dsts} <- @workflow.in do %>
+  <%= for dst <- dsts do %>
+    <%= port_path(@path, "in", src) %> -> <%= destination(dst, @path, @workflow) %>
+  <% end %>
+<% end %>
+
+<%= for {name, node} <- @workflow.nodes do %>
+  <%= for {port, dsts} <- node.links do %>
+    <%= for dst <- dsts do %>
+      <%= source(name, node, port, @path) %> -> <%= destination(dst, @path, @workflow) %>
+    <% end %>
   <% end %>
 <% end %>

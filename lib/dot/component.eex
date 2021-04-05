@@ -1,20 +1,23 @@
-<%# Copyright 2018, 2019 Mathijs Saey, Vrije Universiteit Brussel
+<%# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
   # This Source Code Form is subject to the terms of the Mozilla Public
   # License, v. 2.0. If a copy of the MPL was not distributed with this
   # file, You can obtain one at http://mozilla.org/MPL/2.0/. %>
 <%= expand_path(@path, @id) %> [shape=none label=<
   <TABLE STYLE="rounded"><TR>
-    <TD BORDER="0">
-      <%= component_ports(ports: @component.in, prefix: "in") %>
-    </TD>
 
-    <TD BORDER="0"><%= @id %><%= component_name(@component) %></TD>
+    <%= unless @component |> Component.in_ports() |> Enum.empty?() do %>
+      <TD BORDER="0">
+        <%= component_ports(ports: Component.in_ports(@component), prefix: "in") %>
+      </TD>
+    <% end %>
 
-    <%= unless Enum.empty?(@component.out) do %>
-    <TD BORDER="0">
-      <%= component_ports(ports: @component.out, prefix: "out") %>
-    </TD>
-    <%end %>
+    <TD BORDER="0"><%= @id %><BR/> <%= @component |> Module.split() %></TD>
+
+    <%= unless @component |> Component.out_ports() |> Enum.empty?() do %>
+      <TD BORDER="0">
+        <%= component_ports(ports: Component.out_ports(@component), prefix: "out") %>
+      </TD>
+    <% end %>
   </TR></TABLE>
 >];

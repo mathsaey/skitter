@@ -1,8 +1,9 @@
-<%# Copyright 2018, 2019 Mathijs Saey, Vrije Universiteit Brussel
+<%# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
   # This Source Code Form is subject to the terms of the Mozilla Public
   # License, v. 2.0. If a copy of the MPL was not distributed with this
   # file, You can obtain one at http://mozilla.org/MPL/2.0/. %>
-<%= for dst <- @dst_lst do %>
-  <%= src_address(@src, @path, @workflow) %> -> <%= dst_address(dst, @path, @workflow) %>;
-<% end %>
+strict digraph {
+  rankdir = "LR";
+  <%= workflow_body(workflow: @workflow, path: "") %>
+}
