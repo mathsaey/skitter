@@ -1,4 +1,4 @@
-![skitter logo](https://raw.githubusercontent.com/mathsaey/skitter/develop/assets/logo.png)
+![skitter logo](assets/logo_header.png)
 
 A domain specific language for building horizontally scalable, reactive
 workflow applications.
