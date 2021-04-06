@@ -259,6 +259,32 @@ defmodule Skitter.Component do
   @spec out_ports(t()) :: [Port.t()]
   def out_ports(component), do: component._sk_component_info(:out_ports)
 
+  @doc """
+  Check if a component is a source.
+
+  A component is a source if it does not have any in ports.
+
+  ## Examples
+
+  iex> source?(ComponentModule)
+  false
+  """
+  @spec source?(t()) :: boolean()
+  def source?(component), do: component |> in_ports() |> length() == 0
+
+  @doc """
+  Check if a component is a sink.
+
+  A component is a sink if it does not have any out ports.
+
+  ## Examples
+
+  iex> sink?(ComponentModule)
+  false
+  """
+  @spec sink?(t()) :: boolean()
+  def sink?(component), do: component |> out_ports() |> length() == 0
+
   # Callbacks
   # ---------
 

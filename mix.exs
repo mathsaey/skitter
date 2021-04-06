@@ -1,3 +1,9 @@
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 defmodule Skitter.MixProject do
   use Mix.Project
 
@@ -6,7 +12,7 @@ defmodule Skitter.MixProject do
       app: :skitter,
       name: "Skitter",
       elixir: "~> 1.11",
-      version: "0.3.0-dev",
+      version: "0.5.0-dev",
       source_url: "https://github.com/mathsaey/skitter/",
       homepage_url: "https://soft.vub.ac.be/~mathsaey/skitter/",
       start_permanent: Mix.env() == :prod,
@@ -21,18 +27,18 @@ defmodule Skitter.MixProject do
     ]
   end
 
-  def application do
-    [
-      mod: {Skitter.Application, []},
-      extra_applications: [:logger, :eex]
-    ]
-  end
+  # def application do
+  #   [
+  #     mod: {Skitter.Application, []},
+  #     extra_applications: [:logger, :eex]
+  #   ]
+  # end
 
   defp deps do
     [
       # Dev
-      {:credo, "~> 1.4.1", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
+      {:credo, "~> 1.5", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.24", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
 
       # Runtime
@@ -101,6 +107,7 @@ defmodule Skitter.MixProject do
   defp docs do
     [
       main: "readme",
+      assets: "assets",
       extras: ["README.md"],
       authors: ["Mathijs Saey"],
       api_reference: false,
@@ -110,14 +117,11 @@ defmodule Skitter.MixProject do
       groups_for_modules: [
         "Language Constructs": [
           Skitter.Port,
-          Skitter.Callback,
-          Skitter.Callback.Result,
           Skitter.Component,
           Skitter.Workflow,
           Skitter.Strategy
         ],
-        "Runtime Concepts": [
-          Skitter.Context,
+        "Runtime Constructs": [
           Skitter.Manager,
           Skitter.Worker,
           Skitter.Deployment,
@@ -127,6 +131,9 @@ defmodule Skitter.MixProject do
         utilities: [
           Skitter.Dot
         ]
+      ],
+      groups_for_functions: [
+        "Definition helpers": &(&1[:section] == :pre_compile)
       ]
     ]
   end

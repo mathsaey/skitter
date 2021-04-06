@@ -1,5 +1,4 @@
 # Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
-# me
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -109,8 +108,9 @@ defmodule Skitter.DSL.Component do
       iex> Component.out_ports(SignatureExample)
       [:y, :z]
 
-  If a component has no `in`, or `out` ports, it can be omitted from the component's header.
-  Furthermore, if only a single `in` or `out` port, the list notation can be omitted:
+  If a component has no `in`, or `out` ports, they can be omitted from the component's header.
+  Furthermore, if the component only has a single `in` or `out` port, the list notation can be
+  omitted:
 
       iex> defcomponent PortExample, in: a, strategy: Dummy do
       ...> end

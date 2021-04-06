@@ -14,8 +14,8 @@ defmodule Skitter.Dot do
   function can be used to export the generated graph in a variety of formats.
   """
   alias Skitter.{Component, Workflow}
-  alias Skitter.Workflow.Component, as: C
-  alias Skitter.Workflow.Workflow, as: W
+  alias Skitter.Workflow.Node.Component, as: C
+  alias Skitter.Workflow.Node.Workflow, as: W
 
   @doc """
   Return the dot representation of a workflow as a string.
@@ -87,8 +87,8 @@ defmodule Skitter.Dot do
   defp expand_path(path, id), do: "#{path}_#{Atom.to_string(id)}"
 
   # Ports are prefixed with path and their "type" (in or out)
-  defp port_path("", prefix, port), do: "#{prefix}_#{port}"
-  defp port_path(path, prefix, port), do: "#{path}_#{prefix}_#{port}"
+  defp port_path("", prefix, port), do: ~s/"#{prefix}_#{port}"/
+  defp port_path(path, prefix, port), do: ~s/"#{path}_#{prefix}_#{port}"/
 
   # Pattern match to treat workflows and components differently
   defp workflow_node(id, c = %C{}, path) do
@@ -101,13 +101,13 @@ defmodule Skitter.Dot do
 
   defp destination({name, port}, path, workflow) do
     case workflow.nodes[name] do
-      %C{} -> "#{expand_path(path, name)}:in_#{port}"
+      %C{} -> ~s/"#{expand_path(path, name)}":in_#{port}/
       %W{} -> path |> expand_path(name) |> port_path("in", port)
     end
   end
 
   defp destination(port, path, _), do: port_path(path, "out", port)
 
-  defp source(name, %C{}, port, path), do: "#{expand_path(path, name)}:out_#{port}"
+  defp source(name, %C{}, port, path), do: ~s/"#{expand_path(path, name)}":out_#{port}/
   defp source(name, %W{}, port, path), do: path |> expand_path(name) |> port_path("out", port)
 end

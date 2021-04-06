@@ -3,7 +3,7 @@
   # This Source Code Form is subject to the terms of the Mozilla Public
   # License, v. 2.0. If a copy of the MPL was not distributed with this
   # file, You can obtain one at http://mozilla.org/MPL/2.0/. %>
-<%= expand_path(@path, @id) %> [shape=none label=<
+"<%= expand_path(@path, @id) %>" [shape=none label=<
   <TABLE STYLE="rounded"><TR>
 
     <%= unless @component |> Component.in_ports() |> Enum.empty?() do %>
@@ -12,7 +12,10 @@
       </TD>
     <% end %>
 
-    <TD BORDER="0"><%= @id %><BR/> <%= @component |> Module.split() %></TD>
+    <TD BORDER="0">
+      <%= @id %><BR/>
+      <%= @component |> Module.split() %>
+    </TD>
 
     <%= unless @component |> Component.out_ports() |> Enum.empty?() do %>
       <TD BORDER="0">

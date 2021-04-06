@@ -1,4 +1,4 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,23 +6,23 @@
 
 defmodule Skitter.DSL do
   @moduledoc """
-  Domain specific language support for Skitter.
+  Domain-specific language support for Skitter.
 
-  `use Skitter.DSL` can be used to automatically load all the domain-specific
-  languages defined by this application:
+  This module enables the various DSLs offered by Skitter.
+  `use Skitter.DSL` imports:
 
-  - `Skitter.DSL.Component.component/2` and `Skitter.DSL.Component.defcomponent/3`
-  - `Skitter.DSL.Workflow.workflow/2` and `Skitter.DSL.Workflow.defworkflow/3`
-  - `Skitter.DSL.Strategy.strategy/1` and `Skitter.DSL.Strategy.defstrategy/2`
+  - `Skitter.DSL.Component.defcomponent/3`
+  - `Skitter.DSL.Strategy.defstrategy/3`
+  - `Skitter.DSL.Workflow.workflow/2`
+  - This module
   """
 
-  @doc false
   defmacro __using__(_opts) do
     quote do
-      import Skitter.DSL.Component
-      import Skitter.DSL.Workflow
-      import Skitter.DSL.Strategy
-      :ok
+      import Skitter.DSL.Component, only: [defcomponent: 3, defcomponent: 2]
+      import Skitter.DSL.Workflow, only: [workflow: 1, workflow: 2]
+      import Skitter.DSL.Strategy, only: [defstrategy: 2, defstrategy: 3]
+      import unquote(__MODULE__)
     end
   end
 end

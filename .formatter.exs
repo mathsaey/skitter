@@ -7,8 +7,6 @@
 [
   inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
   locals_without_parens: [
-    # Elixir
-    throw: :*,
     # Logger
     info: :*,
     debug: :*,
@@ -16,10 +14,12 @@
     error: :*,
     # Skitter DSL
     defcomponent: :*,
-    defworkflow: :*,
-    strategy: :*,
-    instance: :*,
+    defcb: :*,
     fields: :*,
+    defstrategy: :*,
+    defhook: :*,
+    workflow: :*,
+    node: :*,
     # Skitter config
     config_from_env: :*,
     config_enabled_if_set: :*,
