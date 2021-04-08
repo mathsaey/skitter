@@ -782,7 +782,7 @@ defmodule Skitter.DSL.Component do
                   "Missing required callback #{unquote(name)} with arity #{unquote(arity)}"
 
           info ->
-            Skitter.Component.verify!(info, unquote(name), unquote(properties))
+            Skitter.Component.verify_info!(info, unquote(name), unquote(properties))
         end
       end
 

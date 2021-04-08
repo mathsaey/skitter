@@ -168,11 +168,12 @@ defmodule Skitter.Component do
   - `:out_ports`: A list of out ports names which represents the out ports the component can use
   to publish data.
 
-  - `:strategy`: The `Skitter.Strategy` of the component.
+  - `:strategy`: The `Skitter.Strategy` of the component. `nil` may be provided instead, in which
+  case a strategy must be provided when the component is embedded in a workflow.
   """
   @callback _sk_component_info(:in_ports) :: [Port.t()]
   @callback _sk_component_info(:out_ports) :: [Port.t()]
-  @callback _sk_component_info(:strategy) :: Strategy.t()
+  @callback _sk_component_info(:strategy) :: Strategy.t() | nil
 
   @doc """
   Return the names and arities of all the callbacks defined in this module.
@@ -229,7 +230,7 @@ defmodule Skitter.Component do
       iex> strategy(ComponentModule)
       Strategy
   """
-  @spec strategy(t()) :: Strategy.t()
+  @spec strategy(t()) :: Strategy.t() | nil
   def strategy(component), do: component._sk_component_info(:strategy)
 
   @doc """
@@ -353,111 +354,111 @@ defmodule Skitter.Component do
   This function will lookup the property of a callback in the provided `t:info/0` struct and
   compare it to an expected value.
 
-  - If the property is not present in `t:info/0`, `:invalid` is returned.
+  - If the property is not present in `t:info/0`, `{:error, :invalid}` is returned.
 
   - If the property has the same value as `expected`, `:ok` is returned.
 
-  - If the values do not match, the actual value of the property is returned.
+  - If the values do not match, the `{:error, actual value}` is returned.
 
   As a special case, the properties, `read?`, `write?` and `publish?` may be passed along with a
-  boolean value. When this value is `false`, `verify` ensures the corresponding property (`read`,
-  `write`, or `publish`) is equal to the empty list. When `true` is passed, any value for `read`,
-  `write` or `publish` is accepted. This is done to enable `verify/3` to ensure a callback does
-  not update its state or publish data when this is not allowed.
+  boolean value. When this value is `false`, `verify_info` ensures the corresponding property
+  (`read`, `write`, or `publish`) is equal to the empty list. When `true` is passed, any value for
+  `read`, `write` or `publish` is accepted. This is done to enable `verify_info/3` to ensure a
+  callback does not update its state or publish data when this is not allowed.
 
   ## Examples
 
-      iex> verify(%Info{read: [:field]}, :read, [:field])
+      iex> verify_info(%Info{read: [:field]}, :read, [:field])
       :ok
 
-      iex> verify(%Info{read: [:field]}, :read, [])
-      [:field]
+      iex> verify_info(%Info{read: [:field]}, :read, [])
+      {:error, [:field]}
 
-      iex> verify(%Info{read: [:field]}, :red, [:field])
-      :invalid
+      iex> verify_info(%Info{read: [:field]}, :red, [:field])
+      {:error, :invalid}
 
-      iex> verify(%Info{read: [:field]}, :read?, true)
+      iex> verify_info(%Info{read: [:field]}, :read?, true)
       :ok
 
-      iex> verify(%Info{read: [:field]}, :read?, false)
-      [:field]
+      iex> verify_info(%Info{read: [:field]}, :read?, false)
+      {:error, [:field]}
 
-      iex> verify(%Info{write: []}, :write?, true)
+      iex> verify_info(%Info{write: []}, :write?, true)
       :ok
 
-      iex> verify(%Info{write: []}, :write?, false)
+      iex> verify_info(%Info{write: []}, :write?, false)
       :ok
 
-      iex> verify(%Info{publish: []}, :publish?, false)
+      iex> verify_info(%Info{publish: []}, :publish?, false)
       :ok
 
   """
-  @spec verify(info(), atom(), any()) :: :ok | :invalid | any()
+  @spec verify_info(info(), atom(), any()) :: :ok | {:error, :invalid | any()}
 
-  def verify(_, property, true) when property in [:read?, :write?, :publish?], do: :ok
+  def verify_info(_, property, true) when property in [:read?, :write?, :publish?], do: :ok
 
-  def verify(info = %Info{}, :read?, false), do: verify(info, :read, [])
-  def verify(info = %Info{}, :write?, false), do: verify(info, :write, [])
-  def verify(info = %Info{}, :publish?, false), do: verify(info, :publish, [])
+  def verify_info(info = %Info{}, :read?, false), do: verify_info(info, :read, [])
+  def verify_info(info = %Info{}, :write?, false), do: verify_info(info, :write, [])
+  def verify_info(info = %Info{}, :publish?, false), do: verify_info(info, :publish, [])
 
-  def verify(info = %Info{}, property, expected) do
+  def verify_info(info = %Info{}, property, expected) do
     case Map.get(info, property) do
-      nil -> :invalid
+      nil -> {:error, :invalid}
       ^expected -> :ok
-      value -> value
+      value -> {:error, value}
     end
   end
 
   @doc """
   Verify if the `property` of a callback satisfies `property`
 
-  Works like `verify/3`, but raises a `Skitter.DefinitionError` if the properties do not match.
-  `:ok` is returned if the properties match.
+  Works like `verify_info/3`, but raises a `Skitter.DefinitionError` if the properties do not
+  match. `:ok` is returned if the properties match.
 
   ## Examples
 
-      iex> verify!(%Info{write: []}, :write, [], "example")
+      iex> verify_info!(%Info{write: []}, :write, [], "example")
       :ok
 
-      iex> verify!(%Info{write: []}, :write, [:field], "example")
+      iex> verify_info!(%Info{write: []}, :write, [:field], "example")
       ** (Skitter.DefinitionError) Incorrect write for callback example, expected [:field], got []
 
-      iex> verify!(%Info{write: []}, :wrte, [], "example")
+      iex> verify_info!(%Info{write: []}, :wrte, [], "example")
       ** (Skitter.DefinitionError) `wrte` is not a valid property name
 
-      iex> verify!(%Info{read: []}, :read?, true, "example")
+      iex> verify_info!(%Info{read: []}, :read?, true, "example")
       :ok
 
-      iex> verify!(%Info{read: [:field]}, :read?, false, "example")
+      iex> verify_info!(%Info{read: [:field]}, :read?, false, "example")
       ** (Skitter.DefinitionError) Incorrect read for callback example, expected [], got [:field]
 
-      iex> verify!(%Info{read: []}, :write?, true, "example")
+      iex> verify_info!(%Info{read: []}, :write?, true, "example")
       :ok
 
-      iex> verify!(%Info{read: []}, :write?, false, "example")
+      iex> verify_info!(%Info{read: []}, :write?, false, "example")
       :ok
 
-      iex> verify!(%Info{publish: []}, :publish?, false, "example")
+      iex> verify_info!(%Info{publish: []}, :publish?, false, "example")
       :ok
 
   """
-  @spec verify!(info(), atom(), any(), String.t()) :: :ok | no_return()
+  @spec verify_info!(info(), atom(), any(), String.t()) :: :ok | no_return()
 
-  def verify!(_, property, true, _) when property in [:read?, :write?, :publish?], do: :ok
+  def verify_info!(_, property, true, _) when property in [:read?, :write?, :publish?], do: :ok
 
-  def verify!(info = %Info{}, :read?, false, name), do: verify!(info, :read, [], name)
-  def verify!(info = %Info{}, :write?, false, name), do: verify!(info, :write, [], name)
-  def verify!(info = %Info{}, :publish?, false, name), do: verify!(info, :publish, [], name)
+  def verify_info!(info = %Info{}, :read?, false, n), do: verify_info!(info, :read, [], n)
+  def verify_info!(info = %Info{}, :write?, false, n), do: verify_info!(info, :write, [], n)
+  def verify_info!(info = %Info{}, :publish?, false, n), do: verify_info!(info, :publish, [], n)
 
-  def verify!(info = %Info{}, property, value, name) do
-    case verify(info, property, value) do
+  def verify_info!(info = %Info{}, property, value, name) do
+    case verify_info(info, property, value) do
       :ok ->
         :ok
 
-      :invalid ->
+      {:error, :invalid} ->
         raise DefinitionError, "`#{property}` is not a valid property name"
 
-      actual ->
+      {:error, actual} ->
         value = inspect(value)
         actual = inspect(actual)
 
@@ -467,27 +468,121 @@ defmodule Skitter.Component do
   end
 
   @doc """
-  Verify the properties of a callback using `verify!/4`.
+  Verify the properties of a callback using `verify_info!/4`.
 
   This function accepts a keyword list of `{property, expected_value}` pairs and compares each of
-  them with `verify!/4`.
+  them with `verify_info!/4`.
 
   ## Examples
 
-      iex> verify!(%Info{read: [], write: [:field]}, "example", read?: true, write?: true)
+      iex> verify_info!(%Info{read: [], write: [:field]}, "example", read?: true, write?: true)
       :ok
 
-      iex> verify!(%Info{read: [], write: [:field]}, "example")
+      iex> verify_info!(%Info{read: [], write: [:field]}, "example")
       :ok
 
-      iex> verify!(%Info{write: [:field]}, "example", publish?: true, wrt: [])
+      iex> verify_info!(%Info{write: [:field]}, "example", publish?: true, wrt: [])
       ** (Skitter.DefinitionError) `wrt` is not a valid property name
 
-      iex> verify!(%Info{publish: [:port]}, "example", publish?: false)
+      iex> verify_info!(%Info{publish: [:port]}, "example", publish?: false)
       ** (Skitter.DefinitionError) Incorrect publish for callback example, expected [], got [:port]
   """
-  @spec verify!(info(), String.t(), [{atom(), any()}]) :: :ok | no_return()
-  def verify!(info = %Info{}, name, properties \\ []) do
-    Enum.each(properties, fn {property, value} -> verify!(info, property, value, name) end)
+  @spec verify_info!(info(), String.t(), [{atom(), any()}]) :: :ok | no_return()
+  def verify_info!(info = %Info{}, name, properties \\ []) do
+    Enum.each(properties, fn {property, value} -> verify_info!(info, property, value, name) end)
+  end
+
+  @doc """
+  Verify if the `property` of the provided callback satisfies `property`.
+
+  This function calls `verify_info/3` on the `callback_info/3` of the provided callback. If the
+  callback does not exist, `{error, :missing}` is returned.
+
+  ## Examples
+
+      iex> verify(ComponentModule, :example, 1, :read, [:field])
+      :ok
+
+      iex> verify(ComponentModule, :exampl, 1, :read, [:field])
+      {:error, :missing}
+
+      iex> verify(ComponentModule, :example, 1, :read, [])
+      {:error, [:field]}
+
+      iex> verify(ComponentModule, :example, 1, :red, [:field])
+      {:error, :invalid}
+
+      iex> verify(ComponentModule, :example, 1, :read?, true)
+      :ok
+  """
+  @spec verify(t(), atom(), arity(), atom(), any()) :: :ok | {:error, :invalid | :missing | any()}
+  def verify(component, name, arity, property, value) do
+    if {name, arity} in callback_list(component) do
+      callback_info(component, name, arity) |> verify_info(property, value)
+    else
+      {:error, :missing}
+    end
+  end
+
+  @doc """
+  Verify if the `property` of the provided callback satisfies `property`.
+
+  This function calls `verify_info!/4` on the `callback_info/3` of the provided callback.
+
+  ## Examples
+
+      iex> verify!(ComponentModule, :example, 1, :read, [:field])
+      :ok
+
+      iex> verify!(ComponentModule, :exampl, 1, :read, [:field])
+      ** (Skitter.DefinitionError) Missing required callback exampl with arity 1
+
+      iex> verify!(ComponentModule, :example, 1, :read, [])
+      ** (Skitter.DefinitionError) Incorrect read for callback example, expected [], got [:field]
+
+      iex> verify!(ComponentModule, :example, 1, :red, [:field])
+      ** (Skitter.DefinitionError) `red` is not a valid property name
+
+      iex> verify!(ComponentModule, :example, 1, :read?, true)
+      :ok
+  """
+  @spec verify!(t(), atom(), arity(), atom(), any()) :: :ok | no_return()
+  def verify!(component, name, arity, property, value) do
+    if {name, arity} in callback_list(component) do
+      callback_info(component, name, arity) |> verify_info!(property, value, Atom.to_string(name))
+    else
+      raise Skitter.DefinitionError, "Missing required callback #{name} with arity #{arity}"
+    end
+  end
+
+  @doc """
+  Verify the properties of a callback using `verify_info!/3`.
+
+  This function calls `verify_info!/3` on the `callback_info/3` of the provided callback.
+
+  ## Examples
+
+      iex> verify!(ComponentModule, :example, 1, read?: true, write?: true)
+      :ok
+
+      iex> verify!(ComponentModule, :example, 1)
+      :ok
+
+      iex> verify!(ComponentModule, :exampl, 1)
+      ** (Skitter.DefinitionError) Missing required callback exampl with arity 1
+
+      iex> verify!(ComponentModule, :example, 1, publish?: true, wrt: [])
+      ** (Skitter.DefinitionError) `wrt` is not a valid property name
+
+      iex> verify!(ComponentModule, :example, 1, publish?: false)
+      ** (Skitter.DefinitionError) Incorrect publish for callback example, expected [], got [:arg]
+  """
+  @spec verify!(t(), atom(), arity(), [{atom(), any()}]) :: :ok | no_return()
+  def verify!(component, name, arity, properties \\ []) do
+    if {name, arity} in callback_list(component) do
+      callback_info(component, name, arity) |> verify_info!(Atom.to_string(name), properties)
+    else
+      raise Skitter.DefinitionError, "Missing required callback #{name} with arity #{arity}"
+    end
   end
 end
