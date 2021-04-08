@@ -4,7 +4,7 @@ name: docs
 
 steps:
   - name: build
-    image: hexpm/elixir:1.11.2-erlang-23.1.2-alpine-3.12.1
+    image: elixir:alpine
     environment:
       MIX_ENV: dev
     commands:
@@ -38,7 +38,7 @@ name: test
 
 steps:
   - name: test
-    image: hexpm/elixir:1.11.2-erlang-23.1.2-alpine-3.12.1
+    image: elixir:alpine
     environment:
       MIX_ENV: test
     commands:
