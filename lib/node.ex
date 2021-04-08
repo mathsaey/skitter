@@ -16,4 +16,10 @@ defmodule Skitter.Node do
   """
   @spec on_all_workers((() -> any())) :: [{node(), any()}]
   def on_all_workers(fun), do: Skitter.Runtime.Registry.on_all(fun)
+
+  @doc """
+  Get the name of the current node.
+  """
+  @spec self() :: node()
+  def self(), do: Node.self()
 end
