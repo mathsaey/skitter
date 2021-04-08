@@ -71,6 +71,8 @@ defmodule Skitter.Node.Worker.MasterConnectionTest do
     assert worker1 in Registry.all()
 
     Cluster.rpc(worker2, MasterConnection, :connect, [master])
+    # Give the changes some time to propagate
+    Process.sleep(100)
     :sys.get_state(manager)
     assert worker2 in Registry.all()
 
