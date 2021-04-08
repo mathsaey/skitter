@@ -1,4 +1,4 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,24 +6,31 @@
 
 defmodule Skitter.Invocation do
   @moduledoc """
-  Resources available while a workflow process a single (set of) input(s).
+  Metadata of data being processed.
 
-  An invocation contains all the state that is available while a workflow or component processes a
-  single data record. Like a deployment, an invocation is globablly available and therefore
-  immutable.
+  It is often necessary to store metadata that belongs to a (set of) tokens. This data is stored
+  in the invocation. Strategies have the ability to create new invocations or to add data to an
+  invocation.
+
+  This module defines the invocation type and the operations that can be performed on it.
   """
-  alias Skitter.Deployment
 
   @typedoc """
-  Unique reference to an invocation.
+  Invocation definition.
+
+  An invocation is either a map which stores metadata belonging to a set of tokens or an atom
+  which defines that the data associated with this invocation does not store metadata. This can
+  occur in two situations:
+
+  - The data is external. This occurs when a source component receives a message that is not
+  sent through Skitter. In this case, the invocation is marked as `:external`. The strategy
+  handling the message is responsible for creating a proper invocation.
+
+  - The message is a "meta-message". This occurs when strategies wish to propagate information
+  through the workflow that is not data to be processed. When this is the case, the message is
+  marked as `:meta`.
   """
-  @type ref :: reference()
+  @type t() :: %{required(:_id) => reference()} | :external | :meta
 
-  # @type t :: %__MODULE__{
-  #   deployment: Deployment.ref(),
-  #   data: any(),
-  #   ref: ref()
-  # }
-
-  def new, do: make_ref()
+  def new, do: %{_id: make_ref()}
 end

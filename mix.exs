@@ -27,12 +27,12 @@ defmodule Skitter.MixProject do
     ]
   end
 
-  # def application do
-  #   [
-  #     mod: {Skitter.Application, []},
-  #     extra_applications: [:logger, :eex]
-  #   ]
-  # end
+  def application do
+    [
+      mod: {Skitter.Runtime.Application, []},
+      extra_applications: [:logger, :eex]
+    ]
+  end
 
   defp deps do
     [
@@ -115,7 +115,7 @@ defmodule Skitter.MixProject do
       logo: "assets/logo-light_docs.png",
       formatters: ["html"],
       groups_for_modules: [
-        "Language Constructs": [
+        "Language Abstractions": [
           Skitter.Port,
           Skitter.Component,
           Skitter.Workflow,

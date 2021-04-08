@@ -60,8 +60,13 @@ defmodule Skitter.Remote.Test.Case do
     handlers = Keyword.get(opts, :handlers, [])
 
     quote do
+      setup_all do
+        Application.stop(:skitter)
+        on_exit(fn -> Application.start(:skitter) end)
+      end
+
       setup do
-        start_supervised({Skitter.Remote.Supervisor, [unquote(mode), unquote(handlers)]})
+        start_supervised!({Skitter.Remote.Supervisor, [unquote(mode), unquote(handlers)]})
         :ok
       end
     end
@@ -80,7 +85,7 @@ defmodule Skitter.Remote.Test.Case do
 
     if start do
       Cluster.rpc(remote, Supervisor, :start_child, [
-        {Skitter.Application, remote},
+        {Skitter.Runtime.Application, remote},
         {Skitter.Remote.Supervisor, [start[:mode], start[:handlers] || []]}
       ])
     end

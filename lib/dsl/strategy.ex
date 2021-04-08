@@ -10,13 +10,14 @@ defmodule Skitter.DSL.Strategy do
 
   This module offers macros to define a strategy and hooks. To define a strategy, use
   `defstrategy/3`. Inside the strategy, `defhook/2` can be used to define hooks. Inside the body
-  of the hook, `sigil_c/2` can be used to read the current context.
+  of the hook, `context/0`, `component/0`, `strategy/0`, `deployment/0` and `invocation/0` can be
+  used to read information from the current context.
 
   Note that it is possible to define a strategy as an elixir module which implements the
   `Skitter.Strategy` behaviour. Using `defstrategy/3` instead offers two main advantages:
 
   - The `t:Skitter.Strategy.context/0` of a hook is passed as an implicit argument, which can be
-  accessed through the `sigil_c/2` macro.
+  accessed using the aforementioned macros.
   - A trait-like mechanism is introduced, which can be used to create new strategies based on
   existing ones.
 
@@ -40,7 +41,8 @@ defmodule Skitter.DSL.Strategy do
 
   A hook is an elixir function which accepts a `t:Skitter.Strategy.context/0` as its first
   argument. This context argument is implicitly created by the `defhook/2` macro; the various
-  fields of the context can be accessed through the use of `sigil_c/2`.
+  fields of the context can be accessed through the use of `context/0`, `component/0`,
+  `strategy/0`, `deployment/0` and `invocation/0`.
 
   Besides the context argument, hooks offer one additional feature: they can be inherited by other
   strategies.
@@ -104,21 +106,6 @@ defmodule Skitter.DSL.Strategy do
         Module.register_attribute(__MODULE__, :_sk_hook, accumulate: true)
 
         import unquote(__MODULE__), only: [defhook: 2]
-        import unquote(__MODULE__).Helpers
-
-        # define helpers
-        import Skitter.DSL.Component,
-          only: [
-            default_cb: 3,
-            require_cb: 4,
-            arity: 1,
-            in_ports: 1,
-            out_ports: 1,
-            strategy: 1,
-            modify_in_ports: 2,
-            modify_out_ports: 2,
-            modify_strategy: 2
-          ]
 
         unquote(body)
       end
@@ -133,29 +120,6 @@ defmodule Skitter.DSL.Strategy do
   # ----- #
 
   defp context_var, do: quote(do: var!(context, unquote(__MODULE__)))
-
-  @doc """
-  Read context information.
-
-  A strategy hook is called with a `t:Skitter.Strategy.context/0` as its first argument. This
-  macro is used to access the context fields.
-
-  ## Examples
-
-      iex> defstrategy ReadContext, extends: Dummy do
-      ...>   defhook read_component, do: ~c{component}
-      ...> end
-      iex> ReadContext.read_component(%Context{component: SomeComponent})
-      SomeComponent
-
-  """
-  defmacro sigil_c({:<<>>, _, [str]}, _) do
-    field = str |> String.to_atom()
-
-    quote do
-      context().unquote(field)
-    end
-  end
 
   @doc """
   Obtain the context struct.
@@ -178,12 +142,66 @@ defmodule Skitter.DSL.Strategy do
   end
 
   @doc """
+  Obtain the context's component.
+
+  ## Examples
+
+      iex> defstrategy ReadComponent, extends: Dummy do
+      ...>   defhook read, do: component()
+      ...> end
+      iex> ReadComponent.read(%Context{component: SomeComponent})
+      SomeComponent
+  """
+  defmacro component, do: quote(do: context().component)
+
+  @doc """
+  Obtain the context's component.
+
+  ## Examples
+
+      iex> defstrategy ReadStrategy, extends: Dummy do
+      ...>   defhook read, do: strategy()
+      ...> end
+      iex> ReadStrategy.read(%Context{strategy: ReadStrategy})
+      Skitter.DSL.StrategyTest.ReadStrategy
+  """
+  defmacro strategy, do: quote(do: context().strategy)
+
+  @doc """
+  Obtain the context's component.
+
+  ## Examples
+
+      iex> defstrategy ReadDeployment, extends: Dummy do
+      ...>   defhook read, do: deployment()
+      ...> end
+      iex> ReadDeployment.read(%Context{deployment: :some_deployment_data})
+      :some_deployment_data
+  """
+  defmacro deployment, do: quote(do: context().deployment)
+
+  @doc """
+  Obtain the context's component.
+
+  ## Examples
+
+      iex> defstrategy ReadInvocation, extends: Dummy do
+      ...>   defhook read, do: invocation()
+      ...> end
+      iex> ReadInvocation.read(%Context{invocation: :external})
+      :external
+  """
+  defmacro invocation, do: quote(do: context().invocation)
+
+  @doc """
   Define a hook.
 
   This macro defines a single hook of a strategy. While a hook may be defined as a plain elixir
   function, using this macro offers two advantages:
 
-  - The hook context is handled by the macro and can be accessed with `sigil_c/2`.
+  - The hook context is handled by the macro and can be accessed with `context/0`, `component/0`,
+  `strategy/0`, `deployment/0` and `invocation/0`.
+
   - Other strategies can inherit this hook, making it easier to create new strategies. This is
   shown in the documentation of `defstrategy/3`.
 
@@ -217,7 +235,7 @@ defmodule Skitter.DSL.Strategy do
   A hook of a child strategy can also be called dynamically in a similar way:
 
       iex> defstrategy Abstract, extends: Dummy do
-      ...>   defhook example, do: "Child says: " <> ~c{strategy}.say(context())
+      ...>   defhook example, do: "Child says: " <> strategy().say(context())
       ...> end
       iex> defstrategy Child, extends: Abstract do
       ...>   defhook say, do: "Hello!"
@@ -232,8 +250,17 @@ defmodule Skitter.DSL.Strategy do
 
     body =
       quote do
-        import Kernel, except: [sigil_c: 2]
-        import unquote(__MODULE__), only: [context: 0, sigil_c: 2]
+        use unquote(__MODULE__).Helpers, hook: unquote(name)
+
+        import unquote(__MODULE__),
+          only: [
+            context: 0,
+            component: 0,
+            strategy: 0,
+            deployment: 0,
+            invocation: 0
+          ]
+
         unquote(body)
       end
 

@@ -19,7 +19,7 @@ defmodule Skitter.Strategy do
   This module defines the strategy type and behaviour along with functions to call the various
   strategy hooks.
   """
-  alias Skitter.Component
+  alias Skitter.{Component, Port, Deployment, Invocation, Worker}
 
   @typedoc """
   A strategy is defined as a module.
@@ -45,32 +45,92 @@ defmodule Skitter.Strategy do
   @type context :: %__MODULE__.Context{
           component: Component.t(),
           strategy: t(),
-          # TODO
-          deployment: any() | nil,
-          # TODO
-          invocation: any() | nil
+          deployment: Deployment.data() | nil,
+          invocation: Invocation.t() | nil
         }
 
   defmodule Context do
     @moduledoc false
-    defstruct [:component, :strategy, :deployment, :invocation]
+    defstruct [:component, :strategy, :deployment, :invocation, :_skr]
   end
 
   @doc """
   Add code to a component defined with `Skitter.DSL.Component.defcomponent/3`
 
-  This hook is called when a component is defined by the skitter component dsl. It should return a
-  quoted expression which is added to the component definition before it is compiled. This hook is
-  mainly used to verify the properties of a component or to add default callbacks
-  (`Skitter.DSL.Component.require_cb/3` and `Skitter.DSL.Component.default_cb/2`).
-  """
-  @callback define(context(), any()) :: [tuple()]
+  This hook is called when a component is defined by the skitter component DSL. It can be used to
+  modify the defined component or to verify its properties. Additional information about this hook
+  can be found in the documentation of `Skitter.DSL.Component.defcomponent/3`.
 
-  # replace this with before and after compile? Not a priority!
-  # info in map / struct steken, extra code toevoegen en later extracten en uithalen?
+  ## Context
+
+  When this hook is called, the `t:context/0` contains the strategy and the module name of the
+  component that is being defined. Note that when this hook is called the component module has not
+  been compiled yet. It is therefore not possible to use functions defined in `Skitter.Component`
+  on this component.
+  """
+  @callback define(context(), component_info :: Skitter.DSL.Component.info()) ::
+              Skitter.DSL.Component.info()
 
   @doc """
   Deploy a component over the cluster.
+
+  This hook is called by the runtime system when a component has to be distributed over the
+  cluster. It receives the arguments passed to `t:Skitter.Workflow.component/0` as its only
+  argument. Any data returned by this hook is made available to other hooks through the
+  `deployment` field in `t:context/0`.
+
+  ## Context
+
+  When this hook is called, only the current strategy and component are available in the context.
   """
-  @callback deploy(%{component: Component.t()}, [any()]) :: any()
+  @callback deploy(context(), args :: any()) :: Deployment.data()
+
+  @doc """
+  Send a message to the component.
+
+  This hook is called by the runtime system when data needs to be sent to a given component (e.g.
+  when a predecessor of the component publishes data). It receives the data to be sent along with
+  the port to which the data should be sent. The result of this hook is ignored.
+
+  ## Context
+
+  All context data (component, strategy, deployment data and the invocation) is available when
+  this hook is called.
+  """
+  @callback send(context(), data :: any(), port :: Port.t() | nil) :: any()
+
+  @doc """
+  Handle a message received by the component.
+
+  This hook is called by the runtime when a worker process receives a message. It is called with
+  the received message, the data of the worker that received the message and its tag.
+
+  This callback should return a keyword list which may contain the following keys:
+
+  - `state`: the new state of the worker that received the message. If this key is not present the
+  state of the worker remains unchanged.
+
+  - `publish`: data to be published. A keyword list of `{port, value}` pairs. `value` will be sent
+  to each component connected to `port`. The data will be sent with the invocation contained in
+  the context. Mutually exclusive with `publish_with_invocation`.
+
+  - `publish_with_invocation`: data to be published along with an invocation. A keyword list of
+  `{port, list}` pairs. `list` is a list of `{value, invocation}` pairs. For every pair, `value`
+  will be sent to `port` with `invocation` as its invocation.
+
+  ## Context
+
+  All context data (component, strategy, deployment data and the invocation) is available when
+  this hook is called.
+
+  When the received message was not sent by Skitter (i.e. when the worker process received a
+  regular message), the invocation is set to `:external`. This can be used by e.g. sources to
+  respond to external data.
+  """
+  @callback receive(context(), message :: any(), state :: Worker.state(), tag :: Worker.tag()) ::
+              [
+                state: Worker.state(),
+                publish: [{Port.t(), any()}],
+                publish_with_invocation: [{Port.t(), [{any(), Invocation.t()}]}]
+              ]
 end

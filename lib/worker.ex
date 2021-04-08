@@ -1,4 +1,4 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,78 +6,83 @@
 
 defmodule Skitter.Worker do
   @moduledoc """
-  Data processor which can perform work for a component.
-  """
-  alias Skitter.{Context, Component, Invocation}
+  Worker which manages state and performs computations for a component.
 
-  # ----- #
-  # Types #
-  # ----- #
+  Workers are spawned by strategies to manage state and perform computations for a given
+  component. Any component or strategy state not stored in the deployment lives in a worker.
+
+  Skitter workers are created by strategies with an initial state. Any messages received by the
+  worker are handled by the `c:Skitter.Strategy.receive/4` hook of its strategy. This callback
+  receives the current worker state and may return a new, udpated state to be stored by the
+  worker.
+
+  Since strategies can create many separate workers, each worker is created with a _tag_ which can
+  be used by the strategy to provide different implementations of `c:Skitter.Strategy.receive/4`
+  based on the worker that received the message.
+
+  This module defines the worker types and various functions to deal with workers.
+  """
+  alias Skitter.{Strategy, Invocation}
 
   @typedoc """
-  Reference to an existing worker.
+  Reference to a created worker.
   """
-  @opaque ref :: pid()
+  @type ref :: pid()
 
   @typedoc """
-  Worker identification tag.
+  Worker state.
+  """
+  @type state :: any()
+
+  @typedoc """
+  Worker tag.
+
+  Each worker is tagged with an atom which allows the strategy to differentiate between the various
+  workers it creates.
   """
   @type tag :: atom()
 
   @typedoc """
-  Worker lifetime.
-
-  A worker can remain alive through the duration of a deployment or an invocation. The scheduler
-  may use this information to determine how to schedule a worker.
-  """
-  @type lifetime :: :deployment | :invocation
-
-  @typedoc """
   Placement constraints.
 
-  Workers may need to put some constraints on the node on which they are spawned. These
-  constraints are represented by this type. The following constraints are currently supported:
+  When spawning a worker, it is often desirable to tweak on which node the worker will be placed.
+  This type defines a set of placement constraints which can be passed as an argument to
+  `create/4`.
 
-  - `:with` place the worker on the same location as the given worker.
-  - `:avoid` try to place the worker on a different node as the given worker.
-  - `:on` place the worker on the specified location.
+  The following constraints are defined:
+
+  - `nil`: No constraints.
+  - `local`: Try to spawn the worker on the local node. Note that this constraints will be ignored
+  when executed on a master node.
+  - `on: node`: Spawn the worker at the specified node.
+  - `with: ref`: Spawn the worker on the same node as the worker identified by `ref`.
+  - `avoid: ref`: Try to place the worker on a different node than the worker identified by `ref`.
+  Note that it is not always possible to avoid placing two workers on the same node. When this is
+  the case, a warning will be logged and both workers will be placed on the same node.
   """
-  @type constraints :: [with: ref(), avoid: ref(), on: node()]
-
-  # --- #
-  # API #
-  # --- #
-
-  @ps_key :skitter_worker_spawner_mod
-
-  @doc false
-  def set_create_module(mod), do: :persistent_term.put(@ps_key, mod)
+  @type placement :: nil | :local | [on: node()] | [with: ref()] | [avoid: ref()]
 
   @doc """
   Create a new worker.
   """
-  @spec create(
-          Component.t(),
-          Context.t(),
-          any() | (() -> any()),
-          tag(),
-          lifetime(),
-          constraints()
-        ) :: ref()
-  def create(component, context, state, tag, lifetime, constraints \\ []) do
-    mod = :persistent_term.get(@ps_key)
-    mod.create(component, context, state, tag, lifetime, constraints)
+  @spec create(Strategy.context(), state(), tag(), placement()) :: ref()
+  def create(context, state, tag, placement \\ nil) do
+    Skitter.Runtime.Spawner.spawn(context, state, tag, placement)
   end
 
   @doc """
-  Send a message to a worker reference.
+  Send a message to the worker at `ref`.
   """
-  @spec send(ref(), any(), Invocation.ref()) :: :ok
-  def send(ref, message, invocation), do: GenServer.cast(ref, {:msg, message, invocation})
+  @spec send(ref(), any(), Invocation.t()) :: :ok
+  def send(worker, message, invocation) do
+    GenServer.cast(worker, {:sk_msg, message, invocation})
+  end
 
   @doc """
-  Stop the referenced worker.
+  Stop worker `ref`.
   """
   @spec stop(ref()) :: :ok
-  def stop(ref), do: GenServer.cast(ref, :stop)
+  def stop(worker) do
+    GenServer.cast(worker, :sk_stop)
+  end
 end

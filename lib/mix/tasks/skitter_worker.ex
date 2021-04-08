@@ -8,22 +8,23 @@ defmodule Mix.Tasks.Skitter.Worker do
   @moduledoc """
   Start a Skitter worker node
 
-  This task starts the Skitter application in worker mode. It accepts a single option and a single
-  argument. Note that some additional arguments need to be passed to `elixir` / `iex` in order to
-  connect to other Skitter nodes.
+  This task starts a Skitter worker node. It accepts a single option (`--no-shutdown-with-master`)
+  and a single argument which represents the master node the worker will try to connect to. In
+  order to be able to connect to the specified master (and other workers), additional arguments
+  need to be passed to the `elixir` or `iex` command used to start the system. More information
+  can be found in the "Distribution Parameters" section below.
 
-  If you wish to use this task in production, consider if using the Skitter release is not a
-  better option for your use case. If you end up using this task, be sure to run mix in production
-  mode.
+  It is not recommended to use this task in production. Consider using the `skitter.release` task
+  to build a release instead. If mix is used anyway, be sure to start in production mode.
 
   ## Flags and Arguments
 
   * `--no-shutdown-with-master`: By default, a worker node shuts itself down when its connected
   master node disconnects. This option can be passed to override this behaviour.
 
-  Besides this, the name of a master node can be passed as an argument. On startup, the created
-  worker will attempt to connect to the master. If this is not successful, a warning is logged but
-  the worker does not shut down.
+  Besides this, the name of a master node can be passed as an argument. The worker will attempt to
+  connect to the specified master. If this is not successful, a warning is logged, however, the
+  worker will not shut down.
 
   ## Distribution Parameters
 

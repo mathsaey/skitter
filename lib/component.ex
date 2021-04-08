@@ -99,6 +99,14 @@ defmodule Skitter.Component do
   @type state :: struct()
 
   @typedoc """
+  Output published by a callback.
+
+  Published data is returned as a list where the output for each out port is specified. When no
+  data is published on a port, the port should be omitted from the published list.
+  """
+  @type publish :: [{Port.t(), any()}]
+
+  @typedoc """
   Values returned by a callback when it is called.
 
   The following information is stored:
@@ -110,7 +118,7 @@ defmodule Skitter.Component do
   @type result :: %__MODULE__.Callback.Result{
           result: any(),
           state: state(),
-          publish: [{Port.t(), any()}]
+          publish: publish()
         }
 
   @typedoc """

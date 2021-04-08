@@ -17,7 +17,7 @@ defmodule Mix.Tasks.Skitter do
   end
 
   def put(lst) when is_list(lst), do: Enum.each(lst, &put/1)
-  def put({k, v}), do: Skitter.Config.put_runtime(k, v)
+  def put({k, v}), do: Skitter.Runtime.Config.put_runtime(k, v)
 
   defp update_args(args), do: if(IEx.started?(), do: args, else: ["--no-halt" | args])
 end

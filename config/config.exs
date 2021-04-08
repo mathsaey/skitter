@@ -11,6 +11,4 @@ config :logger, :console,
   device: :standard_error,
   metadata: :all
 
-config :skitter, mode: :local
-
 import_config "#{Mix.env()}.exs"

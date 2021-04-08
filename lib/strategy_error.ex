@@ -1,4 +1,4 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,11 +6,16 @@
 
 defmodule Skitter.StrategyError do
   @moduledoc """
-  Raised when a strategy encounters an error.
+  Error raised by a strategy.
 
-  This error can be raised by a `Skitter.Strategy` hook. It generally occurs when a strategy
-  wishes to enforce a certain property (e.g. `Component.require_callback!/3`) which is not met by
-  a component.
+  This error can be raised by a `Skitter.Strategy`. It is used to indicate the strategy
+  encountered some unexpected situation.
   """
-  defexception [:message]
+
+  defexception [:message, :context]
+
+  @impl true
+  def message(%__MODULE__{message: msg, context: cont}) do
+    "Raised by #{inspect(cont.strategy)} handling #{inspect(cont.component)}:\n\t#{msg}"
+  end
 end

@@ -6,12 +6,42 @@
 
 defmodule Skitter.DSL.Strategy.Helpers do
   @moduledoc """
-  Helpers for strategy definitions.
+  Macros to be used in strategy hooks.
 
-  This module defines various functions and macros which can be used when defining strategies. The
-  contents of this module are automatically imported when using
-  `Skitter.DSL.Strategy.defstrategy/3`.
+  This module defines various macro "primitives" to be used in `Skitter.DSL.Strategy.defhook/2`.
+  The contents of this module are automatically available inside `defhook`.
+
+  The macros defined in this module do not offer new functionality. Instead, they provide
+  syntactic sugar over calling existing functions with arguments based on the context passed to
+  the strategy hook.
   """
+  defmacro __using__(hook: :define) do
+    quote do
+      import unquote(__MODULE__), only: [error: 1]
+
+      import Skitter.DSL.Component,
+        only: [
+          default_cb: 3,
+          require_cb: 3,
+          require_cb: 4,
+          arity: 1,
+          in_ports: 1,
+          out_ports: 1,
+          strategy: 1,
+          modify_in_ports: 2,
+          modify_out_ports: 2,
+          modify_strategy: 2
+        ]
+    end
+  end
+
+  defmacro __using__(_) do
+    quote do
+      import Kernel, except: [send: 2]
+      import unquote(__MODULE__)
+      alias Skitter.{Component, Worker, Invocation}
+    end
+  end
 
   @doc """
   Raise a `Skitter.StrategyError`
@@ -25,5 +55,66 @@ defmodule Skitter.DSL.Strategy.Helpers do
         message: unquote(message),
         context: context()
     end
+  end
+
+  @doc """
+  Create a worker using `Skitter.Worker.create/4`.
+
+  This macro creates a worker, automatically passing the current context.
+  """
+  defmacro create_worker(state, tag, placement \\ nil) do
+    quote do
+      Skitter.Worker.create(context(), unquote(state), unquote(tag), unquote(placement))
+    end
+  end
+
+  @doc """
+  Send a message to a worker with `Skitter.Worker.send/3`
+
+  The invocation is inferred from the current invocation.
+  """
+  defmacro send(worker, message) do
+    quote(do: Skitter.Worker.send(unquote(worker), unquote(message), invocation()))
+  end
+
+  @doc """
+  Send a message to a worker with `Skitter.Worker.send/3`
+  """
+  defmacro send(worker, message, invocation) do
+    quote(do: Skitter.Worker.send(unquote(worker), unquote(message), unquote(invocation)))
+  end
+
+  @doc """
+  Stop the given worker using `Skitter.Worker.stop/1`
+  """
+  defmacro stop_worker(worker) do
+    quote(do: Skitter.Worker.stop(unquote(worker)))
+  end
+
+  @doc """
+  Stop the current worker using `Skitter.Worker.stop/1`
+  """
+  defmacro stop_worker do
+    quote(do: Skitter.Worker.stop(self()))
+  end
+
+  @doc """
+  Call `callback` of the current component with `state` and `args`.
+
+  Uses `Skitter.Component.call/4`.
+  """
+  defmacro call_component(callback, state, args) do
+    quote do
+      Skitter.Component.call(component(), unquote(callback), unquote(state), unquote(args))
+    end
+  end
+
+  @doc """
+  Call `callback` of the current component with `args`.
+
+  Uses `Skitter.Component.call/3`.
+  """
+  defmacro call_component(callback, args) do
+    quote(do: Skitter.Component.call(component(), unquote(callback), unquote(args)))
   end
 end

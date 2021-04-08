@@ -8,25 +8,26 @@ defmodule Mix.Tasks.Skitter.Master do
   @moduledoc """
   Start a Skitter master node
 
-  This tasks starts the Skitter application in master mode. It accepts a single option and
-  multiple arguments. Note that additional arguments need to be passed to `elixir` or `iex` in
-  order to be able to connect to other Skitter nodes.
+  This task starts a Skitter master node. It accepts a single option (`--eval`) and multiple
+  arguments, which represent worker nodes to connect to. In order to connect to the specified
+  workers, additional arguments need to be passed to the `elixir` or `iex` command used to start
+  the system. More information can be found in the "Distribution Parameters" section below.
 
-  If you wish to use this task in production, consider if using the Skitter release is not a
-  better option for your use case. If you end up using this task, be sure to run mix in production
-  mode.
+  It is not recommended to use this task in production. Consider using the `skitter.release` task
+  to build a release instead. If mix is used anyway, be sure to start in production mode.
 
   ## Options and Arguments
 
-  * `--eval`, `-e`: Evaluate the given code after starting the Skitter master.
+  * `--eval`, `-e`: Evaluate the given code after skitter has started.
 
-  Besides this, all other arguments are interpreted as worker nodes. When the master node starts,
-  it will attempt to connect to all the specified nodes. If this fails, the master exits.
+  Besides the `--eval` option, any other argument is interpreted as the name of a worker node.
+  The master node will attempt to connect to all the specified nodes when it is starting. If this
+  fails, the master exits.
 
   ## Distribution Parameters
 
   In order to connect with other Skitter nodes, the local node needs to be distributed. This task
-  does not handle distrbution, instead, the correct parameters should be passed to `iex` or
+  does not handle distribution, instead, the correct parameters should be passed to `iex` or
   `elixir`. A few examples are provided below:
 
   - `elixir --sname master -S mix skitter.master`

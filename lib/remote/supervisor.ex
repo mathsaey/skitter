@@ -11,7 +11,7 @@ defmodule Skitter.Remote.Supervisor do
   def init([mode, handlers]) do
     children = [
       {Remote.Beacon, mode},
-      {Remote.Handler.Supervisor, handlers},
+      {Remote.Handler.HandlerDispatcherSupervisor, handlers},
       {Task.Supervisor, name: Remote.TaskSupervisor}
     ]
 

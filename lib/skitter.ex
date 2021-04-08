@@ -1,4 +1,4 @@
-# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,11 +6,7 @@
 
 defmodule Skitter do
   @moduledoc """
-  Interface to the Skitter system.
+  Interface to the skitter system.
   """
-  alias Skitter.Manager
-
-  defdelegate deploy(workflow), to: Manager, as: :create
-  defdelegate send(manager, records), to: Manager
-  defdelegate stop(manager), to: Manager
+  def deploy(workflow), do: Skitter.Runtime.deploy(workflow)
 end

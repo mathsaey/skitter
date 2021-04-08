@@ -160,7 +160,8 @@ defmodule Skitter.DSL.Component do
       "Hello, world!"
 
   It is generally not needed to directly modify the `t:info/0` struct. Instead, this module
-  provides multiple "definition helpers" which accept a `t:info/0` struct to modify.
+  provides multiple "definition helpers" which accept a `t:info/0` struct to modify. These helpers
+  are automatically available inside the body of `Skitter.DSL.Strategy.defhook/2`.
 
   ## Examples
 
@@ -274,8 +275,8 @@ defmodule Skitter.DSL.Component do
   @doc false
   # generate component behaviour callbacks
   defmacro generate_callbacks(env) do
-    names = env.module |> get_info_before_compile() |> Map.keys()
-    metadata = env.module |> get_info_before_compile() |> Macro.escape()
+    names = env.module |> _info_before_compile() |> Map.keys()
+    metadata = env.module |> _info_before_compile() |> Macro.escape()
 
     quote bind_quoted: [names: names, metadata: metadata] do
       @impl true
@@ -305,7 +306,7 @@ defmodule Skitter.DSL.Component do
 
   @doc false
   # Gets the callback info before generate_callback_info/1 is called.
-  def get_info_before_compile(module) do
+  def _info_before_compile(module) do
     module
     |> Module.get_attribute(:_sk_callbacks)
     |> Enum.reduce(%{}, fn {{name, arity}, info}, map ->
@@ -686,45 +687,9 @@ defmodule Skitter.DSL.Component do
   @doc """
   Add a callback if it does not exist yet.
 
-  This macro defines a callback using `defcb/2`, if a callback with the same signature does not
-  exist (i.e. if there is no callback with the same name and arity present in the module where
-  this macro is used).
-
-  Note that this macro is not imported by `defcomponent/3`.
-
-  ## Examples
-
-      iex> defcomponent DefaultExample, strategy: Dummy do
-      ...>   defcb foo(), do: :foo
-      ...>
-      ...>   Skitter.DSL.Component.default_cb foo(), do: :default
-      ...>   Skitter.DSL.Component.default_cb bar(), do: :default
-      ...> end
-      iex> Component.callback_list(DefaultExample)
-      [bar: 0, foo: 0]
-      iex> Component.call(DefaultExample, :foo, %{}, [])
-      %Result{result: :foo, publish: [], state: %{}}
-      iex> Component.call(DefaultExample, :bar, %{}, [])
-      %Result{result: :default, publish: [], state: %{}}
-  """
-  defmacro default_cb(signature, do: body) do
-    {name, args} = Macro.decompose_call(signature)
-    arity = length(args)
-
-    quote do
-      import Skitter.DSL.Component, only: [get_info_before_compile: 1, defcb: 2]
-
-      unless Map.has_key?(get_info_before_compile(__MODULE__), {unquote(name), unquote(arity)}) do
-        defcb(unquote(signature), do: unquote(body))
-      end
-    end
-  end
-
-  @doc """
-  Add `default_cb/2` to `t:info/0`.
-
-  This add a call to `default_cb/2` to the provided `info` struct. This macro can be used to add a
-  default callback to a component inside `c:Skitter.Strategy.define/2`.
+  This macro adds code to the generated component which adds a callback if a callback with the
+  specified signature does not exist (i.e. if there is no callback with the same name and arity
+  present in the module where this macro is used).
 
   ## Examples
 
@@ -739,73 +704,49 @@ defmodule Skitter.DSL.Component do
       ...> end
       iex> Component.call(Example, :init, []).result
       :default
+      iex> defcomponent Example, strategy: Default do
+      ...>   defcb init(), do: :not_default
+      ...> end
+      iex> Component.call(Example, :init, []).result
+      :not_default
   """
   @doc section: :pre_compile
   defmacro default_cb(info, signature, do: body) do
-    macro =
-      quote(do: Skitter.DSL.Component.default_cb(unquote(signature), do: unquote(body)))
+    {name, args} = Macro.decompose_call(signature)
+    arity = length(args)
+
+    quoted =
+      quote do
+        import unquote(__MODULE__), only: [_info_before_compile: 1, defcb: 2]
+
+        unless Map.has_key?(_info_before_compile(__MODULE__), {unquote(name), unquote(arity)}) do
+          defcb(unquote(signature), do: unquote(body))
+        end
+      end
       |> Macro.escape()
 
     quote do
-      Map.update!(unquote(info), :inject, &(&1 ++ [unquote(macro)]))
+      Map.update!(unquote(info), :inject, &(&1 ++ [unquote(quoted)]))
     end
   end
 
   @doc """
   Ensure a callback exists and verify its properties.
 
-  This macro injects code that ensures a callback with `name` and `arity` exists. If the callback
-  does not exist, a `Skitter.DefinitionError` is raised. If the callback exists, its properties
-  are verified using `Skitter.Component.verify!/3`.
+  This function adds code to the generated component which ensures a callback with `name` and
+  `arity` exists. If the callback does not exist, a`Skitter.DefinitionError` is raised. If the
+  callback exists, its properties are verified using `Skitter.Component.verify!/3`.
 
   ## Examples
 
-      The following example will compile without issues:
-
-      iex> defcomponent RequireExample, strategy: Dummy do
-      ...>   defcb foo(), do: :foo ~> out
-      ...>
-      ...>   Skitter.DSL.Component.require_cb(:foo, 0)
+      iex> defstrategy Require, extends: Dummy do
+      ...>   defhook define(component) do
+      ...>     require_cb(component, :react, arity(component), publish?: false)
+      ...>   end
       ...> end
-
-      The following examples will not compile:
-
-      iex> defcomponent MissingRequireExample, strategy: Dummy do
-      ...>   Skitter.DSL.Component.require_cb(:foo, 0)
+      iex> defcomponent Example, out: port, strategy: Require do
       ...> end
-      ** (Skitter.DefinitionError) Missing required callback foo with arity 0
-
-      iex> defcomponent VerifyRequireExample, strategy: Dummy do
-      ...>   defcb foo(), do: :foo ~> out
-      ...>
-      ...>   Skitter.DSL.Component.require_cb(:foo, 0, publish?: false)
-      ...> end
-      ** (Skitter.DefinitionError) Incorrect publish for callback foo, expected [], got [:out]
-
-  """
-  defmacro require_cb(name, arity, properties \\ []) do
-    quote do
-      __MODULE__
-      |> Skitter.DSL.Component.get_info_before_compile()
-      |> Map.get({unquote(name), unquote(arity)})
-      |> case do
-        nil ->
-          raise Skitter.DefinitionError,
-                "Missing required callback #{unquote(name)} with arity #{unquote(arity)}"
-
-        info ->
-          Skitter.Component.verify!(info, unquote(name), unquote(properties))
-      end
-    end
-  end
-
-  @doc """
-  Add `require_cb/3` to `t:info/0`.
-
-  This add a call to `require_cb/3` to the provided `info` struct. This macro can be used to
-  ensure a callback is defined inside `c:Skitter.Strategy.define/2`.
-
-  ## Examples
+      ** (Skitter.DefinitionError) Missing required callback react with arity 0
 
       iex> defstrategy Require, extends: Dummy do
       ...>   defhook define(component) do
@@ -816,13 +757,33 @@ defmodule Skitter.DSL.Component do
       ...>   defcb react(), do: :foo ~> port
       ...> end
       ** (Skitter.DefinitionError) Incorrect publish for callback react, expected [], got [:port]
+
+      iex> defstrategy Require, extends: Dummy do
+      ...>   defhook define(component) do
+      ...>     require_cb(component, :react, arity(component), publish?: false)
+      ...>   end
+      ...> end
+      iex> defcomponent Example, out: port, strategy: Require do
+      ...>   defcb react(), do: :ok
+      ...> end
+
   """
   @doc section: :pre_compile
   @spec require_cb(info(), atom(), arity(), [{atom(), any()}]) :: info()
-  def require_cb(info, name, arity, properties) do
+  def require_cb(info, name, arity, properties \\ []) do
     quoted =
       quote do
-        Skitter.DSL.Component.require_cb(unquote(name), unquote(arity), unquote(properties))
+        __MODULE__
+        |> Skitter.DSL.Component._info_before_compile()
+        |> Map.get({unquote(name), unquote(arity)})
+        |> case do
+          nil ->
+            raise Skitter.DefinitionError,
+                  "Missing required callback #{unquote(name)} with arity #{unquote(arity)}"
+
+          info ->
+            Skitter.Component.verify!(info, unquote(name), unquote(properties))
+        end
       end
 
     Map.update!(info, :inject, &(&1 ++ [quoted]))

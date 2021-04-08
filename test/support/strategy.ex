@@ -7,5 +7,8 @@
 import Skitter.DSL.Strategy
 
 defstrategy Dummy do
+  defhook define(c), do: c
   defhook deploy(_), do: nil
+  defhook send(_, _), do: nil
+  defhook receive(_, _, _), do: {nil, []}
 end
