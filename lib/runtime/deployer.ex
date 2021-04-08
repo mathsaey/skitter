@@ -4,11 +4,16 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Runtime do
+defmodule Skitter.Runtime.Deployer do
   @moduledoc false
 
-  alias __MODULE__
-  alias __MODULE__.{ConstantStore, Registry, WorkflowManagerSupervisor}
+  alias Skitter.Runtime.{
+    ConstantStore,
+    Registry,
+    WorkflowManagerSupervisor,
+    WorkflowWorkerSupervisor
+  }
+
   alias Skitter.{Component, Workflow, Port, Strategy}
 
   def deploy(workflow) do
@@ -42,7 +47,7 @@ defmodule Skitter.Runtime do
   end
 
   def store_local_supervisors(ref, components) do
-    {:ok, pid} = Runtime.WorkflowWorkerSupervisor.add_workflow(ref, components)
+    {:ok, pid} = WorkflowWorkerSupervisor.add_workflow(ref, components)
 
     pid
     |> Supervisor.which_children()

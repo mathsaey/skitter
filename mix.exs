@@ -125,7 +125,8 @@ defmodule Skitter.MixProject do
           Skitter.Manager,
           Skitter.Worker,
           Skitter.Deployment,
-          Skitter.Invocation
+          Skitter.Invocation,
+          Skitter.Node
         ],
         dsl: ~r/Skitter.DSL*/,
         utilities: [

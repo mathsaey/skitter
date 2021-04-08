@@ -8,5 +8,5 @@ defmodule Skitter do
   @moduledoc """
   Interface to the skitter system.
   """
-  def deploy(workflow), do: Skitter.Runtime.deploy(workflow)
+  def deploy(workflow), do: Skitter.Runtime.Deployer.deploy(workflow)
 end

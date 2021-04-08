@@ -2,6 +2,7 @@ defmodule Skitter.Remote do
   @moduledoc false
 
   alias __MODULE__.{Beacon, Handler}
+  alias __MODULE__.TaskSupervisor, as: Sup
 
   @doc """
   Attempt to connect to `remote`.
@@ -75,32 +76,32 @@ defmodule Skitter.Remote do
   @doc """
   Execute `mod.func(args)` on every specified remote runtime, obtain results in a list.
   """
-  @spec on_many([node()], module(), atom(), [any()]) :: [any()]
+  @spec on_many([node()], module(), atom(), [any()]) :: [{node(), any()}]
   def on_many(remotes, mod, func, args) do
     remotes
-    |> Enum.map(&Task.Supervisor.async({Skitter.Remote.TaskSupervisor, &1}, mod, func, args))
-    |> Enum.map(&Task.await(&1))
+    |> Enum.map(&{&1, Task.Supervisor.async({Sup, &1}, mod, func, args)})
+    |> Enum.map(fn {n, t} -> {n, Task.await(t)} end)
   end
 
   @doc """
   Execute `fun` on every specified remote runtime, obtain results in a list.
   """
-  @spec on_many([node()], (() -> any())) :: [any()]
+  @spec on_many([node()], (() -> any())) :: [{node(), any()}]
   def on_many(remotes, fun) do
     remotes
-    |> Enum.map(&Task.Supervisor.async({Skitter.Remote.TaskSupervisor, &1}, fun))
-    |> Enum.map(&Task.await(&1))
+    |> Enum.map(&{&1, Task.Supervisor.async({Sup, &1}, fun)})
+    |> Enum.map(fn {n, t} -> {n, Task.await(t)} end)
   end
 
   @doc """
   Execute `mod.func(args)` on `remote`, block until a result is available.
   """
   @spec on(node(), module(), atom(), [any()]) :: any()
-  def on(remote, mod, func, args), do: hd(on_many([remote], mod, func, args))
+  def on(remote, mod, func, args), do: on_many([remote], mod, func, args) |> hd() |> elem(1)
 
   @doc """
   Execute `fun` on `remote`, block until a result is available.
   """
   @spec on(node(), (() -> any())) :: any()
-  def on(remote, fun), do: hd(on_many([remote], fun))
+  def on(remote, fun), do: on_many([remote], fun) |> hd() |> elem(1)
 end
