@@ -23,12 +23,12 @@ defmodule Skitter.Runtime.Deployer do
     store_supervisors(ref, length(lst))
 
     lst
-    |> Enum.map(fn {_comp, links, _args} -> links end)
+    |> Enum.map(fn {_comp, _strat, links, _args} -> links end)
     |> ConstantStore.put_everywhere(:skitter_links, ref)
 
     lst
     |> Enum.with_index()
-    |> Enum.map(fn {{comp, _links, args}, idx} -> {comp, args, idx} end)
+    |> Enum.map(fn {{comp, strat, _links, args}, idx} -> {comp, strat, args, idx} end)
     |> Enum.map(&deploy_component(&1, ref))
     |> ConstantStore.put_everywhere(:skitter_deployment, ref)
 
@@ -36,10 +36,9 @@ defmodule Skitter.Runtime.Deployer do
     pid
   end
 
-  defp deploy_component({comp, args, idx}, ref) do
-    strategy = Component.strategy(comp)
-    context = %Strategy.Context{strategy: strategy, component: comp, _skr: {ref, idx}}
-    strategy.deploy(context, args)
+  defp deploy_component({comp, strat, args, idx}, ref) do
+    context = %Strategy.Context{strategy: strat, component: comp, _skr: {ref, idx}}
+    strat.deploy(context, args)
   end
 
   defp store_supervisors(ref, components) do
@@ -61,25 +60,34 @@ defmodule Skitter.Runtime.Deployer do
   # -------------------
 
   @spec convert_workflow(Workflow.t()) ::
-          [{Component.t(), [{Port.t(), [{non_neg_integer(), Port.t(), Component.t()}]}], any()}]
+          [
+            {
+              Component.t(),
+              Strategy.t(),
+              [{Port.t(), [{non_neg_integer(), Port.t(), Component.t()}]}],
+              any()
+            }
+          ]
   defp convert_workflow(workflow) do
-    lst =
-      workflow
-      |> Skitter.Workflow.flatten()
-      |> Map.fetch!(:nodes)
-      |> Enum.to_list()
-
+    lst = workflow |> Skitter.Workflow.flatten() |> Map.fetch!(:nodes) |> Enum.to_list()
     table = lookup_table(lst)
 
-    lst
-    |> Enum.map(&elem(&1, 1))
-    |> Enum.map(&{&1.component, update_links(&1.links, table), &1.args})
+    Enum.map(lst, fn {_, comp} ->
+      {mod, strat} = read_comp(comp)
+      {mod, strat, update_links(comp.links, table), comp.args}
+    end)
   end
+
+  defp read_comp(%{component: comp, strategy: nil}), do: {comp, Component.strategy(comp)}
+  defp read_comp(%{component: comp, strategy: strat}), do: {comp, strat}
 
   defp lookup_table(lst) do
     lst
     |> Enum.with_index()
-    |> Enum.map(fn {{name, comp}, idx} -> {name, {idx, comp.component}} end)
+    |> Enum.map(fn {{name, comp}, idx} ->
+      {comp, strat} = read_comp(comp)
+      {name, {idx, comp, strat}}
+    end)
     |> Map.new()
   end
 
@@ -87,8 +95,8 @@ defmodule Skitter.Runtime.Deployer do
     Enum.map(lst, fn {out, dsts} ->
       dsts =
         Enum.map(dsts, fn {name, port} ->
-          {idx, comp} = table[name]
-          {idx, port, comp, Component.strategy(comp)}
+          {idx, comp, strat} = table[name]
+          {idx, port, comp, strat}
         end)
 
       {out, dsts}

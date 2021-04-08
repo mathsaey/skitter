@@ -151,7 +151,7 @@ defmodule Skitter.DSL.Workflow do
       ...>   workflow.foo ~> node(Example) ~> joiner.left
       ...>   workflow.bar ~> node(Example) ~> joiner.right
       ...>
-      ...>   node(Join, as: joiner)
+      ...>   node(Join, with: SomeStrategy, as: joiner)
       ...>   ~> node(Example, args: :some_args)
       ...>   ~> workflow.baz
       ...> end
@@ -169,7 +169,7 @@ defmodule Skitter.DSL.Workflow do
             component: Example, args: nil, links: [out_port: [joiner: :right]]
           },
           joiner: %Skitter.Workflow.Node.Component{
-            component: Join, args: nil, links: [_: ["skitter/dsl/workflow_test/example#3": :in_port]]
+            component: Join, args: nil, strategy: SomeStrategy, links: [_: ["skitter/dsl/workflow_test/example#3": :in_port]]
           },
           "skitter/dsl/workflow_test/example#3": %Skitter.Workflow.Node.Component{
             component: Example, args: :some_args, links: [out_port: [:baz]]
@@ -234,6 +234,10 @@ defmodule Skitter.DSL.Workflow do
   - `args:` defines the arguments to pass to the node. Note that this is only relevant for
   component nodes. Arguments passed to workflow nodes are ignored. If no arguments are provided,
   the arguments of the node defaults to `nil`.
+  - `with:` defines the strategy to pass to the node. Note that this is only relevant for
+  component nodes. When a strategy is provided here, it will override the one defined by the
+  component. If no strategy is provided, `nil` is passed, in which case the component's default
+  strategy will be used.
 
   ## Examples
 
@@ -241,23 +245,23 @@ defmodule Skitter.DSL.Workflow do
       ...>   node Example
       ...>   node Example, as: example_1
       ...>   node Example, args: :args
-      ...>   node Example, as: example_2, args: :args
+      ...>   node Example, as: example_2, args: :args, with: SomeStrategy
       ...> end
       %Skitter.Workflow{
         in: [],
         out: [],
         nodes: %{
           "skitter/dsl/workflow_test/example#1": %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, links: []
+            component: Example, args: nil, strategy: nil, links: []
           },
           example_1:  %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, links: []
+            component: Example, args: nil, strategy: nil, links: []
           },
           "skitter/dsl/workflow_test/example#2": %Skitter.Workflow.Node.Component{
-            component: Example, args: :args, links: []
+            component: Example, args: :args, strategy: nil, links: []
           },
           example_2:  %Skitter.Workflow.Node.Component{
-            component: Example, args: :args, links: []
+            component: Example, args: :args, strategy: SomeStrategy, links: []
           },
         }
       }
@@ -285,11 +289,12 @@ defmodule Skitter.DSL.Workflow do
       end
 
     args = Keyword.get(opts, :args)
+    strat = Keyword.get(opts, :with)
 
     quote do
       node = unquote(comp_or_wf)
       name = unquote(name)
-      node = unquote(__MODULE__)._make_node(unquote(comp_or_wf), unquote(args))
+      node = unquote(__MODULE__)._make_node(unquote(comp_or_wf), unquote(args), unquote(strat))
       unquote(node_var()) = Map.put(unquote(node_var()), name, node)
       {name, node}
     end
@@ -423,8 +428,9 @@ defmodule Skitter.DSL.Workflow do
 
   defp maybe_transform_ast(any), do: any
 
-  def _make_node(atom, args) when is_atom(atom), do: %C{component: atom, args: args}
-  def _make_node(wf = %Workflow{}, _), do: %W{workflow: wf}
+  def _make_node(m, a, s) when is_atom(m), do: %C{component: m, args: a, strategy: s}
+
+  def _make_node(wf = %Workflow{}, _, _), do: %W{workflow: wf}
 
   def _make_link({ln, ls}, {rn, rs}) when is_struct(ls) and is_struct(rs) do
     {{ln, implicit_out_port(ls)}, {rn, implicit_in_port(rs)}}

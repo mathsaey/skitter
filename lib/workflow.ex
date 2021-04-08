@@ -20,7 +20,7 @@ defmodule Skitter.Workflow do
   not recommended to define a workflow manually. Instead, the use of
   `Skitter.DSL.Workflow.workflow/2` is preferred.
   """
-  alias Skitter.{Component, Port, DefinitionError}
+  alias Skitter.{Component, Strategy, Port, DefinitionError}
 
   # ----- #
   # Types #
@@ -44,11 +44,13 @@ defmodule Skitter.Workflow do
   @typedoc """
   Component embedded inside a workflow.
 
-  A component in a workflow is stored along with its initialization arguments (which are passed to
-  `c:Skitter.Strategy.deploy/2`) and the outgoing links of each of its out ports.
+  A component in a workflow is stored along with its strategy, initialization arguments (which
+  are passed to `c:Skitter.Strategy.deploy/2`) and the outgoing links of each of its out ports.
+  Note that a strategy specified here takes presedence over the strategy defined by the component.
   """
   @type component :: %__MODULE__.Node.Component{
           component: Component.t(),
+          strategy: Strategy.t(),
           args: any(),
           links: links()
         }
@@ -94,7 +96,7 @@ defmodule Skitter.Workflow do
     @moduledoc false
     defmodule Component do
       @moduledoc false
-      defstruct [:component, :args, links: []]
+      defstruct [:component, :strategy, :args, links: []]
     end
 
     defmodule Workflow do
