@@ -7,20 +7,20 @@
 defmodule Skitter.DSL.ComponentTest do
   use ExUnit.Case, async: true
 
-  import Skitter.DSL.{Component, Strategy}
+  import Skitter.DSL.Component
   import Skitter.DSL.Test.Assertions
 
   alias Skitter.Component
   alias Skitter.Component.Callback.{Info, Result}
 
-  defcomponent FieldsExample, strategy: Dummy do
+  defcomponent FieldsExample do
     fields foo: 42
   end
 
-  defcomponent NoFields, strategy: Dummy do
+  defcomponent NoFields do
   end
 
-  defcomponent Average, in: value, out: current, strategy: Dummy do
+  defcomponent Average, in: value, out: current do
     fields total: 0, count: 0
 
     defcb react(value) do
@@ -31,29 +31,29 @@ defmodule Skitter.DSL.ComponentTest do
     end
   end
 
-  defcomponent ReadExample, strategy: Dummy do
+  defcomponent ReadExample do
     fields [:field]
     defcb read(), do: ~f{field}
   end
 
-  defcomponent WriteExample, strategy: Dummy do
+  defcomponent WriteExample do
     fields [:field]
     defcb write(), do: field <~ :bar
   end
 
-  defcomponent WrongWriteExample, strategy: Dummy do
+  defcomponent WrongWriteExample do
     fields [:field]
     defcb write(), do: doesnotexist <~ :bar
   end
 
-  defcomponent PublishExample, strategy: Dummy do
+  defcomponent PublishExample do
     defcb publish(value) do
       value ~> some_port
       :foo ~> some_other_port
     end
   end
 
-  defcomponent CbExample, strategy: Dummy do
+  defcomponent CbExample do
     defcb simple(), do: nil
     defcb arguments(arg1, arg2), do: arg1 + arg2
     defcb state(), do: counter <~ (~f{counter} + 1)
@@ -65,16 +65,9 @@ defmodule Skitter.DSL.ComponentTest do
   describe "defcomponent" do
     test "multiple fields results in error" do
       assert_definition_error ~r/.*: Only one fields declaration is allowed/ do
-        defcomponent ShouldError, strategy: Dummy do
+        defcomponent ShouldError do
           fields a: 1
           fields b: 2
-        end
-      end
-    end
-
-    test "no strategy results in error" do
-      assert_definition_error ~r/Missing strategy/ do
-        defcomponent ShouldError do
         end
       end
     end
@@ -87,7 +80,7 @@ defmodule Skitter.DSL.ComponentTest do
     end
   end
 
-  defcomponent Clauses, strategy: Dummy do
+  defcomponent Clauses do
     fields [:x, :y]
 
     defcb f(:foo), do: x <~ :foo
@@ -123,7 +116,7 @@ defmodule Skitter.DSL.ComponentTest do
 
   describe "control flow rewrite" do
     test "if does not influence normal if" do
-      defcomponent NormalIf, strategy: Dummy do
+      defcomponent NormalIf do
         defcb test1() do
           if true, do: 10
         end
@@ -143,7 +136,7 @@ defmodule Skitter.DSL.ComponentTest do
     end
 
     test "if allows state and publish updates" do
-      defcomponent StateIf, strategy: Dummy do
+      defcomponent StateIf do
         defcb publish(arg) do
           if arg do
             :foo ~> true_port
@@ -174,7 +167,7 @@ defmodule Skitter.DSL.ComponentTest do
 
     test "if throws when fields are incompatible" do
       assert_definition_error ~r/Incompatible writes in control structure..*/ do
-        defcomponent ErrorIf, strategy: Dummy do
+        defcomponent ErrorIf do
           defcb test() do
             if true do
               x <~ :foo
@@ -187,7 +180,7 @@ defmodule Skitter.DSL.ComponentTest do
     end
 
     test "case does not influece normal case" do
-      defcomponent NormalCase, strategy: Dummy do
+      defcomponent NormalCase do
         defcb test() do
           case 5 do
             5 -> 10
@@ -199,7 +192,7 @@ defmodule Skitter.DSL.ComponentTest do
     end
 
     test "case can update state" do
-      defcomponent StateCase, strategy: Dummy do
+      defcomponent StateCase do
         defcb test() do
           case 5 do
             5 ->
@@ -212,7 +205,7 @@ defmodule Skitter.DSL.ComponentTest do
     end
 
     test "case can publish" do
-      defcomponent PublishCase, strategy: Dummy do
+      defcomponent PublishCase do
         defcb test(arg) do
           case arg do
             1 -> :foo ~> out
@@ -227,7 +220,7 @@ defmodule Skitter.DSL.ComponentTest do
 
     test "case throws when fields are incompatible" do
       assert_definition_error ~r/Incompatible writes in control structure..*/ do
-        defcomponent ErrorCase, strategy: Dummy do
+        defcomponent ErrorCase do
           defcb test() do
             case arg do
               1 -> x <~ 1

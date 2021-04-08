@@ -14,31 +14,7 @@ defmodule Skitter.DSL.Component do
   state, update the state or publish data.
   """
   alias Skitter.DSL.AST
-  alias Skitter.{Component.Callback.Info, DefinitionError, Port, Strategy, Strategy.Context}
-
-  @typedoc """
-  Component information before compilation.
-
-  This struct contains the information tracked by the component DSL before it is compiled. This
-  information is passed to the `c:Skitter.Strategy.define/2` hook, which can use this information to
-  verify the correctness of the component definition and inject additional code. Any changes made
-  to this struct are reflected in the generated module.
-
-  The following information is tracked:
-
-  - `in`: the list of in ports
-  - `out`: the list of out ports
-  - `strategy`: the strategy of the component
-  - `inject`: additional code to add to the component before it is compiled.
-  """
-  @type info :: %__MODULE__{
-          in: [Port.t()],
-          out: [Port.t()],
-          strategy: Strategy.t(),
-          inject: [Macro.t()]
-        }
-
-  defstruct [:in, :out, :strategy, :callbacks, :inject]
+  alias Skitter.{Component.Callback.Info, DefinitionError}
 
   # --------- #
   # Component #
@@ -63,7 +39,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent FieldsExample, strategy: Dummy do
+  defcomponent FieldsExample do
     fields foo: 42
   end
   ```
@@ -72,7 +48,7 @@ defmodule Skitter.DSL.Component do
       %FieldsExample{foo: 42}
 
   ```
-  defcomponent NoFields, strategy: Dummy do
+  defcomponent NoFields do
   end
   ```
 
@@ -99,10 +75,10 @@ defmodule Skitter.DSL.Component do
   The component Strategy and its in -and out ports can be defined in the header of the component
   declaration as follows:
 
-      iex> defcomponent SignatureExample, in: [a, b, c], out: [y, z], strategy: Dummy do
+      iex> defcomponent SignatureExample, in: [a, b, c], out: [y, z], strategy: SomeStrategy do
       ...> end
       iex> Component.strategy(SignatureExample)
-      Dummy
+      SomeStrategy
       iex> Component.in_ports(SignatureExample)
       [:a, :b, :c]
       iex> Component.out_ports(SignatureExample)
@@ -112,61 +88,21 @@ defmodule Skitter.DSL.Component do
   Furthermore, if the component only has a single `in` or `out` port, the list notation can be
   omitted:
 
-      iex> defcomponent PortExample, in: a, strategy: Dummy do
+      iex> defcomponent PortExample, in: a do
       ...> end
       iex> Component.in_ports(PortExample)
       [:a]
       iex> Component.out_ports(PortExample)
       []
 
-  Finally, note that it is mandatory to specify the component's strategy:
-
-  ```
-  defcomponent NoStrategy do
-  end
-  ```
-
-  will raise a `Skitter.DefinitionError`
-
-  ### `c:Skitter.Strategy.define/2`
-
-  The strategy of a component may modify a component before it is defined. This is done through
-  the `c:Skitter.Strategy.define/2` hook, which is called by `defcomponent/3` _before_ the
-  generated module is compiled. This hook accepts a `t:info/0` argument, which contains
-  information about the component. Any changes made to this struct are propagated to the generated
-  module. For instance:
-
-      iex> defstrategy ChangePorts, extends: Dummy do
-      ...>   defhook define(info) do
-      ...>     %{info | in: [:new_port]}
-      ...>   end
-      ...> end
-      iex> defcomponent Example, in: some_port, strategy: ChangePorts do
-      ...> end
-      iex> Component.in_ports(Example)
-      [:new_port]
-
-  Besides this, a `t:info/0` struct has an `:inject` field, which defaults to an empty list. Any
-  code added to this list is added to the module before it is compiled.
-
-      iex> defstrategy AddFunction, extends: Dummy do
-      ...>   defhook define(info) do
-      ...>     %{info | inject: [quote(do: def(hello, do: "Hello, world!"))]}
-      ...>   end
-      ...> end
-      iex> defcomponent Example, strategy: AddFunction do
-      ...> end
-      iex> Example.hello()
-      "Hello, world!"
-
-  It is generally not needed to directly modify the `t:info/0` struct. Instead, this module
-  provides multiple "definition helpers" which accept a `t:info/0` struct to modify. These helpers
-  are automatically available inside the body of `Skitter.DSL.Strategy.defhook/2`.
+  The strategy may be omitted. In this case, a strategy _must_ be provided when the defined
+  component is embedded inside a workflow. If this is not done, an error will be raised when the
+  workflow is deployed.
 
   ## Examples
 
   ```
-  defcomponent Average, in: value, out: current, strategy: Dummy do
+  defcomponent Average, in: value, out: current do
     fields total: 0, count: 0
 
     defcb react(value) do
@@ -185,7 +121,7 @@ defmodule Skitter.DSL.Component do
 
 
       iex> Component.strategy(Average)
-      Dummy
+      nil
 
       iex> Component.call(Average, :react, [10])
       %Result{result: 10.0, publish: [current: 10.0], state: %Average{count: 1, total: 10}}
@@ -210,9 +146,7 @@ defmodule Skitter.DSL.Component do
         @behaviour Skitter.Component
         import unquote(__MODULE__), only: [fields: 1, defcb: 2]
 
-        @before_compile {unquote(__MODULE__), :strategy_hook}
         @before_compile {unquote(__MODULE__), :generate_callbacks}
-
         Module.register_attribute(__MODULE__, :_sk_callbacks, accumulate: true)
 
         @_sk_strategy unquote(strategy)
@@ -225,50 +159,10 @@ defmodule Skitter.DSL.Component do
     end
   end
 
-  defp read_strategy(nil, env), do: DefinitionError.inject("Missing strategy", env)
-
   defp read_strategy(mod, env) do
     case Macro.expand(mod, env) do
       mod when is_atom(mod) -> mod
       any -> DefinitionError.inject("Invalid strategy: `#{inspect(any)}`", env)
-    end
-  end
-
-  @doc false
-  # Call the strategy define/2 hook and extract the results
-  defmacro strategy_hook(env) do
-    strategy = Module.get_attribute(env.module, :_sk_strategy)
-
-    hook_result =
-      strategy.define(
-        %Context{strategy: strategy, component: env.module},
-        %__MODULE__{
-          in: Module.get_attribute(env.module, :_sk_in_ports),
-          out: Module.get_attribute(env.module, :_sk_out_ports),
-          strategy: strategy,
-          inject: []
-        }
-      )
-
-    quote do
-      @_sk_in_ports unquote(hook_result.in)
-      @_sk_out_ports unquote(hook_result.out)
-      @_sk_strategy unquote(hook_result.strategy)
-
-      import unquote(__MODULE__),
-        only: [
-          default_cb: 3,
-          require_cb: 4,
-          arity: 1,
-          in_ports: 1,
-          out_ports: 1,
-          strategy: 1,
-          modify_in_ports: 2,
-          modify_out_ports: 2,
-          modify_strategy: 2
-        ]
-
-      unquote_splicing(hook_result.inject)
     end
   end
 
@@ -345,7 +239,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent ReadExample, strategy: Dummy do
+  defcomponent ReadExample do
     fields [:field]
     defcb read(), do: ~f{field}
   end
@@ -369,7 +263,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent WriteExample, strategy: Dummy do
+  defcomponent WriteExample do
     fields [:field]
     defcb write(), do: field <~ :bar
   end
@@ -378,7 +272,7 @@ defmodule Skitter.DSL.Component do
       :bar
 
   ```
-  defcomponent WrongWriteExample, strategy: Dummy do
+  defcomponent WrongWriteExample do
     fields [:field]
     defcb write(), do: doesnotexist <~ :bar
   end
@@ -441,7 +335,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent PublishExample, strategy: Dummy do
+  defcomponent PublishExample do
     defcb publish(value) do
       value ~> some_port
       :foo ~> some_other_port
@@ -498,7 +392,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent CbExample, strategy: Dummy do
+  defcomponent CbExample do
     defcb simple(), do: nil
     defcb arguments(arg1, arg2), do: arg1 + arg2
     defcb state(), do: counter <~ (~f{counter} + 1)
@@ -563,229 +457,5 @@ defmodule Skitter.DSL.Component do
         }
       end
     end
-  end
-
-  # -------------- #
-  # Before Compile #
-  # -------------- #
-
-  @doc """
-  Get the arity of a component before it is defined.
-  """
-  @doc section: :pre_compile
-  @spec arity(info()) :: arity()
-  def arity(%__MODULE__{in: ports}), do: length(ports)
-
-  @doc """
-  Get the in ports of a component before it is defined.
-  """
-  @doc section: :pre_compile
-  @spec in_ports(info()) :: [Port.t()]
-  def in_ports(%__MODULE__{in: ports}), do: ports
-
-  @doc """
-  Get the out ports of a component before it is defined.
-  """
-  @doc section: :pre_compile
-  @spec out_ports(info()) :: [Port.t()]
-  def out_ports(%__MODULE__{out: ports}), do: ports
-
-  @doc """
-  Get the strategy of a component before it is defined.
-  """
-  @doc section: :pre_compile
-  @spec strategy(info()) :: Strategy.t()
-  def strategy(%__MODULE__{strategy: strategy}), do: strategy
-
-  @doc """
-  Update the in ports of a component before it is defined.
-
-  This function can be called with a new value for the in ports, or with a function. If a value
-  is provided, it will be used as the new value for in_ports. When a function is provided, it
-  will be called with the current in ports. The return value of the function will be used as the
-  new value for in ports.
-
-  ## Examples
-
-      iex> defstrategy ModifyInPorts, extends: Dummy do
-      ...>   defhook define(component), do: modify_in_ports(component, [:bar])
-      ...> end
-      iex> defcomponent Example, in: foo, strategy: ModifyInPorts do
-      ...> end
-      iex> Component.in_ports(Example)
-      [:bar]
-      iex> defstrategy ModifyInPorts, extends: Dummy do
-      ...>   defhook define(component), do: modify_in_ports(component, &[:foo | &1])
-      ...> end
-      iex> defcomponent Example, in: bar, strategy: ModifyInPorts do
-      ...> end
-      iex> Component.in_ports(Example)
-      [:foo, :bar]
-  """
-  @doc section: :pre_compile
-  @spec modify_in_ports(info(), [Port.t()] | ([Port.t()] -> [Port.t()])) :: info()
-  def modify_in_ports(info, func) when is_function(func, 1) do
-    modify_in_ports(info, func.(in_ports(info)))
-  end
-
-  def modify_in_ports(info, ports), do: %{info | in: ports}
-
-  @doc """
-  Update the out ports of a component before it is defined.
-
-  This function can be called with a new value for the out ports, or with a function. If a value
-  is provided, it will be used as the new value for out_ports. When a function is provided, it
-  will be called with the current out ports. The return value of the function will be used as the
-  new value for out ports.
-
-  ## Examples
-
-      iex> defstrategy ModifyOutPorts, extends: Dummy do
-      ...>   defhook define(component), do: modify_out_ports(component, [:bar])
-      ...> end
-      iex> defcomponent Example, out: foo, strategy: ModifyOutPorts do
-      ...> end
-      iex> Component.out_ports(Example)
-      [:bar]
-      iex> defstrategy ModifyOutPorts, extends: Dummy do
-      ...>   defhook define(component), do: modify_out_ports(component, &[:foo | &1])
-      ...> end
-      iex> defcomponent Example, out: bar, strategy: ModifyOutPorts do
-      ...> end
-      iex> Component.out_ports(Example)
-      [:foo, :bar]
-  """
-  @doc section: :pre_compile
-  @spec modify_out_ports(info(), [Port.t()] | ([Port.t()] -> [Port.t()])) :: info()
-  def modify_out_ports(info, func) when is_function(func, 1) do
-    modify_out_ports(info, func.(out_ports(info)))
-  end
-
-  def modify_out_ports(info, ports), do: %{info | out: ports}
-
-  @doc """
-  Update the strategy ports of a component before it is defined.
-
-  Note that the `c:Skitter.Strategy.define/2` hook of the new strategy will not be called.
-
-  ## Examples
-
-      iex> defstrategy ModifyStrategy, extends: Dummy do
-      ...>   defhook define(component) do
-      ...>     modify_strategy(component, SomeOtherStrategy)
-      ...>   end
-      ...> end
-      iex> defcomponent Example, strategy: ModifyStrategy do
-      ...> end
-      iex> Component.strategy(Example)
-      SomeOtherStrategy
-  """
-  @doc section: :pre_compile
-  @spec modify_strategy(info(), Strategy.t()) :: info()
-  def modify_strategy(info, strategy) when is_atom(strategy), do: %{info | strategy: strategy}
-
-  @doc """
-  Add a callback if it does not exist yet.
-
-  This macro adds code to the generated component which adds a callback if a callback with the
-  specified signature does not exist (i.e. if there is no callback with the same name and arity
-  present in the module where this macro is used).
-
-  ## Examples
-
-      iex> defstrategy Default, extends: Dummy do
-      ...>   defhook define(component) do
-      ...>     default_cb(component, init()) do
-      ...>       :default
-      ...>     end
-      ...>   end
-      ...> end
-      iex> defcomponent Example, strategy: Default do
-      ...> end
-      iex> Component.call(Example, :init, []).result
-      :default
-      iex> defcomponent Example, strategy: Default do
-      ...>   defcb init(), do: :not_default
-      ...> end
-      iex> Component.call(Example, :init, []).result
-      :not_default
-  """
-  @doc section: :pre_compile
-  defmacro default_cb(info, signature, do: body) do
-    {name, args} = Macro.decompose_call(signature)
-    arity = length(args)
-
-    quoted =
-      quote do
-        import unquote(__MODULE__), only: [_info_before_compile: 1, defcb: 2]
-
-        unless Map.has_key?(_info_before_compile(__MODULE__), {unquote(name), unquote(arity)}) do
-          defcb(unquote(signature), do: unquote(body))
-        end
-      end
-      |> Macro.escape()
-
-    quote do
-      Map.update!(unquote(info), :inject, &(&1 ++ [unquote(quoted)]))
-    end
-  end
-
-  @doc """
-  Ensure a callback exists and verify its properties.
-
-  This function adds code to the generated component which ensures a callback with `name` and
-  `arity` exists. If the callback does not exist, a`Skitter.DefinitionError` is raised. If the
-  callback exists, its properties are verified using `Skitter.Component.verify!/3`.
-
-  ## Examples
-
-      iex> defstrategy Require, extends: Dummy do
-      ...>   defhook define(component) do
-      ...>     require_cb(component, :react, arity(component), publish?: false)
-      ...>   end
-      ...> end
-      iex> defcomponent Example, out: port, strategy: Require do
-      ...> end
-      ** (Skitter.DefinitionError) Missing required callback react with arity 0
-
-      iex> defstrategy Require, extends: Dummy do
-      ...>   defhook define(component) do
-      ...>     require_cb(component, :react, arity(component), publish?: false)
-      ...>   end
-      ...> end
-      iex> defcomponent Example, out: port, strategy: Require do
-      ...>   defcb react(), do: :foo ~> port
-      ...> end
-      ** (Skitter.DefinitionError) Incorrect publish for callback react, expected [], got [:port]
-
-      iex> defstrategy Require, extends: Dummy do
-      ...>   defhook define(component) do
-      ...>     require_cb(component, :react, arity(component), publish?: false)
-      ...>   end
-      ...> end
-      iex> defcomponent Example, out: port, strategy: Require do
-      ...>   defcb react(), do: :ok
-      ...> end
-
-  """
-  @doc section: :pre_compile
-  @spec require_cb(info(), atom(), arity(), [{atom(), any()}]) :: info()
-  def require_cb(info, name, arity, properties \\ []) do
-    quoted =
-      quote do
-        __MODULE__
-        |> Skitter.DSL.Component._info_before_compile()
-        |> Map.get({unquote(name), unquote(arity)})
-        |> case do
-          nil ->
-            raise Skitter.DefinitionError,
-                  "Missing required callback #{unquote(name)} with arity #{unquote(arity)}"
-
-          info ->
-            Skitter.Component.verify_info!(info, unquote(name), unquote(properties))
-        end
-      end
-
-    Map.update!(info, :inject, &(&1 ++ [quoted]))
   end
 end

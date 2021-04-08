@@ -55,23 +55,6 @@ defmodule Skitter.Strategy do
   end
 
   @doc """
-  Add code to a component defined with `Skitter.DSL.Component.defcomponent/3`
-
-  This hook is called when a component is defined by the skitter component DSL. It can be used to
-  modify the defined component or to verify its properties. Additional information about this hook
-  can be found in the documentation of `Skitter.DSL.Component.defcomponent/3`.
-
-  ## Context
-
-  When this hook is called, the `t:context/0` contains the strategy and the module name of the
-  component that is being defined. Note that when this hook is called the component module has not
-  been compiled yet. It is therefore not possible to use functions defined in `Skitter.Component`
-  on this component.
-  """
-  @callback define(context(), component_info :: Skitter.DSL.Component.info()) ::
-              Skitter.DSL.Component.info()
-
-  @doc """
   Deploy a component over the cluster.
 
   This hook is called by the runtime system when a component has to be distributed over the

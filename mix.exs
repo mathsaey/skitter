@@ -132,9 +132,6 @@ defmodule Skitter.MixProject do
         utilities: [
           Skitter.Dot
         ]
-      ],
-      groups_for_functions: [
-        "Definition helpers": &(&1[:section] == :pre_compile)
       ]
     ]
   end

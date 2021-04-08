@@ -36,6 +36,10 @@ defmodule Skitter.Runtime.Deployer do
     pid
   end
 
+  defp deploy_component({comp, nil, _, _}, _) do
+    raise Skitter.DefinitionError, "Component #{comp} does not define a strategy"
+  end
+
   defp deploy_component({comp, strat, args, idx}, ref) do
     context = %Strategy.Context{strategy: strat, component: comp, _skr: {ref, idx}}
     strat.deploy(context, args)

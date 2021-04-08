@@ -121,7 +121,7 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> defcomponent Example, in: p, out: p, strategy: Dummy do
+      iex> defcomponent Example, in: p, out: p do
       ...> end
       iex> verify(%Workflow{nodes: %{
       ...>   foo: %Node.Component{component: Example, links: [p: [bar: :p]]},
@@ -157,7 +157,7 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> defcomponent Example, in: p, out: p, strategy: Dummy do
+      iex> defcomponent Example, in: p, out: p do
       ...> end
       iex> verify!(%Workflow{nodes: %{
       ...>   foo: %Node.Component{component: Example, links: [p: [bar: :p]]},
@@ -225,9 +225,9 @@ defmodule Skitter.Workflow do
   will be converted to:
   ![](assets/docs_workflow_inline_after.png)
 
-      iex> defcomponent Simple, in: p, out: p, strategy: Dummy do
+      iex> defcomponent Simple, in: p, out: p do
       ...> end
-      iex> defcomponent Join, in: [left, right], out: p, strategy: Dummy do
+      iex> defcomponent Join, in: [left, right], out: p do
       ...> end
       iex> inner = %Workflow{
       ...>   in: [foo: [node1: :p, node2: :p]],

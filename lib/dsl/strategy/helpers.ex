@@ -15,25 +15,6 @@ defmodule Skitter.DSL.Strategy.Helpers do
   syntactic sugar over calling existing functions with arguments based on the context passed to
   the strategy hook.
   """
-  defmacro __using__(hook: :define) do
-    quote do
-      import unquote(__MODULE__), only: [error: 1]
-
-      import Skitter.DSL.Component,
-        only: [
-          default_cb: 3,
-          require_cb: 3,
-          require_cb: 4,
-          arity: 1,
-          in_ports: 1,
-          out_ports: 1,
-          strategy: 1,
-          modify_in_ports: 2,
-          modify_out_ports: 2,
-          modify_strategy: 2
-        ]
-    end
-  end
 
   defmacro __using__(_) do
     quote do
