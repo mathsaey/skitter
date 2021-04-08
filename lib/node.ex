@@ -8,6 +8,7 @@ defmodule Skitter.Node do
   @moduledoc """
   Remote Skitter runtime.
   """
+  alias Skitter.Runtime.Registry
 
   @doc """
   Execute a function on every worker node.
@@ -22,4 +23,10 @@ defmodule Skitter.Node do
   """
   @spec self() :: node()
   def self(), do: Node.self()
+
+  @doc """
+  Get a list of all the workers in the cluster.
+  """
+  @spec workers() :: [node()]
+  def workers(), do: Registry.all()
 end
