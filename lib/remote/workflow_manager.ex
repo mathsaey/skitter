@@ -29,9 +29,11 @@ defmodule Skitter.Runtime.WorkflowManager do
     links = ConstantStore.get_all(:skitter_links, ref)
 
     Remote.on(node, fn ->
-      ConstantStore.put(:skitter_deployment, deployment)
-      ConstantStore.put(:skitter_links, links)
+      ConstantStore.put(deployment, :skitter_deployment, ref)
+      ConstantStore.put(links, :skitter_links, ref)
       Runtime.store_local_supervisors(ref, length(links))
     end)
+
+    {:noreply, ref}
   end
 end
