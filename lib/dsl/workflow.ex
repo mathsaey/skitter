@@ -152,7 +152,7 @@ defmodule Skitter.DSL.Workflow do
       ...>   workflow.bar ~> node(Example) ~> joiner.right
       ...>
       ...>   node(Join, as: joiner)
-      ...>   ~> node(Example, with: :some_args)
+      ...>   ~> node(Example, args: :some_args)
       ...>   ~> workflow.baz
       ...> end
       %Skitter.Workflow{
@@ -226,12 +226,12 @@ defmodule Skitter.DSL.Workflow do
   `t:Skitter.Workflow.component/0` or `t:Skitter.Workflow.workflow/0`. No links will be added to
   the generated node.
 
-  Two options can be passed when creating a node: `as:` and `with:`:
+  Two options can be passed when creating a node: `as:` and `args:`:
 
   - `as:` defines the name of the node inside the workflow. It can be used to refer to the
   component when creating links with `~>/2`. If no name is specified, this macro will generate a
   name.
-  - `with:` defines the arguments to pass to the node. Note that this is only relevant for
+  - `args:` defines the arguments to pass to the node. Note that this is only relevant for
   component nodes. Arguments passed to workflow nodes are ignored. If no arguments are provided,
   the arguments of the node defaults to `nil`.
 
@@ -240,8 +240,8 @@ defmodule Skitter.DSL.Workflow do
       iex> inner = workflow do
       ...>   node Example
       ...>   node Example, as: example_1
-      ...>   node Example, with: :args
-      ...>   node Example, as: example_2, with: :args
+      ...>   node Example, args: :args
+      ...>   node Example, as: example_2, args: :args
       ...> end
       %Skitter.Workflow{
         in: [],
@@ -264,7 +264,7 @@ defmodule Skitter.DSL.Workflow do
       iex> workflow do
       ...>   node inner
       ...>   node inner, as: nested_1
-      ...>   node inner, with: :will_be_ignored, as: nested_2
+      ...>   node inner, args: :will_be_ignored, as: nested_2
       ...> end
       %Skitter.Workflow{
         in: [],
@@ -284,7 +284,7 @@ defmodule Skitter.DSL.Workflow do
         nil -> quote(do: unquote(__MODULE__)._gen_name(node))
       end
 
-    args = Keyword.get(opts, :with)
+    args = Keyword.get(opts, :args)
 
     quote do
       node = unquote(comp_or_wf)
