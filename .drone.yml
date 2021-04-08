@@ -48,7 +48,7 @@ steps:
       - mix deps.compile
       - epmd -daemon
       - mix test
-      - mix dialyzer
+      # - mix dialyzer
 
 ---
 kind: pipeline
