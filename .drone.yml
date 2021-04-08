@@ -44,7 +44,7 @@ steps:
     commands:
       - mix local.hex --force
       - mix local.rebar --force
-      - mix deps.get --only dev
+      - mix deps.get
       - mix deps.compile
       - epmd -daemon
       - mix test

@@ -60,6 +60,8 @@ defmodule Skitter.Runtime.Application do
     )
   end
 
+  defp start(:none), do: Supervisor.start_link([], strategy: :one_for_one, name: __MODULE__)
+
   defp pre_start(:local) do
     banner(:local)
     :ok
@@ -84,6 +86,8 @@ defmodule Skitter.Runtime.Application do
     Registry.add(Node.self())
     :ok
   end
+
+  defp post_start(_), do: :ok
 
   # ------ #
   # Banner #

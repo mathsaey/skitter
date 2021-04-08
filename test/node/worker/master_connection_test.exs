@@ -37,7 +37,7 @@ defmodule Skitter.Node.Worker.MasterConnectionTest do
     assert MasterConnection.connect(master) == {:error, :already_connected}
   end
 
-  @tag remote: [remote: [config: [mode: :local], start_on_remote: [mode: :not_master]]]
+  @tag remote: [remote: [config: [mode: :none], start_on_remote: [mode: :not_master]]]
   test "connecting to a non-master", %{remote: remote} do
     assert MasterConnection.connect(remote) == {:error, :mode_mismatch}
   end
@@ -75,6 +75,7 @@ defmodule Skitter.Node.Worker.MasterConnectionTest do
     assert worker2 in Registry.all()
 
     Cluster.kill_node(worker1)
+    Process.sleep(100)
     :sys.get_state(manager)
     assert worker1 not in Registry.all()
   end

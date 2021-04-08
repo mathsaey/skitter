@@ -20,9 +20,9 @@ defmodule Skitter.Node.Master.WorkerConnectionTest do
 
   describe "connecting" do
     @tag remote: [
-           first: [config: [mode: :local], start_on_remote: [mode: :wrong_mode]],
+           first: [config: [mode: :none], start_on_remote: [mode: :wrong_mode]],
            second: [],
-           third: [config: [mode: :local], start_on_remote: [mode: :wrong_mode]]
+           third: [config: [mode: :none], start_on_remote: [mode: :wrong_mode]]
          ]
     test "handles multiple connections", %{first: first, second: second, third: third} do
       assert WorkerConnection.connect([first, second, third]) ==
@@ -39,7 +39,7 @@ defmodule Skitter.Node.Master.WorkerConnectionTest do
       assert worker in WorkerConnection.all()
     end
 
-    @tag remote: [remote: [config: [mode: :local], start_on_remote: [mode: :not_worker]]]
+    @tag remote: [remote: [config: [mode: :none], start_on_remote: [mode: :not_worker]]]
     test "rejects non-workers", %{remote: remote} do
       assert WorkerConnection.connect(remote) == {:error, [{remote, :mode_mismatch}]}
       assert not WorkerConnection.connected?(remote)

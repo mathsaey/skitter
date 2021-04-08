@@ -56,15 +56,10 @@ defmodule Skitter.Remote.Test.Case do
   end
 
   defp local_block(opts) do
-    mode = Keyword.get(opts, :mode, :test_mode)
+    mode = Keyword.get(opts, :mode, :test)
     handlers = Keyword.get(opts, :handlers, [])
 
     quote do
-      setup_all do
-        Application.stop(:skitter)
-        on_exit(fn -> Application.start(:skitter) end)
-      end
-
       setup do
         start_supervised!({Skitter.Remote.Supervisor, [unquote(mode), unquote(handlers)]})
         :ok
