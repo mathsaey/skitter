@@ -19,7 +19,7 @@ defmodule Skitter.Runtime.ConstantStore do
   @spec put_everywhere([any()], atom(), reference()) :: ref()
   def put_everywhere(term, atom, ref) do
     put(term, atom, ref)
-    Registry.on_all(__MODULE__, :put, [term, atom, ref])
+    Registry.on_all(__MODULE__, :put, [term, atom, ref]) |> hd()
   end
 
   def get_all(atom, ref) do
