@@ -24,5 +24,16 @@
     config_from_env: :*,
     config_enabled_if_set: :*,
     config_enabled_unless_set: :*
+  ],
+  export: [
+    locals_without_parens: [
+      defcomponent: :*,
+      defcb: :*,
+      fields: :*,
+      defstrategy: :*,
+      defhook: :*,
+      workflow: :*,
+      node: :*
+    ]
   ]
 ]
