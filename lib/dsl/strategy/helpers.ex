@@ -20,7 +20,7 @@ defmodule Skitter.DSL.Strategy.Helpers do
     quote do
       import Kernel, except: [send: 2]
       import unquote(__MODULE__)
-      alias Skitter.{Component, Worker, Invocation, Node}
+      alias Skitter.{Component, Worker, Invocation, Nodes}
     end
   end
 
