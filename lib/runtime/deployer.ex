@@ -11,9 +11,12 @@ defmodule Skitter.Runtime.Deployer do
     ConstantStore,
     Registry,
     WorkflowManagerSupervisor,
-    WorkflowWorkerSupervisor
+    WorkflowWorkerSupervisor,
+    WorkerSupervisor,
+    Worker
   }
 
+  require ConstantStore
   alias Skitter.{Component, Workflow, Port, Strategy}
 
   def deploy(workflow) do
@@ -23,14 +26,20 @@ defmodule Skitter.Runtime.Deployer do
     store_supervisors(ref, length(lst))
 
     lst
-    |> Enum.map(fn {_comp, _strat, links, _args} -> links end)
-    |> ConstantStore.put_everywhere(:skitter_links, ref)
-
-    lst
     |> Enum.with_index()
     |> Enum.map(fn {{comp, strat, _links, args}, idx} -> {comp, strat, args, idx} end)
     |> Enum.map(&deploy_component(&1, ref))
     |> ConstantStore.put_everywhere(:skitter_deployment, ref)
+
+    lst
+    |> Enum.map(fn {_comp, _strat, links, _args} ->
+      links
+      |> Enum.map(&expand_links(&1, ref))
+      |> Map.new()
+    end)
+    |> ConstantStore.put_everywhere(:skitter_links, ref)
+
+    notify_workers(ref)
 
     {:ok, pid} = WorkflowManagerSupervisor.add_manager(ref)
     pid
@@ -41,8 +50,21 @@ defmodule Skitter.Runtime.Deployer do
   end
 
   defp deploy_component({comp, strat, args, idx}, ref) do
-    context = %Strategy.Context{strategy: strat, component: comp, _skr: {ref, idx}}
+    context = %Strategy.Context{component: comp, strategy: strat, _skr: {:deploy, ref, idx}}
     strat.deploy(context, args)
+  end
+
+  defp expand_links({port, lst}, ref), do: {port, Enum.map(lst, &expand_link(&1, ref))}
+
+  defp expand_link({idx, port, comp, strat}, ref) do
+    context = %Strategy.Context{
+      component: comp,
+      strategy: strat,
+      deployment: ConstantStore.get(:skitter_deployment, ref, idx),
+      _skr: {ref, idx}
+    }
+
+    {context, port}
   end
 
   defp store_supervisors(ref, components) do
@@ -58,6 +80,16 @@ defmodule Skitter.Runtime.Deployer do
     |> Enum.sort_by(&elem(&1, 0))
     |> Enum.map(&elem(&1, 1))
     |> ConstantStore.put(:skitter_supervisors, ref)
+  end
+
+  defp notify_workers(ref) do
+    Registry.on_all(__MODULE__, :notify_local_workers, [ref])
+  end
+
+  def notify_local_workers(ref) do
+    ConstantStore.get_all(:skitter_supervisors, ref)
+    |> Enum.flat_map(&WorkerSupervisor.children/1)
+    |> Enum.each(&Worker.notify_deploy_complete/1)
   end
 
   # Workflow Conversion

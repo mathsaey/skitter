@@ -8,55 +8,52 @@ defmodule Skitter.Runtime.Worker do
   @moduledoc false
 
   use GenServer, restart: :transient
-
   alias Skitter.Runtime.ConstantStore
   require Skitter.Runtime.ConstantStore
 
-  defstruct [:component, :strategy, :idx, :ref, :links, :state, :context, :tag]
+  defstruct [:component, :strategy, :context, :idx, :ref, :links, :state, :tag]
 
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
+  def notify_deploy_complete(pid), do: GenServer.cast(pid, :sk_deployment_complete)
 
   @impl true
-  def init({context, state, tag}) when is_function(state, 0) do
-    {:ok, init_state(context, tag), {:continue, state}}
-  end
-
-  def init({context, state, tag}) do
-    {:ok, %{init_state(context, tag) | state: state}}
-  end
+  def init({context = %{_skr: {:deploy, _, _}}, state, tag}), do: {:ok, {context, state, tag}}
+  def init({context, state, tag}), do: {:ok, init_state({context, state, tag})}
 
   @impl true
-  def handle_continue(state_fn, srv) do
-    {:noreply, %{srv | state: state_fn.()}}
+  def handle_cast(:sk_deployment_complete, {context, state, tag}) do
+    context = update_in(context._skr, fn {:deploy, ref, idx} -> {ref, idx} end)
+    {:noreply, init_state({context, state, tag})}
   end
 
-  @impl true
   def handle_cast({:sk_msg, msg, inv}, srv), do: {:noreply, recv_hook(msg, inv, srv)}
   def handle_cast(:sk_stop, srv), do: {:stop, :normal, srv}
 
-  @impl true
-  def handle_info(msg, srv), do: {:noreply, recv_hook(msg, :external, srv)}
+  defp init_state({context, state, tag}) when is_function(state, 0) do
+    init_state({context, state.(), tag})
+  end
 
-  defp init_state(context, tag) do
+  defp init_state({context, state, tag}) do
     {ref, idx} = context._skr
 
     %__MODULE__{
       component: context.component,
       strategy: context.strategy,
-      idx: idx,
+      context: %{context | deployment: ConstantStore.get(:skitter_deployment, ref, idx)},
       links: ConstantStore.get(:skitter_links, ref, idx),
+      state: state,
+      idx: idx,
       ref: ref,
-      context: context,
       tag: tag
     }
   end
 
-  defp recv_hook(msg, inv, srv) do
-    %{strategy: str, context: cnt, ref: ref, idx: idx, tag: tag, state: state} = srv
-    dep_data = ConstantStore.get(:skitter_deployment, ref, idx)
-    res = str.receive(%{cnt | invocation: inv, deployment: dep_data}, msg, state, tag)
+  @impl true
+  def handle_info(msg, srv), do: {:noreply, recv_hook(msg, :external, srv)}
 
-    res |> Keyword.drop([:state]) |> maybe_publish(srv)
+  defp recv_hook(msg, inv, srv) do
+    res = srv.strategy.receive(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
+    res |> Keyword.drop([:state]) |> maybe_publish(srv, inv)
 
     case Keyword.fetch(res, :state) do
       {:ok, state} -> %{srv | state: state}
@@ -64,40 +61,22 @@ defmodule Skitter.Runtime.Worker do
     end
   end
 
-  defp maybe_publish([], _), do: nil
+  defp maybe_publish([], _, _), do: nil
 
-  defp maybe_publish([publish: lst], %{links: links, context: ctx, ref: ref}) do
+  defp maybe_publish([publish: lst], srv, invocation) do
     Enum.each(lst, fn {port, value} ->
-      links
-      |> Keyword.get(port, [])
-      |> Enum.each(fn {idx, port, comp, strat} ->
-        context = %{
-          ctx
-          | strategy: strat,
-            component: comp,
-            deployment: ConstantStore.get(:skitter_deployment, ref, idx),
-            _skr: {ref, idx}
-        }
-
-        strat.send(context, value, port)
+      Enum.each(srv.links[port] || [], fn {ctx, port} ->
+        ctx.strategy.send(%{ctx | invocation: invocation}, value, port)
       end)
     end)
   end
 
-  defp maybe_publish([publish_with_invocation: lst], %{links: links, context: ctx, ref: ref}) do
+  defp maybe_publish([publish_with_invocation: lst], srv, _) do
     Enum.each(lst, fn {port, lst} ->
-      links
-      |> Keyword.get(port, [])
-      |> Enum.each(fn {idx, port, comp, strat} ->
-        context = %{
-          ctx
-          | strategy: strat,
-            component: comp,
-            deployment: ConstantStore.get(:skitter_deployment, ref, idx),
-            _skr: {ref, idx}
-        }
-
-        Enum.each(lst, &strat.send(%{context | invocation: elem(&1, 1)}, elem(&1, 0), port))
+      Enum.each(srv.links[port] || [], fn {outer_ctx, port} ->
+        Enum.each(lst, fn {val, inv} ->
+          outer_ctx.strategy.send(%{outer_ctx | invocation: inv}, val, port)
+        end)
       end)
     end)
   end

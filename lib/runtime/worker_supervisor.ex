@@ -20,9 +20,21 @@ defmodule Skitter.Runtime.WorkerSupervisor do
     DynamicSupervisor.init(strategy: :one_for_one, max_restarts: 0)
   end
 
-  def add_worker(ctx = %{_skr: {ref, idx}}, state, tag) do
+  def add_worker(ctx, state, tag) do
+    {ref, idx} =
+      case ctx._skr do
+        {:deploy, ref, idx} -> {ref, idx}
+        {ref, idx} -> {ref, idx}
+      end
+
     pid = ConstantStore.get(:skitter_supervisors, ref, idx)
     {:ok, pid} = DynamicSupervisor.start_child(pid, {Skitter.Runtime.Worker, {ctx, state, tag}})
     pid
+  end
+
+  def children(pid) do
+    pid
+    |> DynamicSupervisor.which_children()
+    |> Enum.map(&elem(&1, 1))
   end
 end
