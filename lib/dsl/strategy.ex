@@ -14,18 +14,12 @@ defmodule Skitter.DSL.Strategy do
   used to read information from the current context.
 
   Note that it is possible to define a strategy as an elixir module which implements the
-  `Skitter.Strategy` behaviour. Using `defstrategy/3` instead offers two main advantages:
+  appropriate behaviour. Using `defstrategy/3` instead offers two main advantages:
 
   - The `t:Skitter.Strategy.context/0` of a hook is passed as an implicit argument, which can be
   accessed using the aforementioned macros.
   - A trait-like mechanism is introduced, which can be used to create new strategies based on
   existing ones.
-
-  ## Examples
-
-  Many strategies in this module's documentation extend the `Dummy` strategy. This is done to
-  prevent warnings related to the `Skitter.Strategy` behaviour and should not be considered a part
-  of the example code.
   """
 
   # -------- #
@@ -53,7 +47,7 @@ defmodule Skitter.DSL.Strategy do
   strategy. When a strategy extends another strategy, it will inherit all the hooks defined by the
   strategy it extends:
 
-      iex> defstrategy Parent, extends: Dummy do
+      iex> defstrategy Parent do
       ...>   defhook example, do: :example_hook
       ...> end
       iex> defstrategy Child, extends: Parent do
@@ -63,7 +57,7 @@ defmodule Skitter.DSL.Strategy do
 
   Inherited hooks can be overridden:
 
-      iex> defstrategy Parent, extends: Dummy do
+      iex> defstrategy Parent do
       ...>   defhook example, do: :parent
       ...> end
       iex> defstrategy Child, extends: Parent do
@@ -75,10 +69,10 @@ defmodule Skitter.DSL.Strategy do
   Finally, a strategy can extend multiple parent strategies. When this is done, the hooks of
   earlier parent strategies take precedence over later hooks:
 
-      iex> defstrategy Parent1, extends: Dummy do
+      iex> defstrategy Parent1 do
       ...>   defhook example, do: :parent1
       ...> end
-      iex> defstrategy Parent2, extends: Dummy do
+      iex> defstrategy Parent2 do
       ...>   defhook example, do: :parent2
       ...>   defhook another, do: :parent2
       ...> end
@@ -97,8 +91,6 @@ defmodule Skitter.DSL.Strategy do
 
     quote do
       defmodule unquote(name) do
-        @behaviour Skitter.Strategy
-
         # Required for hook "inheritance"
         @_sk_parents unquote(parents)
         @before_compile {unquote(__MODULE__), :add_parent_hooks}
@@ -129,7 +121,7 @@ defmodule Skitter.DSL.Strategy do
 
   ## Examples
 
-      iex> defstrategy FullContext, extends: Dummy do
+      iex> defstrategy FullContext do
       ...>   defhook read, do: context()
       ...> end
       iex> FullContext.read(%Context{component: SomeComponent})
@@ -146,7 +138,7 @@ defmodule Skitter.DSL.Strategy do
 
   ## Examples
 
-      iex> defstrategy ReadComponent, extends: Dummy do
+      iex> defstrategy ReadComponent do
       ...>   defhook read, do: component()
       ...> end
       iex> ReadComponent.read(%Context{component: SomeComponent})
@@ -159,7 +151,7 @@ defmodule Skitter.DSL.Strategy do
 
   ## Examples
 
-      iex> defstrategy ReadStrategy, extends: Dummy do
+      iex> defstrategy ReadStrategy do
       ...>   defhook read, do: strategy()
       ...> end
       iex> ReadStrategy.read(%Context{strategy: ReadStrategy})
@@ -172,7 +164,7 @@ defmodule Skitter.DSL.Strategy do
 
   ## Examples
 
-      iex> defstrategy ReadDeployment, extends: Dummy do
+      iex> defstrategy ReadDeployment do
       ...>   defhook read, do: deployment()
       ...> end
       iex> ReadDeployment.read(%Context{deployment: :some_deployment_data})
@@ -185,7 +177,7 @@ defmodule Skitter.DSL.Strategy do
 
   ## Examples
 
-      iex> defstrategy ReadInvocation, extends: Dummy do
+      iex> defstrategy ReadInvocation do
       ...>   defhook read, do: invocation()
       ...> end
       iex> ReadInvocation.read(%Context{invocation: :external})
@@ -211,10 +203,10 @@ defmodule Skitter.DSL.Strategy do
   body of a hook. When this occurs, `defhook/2` automatically passes the context argument to the
   hook that is called.
 
-      iex> defstrategy S1, extends: Dummy do
+      iex> defstrategy S1 do
       ...>   defhook example, do: "world!"
       ...> end
-      iex> defstrategy S2, extends: Dummy do
+      iex> defstrategy S2 do
       ...>   defhook example, do: "Hello, " <> S1.example()
       ...> end
       iex> S2.example(%Context{})
@@ -224,7 +216,7 @@ defmodule Skitter.DSL.Strategy do
   Therefore, a local hook should be called with a context argument. `context/0` can be used for
   this:
 
-      iex> defstrategy Local, extends: Dummy do
+      iex> defstrategy Local do
       ...>   defhook left, do: "Hello, "
       ...>   defhook right, do: "world!"
       ...>   defhook example, do: left(context()) <> right(context())
@@ -234,7 +226,7 @@ defmodule Skitter.DSL.Strategy do
 
   A hook of a child strategy can also be called dynamically in a similar way:
 
-      iex> defstrategy Abstract, extends: Dummy do
+      iex> defstrategy Abstract do
       ...>   defhook example, do: "Child says: " <> strategy().say(context())
       ...> end
       iex> defstrategy Child, extends: Abstract do

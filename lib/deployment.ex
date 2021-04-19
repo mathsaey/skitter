@@ -10,9 +10,9 @@ defmodule Skitter.Deployment do
 
   A reactive dataflow which is deployed over the cluster has access to an immutable set of data
   which is termed the _deployment_. Each strategy can specify which data to store in the
-  deployment in the `c:Skitter.Strategy.deploy/2` hook. The other strategy hooks (besides
-  `c:Skitter.Strategy.define/2`) have access to the data stored within the deployment. Note that a
-  strategy is only allowed to access its own deployment data.
+  deployment in the `c:Skitter.Strategy.Component.deploy/2` hook. The other strategy hooks have
+  access to the data stored within the deployment.  Note that a strategy is only able to access
+  its own deployment data.
   """
 
   @type data :: any()
