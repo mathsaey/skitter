@@ -121,6 +121,7 @@ defmodule Skitter.MixProject do
           Skitter.Workflow,
           Skitter.Strategy
         ],
+        "Runtime Hooks": ~r/Skitter.Strategy\..*/,
         "Runtime Constructs": [
           Skitter.Manager,
           Skitter.Worker,
