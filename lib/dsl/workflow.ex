@@ -65,13 +65,13 @@ defmodule Skitter.DSL.Workflow do
       iex> wf.nodes[:node1].links
       [out_port: [node2: :in_port]]
 
-  In order to link nodes to the in or out ports of the workflow, `workflow.port` should be used:
+  To link nodes to the in or out ports of a workflow, the port name should be used:
 
       iex> wf = workflow in: foo, out: bar do
       ...>   node Example, as: node
       ...>
-      ...>   workflow.foo ~> node.in_port
-      ...>   node.out_port ~> workflow.bar
+      ...>   foo ~> node.in_port
+      ...>   node.out_port ~> bar
       ...> end
       iex> wf.nodes[:node].links
       [out_port: [:bar]]
@@ -83,8 +83,8 @@ defmodule Skitter.DSL.Workflow do
       iex> inner = workflow in: foo, out: bar do
       ...>   node Example, as: node
       ...>
-      ...>   workflow.foo ~> node.in_port
-      ...>   node.out_port ~> workflow.bar
+      ...>   foo ~> node.in_port
+      ...>   node.out_port ~> bar
       ...> end
       iex> outer = workflow do
       ...>   node inner, as: inner_left
@@ -101,15 +101,13 @@ defmodule Skitter.DSL.Workflow do
   sugar can be used when creating a node:
 
       iex> wf = workflow in: foo do
-      ...>   workflow.foo
-      ...>   ~> node(Example, as: node)
+      ...>   foo ~> node(Example, as: node)
       ...> end
       iex> wf.in
       [foo: [node: :in_port]]
 
       iex> wf = workflow out: bar do
-      ...>   node(Example, as: node)
-      ...>   ~> workflow.bar
+      ...>   node(Example, as: node) ~> bar
       ...> end
       iex> wf.nodes[:node].links
       [out_port: [:bar]]
@@ -117,10 +115,10 @@ defmodule Skitter.DSL.Workflow do
   These uses of `~>/2` can be chained:
 
       iex> wf = workflow in: foo, out: bar do
-      ...>   workflow.foo
+      ...>   foo
       ...>   ~> node(Example, as: node1)
       ...>   ~> node(Example, as: node2)
-      ...>   ~> workflow.bar
+      ...>   ~> bar
       ...> end
       iex> wf.in
       [foo: [node1: :in_port]]
@@ -133,10 +131,10 @@ defmodule Skitter.DSL.Workflow do
   node. You should not rely on the format of the generated names in this case:
 
       iex> wf = workflow in: foo, out: bar do
-      ...>   workflow.foo
+      ...>   foo
       ...>   ~> node(Example)
       ...>   ~> node(Example)
-      ...>   ~> workflow.bar
+      ...>   ~> bar
       ...> end
       iex> wf.in
       [foo: ["skitter/dsl/workflow_test/example#1": :in_port]]
@@ -148,12 +146,12 @@ defmodule Skitter.DSL.Workflow do
   ## Examples
 
       iex> workflow in: [foo, bar], out: baz do
-      ...>   workflow.foo ~> node(Example) ~> joiner.left
-      ...>   workflow.bar ~> node(Example) ~> joiner.right
+      ...>   foo ~> node(Example) ~> joiner.left
+      ...>   bar ~> node(Example) ~> joiner.right
       ...>
       ...>   node(Join, with: SomeStrategy, as: joiner)
       ...>   ~> node(Example, args: :some_args)
-      ...>   ~> workflow.baz
+      ...>   ~> baz
       ...> end
       %Skitter.Workflow{
         in: [
@@ -353,7 +351,7 @@ defmodule Skitter.DSL.Workflow do
   Where source and destination have one of the following two forms:
 
   * `<component name>.<port name>`: specifies a component port
-  * `<workflow>.<port name>`: specifies a workflow port
+  * `<port name>`: specifies a workflow port
 
   For instance:
 
@@ -361,9 +359,9 @@ defmodule Skitter.DSL.Workflow do
       ...>   node Example, as: node1
       ...>   node Example, as: node2
       ...>
-      ...>   workflow.foo ~> node1.in_port   # workflow port ~> component port
+      ...>   foo ~> node1.in_port            # workflow port ~> component port
       ...>   node1.out_port ~> node2.in_port # component port ~> component port
-      ...>   node2.out_port ~> workflow.bar  # component port ~> workflow port
+      ...>   node2.out_port ~> bar           # component port ~> workflow port
       ...> end
       iex> wf.in
       [foo: [node1: :in_port]]
@@ -382,8 +380,8 @@ defmodule Skitter.DSL.Workflow do
   For instance:
 
       iex> wf = workflow in: foo, out: bar do
-      ...>   workflow.foo ~> node(Example, as: node1)
-      ...>   node(Example, as: node2) ~> workflow.bar
+      ...>   foo ~> node(Example, as: node1)
+      ...>   node(Example, as: node2) ~> bar
       ...> end
       iex> wf.in
       [foo: [node1: :in_port]]
@@ -403,7 +401,7 @@ defmodule Skitter.DSL.Workflow do
   Finally, `~>` always returns the right hand side as its result. This enables `~>` to be chained.
 
       iex> wf = workflow in: foo, out: bar do
-      ...>   workflow.foo ~> node(Example, as: node1) ~> node(Example, as: node2) ~> workflow.bar
+      ...>   foo ~> node(Example, as: node1) ~> node(Example, as: node2) ~> bar
       ...> end
       iex> wf.in
       [foo: [node1: :in_port]]
@@ -425,9 +423,8 @@ defmodule Skitter.DSL.Workflow do
     end
   end
 
-  defp maybe_transform_ast({{:., _, [{:workflow, _, _}, p]}, _, _}), do: p
   defp maybe_transform_ast({{:., _, [{n, _, _}, p]}, _, _}), do: {n, p} |> Macro.escape()
-
+  defp maybe_transform_ast({name, _, rhs}) when is_atom(name) and is_atom(rhs), do: name
   defp maybe_transform_ast(any), do: any
 
   def _make_node(m, a, s) when is_atom(m), do: %C{component: m, args: a, strategy: s}
