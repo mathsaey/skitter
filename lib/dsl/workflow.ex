@@ -379,6 +379,8 @@ defmodule Skitter.DSL.Workflow do
   * When the right hand side of `~>` is a node, a link is created between the source and the first
   in port of this node.
 
+  For instance:
+
       iex> wf = workflow in: foo, out: bar do
       ...>   workflow.foo ~> node(Example, as: node1)
       ...>   node(Example, as: node2) ~> workflow.bar
