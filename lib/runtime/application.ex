@@ -14,17 +14,14 @@ defmodule Skitter.Runtime.Application do
   alias Skitter.Node.{Worker, Master}
   alias Skitter.Runtime.{Config, Registry}
 
-  def start(:normal, []) do
-    mode = Config.get(:mode, :local)
+  def start(:normal, []), do: start(mode())
+  def start_phase(:sk_welcome, :normal, []), do: welcome(mode())
+  def start_phase(:sk_connect, :normal, []), do: connect(mode())
 
-    with :ok <- pre_start(mode),
-         {:ok, pid} <- start(mode),
-         :ok <- post_start(mode) do
-      {:ok, pid}
-    else
-      any -> any
-    end
-  end
+  defp mode, do: Skitter.Runtime.Config.get(:mode, :local)
+
+  # Application Supervision Tree
+  # ----------------------------
 
   defp start(:local) do
     Supervisor.start_link(
@@ -63,55 +60,46 @@ defmodule Skitter.Runtime.Application do
   # Tests take care of setting up their own supervisors as needed
   defp start(:test), do: Supervisor.start_link([], strategy: :one_for_one, name: __MODULE__)
 
-  defp pre_start(:local) do
-    banner(:local)
+  # Banner / Log
+  # ------------
+
+  defp welcome(mode) do
+    if IEx.started?() and Config.get(:banner, true), do: banner(mode), else: logline(mode)
+    if Node.alive?(), do: Logger.info("Reachable at `#{Node.self()}`")
     :ok
   end
 
-  defp pre_start(mode) do
-    logline(mode)
-    :ok
+  defp version, do: "v#{Application.spec(:skitter, :vsn)}"
+  defp logline(mode), do: Logger.info("Skitter #{version()} started in #{mode} mode")
+
+  defp banner(mode) do
+    logo =
+      if IO.ANSI.enabled?() do
+        "⬡⬢⬡⬢ #{IO.ANSI.italic()}Skitter#{IO.ANSI.reset()}"
+      else
+        "Skitter"
+      end
+
+    IO.puts("#{logo} #{version()} (#{mode})\n")
   end
 
-  defp post_start(:worker) do
+  # Connect
+  # -------
+
+  defp connect(:worker) do
     Worker.MasterConnection.connect()
     :ok
   end
 
-  defp post_start(:master) do
+  defp connect(:master) do
     Master.WorkerConnection.connect()
   end
 
-  defp post_start(:local) do
+  defp connect(:local) do
     Registry.start_link()
     Registry.add(Node.self())
     :ok
   end
 
-  defp post_start(_), do: :ok
-
-  # ------ #
-  # Banner #
-  # ------ #
-
-  defp version, do: "v#{Application.spec(:skitter, :vsn)}"
-
-  defp banner(mode) do
-    if Config.get(:banner, true) do
-      logo =
-        if IO.ANSI.enabled?() do
-          "⬡⬢⬡⬢ #{IO.ANSI.italic()}Skitter#{IO.ANSI.reset()}"
-        else
-          "Skitter"
-        end
-
-      IO.puts("#{logo} (#{mode}) #{version()}\n")
-    end
-  end
-
-  defp logline(mode) do
-    Logger.info("Skitter #{version()}")
-    Logger.info("Starting in #{mode} mode")
-    if Node.alive?(), do: Logger.info("Reachable at `#{Node.self()}`")
-  end
+  defp connect(_), do: :ok
 end
