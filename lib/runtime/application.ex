@@ -60,7 +60,8 @@ defmodule Skitter.Runtime.Application do
     )
   end
 
-  defp start(:none), do: Supervisor.start_link([], strategy: :one_for_one, name: __MODULE__)
+  # Tests take care of setting up their own supervisors as needed
+  defp start(:test), do: Supervisor.start_link([], strategy: :one_for_one, name: __MODULE__)
 
   defp pre_start(:local) do
     banner(:local)

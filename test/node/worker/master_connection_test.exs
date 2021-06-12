@@ -37,7 +37,7 @@ defmodule Skitter.Node.Worker.MasterConnectionTest do
     assert MasterConnection.connect(master) == {:error, :already_connected}
   end
 
-  @tag remote: [remote: [config: [mode: :none], start_on_remote: [mode: :not_master]]]
+  @tag remote: [remote: [config: [mode: :test], start_on_remote: [mode: :not_master]]]
   test "connecting to a non-master", %{remote: remote} do
     assert MasterConnection.connect(remote) == {:error, :mode_mismatch}
   end
