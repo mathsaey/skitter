@@ -17,6 +17,7 @@ defmodule Skitter.Runtime.Application do
   def start(:normal, []), do: start(mode())
   def start_phase(:sk_welcome, :normal, []), do: welcome(mode())
   def start_phase(:sk_connect, :normal, []), do: connect(mode())
+  def start_phase(:sk_deploy, :normal, []), do: deploy(mode())
 
   defp mode, do: Skitter.Runtime.Config.get(:mode, :local)
 
@@ -102,4 +103,21 @@ defmodule Skitter.Runtime.Application do
   end
 
   defp connect(_), do: :ok
+
+  # Deploy
+  # ------
+
+  defp deploy(mode) when mode in [:master, :local] do
+    if mfa = Config.get(:deploy) do
+      {m, f, a} = mfa
+      Logger.info("Deploying #{m}.#{f}(#{a |> Enum.map(&inspect/1) |> Enum.join(", ")})")
+      workflow = apply(m, f, a)
+      # TODO: store result when manager becomes useful
+      Skitter.deploy(workflow)
+    end
+
+    :ok
+  end
+
+  defp deploy(_), do: :ok
 end

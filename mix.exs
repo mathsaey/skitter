@@ -30,7 +30,7 @@ defmodule Skitter.MixProject do
   def application do
     [
       mod: {Skitter.Runtime.Application, []},
-      start_phases: [sk_welcome: [], sk_connect: []],
+      start_phases: [sk_welcome: [], sk_connect: [], sk_deploy: []],
       extra_applications: [:logger, :eex]
     ]
   end
