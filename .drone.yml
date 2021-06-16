@@ -4,7 +4,7 @@ name: docs
 
 steps:
   - name: build
-    image: elixir:alpine
+    image: elixir:latest
     environment:
       MIX_ENV: dev
     commands:
@@ -38,7 +38,7 @@ name: test
 
 steps:
   - name: test
-    image: elixir:alpine
+    image: elixir:latest
     environment:
       MIX_ENV: test
     commands:
@@ -56,7 +56,7 @@ name: typecheck
 
 steps:
   - name: dialyzer
-    image: elixir:alpine
+    image: elixir:latest
     environment:
       MIX_ENV: dev
     commands:
