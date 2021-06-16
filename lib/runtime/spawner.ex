@@ -45,7 +45,7 @@ defmodule Skitter.Runtime.Spawner do
     |> case do
       [] ->
         Logger.warn("No workers provide tag #{tag}")
-        Enum.all()
+        Registry.all()
 
       lst ->
         lst
