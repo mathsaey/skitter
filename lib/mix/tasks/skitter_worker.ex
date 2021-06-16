@@ -8,11 +8,11 @@ defmodule Mix.Tasks.Skitter.Worker do
   @moduledoc """
   Start a Skitter worker node
 
-  This task starts a Skitter worker node. It accepts a single option (`--no-shutdown-with-master`)
-  and a single argument which represents the master node the worker will try to connect to. In
-  order to be able to connect to the specified master (and other workers), additional arguments
-  need to be passed to the `elixir` or `iex` command used to start the system. More information
-  can be found in the "Distribution Parameters" section below.
+  This task starts a Skitter worker node. It accepts a single argument which represents the master
+  the worker will try to connect to and several options.  In order to be able to connect to the
+  specified master (and other workers), additional arguments need to be passed to the `elixir` or
+  `iex` command used to start the system. More information can be found in the "Distribution
+  Parameters" section below.
 
   It is not recommended to use this task in production. Consider using the `skitter.release` task
   to build a release instead. If mix is used anyway, be sure to start in production mode.
@@ -21,6 +21,7 @@ defmodule Mix.Tasks.Skitter.Worker do
 
   * `--no-shutdown-with-master`: By default, a worker node shuts itself down when its connected
   master node disconnects. This option can be passed to override this behaviour.
+  * `--tag` or `-t`: Specify a `t:Skitter.Nodes.tag/0` for this worker node.
 
   Besides this, the name of a master node can be passed as an argument. The worker will attempt to
   connect to the specified master. If this is not successful, a warning is logged, however, the
@@ -42,7 +43,14 @@ defmodule Mix.Tasks.Skitter.Worker do
 
   @impl Mix.Task
   def run(args) do
-    {options, master, _} = OptionParser.parse(args, strict: [shutdown_with_master: :boolean])
+    {options, master, _} =
+      OptionParser.parse(args,
+        aliases: [t: :tag],
+        strict: [shutdown_with_master: :boolean, tag: :keep]
+      )
+
+    {tags, options} = Keyword.pop_values(options, :tag)
+    options = Keyword.put_new(options, :tags, Enum.map(tags, &String.to_atom/1))
 
     options =
       case master do

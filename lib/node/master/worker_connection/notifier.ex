@@ -7,6 +7,7 @@
 defmodule Skitter.Node.Master.WorkerConnection.Notifier do
   @moduledoc false
   use GenServer
+  alias Skitter.Nodes
 
   def start_link([]) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -16,7 +17,7 @@ defmodule Skitter.Node.Master.WorkerConnection.Notifier do
   Subscribe to worker_up events.
 
   Every time a new worker is connected, the process that called this function
-  will receive a `{:worker_up, worker}` message.
+  will receive a `{:worker_up, worker, tags}` message.
   """
   @spec subscribe_up() :: :ok
   def subscribe_up(), do: GenServer.call(__MODULE__, {:subscribe, :worker_up})
@@ -25,7 +26,7 @@ defmodule Skitter.Node.Master.WorkerConnection.Notifier do
   Subscribe to worker_up events on the remote node.
 
   Every time a new worker is connected, the process that called this function
-  will receive a `{:worker_up, worker}` message.
+  will receive a `{:worker_up, worker, tags}` message.
   """
   @spec subscribe_up(node()) :: :ok
   def subscribe_up(node) do
@@ -45,7 +46,7 @@ defmodule Skitter.Node.Master.WorkerConnection.Notifier do
   Subscribe to worker_down events on the remote node.
 
   Every time a new worker is connected, the process that called this function
-  will receive a `{:worker_up, worker}` message.
+  will receive a `{:worker_down, worker}` message.
   """
   @spec subscribe_down(node()) :: :ok
   def subscribe_down(node) do
@@ -83,14 +84,14 @@ defmodule Skitter.Node.Master.WorkerConnection.Notifier do
   @doc """
   Notify subscribers a node has joined the cluster.
   """
-  @spec notify_up(node()) :: :ok
-  def notify_up(worker), do: GenServer.cast(__MODULE__, {:notify, :worker_up, worker})
+  @spec notify_up(node(), Nodes.tag()) :: :ok
+  def notify_up(worker, tags), do: GenServer.cast(__MODULE__, {:worker_up, worker, tags})
 
   @doc """
   Notify subscribers a node has left the cluster.
   """
   @spec notify_down(node()) :: :ok
-  def notify_down(worker), do: GenServer.cast(__MODULE__, {:notify, :worker_down, worker})
+  def notify_down(worker), do: GenServer.cast(__MODULE__, {:worker_down, worker})
 
   # --------- #
   # Genserver #
@@ -113,12 +114,17 @@ defmodule Skitter.Node.Master.WorkerConnection.Notifier do
     {:noreply, state}
   end
 
-  def handle_cast({:notify, topic, worker}, state) do
-    state
-    |> Map.get(topic, MapSet.new())
-    |> MapSet.to_list()
-    |> Enum.each(&send(&1, {topic, worker}))
-
+  def handle_cast(tuple = {:worker_up, _, _}, state) do
+    notify(:worker_up, tuple, state)
     {:noreply, state}
+  end
+
+  def handle_cast(tuple = {:worker_down, _}, state) do
+    notify(:worker_down, tuple, state)
+    {:noreply, state}
+  end
+
+  defp notify(topic, tuple, topics) do
+    topics |> Map.get(topic, MapSet.new()) |> MapSet.to_list() |> Enum.each(&send(&1, tuple))
   end
 end

@@ -34,17 +34,10 @@ defmodule Skitter.Runtime.Registry do
   end
 
   def all, do: :ets.tab2list(@node_tab) |> Enum.map(&elem(&1, 0))
-  def connected?(node), do: :ets.member(@node_tab, node)
   def with_tag(tag), do: :ets.match(@tag_tab, {tag, :"$1"}) |> Enum.map(&hd/1)
-
-  def tags(node) do
-    case :ets.match(@tag_tab, {:"$1", node}) do
-      [] -> raise KeyError
-      lst -> Enum.map(lst, &hd/1)
-    end
-  end
-
-  def all_with_tags, do: Enum.map(all(), fn node -> {node, tags(node)} end)
+  def tags(node), do: :ets.match(@tag_tab, {:"$1", node}) |> Enum.map(&hd/1)
+  def connected?(node), do: :ets.member(@node_tab, node)
+  def all_with_tags, do: Enum.map(all(), fn node -> {node, tags(node) || []} end)
 
   def on_all(mod, func, args), do: Remote.on_many(all(), mod, func, args)
   def on_all(fun), do: Remote.on_many(all(), fun)

@@ -10,6 +10,13 @@ defmodule Skitter.Nodes do
   """
   alias Skitter.Runtime.Registry
 
+  @typedoc """
+  Node tag.
+
+  A node may be tagged with atoms which indicate properties of the node.
+  """
+  @type tag :: atom()
+
   @doc """
   Execute a function on every worker node.
 

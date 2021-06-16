@@ -24,7 +24,7 @@ defmodule Skitter.Runtime.WorkflowManager do
     {:ok, ref}
   end
 
-  def handle_info({:worker_up, node}, ref) do
+  def handle_info({:worker_up, node, _}, ref) do
     deployment = ConstantStore.get_all(:skitter_deployment, ref)
     links = ConstantStore.get_all(:skitter_links, ref)
 

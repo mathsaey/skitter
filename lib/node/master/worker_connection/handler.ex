@@ -10,7 +10,9 @@ defmodule Skitter.Node.Master.WorkerConnection.Handler do
 
   use Skitter.Remote.Handler
 
+  alias Skitter.Remote
   alias Skitter.Runtime.Registry
+  alias Skitter.Node.Worker.Tags
   alias Skitter.Node.Master.WorkerConnection.Notifier
 
   @impl true
@@ -24,9 +26,10 @@ defmodule Skitter.Node.Master.WorkerConnection.Handler do
     if Registry.connected?(node) do
       {:error, :already_connected, state}
     else
-      Logger.info("Connected to `#{node}`")
-      Notifier.notify_up(node)
-      Registry.add(node)
+      tags = Remote.on(node, &Tags.get/0)
+      Logger.info("Connected to `#{node}` (#{tags})")
+      Notifier.notify_up(node, tags)
+      Registry.add(node, tags)
       {:ok, state}
     end
   end

@@ -8,7 +8,7 @@ defmodule Skitter.Node.Master.WorkerConnection do
   @moduledoc false
 
   alias Skitter.Remote
-  alias Skitter.Runtime.{Config, Registry}
+  alias Skitter.Runtime.Config
   alias __MODULE__.Notifier
 
   def connect, do: connect(Config.get(:workers, []))
@@ -29,10 +29,6 @@ defmodule Skitter.Node.Master.WorkerConnection do
     |> Enum.reject(fn {_, ret} -> ret == {:ok, :worker} end)
     |> Enum.map(fn {node, {:error, error}} -> {node, error} end)
   end
-
-  def all, do: Registry.all()
-
-  def connected?(worker), do: Registry.connected?(worker)
 
   def subscribe_up(), do: Notifier.subscribe_up()
   def subscribe_down(), do: Notifier.subscribe_down()

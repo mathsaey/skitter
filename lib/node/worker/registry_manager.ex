@@ -32,8 +32,8 @@ defmodule Skitter.Node.Worker.RegistryManager do
     :ok = Notifier.subscribe_down(remote)
 
     remote
-    |> Remote.on(Registry, :all, [])
-    |> Enum.each(&Registry.add/1)
+    |> Remote.on(Registry, :all_with_tags, [])
+    |> Enum.each(fn {node, tags} -> Registry.add(node, tags) end)
 
     {:noreply, remote}
   end
@@ -46,8 +46,8 @@ defmodule Skitter.Node.Worker.RegistryManager do
   end
 
   @impl true
-  def handle_info({:worker_up, node}, state) do
-    Registry.add(node)
+  def handle_info({:worker_up, node, tags}, state) do
+    Registry.add(node, tags)
     {:noreply, state}
   end
 
