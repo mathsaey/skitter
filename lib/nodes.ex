@@ -23,7 +23,10 @@ defmodule Skitter.Nodes do
   The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
   """
   @spec on_all_workers((() -> any())) :: [{node(), any()}]
-  def on_all_workers(fun), do: Skitter.Runtime.Registry.on_all(fun)
+  def on_all_workers(fun), do: Registry.on_all(fun)
+
+  @spec on_tagged_workers(tag(), (() -> any())) :: [{node(), any()}]
+  def on_tagged_workers(tag, fun), do: Registry.on_tagged(tag, fun)
 
   @doc """
   Get the name of the current node.
@@ -36,4 +39,16 @@ defmodule Skitter.Nodes do
   """
   @spec workers() :: [node()]
   def workers(), do: Registry.all()
+
+  @doc """
+  Get a list of all workers with a `t:tag/0`
+  """
+  @spec with_tag(tag()) :: [node()]
+  def with_tag(tag), do: Registry.with_tag(tag)
+
+  @doc """
+  Get a list of all the tags of `node()`.
+  """
+  @spec tags(node()) :: [tag()]
+  def tags(node), do: Registry.tags(node)
 end

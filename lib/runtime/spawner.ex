@@ -14,6 +14,7 @@ defmodule Skitter.Runtime.Spawner do
   def spawn(context, state, tag, on: node), do: spawn_remote(node, context, state, tag)
   def spawn(context, state, tag, with: ref), do: spawn_remote(node(ref), context, state, tag)
   def spawn(context, state, tag, avoid: ref), do: spawn_avoid(node(ref), context, state, tag)
+  def spawn(context, state, tag, tagged: ntag), do: spawn_tagged(ntag, context, state, tag)
 
   def spawn(context, state, tag, :local) do
     case Config.get(:mode, :local) do
@@ -38,8 +39,24 @@ defmodule Skitter.Runtime.Spawner do
     end
   end
 
-  def spawn_random(context, state, tag) do
-    Registry.all() |> Enum.random() |> spawn_remote(context, state, tag)
+  def spawn_tagged(ntag, context, state, tag) do
+    ntag
+    |> Registry.with_tag()
+    |> case do
+      [] ->
+        Logger.warn("No workers provide tag #{tag}")
+        Enum.all()
+
+      lst ->
+        lst
+    end
+    |> spawn_random(context, state, tag)
+  end
+
+  def spawn_random(context, state, tag), do: spawn_random(Registry.all(), context, state, tag)
+
+  def spawn_random(lst, context, state, tag) do
+    lst |> Enum.random() |> spawn_remote(context, state, tag)
   end
 
   def spawn_local(context, state, tag) do

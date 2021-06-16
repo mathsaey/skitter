@@ -27,7 +27,7 @@ defmodule Skitter.Node.Master.WorkerConnection.Handler do
       {:error, :already_connected, state}
     else
       tags = Remote.on(node, &Tags.get/0)
-      Logger.info("Connected to `#{node}` (#{tags})")
+      Logger.info("Connected to `#{node}`, tags: #{inspect(tags)}")
       Notifier.notify_up(node, tags)
       Registry.add(node, tags)
       {:ok, state}
