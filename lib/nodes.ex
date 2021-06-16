@@ -25,6 +25,11 @@ defmodule Skitter.Nodes do
   @spec on_all_workers((() -> any())) :: [{node(), any()}]
   def on_all_workers(fun), do: Registry.on_all(fun)
 
+  @doc """
+  Execute a function on every worker node with a given `tag`.
+
+  The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
+  """
   @spec on_tagged_workers(tag(), (() -> any())) :: [{node(), any()}]
   def on_tagged_workers(tag, fun), do: Registry.on_tagged(tag, fun)
 
