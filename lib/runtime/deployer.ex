@@ -45,10 +45,6 @@ defmodule Skitter.Runtime.Deployer do
     pid
   end
 
-  defp deploy_component({comp, nil, _, _}, _) do
-    raise Skitter.DefinitionError, "Component #{comp} does not define a strategy"
-  end
-
   defp deploy_component({comp, strat, args, idx}, ref) do
     context = %Strategy.Context{component: comp, strategy: strat, _skr: {:deploy, ref, idx}}
     strat.deploy(context, args)
@@ -109,20 +105,15 @@ defmodule Skitter.Runtime.Deployer do
     table = lookup_table(lst)
 
     Enum.map(lst, fn {_, comp} ->
-      {mod, strat} = read_comp(comp)
-      {mod, strat, update_links(comp.links, table), comp.args}
+      {comp.component, comp.strategy, update_links(comp.links, table), comp.args}
     end)
   end
-
-  defp read_comp(%{component: comp, strategy: nil}), do: {comp, Component.strategy(comp)}
-  defp read_comp(%{component: comp, strategy: strat}), do: {comp, strat}
 
   defp lookup_table(lst) do
     lst
     |> Enum.with_index()
     |> Enum.map(fn {{name, comp}, idx} ->
-      {comp, strat} = read_comp(comp)
-      {name, {idx, comp, strat}}
+      {name, {idx, comp.component, comp.strategy}}
     end)
     |> Map.new()
   end

@@ -46,8 +46,10 @@ defmodule Skitter.Workflow do
 
   A component in a workflow is stored along with its strategy, initialization arguments (which
   are passed to `c:Skitter.Strategy.Component.deploy/2`) and the outgoing links of each of its out
-  ports.  Note that a strategy specified here takes presedence over the strategy defined by the
-  component.
+  ports.
+
+  Workflows can override the strategy of a component, therefore, the strategy specified here may
+  not be the same as the strategy returned by `Skitter.Component.strategy/1`.
   """
   @type component :: %__MODULE__.Node.Component{
           component: Component.t(),

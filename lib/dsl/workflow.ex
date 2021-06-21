@@ -161,16 +161,16 @@ defmodule Skitter.DSL.Workflow do
         out: [:baz],
         nodes: %{
           "skitter/dsl/workflow_test/example#1": %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, links: [out_port: [joiner: :left]]
+            component: Example, args: nil, strategy: DefaultStrategy, links: [out_port: [joiner: :left]]
           },
           "skitter/dsl/workflow_test/example#2": %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, links: [out_port: [joiner: :right]]
+            component: Example, args: nil, strategy: DefaultStrategy, links: [out_port: [joiner: :right]]
           },
           joiner: %Skitter.Workflow.Node.Component{
             component: Join, args: nil, strategy: SomeStrategy, links: [_: ["skitter/dsl/workflow_test/example#3": :in_port]]
           },
           "skitter/dsl/workflow_test/example#3": %Skitter.Workflow.Node.Component{
-            component: Example, args: :some_args, links: [out_port: [:baz]]
+            component: Example, args: :some_args, strategy: DefaultStrategy, links: [out_port: [:baz]]
           }
         }
       }
@@ -234,8 +234,8 @@ defmodule Skitter.DSL.Workflow do
   the arguments of the node defaults to `nil`.
   - `with:` defines the strategy to pass to the node. Note that this is only relevant for
   component nodes. When a strategy is provided here, it will override the one defined by the
-  component. If no strategy is provided, `nil` is passed, in which case the component's default
-  strategy will be used.
+  component. If no strategy is provided, the strategy specified by the component will be used. If
+  no strategy is specified by the component, an error will be raised.
 
   ## Examples
 
@@ -250,13 +250,13 @@ defmodule Skitter.DSL.Workflow do
         out: [],
         nodes: %{
           "skitter/dsl/workflow_test/example#1": %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, strategy: nil, links: []
+            component: Example, args: nil, strategy: DefaultStrategy, links: []
           },
           example_1:  %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, strategy: nil, links: []
+            component: Example, args: nil, strategy: DefaultStrategy, links: []
           },
           "skitter/dsl/workflow_test/example#2": %Skitter.Workflow.Node.Component{
-            component: Example, args: :args, strategy: nil, links: []
+            component: Example, args: :args, strategy: DefaultStrategy, links: []
           },
           example_2:  %Skitter.Workflow.Node.Component{
             component: Example, args: :args, strategy: SomeStrategy, links: []
@@ -278,6 +278,23 @@ defmodule Skitter.DSL.Workflow do
         }
       }
 
+      iex> workflow do
+      ...>   node Join
+      ...> end
+      ** (Skitter.DefinitionError) Component Elixir.Skitter.DSL.WorkflowTest.Join does not define a strategy and no strategy was specified by the workflow
+
+      iex> workflow do
+      ...>   node Join, with: SomeStrategy
+      ...> end
+      %Skitter.Workflow{
+        in: [],
+        out: [],
+        nodes: %{
+          "skitter/dsl/workflow_test/join#1": %Skitter.Workflow.Node.Component{
+            component: Join, args: nil, strategy: SomeStrategy, links: []
+          }
+        }
+      }
   """
   defmacro node(comp_or_wf, opts \\ []) do
     name =
@@ -426,6 +443,19 @@ defmodule Skitter.DSL.Workflow do
   defp maybe_transform_ast({{:., _, [{n, _, _}, p]}, _, _}), do: {n, p} |> Macro.escape()
   defp maybe_transform_ast({name, _, rhs}) when is_atom(name) and is_atom(rhs), do: name
   defp maybe_transform_ast(any), do: any
+
+  def _make_node(m, a, nil) when is_atom(m) do
+    case Component.strategy(m) do
+      nil ->
+        raise(
+          Skitter.DefinitionError,
+          "Component #{m} does not define a strategy and no strategy was specified by the workflow"
+        )
+
+      s ->
+        _make_node(m, a, s)
+    end
+  end
 
   def _make_node(m, a, s) when is_atom(m), do: %C{component: m, args: a, strategy: s}
 
