@@ -91,6 +91,18 @@ defmodule Skitter.DSL.Strategy.Helpers do
   end
 
   @doc """
+  Programmatically create output for the out port with `index`.
+
+  The data must be wrapped in a list.
+  """
+  defmacro wrap_output(list, index \\ 0) do
+    quote do
+      port = Skitter.Component.index_to_out_port(component(), unquote(index))
+      [{port, unquote(list)}]
+    end
+  end
+
+  @doc """
   Create the initial state of the component using `init` or an empty state.
 
   This macro creates an initial state for a component, either by calling the `:init` callback of
