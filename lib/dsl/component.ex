@@ -440,6 +440,7 @@ defmodule Skitter.DSL.Component do
     info = %Info{read: reads, write: writes, publish: published} |> Macro.escape()
 
     quote do
+      @doc false
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
       def unquote(name)(unquote(state_var), unquote_splicing(args)) do
         import unquote(__MODULE__), only: [sigil_f: 2, ~>: 2, <~: 2]

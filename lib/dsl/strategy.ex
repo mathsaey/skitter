@@ -272,6 +272,7 @@ defmodule Skitter.DSL.Strategy do
   # Generate a hook implementation, store the module that defined the hook
   defp gen_hook(name, args, module, body) do
     quote do
+      @doc false
       @_sk_hook {{unquote(name), unquote(length(args))}, unquote(module)}
       def unquote(name)(unquote(context_var()), unquote_splicing(args)) do
         unquote(body)
