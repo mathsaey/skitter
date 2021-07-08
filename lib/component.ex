@@ -275,8 +275,8 @@ defmodule Skitter.Component do
 
   ## Examples
 
-  iex> source?(ComponentModule)
-  false
+      iex> source?(ComponentModule)
+      false
   """
   @spec source?(t()) :: boolean()
   def source?(component), do: component |> in_ports() |> length() == 0
@@ -288,8 +288,8 @@ defmodule Skitter.Component do
 
   ## Examples
 
-  iex> sink?(ComponentModule)
-  false
+      iex> sink?(ComponentModule)
+      false
   """
   @spec sink?(t()) :: boolean()
   def sink?(component), do: component |> out_ports() |> length() == 0
