@@ -25,6 +25,18 @@ defmodule Skitter.BIC do
   end
 
   @doc """
+  `Skitter.BIC.Print` node.
+
+  Insert a `Skitter.BIC.Print` node in the workflow. The argument passed to this macro is passed
+  as the print label described in the component documentation. Workflow options (`as`, `with`) can
+  be passed as the optional second argument.
+  """
+  defmacro print(label, opts \\ []) do
+    opts = [args: label] ++ opts
+    quote(do: node(Skitter.BIC.Print, unquote(opts)))
+  end
+
+  @doc """
   tcp source node.
 
   Inserts a `Skitter.BIS.TCPSource` node in the workflow. The address and ports passed to this
