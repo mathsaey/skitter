@@ -98,4 +98,21 @@ defmodule Skitter.DSL.Strategy.Helpers do
   defmacro call_component(callback, args) do
     quote(do: Skitter.Component.call(component(), unquote(callback), unquote(args)))
   end
+
+  @doc """
+  Create the initial state of the component using `init` or an empty state.
+
+  This macro creates an initial state for a component, either by calling the `:init` callback of
+  the component, or by using `Skitter.Component.create_empty_state/1`. The init callback is only
+  called if the component defines an init callback with an arity equal to the length of `args`.
+  """
+  defmacro init_or_initial_state(args) do
+    quote do
+      if {:init, length(unquote(args))} in Skitter.Component.callback_list(component()) do
+        Skitter.Component.call(component(), :init, unquote(args)).state
+      else
+        Skitter.Component.create_empty_state(component())
+      end
+    end
+  end
 end
