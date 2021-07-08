@@ -143,6 +143,22 @@ defmodule Skitter.DSL.Workflow do
       iex> wf.nodes[:"skitter/dsl/workflow_test/example#2"].links
       [out_port: [:bar]]
 
+  `Skitter.BIC` defines various components along with several macros to use these components in a
+  workflow. These macros are automatically imported and available inside the body of `workflow`.
+
+      iex> sugar = workflow out: bar do
+      ...>   tcp_source("127.0.0.1", 4555)
+      ...>   ~> node(Example)
+      ...>   ~> bar
+      ...> end
+      iex> zero = workflow out: bar do
+      ...>   node(Skitter.BIC.TCPSource, args: [address: "127.0.0.1", port: 4555])
+      ...>   ~> node(Example)
+      ...>   ~> bar
+      ...>  end
+      iex> zero == sugar
+      true
+
   ## Examples
 
       iex> workflow in: [foo, bar], out: baz do
@@ -183,6 +199,8 @@ defmodule Skitter.DSL.Workflow do
     quote do
       import Kernel, except: [node: 1]
       import unquote(__MODULE__), only: [node: 1, node: 2, ~>: 2, workflow: 2, workflow: 1]
+
+      import Skitter.BIC, only: :macros
 
       unquote(__MODULE__)._gen_name_state_init()
 

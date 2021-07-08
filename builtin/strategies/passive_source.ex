@@ -1,0 +1,55 @@
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import Skitter.DSL.Strategy, only: :macros
+
+defstrategy Skitter.BIS.PassiveSource do
+  @moduledoc """
+  Strategy for reactive source components.
+
+  This strategy can be used to create a source component. It is designed for components that
+  send data into the workflow as a response to incoming data.
+
+  When the component is deployed, the strategy will spawn a single worker and call the component's
+  `subscribe` callback with the arguments provided in the workflow. This callback should ensure
+  that messages are sent to the worker in response to external events. Any time a message is sent
+  to the worker, the strategy will call the `process` callback of the component, the component
+  should publish a list of data elements based on the received message. Each of the elements in
+  this list will be published to the workflow with a new invocation.
+
+  The strategy ensures that `process` is called on a random worker node, to evenly distribute the
+  incoming data over the cluster.
+
+  ## Component Properties
+
+  * in ports: none
+  * out ports: A single out port.
+  * callbacks:
+    * `subscribe` (required): Called at deployment time with the workflow arguments. This callback
+    should ensure the worker receives messages in response to event.
+    * `process` (required): Called for each received message. This callback should publish the
+    list of received data to its out port to push them into the workflow.
+  """
+  defhook deploy(args) do
+    create_worker(fn -> call_component(:subscribe, [args]) end, :source)
+    Nodes.on_all_workers(fn -> create_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
+  end
+
+  defhook receive(msg, _, :source) do
+    send(Enum.random(deployment()), msg)
+    []
+  end
+
+  defhook receive(msg, _, :sender) do
+    [port] = Component.out_ports(component())
+
+    msgs =
+      call_component(:process, [msg]).publish
+      |> Enum.map(fn {_, msg} -> {msg, Invocation.new()} end)
+
+    [publish_with_invocation: [{port, msgs}]]
+  end
+end
