@@ -271,6 +271,62 @@ defmodule Skitter.Component do
   def out_ports(component), do: component._sk_component_info(:out_ports)
 
   @doc """
+  Get the index of an in port.
+
+  ## Examples
+
+      iex> in_port_to_index(ComponentModule, :input)
+      0
+      iex> in_port_to_index(ComponentModule, :other)
+      nil
+  """
+  @spec in_port_to_index(t(), Port.t()) :: non_neg_integer() | nil
+  def in_port_to_index(component, port) do
+    component |> in_ports() |> Enum.find_index(&(&1 == port))
+  end
+
+  @doc """
+  Get the index of an out port.
+
+  ## Examples
+
+      iex> out_port_to_index(ComponentModule, :output)
+      0
+      iex> out_port_to_index(ComponentModule, :other)
+      nil
+  """
+  @spec out_port_to_index(t(), Port.t()) :: non_neg_integer() | nil
+  def out_port_to_index(component, port) do
+    component |> out_ports() |> Enum.find_index(&(&1 == port))
+  end
+
+  @doc """
+  Convert an index of an in port to a port name.
+
+  ## Examples
+
+      iex> index_to_in_port(ComponentModule, 0)
+      :input
+      iex> index_to_in_port(ComponentModule, 1)
+      nil
+  """
+  @spec index_to_in_port(t(), non_neg_integer()) :: Port.t() | nil
+  def index_to_in_port(component, idx), do: component |> in_ports() |> Enum.at(idx)
+
+  @doc """
+  Convert an index of an out port to a port name.
+
+  ## Examples
+
+      iex> index_to_out_port(ComponentModule, 0)
+      :output
+      iex> index_to_out_port(ComponentModule, 1)
+      nil
+  """
+  @spec index_to_out_port(t(), non_neg_integer()) :: Port.t() | nil
+  def index_to_out_port(component, idx), do: component |> out_ports() |> Enum.at(idx)
+
+  @doc """
   Check if a component is a source.
 
   A component is a source if it does not have any in ports.
