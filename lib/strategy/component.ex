@@ -11,7 +11,7 @@ defmodule Skitter.Strategy.Component do
   This module defines and documents the various hooks a `Skitter.Strategy` for a component should
   implement.
   """
-  alias Skitter.{Strategy, Port, Deployment, Invocation, Worker}
+  alias Skitter.{Component, Strategy, Port, Deployment, Worker}
 
   @doc """
   Deploy a component over the cluster.
@@ -52,13 +52,8 @@ defmodule Skitter.Strategy.Component do
   - `state`: the new state of the worker that received the message. If this key is not present the
   state of the worker remains unchanged.
 
-  - `publish`: data to be published. A keyword list of `{port, value}` pairs. `value` will be sent
-  to each component connected to `port`. The data will be sent with the invocation contained in
-  the context. Mutually exclusive with `publish_with_invocation`.
-
-  - `publish_with_invocation`: data to be published along with an invocation. A keyword list of
-  `{port, list}` pairs. `list` is a list of `{value, invocation}` pairs. For every pair, `value`
-  will be sent to `port` with `invocation` as its invocation.
+  - `publish`: data to be published. A keyword list of `{port, lst}` pairs. Each element in `lst`
+  will be sent to each component connected to `port`.
 
   ## Context
 
@@ -74,10 +69,5 @@ defmodule Skitter.Strategy.Component do
               message :: any(),
               state :: Worker.state(),
               tag :: Worker.tag()
-            ) ::
-              [
-                state: Worker.state(),
-                publish: [{Port.t(), any()}],
-                publish_with_invocation: [{Port.t(), [{any(), Invocation.t()}]}]
-              ]
+            ) :: [state: Worker.state(), publish: Component.publish()]
 end

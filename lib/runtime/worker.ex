@@ -53,7 +53,7 @@ defmodule Skitter.Runtime.Worker do
 
   defp recv_hook(msg, inv, srv) do
     res = srv.strategy.receive(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
-    res |> Keyword.drop([:state]) |> maybe_publish(srv, inv)
+    maybe_publish(res[:publish], srv, inv)
 
     case Keyword.fetch(res, :state) do
       {:ok, state} -> %{srv | state: state}
@@ -61,21 +61,13 @@ defmodule Skitter.Runtime.Worker do
     end
   end
 
-  defp maybe_publish([], _, _), do: nil
+  defp maybe_publish(nil, _, _), do: nil
 
-  defp maybe_publish([publish: lst], srv, invocation) do
-    Enum.each(lst, fn {port, value} ->
-      Enum.each(srv.links[port] || [], fn {ctx, port} ->
-        ctx.strategy.send(%{ctx | invocation: invocation}, value, port)
-      end)
-    end)
-  end
-
-  defp maybe_publish([publish_with_invocation: lst], srv, _) do
-    Enum.each(lst, fn {port, lst} ->
-      Enum.each(srv.links[port] || [], fn {outer_ctx, port} ->
-        Enum.each(lst, fn {val, inv} ->
-          outer_ctx.strategy.send(%{outer_ctx | invocation: inv}, val, port)
+  defp maybe_publish(ports, srv, inv) do
+    Enum.each(ports, fn {port, lst} ->
+      Enum.each(lst, fn value ->
+        Enum.each(srv.links[port] || [], fn {ctx, port} ->
+          ctx.strategy.send(%{ctx | invocation: inv}, value, port)
         end)
       end)
     end)

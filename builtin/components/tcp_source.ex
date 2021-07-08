@@ -14,6 +14,8 @@ defcomponent Skitter.BIC.TCPSource, out: _, strategy: Skitter.BIS.PassiveSource 
   embedded in the workflow with a keyword list as its argument. This list should contain `address`
   and `port` keys, which specify the address and port to connect to, respectively.
 
+  A data element is published for each line sent to the tcp socket.
+
   ## Properties
 
   * in ports:
@@ -27,10 +29,6 @@ defcomponent Skitter.BIC.TCPSource, out: _, strategy: Skitter.BIS.PassiveSource 
     :gen_tcp.connect(addr, port, opts)
   end
 
-  defcb process({:tcp, _, msg}), do: [msg] ~> _
-
-  defcb process({:tcp_closed, _}) do
-    IO.puts("TCP connection closed")
-    [] ~> _
-  end
+  defcb process({:tcp, _, msg}), do: msg ~> _
+  defcb process({:tcp_closed, _}), do: IO.puts("TCP connection closed")
 end

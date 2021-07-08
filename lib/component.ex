@@ -102,9 +102,11 @@ defmodule Skitter.Component do
   Output published by a callback.
 
   Published data is returned as a list where the output for each out port is specified. When no
-  data is published on a port, the port should be omitted from the published list.
+  data is published on a port, the port should be omitted from the published list. The data
+  published by a callback for a port should always be wrapped in a list. Each element in this list
+  will be sent to downstream component separately.
   """
-  @type publish :: [{Port.t(), any()}]
+  @type publish :: [{Port.t(), [any()]}]
 
   @typedoc """
   Values returned by a callback when it is called.

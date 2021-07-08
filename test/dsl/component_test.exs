@@ -46,10 +46,17 @@ defmodule Skitter.DSL.ComponentTest do
     defcb write(), do: doesnotexist <~ :bar
   end
 
-  defcomponent PublishExample do
+  defcomponent SinglePublishExample do
     defcb publish(value) do
       value ~> some_port
       :foo ~> some_other_port
+    end
+  end
+
+  defcomponent MultiPublishExample do
+    defcb publish(value) do
+      value ~> some_port
+      [:foo, :bar] ~>> some_other_port
     end
   end
 
@@ -57,7 +64,8 @@ defmodule Skitter.DSL.ComponentTest do
     defcb simple(), do: nil
     defcb arguments(arg1, arg2), do: arg1 + arg2
     defcb state(), do: counter <~ (~f{counter} + 1)
-    defcb publish(), do: ~D[1991-12-08] ~> out_port
+    defcb publish_single(), do: ~D[1991-12-08] ~> out_port
+    defcb publish_multi(), do: [~D[1991-12-08], ~D[2021-07-08]] ~>> out_port
   end
 
   doctest Skitter.DSL.Component
@@ -110,7 +118,7 @@ defmodule Skitter.DSL.ComponentTest do
     assert Component.call(Clauses, :f, [:baz]) == %Result{
              result: :baz,
              state: %Clauses{},
-             publish: [z: :baz]
+             publish: [z: [:baz]]
            }
   end
 
@@ -140,8 +148,10 @@ defmodule Skitter.DSL.ComponentTest do
         defcb publish(arg) do
           if arg do
             :foo ~> true_port
+            [:bar, :baz] ~>> true_multi
           else
             :foo ~> false_port
+            [:bar, :baz] ~>> false_multi
           end
         end
 
@@ -154,8 +164,15 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(StateIf, :publish, [true]).publish == [true_port: :foo]
-      assert Component.call(StateIf, :publish, [false]).publish == [false_port: :foo]
+      assert Component.call(StateIf, :publish, [true]).publish == [
+               true_multi: [:bar, :baz],
+               true_port: [:foo]
+             ]
+
+      assert Component.call(StateIf, :publish, [false]).publish == [
+               false_multi: [:bar, :baz],
+               false_port: [:foo]
+             ]
 
       assert Component.call(StateIf, :state, %{x: true, y: nil}, []).state == %{x: true, y: :foo}
 
@@ -209,13 +226,13 @@ defmodule Skitter.DSL.ComponentTest do
         defcb test(arg) do
           case arg do
             1 -> :foo ~> out
-            2 -> :bar ~> other
+            2 -> [:bar, :baz] ~>> other
           end
         end
       end
 
-      assert Component.call(PublishCase, :test, [1]).publish == [out: :foo]
-      assert Component.call(PublishCase, :test, [2]).publish == [other: :bar]
+      assert Component.call(PublishCase, :test, [1]).publish == [out: [:foo]]
+      assert Component.call(PublishCase, :test, [2]).publish == [other: [:bar, :baz]]
     end
 
     test "case throws when fields are incompatible" do
