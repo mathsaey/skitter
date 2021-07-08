@@ -36,8 +36,8 @@ defmodule Skitter.Strategy.Component do
 
   ## Context
 
-  All context data (component, strategy, deployment data and the invocation) is available when
-  this hook is called.
+  All context data (component, strategy and deployment data) is available when this hook is
+  called.
   """
   @callback send(context :: Strategy.context(), data :: any(), port :: Port.t() | nil) :: any()
 
@@ -57,12 +57,8 @@ defmodule Skitter.Strategy.Component do
 
   ## Context
 
-  All context data (component, strategy, deployment data and the invocation) is available when
-  this hook is called.
-
-  When the received message was not sent by Skitter (i.e. when the worker process received a
-  regular message), the invocation is set to `:external`. This can be used by e.g. sources to
-  respond to external data.
+  All context data (component, strategy and deployment data) is available when this hook is
+  called.
   """
   @callback receive(
               context :: Strategy.context(),
