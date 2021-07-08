@@ -60,6 +60,11 @@ defmodule Skitter.Runtime.Deployer do
       _skr: {ref, idx}
     }
 
+    port =
+      comp
+      |> Component.in_ports()
+      |> Enum.find_index(&(&1 == port))
+
     {context, port}
   end
 

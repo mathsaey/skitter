@@ -11,7 +11,7 @@ defmodule Skitter.Strategy.Component do
   This module defines and documents the various hooks a `Skitter.Strategy` for a component should
   implement.
   """
-  alias Skitter.{Component, Strategy, Port, Deployment, Worker}
+  alias Skitter.{Component, Strategy, Deployment, Worker}
 
   @doc """
   Deploy a component over the cluster.
@@ -32,14 +32,14 @@ defmodule Skitter.Strategy.Component do
 
   This hook is called by the runtime system when data needs to be sent to a given component (e.g.
   when a predecessor of the component publishes data). It receives the data to be sent along with
-  the port to which the data should be sent. The result of this hook is ignored.
+  the index of the port to which the data should be sent. The result of this hook is ignored.
 
   ## Context
 
   All context data (component, strategy and deployment data) is available when this hook is
   called.
   """
-  @callback send(context :: Strategy.context(), data :: any(), port :: Port.t() | nil) :: any()
+  @callback send(context :: Strategy.context(), data :: any(), port :: non_neg_integer()) :: any()
 
   @doc """
   Handle a message received by the component.
