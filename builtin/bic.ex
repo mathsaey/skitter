@@ -25,6 +25,16 @@ defmodule Skitter.BIC do
   end
 
   @doc """
+  `Skitter.BIC.FlatMap` node.
+
+  Like `map/2`, but with `Skitter.BIC.FlatMap`.
+  """
+  defmacro flatmap(func, opts \\ []) do
+    opts = [args: func] ++ opts
+    quote(do: node(Skitter.BIC.FlatMap, unquote(opts)))
+  end
+
+  @doc """
   `Skitter.BIC.Print` node.
 
   Insert a `Skitter.BIC.Print` node in the workflow. The argument passed to this macro is passed
