@@ -17,7 +17,7 @@ defmodule Skitter.Strategy do
 
   This module defines the strategy and context types.
   """
-  alias Skitter.{Component, Deployment}
+  alias Skitter.{Component, Deployment, Invocation}
 
   @typedoc """
   A strategy is defined as a module.
@@ -37,18 +37,21 @@ defmodule Skitter.Strategy do
   - `strategy`: The strategy of the component.
   - `deployment`: The current deployment data. `nil` if the deployment is not created yet (e.g. in
   `deploy`)
+  - `invocation`: The current invocation data. `nil` for hooks that do not have access to the
+  invocation.
   - `_skr`: Data stored by the runtime system. This data should not be accessed or modified.
   """
   @type context :: %__MODULE__.Context{
           component: Component.t(),
           strategy: t(),
           deployment: Deployment.data() | nil,
+          invocation: Invocation.t() | nil,
           _skr: any()
         }
 
   defmodule Context do
     @moduledoc false
     @derive {Inspect, except: [:_skr]}
-    defstruct [:component, :strategy, :deployment, :_skr]
+    defstruct [:component, :strategy, :deployment, :invocation, :_skr]
   end
 end

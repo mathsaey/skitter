@@ -26,7 +26,7 @@ defmodule Skitter.Runtime.Worker do
     {:noreply, init_state({context, state, tag})}
   end
 
-  def handle_cast({:sk_msg, msg}, srv), do: {:noreply, recv_hook(msg, srv)}
+  def handle_cast({:sk_msg, msg, inv}, srv), do: {:noreply, recv_hook(msg, inv, srv)}
   def handle_cast(:sk_stop, srv), do: {:stop, :normal, srv}
 
   defp init_state({context, state, tag}) when is_function(state, 0) do
@@ -49,11 +49,11 @@ defmodule Skitter.Runtime.Worker do
   end
 
   @impl true
-  def handle_info(msg, srv), do: {:noreply, recv_hook(msg, srv)}
+  def handle_info(msg, srv), do: {:noreply, recv_hook(msg, :external, srv)}
 
-  defp recv_hook(msg, srv) do
-    res = srv.strategy.receive(srv.context, msg, srv.state, srv.tag)
-    maybe_publish(res[:publish], srv)
+  defp recv_hook(msg, inv, srv) do
+    res = srv.strategy.receive(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
+    maybe_publish(res[:publish], srv, inv)
 
     case Keyword.fetch(res, :state) do
       {:ok, state} -> %{srv | state: state}
@@ -61,13 +61,13 @@ defmodule Skitter.Runtime.Worker do
     end
   end
 
-  defp maybe_publish(nil, _), do: nil
+  defp maybe_publish(nil, _, _), do: nil
 
-  defp maybe_publish(ports, srv) do
+  defp maybe_publish(ports, srv, inv) do
     Enum.each(ports, fn {port, lst} ->
       Enum.each(lst, fn value ->
         Enum.each(srv.links[port] || [], fn {ctx, port} ->
-          ctx.strategy.send(ctx, value, port)
+          ctx.strategy.send(%{ctx | invocation: inv}, value, port)
         end)
       end)
     end)

@@ -10,8 +10,8 @@ defmodule Skitter.DSL.Strategy do
 
   This module offers macros to define a strategy and hooks. To define a strategy, use
   `defstrategy/3`. Inside the strategy, `defhook/2` can be used to define hooks. Inside the body
-  of the hook, `context/0`, `component/0`, `strategy/0` and `deployment/0` can be used to read
-  information from the current context.
+  of the hook, `context/0`, `component/0`, `strategy/0`, `deployment/0` and `invocation/0` can be
+  used to read information from the current context.
 
   Note that it is possible to define a strategy as an elixir module which implements the
   appropriate behaviour. Using `defstrategy/3` instead offers two main advantages:
@@ -36,7 +36,7 @@ defmodule Skitter.DSL.Strategy do
   A hook is an elixir function which accepts a `t:Skitter.Strategy.context/0` as its first
   argument. This context argument is implicitly created by the `defhook/2` macro; the various
   fields of the context can be accessed through the use of `context/0`, `component/0`,
-  `strategy/0` and `deployment/0`.
+  `strategy/0`, `deployment/0` and `invocation/0`.
 
   Besides the context argument, hooks offer one additional feature: they can be inherited by other
   strategies.
@@ -173,13 +173,26 @@ defmodule Skitter.DSL.Strategy do
   defmacro deployment, do: quote(do: context().deployment)
 
   @doc """
+  Obtain the context's component.
+
+  ## Examples
+
+      iex> defstrategy ReadInvocation do
+      ...>   defhook read, do: invocation()
+      ...> end
+      iex> ReadInvocation.read(%Context{invocation: :external})
+      :external
+  """
+  defmacro invocation, do: quote(do: context().invocation)
+
+  @doc """
   Define a hook.
 
   This macro defines a single hook of a strategy. While a hook may be defined as a plain elixir
   function, using this macro offers two advantages:
 
   - The hook context is handled by the macro and can be accessed with `context/0`, `component/0`,
-  `strategy/0` and `deployment/0`.
+  `strategy/0`, `deployment/0` and `invocation/0`.
 
   - Other strategies can inherit this hook, making it easier to create new strategies. This is
   shown in the documentation of `defstrategy/3`.
@@ -236,7 +249,8 @@ defmodule Skitter.DSL.Strategy do
             context: 0,
             component: 0,
             strategy: 0,
-            deployment: 0
+            deployment: 0,
+            invocation: 0
           ]
 
         unquote(body)

@@ -22,7 +22,7 @@ defmodule Skitter.Worker do
 
   This module defines the worker types and various functions to deal with workers.
   """
-  alias Skitter.Strategy
+  alias Skitter.{Strategy, Invocation}
 
   @typedoc """
   Reference to a created worker.
@@ -81,9 +81,9 @@ defmodule Skitter.Worker do
   @doc """
   Send a message to the worker at `ref`.
   """
-  @spec send(ref(), any()) :: :ok
-  def send(worker, message) do
-    GenServer.cast(worker, {:sk_msg, message})
+  @spec send(ref(), any(), Invocation.t()) :: :ok
+  def send(worker, message, invocation) do
+    GenServer.cast(worker, {:sk_msg, message, invocation})
   end
 
   @doc """
