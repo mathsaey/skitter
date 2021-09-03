@@ -24,10 +24,8 @@ defstrategy Skitter.BIS.ImmutableLocal do
     invocation of `react`.
   """
   defhook deploy(args) do
-    Nodes.on_all_workers(fn ->
-      Enum.map(1..System.schedulers_online(), fn _ ->
-        create_worker(fn -> init_or_initial_state([args]) end, :worker, :local)
-      end)
+    Nodes.on_all_worker_cores(fn ->
+      create_worker(fn -> init_or_initial_state([args]) end, :worker, :local)
     end)
     |> Map.new()
   end

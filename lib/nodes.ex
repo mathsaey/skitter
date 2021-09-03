@@ -34,6 +34,23 @@ defmodule Skitter.Nodes do
   def on_tagged_workers(tag, fun), do: Registry.on_tagged(tag, fun)
 
   @doc """
+  Execute a function for every core on the current node.
+
+  This can be useful to spawn a worker per core.
+  """
+  @spec on_all_cores((() -> any())) :: [any()]
+  def on_all_cores(fun), do: Enum.map(1..System.schedulers_online(), fn _ -> fun.() end)
+
+  @doc """
+  Execute a function on every core on every worker node.
+
+  A list of results will be returned for each worker node. These results will be returned in a
+  keyword list of `{worker, result}` pairs.
+  """
+  @spec on_all_worker_cores((() -> any())) :: [{node(), [any()]}]
+  def on_all_worker_cores(fun), do: on_all_workers(fn -> on_all_cores(fun) end)
+
+  @doc """
   Get the name of the current node.
   """
   @spec self() :: node()
