@@ -46,15 +46,15 @@ defmodule Skitter.DSL.ComponentTest do
     defcb write(), do: doesnotexist <~ :bar
   end
 
-  defcomponent SinglePublishExample do
-    defcb publish(value) do
+  defcomponent SingleEmitExample do
+    defcb emit(value) do
       value ~> some_port
       :foo ~> some_other_port
     end
   end
 
-  defcomponent MultiPublishExample do
-    defcb publish(value) do
+  defcomponent MultiEmitExample do
+    defcb emit(value) do
       value ~> some_port
       [:foo, :bar] ~>> some_other_port
     end
@@ -64,8 +64,8 @@ defmodule Skitter.DSL.ComponentTest do
     defcb simple(), do: nil
     defcb arguments(arg1, arg2), do: arg1 + arg2
     defcb state(), do: counter <~ (~f{counter} + 1)
-    defcb publish_single(), do: ~D[1991-12-08] ~> out_port
-    defcb publish_multi(), do: [~D[1991-12-08], ~D[2021-07-08]] ~>> out_port
+    defcb emit_single(), do: ~D[1991-12-08] ~> out_port
+    defcb emit_multi(), do: [~D[1991-12-08], ~D[2021-07-08]] ~>> out_port
   end
 
   doctest Skitter.DSL.Component
@@ -100,25 +100,25 @@ defmodule Skitter.DSL.ComponentTest do
     assert Component.callback_info(Clauses, :f, 1) == %Info{
              read: [],
              write: [:y, :x],
-             publish: [:z]
+             emit: [:z]
            }
 
     assert Component.call(Clauses, :f, [:foo]) == %Result{
              result: :foo,
              state: %Clauses{x: :foo, y: nil},
-             publish: []
+             emit: []
            }
 
     assert Component.call(Clauses, :f, [:bar]) == %Result{
              result: :bar,
              state: %Clauses{x: nil, y: :bar},
-             publish: []
+             emit: []
            }
 
     assert Component.call(Clauses, :f, [:baz]) == %Result{
              result: :baz,
              state: %Clauses{},
-             publish: [z: [:baz]]
+             emit: [z: [:baz]]
            }
   end
 
@@ -143,9 +143,9 @@ defmodule Skitter.DSL.ComponentTest do
       assert Component.call(NormalIf, :test3, []).result == 20
     end
 
-    test "if allows state and publish updates" do
+    test "if allows state and emit updates" do
       defcomponent StateIf do
-        defcb publish(arg) do
+        defcb emit(arg) do
           if arg do
             :foo ~> true_port
             [:bar, :baz] ~>> true_multi
@@ -164,12 +164,12 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(StateIf, :publish, [true]).publish == [
+      assert Component.call(StateIf, :emit, [true]).emit == [
                true_multi: [:bar, :baz],
                true_port: [:foo]
              ]
 
-      assert Component.call(StateIf, :publish, [false]).publish == [
+      assert Component.call(StateIf, :emit, [false]).emit == [
                false_multi: [:bar, :baz],
                false_port: [:foo]
              ]
@@ -221,8 +221,8 @@ defmodule Skitter.DSL.ComponentTest do
       assert Component.call(StateCase, :test, %{x: 0}, []).state == %{x: 10}
     end
 
-    test "case can publish" do
-      defcomponent PublishCase do
+    test "case can emit" do
+      defcomponent EmitCase do
         defcb test(arg) do
           case arg do
             1 -> :foo ~> out
@@ -231,8 +231,8 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(PublishCase, :test, [1]).publish == [out: [:foo]]
-      assert Component.call(PublishCase, :test, [2]).publish == [other: [:bar, :baz]]
+      assert Component.call(EmitCase, :test, [1]).emit == [out: [:foo]]
+      assert Component.call(EmitCase, :test, [2]).emit == [other: [:bar, :baz]]
     end
 
     test "case throws when fields are incompatible" do

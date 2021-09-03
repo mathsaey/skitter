@@ -23,12 +23,12 @@ defmodule Skitter.ComponentTest do
     def _sk_callback_list, do: [example: 1]
 
     def _sk_callback_info(:example, 1) do
-      %Info{read: [:field], write: [], publish: [:arg]}
+      %Info{read: [:field], write: [], emit: [:arg]}
     end
 
     def example(state, arg) do
       result = Map.get(state, :field)
-      %Result{state: state, publish: [arg: arg], result: result}
+      %Result{state: state, emit: [arg: arg], result: result}
     end
   end
 

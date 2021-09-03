@@ -17,7 +17,7 @@ defstrategy Skitter.BIS.PassiveSource do
   `subscribe` callback with the arguments provided in the workflow. This callback should ensure
   that messages are sent to the worker in response to external events. Any time a message is sent
   to the worker, the strategy will call the `process` callback of the component, the component
-  should publish a (list of) data element based on the received message.
+  should emit a (list of) data elements based on the received message.
 
   The strategy ensures that `process` is called on a random worker node, to evenly distribute the
   incoming data over the cluster.
@@ -29,8 +29,8 @@ defstrategy Skitter.BIS.PassiveSource do
   * callbacks:
     * `subscribe` (required): Called at deployment time with the workflow arguments. This callback
     should ensure the worker receives messages in response to event.
-    * `process` (required): Called for each received message. This callback should publish the
-    list of received data to its out port to push them into the workflow.
+    * `process` (required): Called for each received message. This callback should emit the list
+    of received data to its out port to push them into the workflow.
   """
   defhook deploy(args) do
     create_worker(fn -> call_component(:subscribe, [args]) end, :source)
@@ -43,6 +43,6 @@ defstrategy Skitter.BIS.PassiveSource do
   end
 
   defhook receive(msg, _, :sender) do
-    [publish: call_component(:process, [msg]).publish]
+    [emit: call_component(:process, [msg]).emit]
   end
 end

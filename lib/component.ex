@@ -31,15 +31,15 @@ defmodule Skitter.Component do
   ## Callbacks
 
   A component defines various _callbacks_: functions which implement the processing logic of a
-  component. These callbacks need to have the ability to modify state and publish data when they
-  are called. Callbacks are implemented as elixir functions with a few properties:
+  component. These callbacks need to have the ability to modify state and emit data when they are
+  called. Callbacks are implemented as elixir functions with a few properties:
 
   - Callbacks accept `t:state/0` as their first argument.
   - Callbacks return a `t:result/0` struct, which wraps the result of the callback call along with
-  the updated state and published data.
+  the updated state and emitted data.
 
   Besides this, callbacks track additional information about how it access state and which data it
-  publishes. This information is stored inside the callbacks defined in this module.
+  emits. This information is stored inside the callbacks defined in this module.
 
   ## Examples
 
@@ -60,12 +60,12 @@ defmodule Skitter.Component do
     def _sk_callback_list, do: [example: 1]
 
     def _sk_callback_info(:example, 1) do
-      %Info{read: [:field], write: [], publish: [:arg]}
+      %Info{read: [:field], write: [], emit: [:arg]}
     end
 
     def example(state, arg) do
       result = Map.get(state, :field)
-      %Result{state: state, publish: [arg: arg], result: result}
+      %Result{state: state, emit: [arg: arg], result: result}
     end
   end
   ```
@@ -99,14 +99,14 @@ defmodule Skitter.Component do
   @type state :: struct()
 
   @typedoc """
-  Output published by a callback.
+  Output emitted by a callback.
 
-  Published data is returned as a list where the output for each out port is specified. When no
-  data is published on a port, the port should be omitted from the published list. The data
-  published by a callback for a port should always be wrapped in a list. Each element in this list
+  Emitted data is returned as a list where the output for each out port is specified. When no
+  data is emitted on a port, the port should be omitted from the emit list. The data
+  emitted by a callback for a port should always be wrapped in a list. Each element in this list
   will be sent to downstream component separately.
   """
-  @type publish :: [{Port.t(), [any()]}]
+  @type emit :: [{Port.t(), [any()]}]
 
   @typedoc """
   Values returned by a callback when it is called.
@@ -115,12 +115,12 @@ defmodule Skitter.Component do
 
   - `:result`: The actual result of the callback, i.e. the final value returned in its body.
   - `:state`: The (possibly modified) state after calling the callback.
-  - `:publish`: The list of output published by the callback.
+  - `:emit`: The list of output emitted by the callback.
   """
   @type result :: %__MODULE__.Callback.Result{
           result: any(),
           state: state(),
-          publish: publish()
+          emit: emit()
         }
 
   @typedoc """
@@ -130,12 +130,12 @@ defmodule Skitter.Component do
 
   - `:read`: The state fields read inside the callback.
   - `:write`: The state fields updated by the callback.
-  - `:publish`: The ports this callback published to.
+  - `:emit`: The ports this callback emits to.
   """
   @type info :: %__MODULE__.Callback.Info{
           read: [atom()],
           write: [atom()],
-          publish: [atom()]
+          emit: [atom()]
         }
 
   # Struct Definitions
@@ -146,12 +146,12 @@ defmodule Skitter.Component do
 
     defmodule Result do
       @moduledoc false
-      defstruct [:state, :publish, :result]
+      defstruct [:state, :emit, :result]
     end
 
     defmodule Info do
       @moduledoc false
-      defstruct read: [], write: [], publish: []
+      defstruct read: [], write: [], emit: []
     end
   end
 
@@ -168,7 +168,7 @@ defmodule Skitter.Component do
   receives incoming data.
 
   - `:out_ports`: A list of out ports names which represents the out ports the component can use
-  to publish data.
+  to emit data.
 
   - `:strategy`: The `Skitter.Strategy` of the component. `nil` may be provided instead, in which
   case a strategy must be provided when the component is embedded in a workflow.
@@ -373,7 +373,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> callback_info(ComponentModule, :example, 1)
-      %Info{read: [:field], write: [], publish: [:arg]}
+      %Info{read: [:field], write: [], emit: [:arg]}
 
   """
   @spec callback_info(t(), atom(), arity()) :: info()
@@ -385,7 +385,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> call(ComponentModule, :example, %ComponentModule{field: :val}, [42])
-      %Skitter.Component.Callback.Result{state: %ComponentModule{field: :val}, result: :val, publish: [arg: 42]}
+      %Skitter.Component.Callback.Result{state: %ComponentModule{field: :val}, result: :val, emit: [arg: 42]}
   """
   @spec call(t(), atom(), state(), args()) :: result()
   def call(component, name, state, args), do: apply(component, name, [state | args])
@@ -399,7 +399,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> call(ComponentModule, :example, [42])
-      %Skitter.Component.Callback.Result{state: %ComponentModule{field: nil}, result: nil, publish: [arg: 42]}
+      %Skitter.Component.Callback.Result{state: %ComponentModule{field: nil}, result: nil, emit: [arg: 42]}
   """
   @spec call(t(), atom(), args()) :: result()
   def call(component, callback_name, args) do
@@ -418,11 +418,11 @@ defmodule Skitter.Component do
 
   - If the values do not match, the `{:error, actual value}` is returned.
 
-  As a special case, the properties, `read?`, `write?` and `publish?` may be passed along with a
+  As a special case, the properties, `read?`, `write?` and `emit?` may be passed along with a
   boolean value. When this value is `false`, `verify_info` ensures the corresponding property
-  (`read`, `write`, or `publish`) is equal to the empty list. When `true` is passed, any value for
-  `read`, `write` or `publish` is accepted. This is done to enable `verify_info/3` to ensure a
-  callback does not update its state or publish data when this is not allowed.
+  (`read`, `write`, or `emit`) is equal to the empty list. When `true` is passed, any value for
+  `read`, `write` or `emit` is accepted. This is done to enable `verify_info/3` to ensure a
+  callback does not update its state or emit data when this is not allowed.
 
   ## Examples
 
@@ -447,17 +447,17 @@ defmodule Skitter.Component do
       iex> verify_info(%Info{write: []}, :write?, false)
       :ok
 
-      iex> verify_info(%Info{publish: []}, :publish?, false)
+      iex> verify_info(%Info{emit: []}, :emit?, false)
       :ok
 
   """
   @spec verify_info(info(), atom(), any()) :: :ok | {:error, :invalid | any()}
 
-  def verify_info(_, property, true) when property in [:read?, :write?, :publish?], do: :ok
+  def verify_info(_, property, true) when property in [:read?, :write?, :emit?], do: :ok
 
   def verify_info(info = %Info{}, :read?, false), do: verify_info(info, :read, [])
   def verify_info(info = %Info{}, :write?, false), do: verify_info(info, :write, [])
-  def verify_info(info = %Info{}, :publish?, false), do: verify_info(info, :publish, [])
+  def verify_info(info = %Info{}, :emit?, false), do: verify_info(info, :emit, [])
 
   def verify_info(info = %Info{}, property, expected) do
     case Map.get(info, property) do
@@ -496,17 +496,17 @@ defmodule Skitter.Component do
       iex> verify_info!(%Info{read: []}, :write?, false, "example")
       :ok
 
-      iex> verify_info!(%Info{publish: []}, :publish?, false, "example")
+      iex> verify_info!(%Info{emit: []}, :emit?, false, "example")
       :ok
 
   """
   @spec verify_info!(info(), atom(), any(), String.t()) :: :ok | no_return()
 
-  def verify_info!(_, property, true, _) when property in [:read?, :write?, :publish?], do: :ok
+  def verify_info!(_, property, true, _) when property in [:read?, :write?, :emit?], do: :ok
 
   def verify_info!(info = %Info{}, :read?, false, n), do: verify_info!(info, :read, [], n)
   def verify_info!(info = %Info{}, :write?, false, n), do: verify_info!(info, :write, [], n)
-  def verify_info!(info = %Info{}, :publish?, false, n), do: verify_info!(info, :publish, [], n)
+  def verify_info!(info = %Info{}, :emit?, false, n), do: verify_info!(info, :emit, [], n)
 
   def verify_info!(info = %Info{}, property, value, name) do
     case verify_info(info, property, value) do
@@ -539,11 +539,11 @@ defmodule Skitter.Component do
       iex> verify_info!(%Info{read: [], write: [:field]}, "example")
       :ok
 
-      iex> verify_info!(%Info{write: [:field]}, "example", publish?: true, wrt: [])
+      iex> verify_info!(%Info{write: [:field]}, "example", emit?: true, wrt: [])
       ** (Skitter.DefinitionError) `wrt` is not a valid property name
 
-      iex> verify_info!(%Info{publish: [:port]}, "example", publish?: false)
-      ** (Skitter.DefinitionError) Incorrect publish for callback example, expected [], got [:port]
+      iex> verify_info!(%Info{emit: [:port]}, "example", emit?: false)
+      ** (Skitter.DefinitionError) Incorrect emit for callback example, expected [], got [:port]
   """
   @spec verify_info!(info(), String.t(), [{atom(), any()}]) :: :ok | no_return()
   def verify_info!(info = %Info{}, name, properties \\ []) do
@@ -629,11 +629,11 @@ defmodule Skitter.Component do
       iex> verify!(ComponentModule, :exampl, 1)
       ** (Skitter.DefinitionError) Missing required callback exampl with arity 1
 
-      iex> verify!(ComponentModule, :example, 1, publish?: true, wrt: [])
+      iex> verify!(ComponentModule, :example, 1, emit?: true, wrt: [])
       ** (Skitter.DefinitionError) `wrt` is not a valid property name
 
-      iex> verify!(ComponentModule, :example, 1, publish?: false)
-      ** (Skitter.DefinitionError) Incorrect publish for callback example, expected [], got [:arg]
+      iex> verify!(ComponentModule, :example, 1, emit?: false)
+      ** (Skitter.DefinitionError) Incorrect emit for callback example, expected [], got [:arg]
   """
   @spec verify!(t(), atom(), arity(), [{atom(), any()}]) :: :ok | no_return()
   def verify!(component, name, arity, properties \\ []) do

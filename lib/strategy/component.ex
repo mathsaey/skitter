@@ -31,8 +31,8 @@ defmodule Skitter.Strategy.Component do
   Send a message to the component.
 
   This hook is called by the runtime system when data needs to be sent to a given component (e.g.
-  when a predecessor of the component publishes data). It receives the data to be sent along with
-  the index of the port to which the data should be sent. The result of this hook is ignored.
+  when a predecessor of the component emits data). It receives the data to be sent along with the
+  index of the port to which the data should be sent. The result of this hook is ignored.
 
   ## Context
 
@@ -52,8 +52,8 @@ defmodule Skitter.Strategy.Component do
   - `state`: the new state of the worker that received the message. If this key is not present the
   state of the worker remains unchanged.
 
-  - `publish`: data to be published. A keyword list of `{port, lst}` pairs. Each element in `lst`
-  will be sent to each component connected to `port`.
+  - `emit`: data to emit. A keyword list of `{port, lst}` pairs. Each element in `lst` will be
+  sent to each component connected to `port`.
 
   ## Context
 
@@ -69,5 +69,5 @@ defmodule Skitter.Strategy.Component do
               message :: any(),
               state :: Worker.state(),
               tag :: Worker.tag()
-            ) :: [state: Worker.state(), publish: Component.publish()]
+            ) :: [state: Worker.state(), emit: Component.emit()]
 end

@@ -10,8 +10,8 @@ defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLo
   @moduledoc """
   Print component.
 
-  This component print any data element it receives and publishes the received value on its out
-  port. This makes it possible to insert this component in the middle of a data processing
+  This component print any data element it receives and emits the received value on its out port.
+  This makes it possible to insert this component in the middle of a data processing
   pipeline for debugging purposes.
 
   A single string may be provided as an argument, this string will be used as a prefix for the

@@ -89,11 +89,11 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
   defp fields(branches) do
     writes = Enum.map(branches, &Component.get_writes/1)
     fields = writes |> Enum.map(&MapSet.new/1) |> Enum.dedup()
-    publish? = Enum.any?(branches, &(Component.get_published(&1) != []))
+    emit? = Enum.any?(branches, &(Component.get_emitted(&1) != []))
 
     Kernel.if length(fields) == 1 do
       fields = fields |> hd() |> Enum.to_list() |> Enum.map(&Component.state_var/1)
-      Kernel.if(publish?, do: [Component.publish_var() | fields], else: fields)
+      Kernel.if(emit?, do: [Component.emit_var() | fields], else: fields)
     else
       incompatible_writes(writes)
     end

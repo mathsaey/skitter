@@ -11,7 +11,7 @@ defmodule Skitter.DSL.Component do
   This module offers macros to define component modules and callbacks. To define a component, use
   `defcomponent/3`. Inside the component body, `defcb/2` can be used to define callbacks. Inside
   the body of `defcb/2`, `sigil_f/2`, `<~/2`, `~>/2` and `~>>/2` can be used to respectively read
-  the state, update the state or publish data.
+  the state, update the state or emit data.
   """
   alias Skitter.DSL.AST
   alias Skitter.{Component.Callback.Info, DefinitionError}
@@ -124,10 +124,10 @@ defmodule Skitter.DSL.Component do
       nil
 
       iex> Component.call(Average, :react, [10])
-      %Result{result: 10.0, publish: [current: [10.0]], state: %Average{count: 1, total: 10}}
+      %Result{result: 10.0, emit: [current: [10.0]], state: %Average{count: 1, total: 10}}
 
       iex> Component.call(Average, :react, %Average{count: 1, total: 10}, [10])
-      %Result{result: 10.0, publish: [current: [10.0]], state: %Average{count: 2, total: 20}}
+      %Result{result: 10.0, emit: [current: [10.0]], state: %Average{count: 2, total: 20}}
   """
   defmacro defcomponent(name, opts \\ [], do: body) do
     in_ = opts |> Keyword.get(:in, []) |> AST.names_to_atoms()
@@ -209,7 +209,7 @@ defmodule Skitter.DSL.Component do
           s
           | read: Enum.uniq(s.read ++ info.read),
             write: Enum.uniq(s.write ++ info.write),
-            publish: Enum.uniq(s.publish ++ info.publish)
+            emit: Enum.uniq(s.emit ++ info.emit)
         }
       end)
     end)
@@ -323,13 +323,13 @@ defmodule Skitter.DSL.Component do
     end)
   end
 
-  # Publish
-  # -------
+  # Emit
+  # ----
 
   @doc """
-  Publish `value` to `port`
+  Emit `value` to `port`
 
-  This macro is used to specify `value` should be published on `port`. This means that `value`
+  This macro is used to specify `value` should be emitted on `port`. This means that `value`
   will be sent to any components downstream of the current component. This macro should only be
   used inside the body of `defcb/2`. If a previous value was specified for `port`, it is
   overridden.
@@ -337,63 +337,62 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent SinglePublishExample do
-    defcb publish(value) do
+  defcomponent SingleEmitExample do
+    defcb emit(value) do
       value ~> some_port
       :foo ~> some_other_port
     end
   end
   ```
 
-      iex> Component.call(SinglePublishExample, :publish, [:bar]).publish
+      iex> Component.call(SingleEmitExample, :emit, [:bar]).emit
       [some_other_port: [:foo], some_port: [:bar]]
   """
   defmacro value ~> {port, _, _} when is_atom(port) do
     quote do
       value = unquote(value)
-      unquote(publish_var()) = Keyword.put(unquote(publish_var()), unquote(port), [value])
+      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), [value])
       value
     end
   end
 
   @doc """
-  Publish a list of values to `port`
+  Emit a list of values to `port`
 
 
-  This macro works like `~>/2`, but publishes a list of output values to the port instead of a
-  single value. Each value in the provided list will be sent to downstream components
-  individually.
+  This macro works like `~>/2`, but emits a list of output values to the port instead of a single
+  value. Each value in the provided list will be sent to downstream components individually.
 
   ## Examples
 
   ```
-  defcomponent MultiPublishExample do
-    defcb publish(value) do
+  defcomponent MultiEmitExample do
+    defcb emit(value) do
       value ~> some_port
       [:foo, :bar] ~>> some_other_port
     end
   end
   ```
 
-      iex> Component.call(MultiPublishExample, :publish, [:bar]).publish
+      iex> Component.call(MultiEmitExample, :emit, [:bar]).emit
       [some_other_port: [:foo, :bar], some_port: [:bar]]
   """
   defmacro lst ~>> {port, _, _} when is_atom(port) do
     quote do
       lst = unquote(lst)
-      unquote(publish_var()) = Keyword.put(unquote(publish_var()), unquote(port), lst)
+      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), lst)
       lst
     end
   end
 
   @doc false
-  def publish_var, do: quote(do: var!(publish, unquote(__MODULE__)))
+  def emit_var, do: quote(do: var!(emit, unquote(__MODULE__)))
 
-  defp publish_init(_), do: quote(do: unquote(publish_var()) = [])
-  defp publish_return(_), do: quote(do: unquote(publish_var()))
+  defp emit_init(_), do: quote(do: unquote(emit_var()) = [])
+  defp emit_return(_), do: quote(do: unquote(emit_var()))
 
   @doc false
-  def get_published(body) do
+  def get_emitted(body) do
     extract(body, fn
       {:~>, _env, [_, {name, _, _}]} -> name
       {:~>>, _env, [_, {name, _, _}]} -> name
@@ -409,10 +408,10 @@ defmodule Skitter.DSL.Component do
 
   This macro is used to define a callback function. Using this macro, a callback can be defined
   similar to a regular procedure. Inside the body of the procedure, `~>/2`, `~>>/2` `<~/2` and
-  `sigil_f/2` can be used to access the state and to publish output. The macro ensures:
+  `sigil_f/2` can be used to access the state and to emit output. The macro ensures:
 
   - The function returns a `t:Skitter.Component.result/0` with the correct state (as updated by
-  `<~/2`), publish (as updated by `~>/2` and `~>>/2`) and result (which contains the value of the
+  `<~/2`), emit (as updated by `~>/2` and `~>>/2`) and result (which contains the value of the
   last expression in `body`).
 
   - `c:Skitter.Component._sk_callback_info/2` and `c:Skitter.Callback._sk_callback_list/0` of the
@@ -429,55 +428,55 @@ defmodule Skitter.DSL.Component do
     defcb simple(), do: nil
     defcb arguments(arg1, arg2), do: arg1 + arg2
     defcb state(), do: counter <~ (~f{counter} + 1)
-    defcb publish_single(), do: ~D[1991-12-08] ~> out_port
-    defcb publish_multi(), do: [~D[1991-12-08], ~D[2021-07-08]] ~>> out_port
+    defcb emit_single(), do: ~D[1991-12-08] ~> out_port
+    defcb emit_multi(), do: [~D[1991-12-08], ~D[2021-07-08]] ~>> out_port
   end
   ```
 
       iex> Component.callback_list(CbExample)
-      [arguments: 2, publish_multi: 0, publish_single: 0, simple: 0, state: 0]
+      [arguments: 2, emit_multi: 0, emit_single: 0, simple: 0, state: 0]
 
       iex> Component.callback_info(CbExample, :simple, 0)
-      %Info{read: [], write: [], publish: []}
+      %Info{read: [], write: [], emit: []}
 
       iex> Component.callback_info(CbExample, :arguments, 2)
-      %Info{read: [], write: [], publish: []}
+      %Info{read: [], write: [], emit: []}
 
       iex> Component.callback_info(CbExample, :state, 0)
-      %Info{read: [:counter], write: [:counter], publish: []}
+      %Info{read: [:counter], write: [:counter], emit: []}
 
-      iex> Component.callback_info(CbExample, :publish_single, 0)
-      %Info{read: [], write: [], publish: [:out_port]}
+      iex> Component.callback_info(CbExample, :emit_single, 0)
+      %Info{read: [], write: [], emit: [:out_port]}
 
-      iex> Component.callback_info(CbExample, :publish_multi, 0)
-      %Info{read: [], write: [], publish: [:out_port]}
+      iex> Component.callback_info(CbExample, :emit_multi, 0)
+      %Info{read: [], write: [], emit: [:out_port]}
 
       iex> Component.call(CbExample, :simple, %{}, [])
-      %Result{result: nil, publish: [], state: %{}}
+      %Result{result: nil, emit: [], state: %{}}
 
       iex> Component.call(CbExample, :arguments, %{}, [10, 20])
-      %Result{result: 30, publish: [], state: %{}}
+      %Result{result: 30, emit: [], state: %{}}
 
       iex> Component.call(CbExample, :state, %{counter: 10, other: :foo}, [])
-      %Result{result: 11, publish: [], state: %{counter: 11, other: :foo}}
+      %Result{result: 11, emit: [], state: %{counter: 11, other: :foo}}
 
-      iex> Component.call(CbExample, :publish_single, %{}, [])
-      %Result{result: ~D[1991-12-08], publish: [out_port: [~D[1991-12-08]]], state: %{}}
+      iex> Component.call(CbExample, :emit_single, %{}, [])
+      %Result{result: ~D[1991-12-08], emit: [out_port: [~D[1991-12-08]]], state: %{}}
 
-      iex> Component.call(CbExample, :publish_multi, %{}, [])
-      %Result{result: [~D[1991-12-08], ~D[2021-07-08]], publish: [out_port: [~D[1991-12-08], ~D[2021-07-08]]], state: %{}}
+      iex> Component.call(CbExample, :emit_multi, %{}, [])
+      %Result{result: [~D[1991-12-08], ~D[2021-07-08]], emit: [out_port: [~D[1991-12-08], ~D[2021-07-08]]], state: %{}}
   """
   defmacro defcb(signature, do: body) do
     body = __MODULE__.ControlFlowOperators.rewrite_special_forms(body)
     {name, args} = Macro.decompose_call(signature)
-    published = get_published(body)
+    emitted = get_emitted(body)
     writes = get_writes(body)
     reads = get_reads(body)
 
     state_var = Macro.var(:state, __MODULE__)
     arity = length(args)
 
-    info = %Info{read: reads, write: writes, publish: published} |> Macro.escape()
+    info = %Info{read: reads, write: writes, emit: emitted} |> Macro.escape()
 
     quote do
       @doc false
@@ -487,14 +486,14 @@ defmodule Skitter.DSL.Component do
         use unquote(__MODULE__.ControlFlowOperators)
 
         unquote(state_init(reads, state_var))
-        unquote(publish_init(published))
+        unquote(emit_init(emitted))
 
         result = unquote(body)
 
         %Skitter.Component.Callback.Result{
           result: result,
           state: unquote(state_return(writes, state_var)),
-          publish: unquote(publish_return(body))
+          emit: unquote(emit_return(body))
         }
       end
     end

@@ -12,8 +12,8 @@ defcomponent Skitter.BIC.FlatMap, in: _, out: _, strategy: Skitter.BIS.Immutable
 
   This component implements a flatmap. When embedded inside a workflow, this component is provided
   with a function argument. This function will be called to process every element received by the
-  component. This function should return a list. Each element in this list will be published on
-  the `_` out port.
+  component. This function should return a list. Each element in this list will be emitted on the
+  `_` out port.
 
   ## Properties
 

@@ -14,7 +14,7 @@ defcomponent Skitter.BIC.TCPSource, out: _, strategy: Skitter.BIS.PassiveSource 
   embedded in the workflow with a keyword list as its argument. This list should contain `address`
   and `port` keys, which specify the address and port to connect to, respectively.
 
-  A data element is published for each line sent to the tcp socket.
+  A data element is emitted for each line sent to the tcp socket.
 
   ## Properties
 
