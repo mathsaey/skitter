@@ -127,4 +127,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
       end
     end
   end
+
+  @doc """
+  Create an empty state for the component.
+
+  This macro creates an initial state for a component, by using
+  `Skitter.Component.create_empty_state/1`
+  """
+  defmacro initial_state do
+    quote do
+      Skitter.Component.create_empty_state(component())
+    end
+  end
 end
