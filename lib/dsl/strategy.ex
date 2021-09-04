@@ -14,10 +14,11 @@ defmodule Skitter.DSL.Strategy do
   used to read information from the current context.
 
   Note that it is possible to define a strategy as an elixir module which implements the
-  appropriate behaviour. Using `defstrategy/3` instead offers two main advantages:
+  appropriate behaviour. Using `defstrategy/3` instead offers three main advantages:
 
   - The `t:Skitter.Strategy.context/0` of a hook is passed as an implicit argument, which can be
   accessed using the aforementioned macros.
+  - The helpers defined in `Skitter.DSL.Strategy.Helpers` can be used.
   - A trait-like mechanism is introduced, which can be used to create new strategies based on
   existing ones.
   """
@@ -189,10 +190,13 @@ defmodule Skitter.DSL.Strategy do
   Define a hook.
 
   This macro defines a single hook of a strategy. While a hook may be defined as a plain elixir
-  function, using this macro offers two advantages:
+  function, using this macro offers three advantages:
 
   - The hook context is handled by the macro and can be accessed with `context/0`, `component/0`,
   `strategy/0`, `deployment/0` and `invocation/0`.
+
+  - The macros defined in `Skitter.DSL.Strategy.Helpers` can be used, reducing the code needed to
+  spawn workers, or call component callbacks.
 
   - Other strategies can inherit this hook, making it easier to create new strategies. This is
   shown in the documentation of `defstrategy/3`.
