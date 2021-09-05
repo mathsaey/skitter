@@ -57,6 +57,7 @@ defmodule Skitter.Worker do
   - `on: node`: Spawn the worker at the specified node.
   - `with: ref`: Spawn the worker on the same node as the worker identified by `ref`.
   - `avoid: ref`: Try to place the worker on a different node than the worker identified by `ref`.
+  - `avoid: node`: Try to avoid placing the worker on `node`.
   - `tagged: tag`: Try to place the worker on a node with a specific `t:Skitter.Nodes.tag/0`.
 
   Note that it is not always possible to match the desired constraints. When this is the case, a
@@ -67,7 +68,7 @@ defmodule Skitter.Worker do
           | :local
           | [on: node()]
           | [with: ref()]
-          | [avoid: ref()]
+          | [avoid: ref() | node()]
           | [tagged: Skitter.Nodes.tag()]
 
   @doc """

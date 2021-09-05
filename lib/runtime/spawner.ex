@@ -13,8 +13,15 @@ defmodule Skitter.Runtime.Spawner do
   def spawn(context, state, tag, nil), do: spawn_random(context, state, tag)
   def spawn(context, state, tag, on: node), do: spawn_remote(node, context, state, tag)
   def spawn(context, state, tag, with: ref), do: spawn_remote(node(ref), context, state, tag)
-  def spawn(context, state, tag, avoid: ref), do: spawn_avoid(node(ref), context, state, tag)
   def spawn(context, state, tag, tagged: ntag), do: spawn_tagged(ntag, context, state, tag)
+
+  def spawn(context, state, tag, avoid: ref) when is_pid(ref) do
+    spawn_avoid(node(ref), context, state, tag)
+  end
+
+  def spawn(context, state, tag, avoid: node) when is_atom(node) do
+    spawn_avoid(node, context, state, tag)
+  end
 
   def spawn(context, state, tag, :local) do
     case Config.get(:mode, :local) do
