@@ -13,7 +13,10 @@ defmodule Skitter.Runtime.Worker do
 
   defstruct [:component, :strategy, :context, :idx, :ref, :links, :state, :tag]
 
-  def start_link(args), do: GenServer.start_link(__MODULE__, args)
+  def start_link(args) do
+    GenServer.start_link(__MODULE__, args, spawn_opt: [message_queue_data: :off_heap])
+  end
+
   def notify_deploy_complete(pid), do: GenServer.cast(pid, :sk_deployment_complete)
 
   @impl true
