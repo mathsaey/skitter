@@ -6,7 +6,7 @@
 
 root = true
 
-[*.{ex,exs,skitter}]
+[*.{ex,exs}]
 
 indent_size = 2
 indent_style = space
