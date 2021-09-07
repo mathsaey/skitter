@@ -387,7 +387,7 @@ function do_local() {
 
 # 1: workers, 2: remote_dir, 3: opts, 4: command, 5: message
 function for_workers() {
-  local cmd="cd ${2} && $script worker ${3} ${4}"
+  local cmd="cd ${2} && $script worker ${4} ${3}"
   connected=""
 
   for remote in $1
