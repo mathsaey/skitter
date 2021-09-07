@@ -1,0 +1,23 @@
+# Copyright 2018 - 2021, Mathijs Saey, Vrije Universiteit Brussel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Erlang configuration
+# This file is copied into every release and configures the parameters of the Erlang VM.
+# This is mainly used to apply some Skitter-specific optimizations.
+
+# TODO: benchmark this more to fine-tune parameters.
+
+# Attempt to pin schedulers to processors. Don't complain if it is not possible
++stbt db
+
+# Make a scheduler busy wait for a while before going to sleep, wake up schedulers fast
++sbwt long
++swct eager
++swt low
+
+# Buffer more messages for distribution
+# should lower latency and heighten throughput at the expense of memory use
++zdbbl 4096

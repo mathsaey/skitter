@@ -1,0 +1,566 @@
+#!/bin/bash
+
+# Copyright 2018 - 2020, Mathijs Saey, Vrije Universiteit Brussel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Skitter deploy script.
+# This script is added to every skitter release and is used to manage Skitter runtimes.
+# It can be used to spawn individual Skitter runtimes or deploy various runtimes over a cluster.
+# This is done by setting environment variables read by skitter.exs (included in every skitter
+# release) and starting the release with its deployment script.
+
+set -e
+
+# ------------- #
+# Documentation #
+# ------------- #
+
+deploy_desc="Deploy a Skitter system over a set of nodes"
+local_desc="Manage a local Skitter runtime"
+worker_desc="Manage a Skitter worker runtime"
+master_desc="Manage a Skitter master runtime"
+
+function global_usage() {
+  printf '%s\n' "Skitter invocation script (<%= @release.name %>-<%= @release.version %>)"
+  printf '\n'
+  printf '%s\n' "This script is used to manage Skitter runtimes."
+  printf '%s\n' "It can be used to start, stop or otherwise manage runtimes,"
+  printf '%s\n' "or it can deploy a set of Skitter runtimes over a cluster."
+  printf '\n'
+  printf '%s\n'   "Usage:"
+  printf '\t%s\n' "skitter MODE COMMAND [COMMAND OPTIONS]"
+  printf '\t%s\n' "skitter [-a | --application-version]"
+  printf '\t%s\n' "skitter [-v | --skitter-version]"
+  printf '\t%s\n' "skitter help [MODE]"
+
+  printf '%s\n'       "Modes:"
+  printf '\t%s\t%s\n' "d, deploy" "$deploy_desc"
+  printf '\t%s\t%s\n' "l, local"  "$local_desc"
+  printf '\t%s\t%s\n' "w, worker" "$worker_desc"
+  printf '\t%s\t%s\n' "m, master" "$master_desc"
+}
+
+function deploy_usage() {
+  printf '%s\n' "$deploy_desc"
+  printf '\n'
+  printf '%s\n' "This command spawns a set of worker runtimes on the specified remote"
+  printf '%s\n' "machines. Afterwards, it spawns a master runtime on the local machine"
+  printf '%s\n' "which automatically connects to the provided workers. The workers shut"
+  printf '%s\n' "down when they lose connection to the master runtime."
+  printf '%s\n' "This script expects the skitter release is copied over to the remote"
+  printf '%s\n' "machines and available at the same path as on the master node. The"
+  printf '%s\n' "--working-dir option can be used if this is not the case."
+  printf '\n'
+  printf '%s\n' "Usage:"
+  printf '\t%s\n' "skitter deploy [COMMAND OPTIONS] [WORKERS]"
+  opt_header
+  printf '\t%s\t%s\n'   "-f, --worker-file PATH" "Read the list of workers to spawn from PATH"
+  printf '\t\t\t\t%s\n'                          "PATH should contain a file where every line"
+  printf '\t\t\t\t%s\n'                          "contains a single worker address."
+  opt_deploy
+  printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker runtime. Do not start a"
+  printf '\t\t\t\t%s\n'                          "master. Only needed if deployment failed."
+  opt_cookie
+  opt_no_log
+  printf '\t%s\t%s\n'   "--working-dir PATH"     "Change to this directory on the workers"
+  printf '\t\t\t\t%s\n'                          "before executing any command. Defaults"
+  printf '\t\t\t\t%s\n'                          "to the current working directory."
+  printf '%s\n'           "Command Arguments:"
+  printf '\t%s\t\t\t%s\n' "WORKERS" "List of worker nodes to spawn. A node is"
+  printf '\t\t\t\t%s\n'             "specified as [name@]hostname. If name is"
+  printf '\t\t\t\t%s\n'             "not specified, it defaults to skitter_worker."
+}
+
+function local_usage() {
+  printf '%s\n' "$local_desc"
+  printf '\n'
+  printf '%s\n' "This command spawns a local skitter runtime. A local runtime can not"
+  printf '%s\n' "connect to other skitter runtimes. It is intended to be used to"
+  printf '%s\n' "develop and test workflows locally before distributing them over"
+  printf '%s\n' "a cluster."
+  printf '%s\n' "Note that you do not need to build a release to use Skitter locally,"
+  printf '%s\n' "instead, you can use iex -S mix."
+  printf '\n'
+  printf '%s\n' "Usage:"
+  printf '\t%s\n' "skitter local COMMAND [COMMAND OPTIONS]"
+  runtime_usage "local"
+  opt_header
+  opt_deploy
+  opt_no_log
+}
+
+function worker_usage() {
+  printf '%s\n' "$worker_desc"
+  printf '\n'
+  runtime_description "worker"
+  printf '\n'
+  printf '%s\n' "Usage:"
+  printf '\t%s\n' "skitter worker COMMAND [COMMAND OPTIONS] [MASTER]"
+  runtime_usage "worker"
+  opt_header
+  opt_name
+  opt_cookie
+  opt_no_log
+  printf '\t%s\t%s\n'   "--no-stop-with-master" "By default, Skitter worker runtimes shut down"
+  printf '\t\t\t\t%s\n'                         "when the master runtime they are connected to"
+  printf '\t\t\t\t%s\n'                         "shuts down. This switch disables this behaviour."
+  printf '%s\n'       "Command Arguments:"
+  printf '\t%s\t\t\t%s\n' "MASTER" "Try to connect to the master node at this address."
+  printf '\t\t\t\t%s\n'            "If the connection fails, the worker logs a warning"
+  printf '\t\t\t\t%s\n'            "but does not stop. This argument can only be used"
+  printf '\t\t\t\t%s\n'            "with start, start_iex, daemon and daemon_iex."
+}
+
+function master_usage() {
+  printf '%s\n' "$master_desc"
+  printf '\n'
+  runtime_description "master"
+  printf '\n'
+  printf '%s\n' "Usage:"
+  printf '\t%s\n' "skitter master COMMAND [WORKERS]"
+  runtime_usage "master"
+  opt_header
+  opt_deploy
+  opt_name
+  opt_cookie
+  opt_no_log
+  printf '%s\n'       "Command Arguments:"
+  printf '\t%s\t\t\t%s\n' "WORKERS" "Try to connect to the provided worker nodes. Workers"
+  printf '\t\t\t\t%s\n'             "are specified as [name@]hostname. If no name is given,"
+  printf '\t\t\t\t%s\n'             "skitter_worker is used. This argument can only be used"
+  printf '\t\t\t\t%s\n'             "with start, start_iex, daemon and daemon_iex."
+}
+
+function runtime_description() {
+  printf '%s\n' "This command spawns a skitter $1 runtime on the local node."
+  printf '%s\n' "If you are deploying a complete Skitter system over a cluster"
+  printf '%s\n' "you should prefer the use of the deploy command, which calls"
+  printf '%s\n' "this command for you."
+}
+
+function runtime_usage() {
+  printf '%s\n'       "Commands:"
+  printf '\t%s\t\t%s\n' "s, start"      "Starts a $1 runtime"
+  printf '\t%s\t\t%s\n' "S, start_iex"  "Starts a $1 runtime with an iex shell"
+  printf '\t%s\t\t%s\n' "d, daemon"     "Starts a $1 runtime as a daemon"
+  printf '\t%s\t\t%s\n' "D, daemon_iex" "Starts a $1 runtime daemon with iex attached"
+  printf '\t%s\t\t\t%s\n' "remote"      "Open an iex shell on the local $1 daemon"
+  printf '\t%s\t\t\t%s\n' "restart" "Restart the $1 daemon"
+  printf '\t%s\t\t\t%s\n' "stop"    "Stop the $1 daemon"
+  printf '\t%s\t\t\t%s\n' "pid"     "Get the pid of the $1 daemon"
+}
+
+function opt_header() {
+  printf '%s\n'         "Command Options:"
+}
+
+function opt_cookie() {
+  printf '\t%s\t%s\n'   "-c, --cookie COOKIE" "Set the distribution cookie"
+}
+
+function opt_name() {
+  printf '\t%s\t\t%s\n' "-n, --name NAME"     "Set the name of the node."
+}
+
+function opt_deploy() {
+  printf '\t%s\t%s\n'   "-d, --deploy MOD.FUNC" "Deploy the workflow returned by calling"
+  printf '\t\t\t\t%s\n'                         "MOD.FUNC() after the runtime has been"
+  printf '\t\t\t\t%s\n'                         "started. It is not possible to pass"
+  printf '\t\t\t\t%s\n'                         "arguments to func when a workflow is"
+  printf '\t\t\t\t%s\n'                         "deployed like this."
+}
+
+function opt_no_log() {
+  printf '\t%s\t\t%s\n' "--no-log"            "By default, Skitter runtimes will write logs"
+  printf '\t\t\t\t%s\n'                       "to log/<nodename>.log. This switch disables"
+  printf '\t\t\t\t%s\n'                       "this behaviour."
+}
+
+# --------- #
+# Utilities #
+# --------- #
+
+function echoerr() {
+  echo "$@" 1>&2
+}
+
+function argerr() {
+  echoerr "$2"
+  "$1"_usage
+  exit 1
+}
+
+# Colors
+# ------
+
+function color() {
+  printf "$1$2${creset}"
+}
+
+creset='\033[0m'
+
+red='\033[0;31m'
+orange='\033[0;33m'
+green='\033[0;32m'
+purple='\033[0;34m'
+
+# ---------- #
+# Mode logic #
+# ---------- #
+
+# Help
+# ----
+
+function do_help() {
+  if [ -z "$1" ]
+  then
+    global_usage
+  else
+    case "$1" in
+      d|deploy)
+        deploy_usage
+        ;;
+      l|local)
+        local_usage
+        ;;
+      w|worker)
+        worker_usage
+        ;;
+      m|master)
+        master_usage
+        ;;
+      *)
+        argerr "global" "Cannot get help, '$1' is not a valid command"
+    esac
+  fi
+}
+
+# Runtime Logic
+# -------------
+
+function rel_cmd() {
+  if [ ! -d "$SKITTER_REL_PATH" ]
+  then
+    echoerr "$SKITTER_REL_PATH does not exist"
+    exit 2
+  fi
+  $maybe_dry_run "$SKITTER_REL_PATH"/bin/<%= @release.name %> "$1"
+}
+
+function maybe_add_name() {
+  echo "$2" | awk -v default_name="$1" '!/@/ {printf "%s@%s", default_name, $0} /@/ {print}'
+}
+
+function worker_start_parse() {
+  while test $# -gt 0
+    do
+      case "$1" in
+        --no-shutdown-with-master)
+          $maybe_dry_run export SKITTER_NO_SHUTDOWN_WITH_MASTER=""
+          ;;
+        -c|--cookie)
+          test $# -lt 2 && argerr "worker" "Missing value for optional argument '--cookie'."
+          $maybe_dry_run export RELEASE_COOKIE="$2"
+          shift
+          ;;
+        -n|--name)
+          test $# -lt 2 && argerr "worker" "Missing value for optional argument '--name'."
+          $maybe_dry_run export RELEASE_NODE="$2"
+          shift
+          ;;
+        --no-log)
+          $maybe_dry_run unset SKITTER_LOG
+          ;;
+        *)
+          REMOTE=$(maybe_add_name "skitter_master" "$1")
+          $maybe_dry_run export SKITTER_MASTER="$REMOTE"
+          ;;
+      esac
+      shift
+  done
+}
+
+function master_start_parse() {
+  local workers
+
+  while test $# -gt 0
+    do
+      case "$1" in
+        -d|--deploy)
+          test $# -lt 2 && argerr "master" "Missing value for optional argument '--deploy'."
+          $maybe_dry_run export SKITTER_DEPLOY="$2"
+          shift
+          ;;
+        -c|--cookie)
+          test $# -lt 2 && argerr "master" "Missing value for optional argument '--cookie'."
+          $maybe_dry_run export RELEASE_COOKIE="$2"
+          shift
+          ;;
+        -n|--name)
+          test $# -lt 2 && argerr "master" "Missing value for optional argument '--name'."
+          $maybe_dry_run export RELEASE_NODE="$2"
+          shift
+          ;;
+        --no-log)
+          $maybe_dry_run unset SKITTER_LOG
+          ;;
+        *)
+          workers="$workers $(maybe_add_name "skitter_worker" "$1")"
+          ;;
+      esac
+      shift
+  done
+
+  if [ -n "$workers" ]
+  then
+    $maybe_dry_run export SKITTER_WORKERS="$workers"
+  fi
+}
+
+function local_start_parse() {
+  while test $# -gt 0
+    do
+      case "$1" in
+        -d|--deploy)
+          test $# -lt 2 && argerr "local" "Missing value for optional argument '--deploy'."
+          $maybe_dry_run export SKITTER_DEPLOY="$2"
+          shift
+          ;;
+        --no-log)
+          $maybe_dry_run unset SKITTER_LOG
+          ;;
+      esac
+      shift
+  done
+}
+
+function do_worker_master_local() {
+  export SKITTER_MODE="$1"
+  export SKITTER_LOG=""
+  mode="$1"
+  shift
+
+  if [ $# -eq 0 ]
+  then
+    argerr "$mode" "Missing command"
+  fi
+
+  case $1 in
+    s|start)
+      shift
+      "$mode"_start_parse $@
+      rel_cmd "start"
+      ;;
+    S|start_iex)
+      shift
+      "$mode"_start_parse $@
+      rel_cmd "start_iex"
+      ;;
+    d|daemon)
+      shift
+      "$mode"_start_parse $@
+      rel_cmd "daemon"
+      ;;
+    D|daemon_iex)
+      shift
+      "$mode"_start_parse $@
+      rel_cmd "daemon_iex"
+      ;;
+    remote|restart|stop|pid)
+      rel_cmd "$1"
+      ;;
+    *)
+      argerr "$mode" "Invalid command: '$1'"
+  esac
+}
+
+function do_local() {
+  mode="local"
+  rel_cmd "start_iex"
+}
+
+# Deploy Logic
+# ------------
+
+# 1: workers, 2: remote_dir, 3: opts, 4: command, 5: message
+function for_workers() {
+  local cmd="cd ${2} && $script worker ${3} ${4}"
+  connected=""
+
+  for remote in $1
+  do
+    printf '%s %s' "$5" "$remote"
+    if [ -z "$maybe_dry_run" ]
+    then
+      if ssh -q "$remote" "$cmd"
+      then
+        printf ' %s\n' "$(color "$green" ✓)"
+        connected="$connected $remote"
+      else
+        printf ' %s\n' "$(color "$red" ✗)"
+        failed="$remote"
+        return 1
+      fi
+      else
+        $maybe_dry_run ssh "$remote" "$cmd"
+    fi
+  done
+}
+
+# 1: workers, 2: remote_dir, 3: opts
+function stop_deploy() {
+  for_workers "$1" "$2" "$3" "stop" "$(color "$orange" "* stopping")"
+}
+
+# 1: workers, 2: remote_dir, 3: opts
+function start_deploy() {
+  printf '%s %s\n' "⬡⬢⬡⬢ Skitter deploy" "<%= @version %>"
+  if [ -n "$3" ] ; then printf '> options: %s\n' "$(color "$purple" "$3")" ; fi
+  printf '> workers: %s\n\n' "$(color "$purple" "$1")"
+
+  if for_workers "$1" "$2" "$3" "daemon" "$(color "$green" "* starting")"
+  then
+    printf "\nWorkers initialized, starting master.\n"
+    $maybe_dry_run sleep 1
+    do_worker_master_local master start_iex "$3" "$1"
+  else
+    printf '\n%s\n' "Failed to initialize some workers:"
+    printf '> Succeeded: %s\n' "$(color "$green" "$connected")"
+    printf '> Failed: %s\n' "$(color "$red" "$failed")"
+
+    printf '\n%s\n' "Shutting down initialized workers:"
+    stop_deploy "$connected" "$2" "$3"
+  fi
+}
+
+function do_deploy() {
+  local remote_dir
+  local workers
+  local opts
+  local mode
+
+  mode="start"
+  remote_dir=$(pwd)
+
+  while test $# -gt 0
+    do
+      case "$1" in
+        -s|--stop)
+          local mode="stop"
+          ;;
+        -d|--deploy)
+          test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--deploy'."
+          opts="$opts --deploy $2"
+          shift
+          ;;
+        --working-dir)
+          test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--working-dir'."
+          remote_dir="$2"
+          shift
+          ;;
+        -c|--cookie)
+          test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--cookie'."
+          opts="$opts --cookie $2"
+          shift
+          ;;
+        -f|--worker-file)
+          test $# -lt 2 && argerr "worker" "Missing value for optional argument '--worker-file'."
+          while IFS= read -r line
+          do
+            local workers="$workers $line"
+          done < "$2"
+          shift
+          ;;
+        --no-log)
+          opts="$opts --no-log"
+          ;;
+        *)
+          local workers="$workers $1"
+          ;;
+      esac
+      shift
+    done
+
+    if [ -z "$workers" ] ; then argerr "deploy" "Missing workers" ; fi
+    "$mode"_deploy "$workers" "$remote_dir" "$opts"
+}
+
+# ------------ #
+# Script logic #
+# ------------ #
+
+# Store the script invocation so we can use it when deploying
+script=$0
+
+# No arguments: print usage and quit
+if [ $# -eq 0 ]
+then
+  global_usage
+  exit 0
+fi
+
+# We expect this script to be stored in the bin folder of the release.
+# Store the location of the release as SKITTER_REL_PATH
+SELF=$(readlink "$0" || true)
+if [ -z "$SELF" ]; then SELF="$0"; fi
+PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
+PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
+SKITTER_REL_PATH="$(cd "$PARENT_DIR/.." && pwd -P)"
+
+# Parse global options and mode
+while test $# -gt 0
+  do
+    case "$1" in
+      -a|--application-version)
+        echo "<%= @release.name %> <%= @release.version %>"
+        exit 0
+        ;;
+      -v|--skitter-version)
+        echo "skitter <%= @version %>"
+        exit 0
+        ;;
+      --debug)
+        maybe_dry_run="echo"
+        ;;
+      *)
+        break
+        ;;
+    esac
+    shift
+done
+
+if [ $# -eq 0 ]
+then
+  argerr "global" "Missing command"
+  exit 0
+fi
+
+# Parse the mode
+case "$1" in
+  h|help)
+    shift
+    do_help $@
+    ;;
+  w|worker)
+    shift
+    do_worker_master_local "worker" $@
+    ;;
+  m|master)
+    shift
+    do_worker_master_local "master" $@
+    ;;
+  l|local)
+    shift
+    do_worker_master_local "local" $@
+    ;;
+  d|deploy)
+    shift
+    do_deploy $@
+    ;;
+  *)
+    argerr "global" "'$1' is not a valid command"
+    ;;
+esac
