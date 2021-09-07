@@ -39,7 +39,7 @@ defmodule Skitter.Release do
     Mix.Generator.copy_template(
       Path.join([__DIR__, "release", "skitter.sh.eex"]),
       target,
-      [release: r, version: Skitter.MixProject.project()[:version]],
+      [release: r, version: Application.spec(:skitter, :vsn)],
       force: true
     )
 
