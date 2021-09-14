@@ -7,7 +7,7 @@
 import Skitter.DSL.Component, only: :macros
 
 defcomponent Skitter.BIC.TCPSource, out: _, strategy: Skitter.BIS.PassiveSource do
-  @moduledoc """
+  @componentdoc """
   TCP source component.
 
   This component is a source which listens to data on a tcp socket. This component should be
@@ -15,12 +15,6 @@ defcomponent Skitter.BIC.TCPSource, out: _, strategy: Skitter.BIS.PassiveSource 
   and `port` keys, which specify the address and port to connect to, respectively.
 
   A data element is emitted for each line sent to the tcp socket.
-
-  ## Properties
-
-  * in ports:
-  * out ports: `_`
-  * default strategy: `Skitter.BIS.PassiveSource`
   """
   defcb subscribe(config) do
     opts = [:binary, reuseaddr: true, packet: :line]

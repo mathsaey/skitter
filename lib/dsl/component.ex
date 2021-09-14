@@ -187,6 +187,12 @@ defmodule Skitter.DSL.Component do
 
       iex> Component.call(Average, :react, %Average{count: 1, total: 10}, [10])
       %Result{result: 10.0, emit: [current: [10.0]], state: %Average{count: 2, total: 20}}
+
+  ## Documentation
+
+  When writing documentation for a component, `@componentdoc` can be used instead of the usual
+  `@moduledoc`. When this is done, this macro will automatically add additional information about
+  the component to the generated documentation.
   """
   defmacro defcomponent(name, opts \\ [], do: body) do
     in_ = opts |> Keyword.get(:in, []) |> AST.names_to_atoms()
@@ -199,6 +205,7 @@ defmodule Skitter.DSL.Component do
         import unquote(__MODULE__), only: [state: 1, state_struct: 1, defcb: 2]
 
         @before_compile {unquote(__MODULE__), :generate_callbacks}
+        @before_compile {unquote(__MODULE__), :generate_moduledoc}
         Module.register_attribute(__MODULE__, :_sk_callbacks, accumulate: true)
 
         @_sk_strategy unquote(strategy)
@@ -250,6 +257,35 @@ defmodule Skitter.DSL.Component do
         def _sk_callback_info(unquote(name), unquote(arity)), do: unquote(Macro.escape(info))
       end
     end
+  end
+
+  defmacro generate_moduledoc(env) do
+    mod = env.module
+    in_ports = Module.get_attribute(mod, :_sk_in_ports) |> Enum.join(", ") |> wrap_value()
+    out_ports = Module.get_attribute(mod, :_sk_out_ports) |> Enum.join(", ") |> wrap_value()
+    strategy = Module.get_attribute(mod, :_sk_strategy) |> wrap_value()
+
+    if Module.has_attribute?(mod, :componentdoc) do
+      quote do
+        @moduledoc """
+        #{@componentdoc}
+
+        ## Component Properties
+
+        * in ports: #{unquote(in_ports)}
+        * out ports: #{unquote(out_ports)}
+        * default strategy: #{unquote(strategy)}
+        """
+      end
+    end
+  end
+
+  defp wrap_value(""), do: "none"
+  defp wrap_value(nil), do: "none"
+  defp wrap_value(str) when is_binary(str), do: "`#{str}`"
+
+  defp wrap_value(mod) when is_atom(mod) do
+    mod |> Module.split() |> Enum.join(".") |> wrap_value()
   end
 
   # --------- #

@@ -7,19 +7,13 @@
 import Skitter.DSL.Component, only: :macros
 
 defcomponent Skitter.BIC.FlatMap, in: _, out: _, strategy: Skitter.BIS.ImmutableLocal do
-  @moduledoc """
+  @componentdoc """
   FlatMap component.
 
   This component implements a flatmap. When embedded inside a workflow, this component is provided
   with a function argument. This function will be called to process every element received by the
   component. This function should return a list. Each element in this list will be emitted on the
   `_` out port.
-
-  ## Properties
-
-  * in ports: `_`
-  * out ports: `_`
-  * default strategy: `Skitter.BIS.ImmutableLocal`
   """
   defcb init(func), do: state <~ func
   defcb react(arg), do: state().(arg) ~>> _

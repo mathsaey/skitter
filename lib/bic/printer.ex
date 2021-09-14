@@ -7,7 +7,7 @@
 import Skitter.DSL.Component, only: :macros
 
 defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLocal do
-  @moduledoc """
+  @componentdoc """
   Print component.
 
   This component print any data element it receives and emits the received value on its out port.
@@ -16,12 +16,6 @@ defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLo
 
   A single string may be provided as an argument, this string will be used as a prefix for the
   printed output.
-
-  ## Properties
-
-  * in ports: `_`
-  * out ports: `_`
-  * default strategy: `Skitter.BIS.ImmutableLocal`
   """
   state_struct label: ""
 
