@@ -21,8 +21,7 @@ defcomponent Skitter.BIC.Map, in: _, out: _, strategy: Skitter.BIS.ImmutableLoca
   * out ports: `_`
   * default strategy: `Skitter.BIS.ImmutableLocal`
   """
-  fields [:func]
 
-  defcb init(func), do: func <~ func
-  defcb react(arg), do: ~f{func}.(arg) ~> _
+  defcb init(func), do: state <~ func
+  defcb react(arg), do: state().(arg) ~> _
 end

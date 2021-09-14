@@ -8,10 +8,8 @@ defmodule Skitter.DSL.Component do
   @moduledoc """
   Callback and Component definition DSL.
 
-  This module offers macros to define component modules and callbacks. To define a component, use
-  `defcomponent/3`. Inside the component body, `defcb/2` can be used to define callbacks. Inside
-  the body of `defcb/2`, `sigil_f/2`, `<~/2`, `~>/2` and `~>>/2` can be used to respectively read
-  the state, update the state or emit data.
+  This module offers macros to define component modules and callbacks. Please refer to the
+  documentation of `defcomponent/3`.
   """
   alias Skitter.DSL.AST
   alias Skitter.{Component.Callback.Info, DefinitionError}
@@ -21,43 +19,104 @@ defmodule Skitter.DSL.Component do
   # --------- #
 
   @doc """
-  Define the fields of the component's state.
+  Defines the initial state of a component.
 
-  This macro defines the various fields that make up the state of a component. It is used
-  similarly to `defstruct/1`. You should only use this macro once inside the body of a component.
-  Note that an empty state will automatically be generated if this macro is not used.
+  This macro is used to define the initial state of a component. This state is passed to every
+  called callback when no state is provided by the component's strategy. When this macro is not
+  used, the initial state of a component is `nil`.
 
-  When multiple `fields` declarations are present, a `Skitter.DefinitionError` will be raised.
-
-  ## Internal representation as a struct
-
-  Currently, this macro is syntactic sugar for directly calling `defstruct/1`. Programmers should
-  not rely on this property however, as it may change in the future. The use of `fields/1` is
-  preferred as it decouples the definition of the layout of a state from its internal
-  representation as an elixir struct.
+  Internally, this macro generates a definition of
+  `c:Skitter.Component._sk_component_intial_state/0`.
 
   ## Examples
 
   ```
-  defcomponent FieldsExample do
-    fields foo: 42
+  defcomponent NoStateExample do
+    defcb return_state, do: state()
+  end
+
+  defcomponent StateExample do
+    state 0
+    defcb return_state, do: state()
   end
   ```
 
-      iex> Component.create_empty_state(FieldsExample)
-      %FieldsExample{foo: 42}
+      iex> Component.initial_state(NoStateExample)
+      nil
 
-  ```
-  defcomponent NoFields do
-  end
-  ```
+      iex> Component.initial_state(StateExample)
+      0
 
-      iex> Component.create_empty_state(NoFields)
-      %NoFields{}
+      iex> Component.call(NoStateExample, :return_state, []).state
+      nil
+
+      iex> Component.call(StateExample, :return_state, []).state
+      0
+
+      iex> Component.call(NoStateExample, :return_state, :some_state, []).state
+      :some_state
+
+      iex> Component.call(StateExample, :return_state, :some_state, []).state
+      :some_state
+
+
   """
-  defmacro fields(lst) do
+  defmacro state(initial_state) do
     quote do
-      defstruct unquote(lst)
+      @impl true
+      def _sk_component_initial_state, do: unquote(initial_state)
+    end
+  end
+
+  @doc """
+  Creates an initial struct-based state for a component.
+
+  In Elixir, it is common to use a struct to store structured information. Therefore, when a
+  component manages a complex state, it often defines a struct and uses this struct as the initial
+  state of the component. Afterwards, the state of the component is updated when it reacts to
+  incoming data:
+
+  ```
+  defcomponent Average, in: value, out: current do
+    defstruct [total: 0, count: 0]
+    state %__MODULE__{}
+
+    defcb react(val) do
+      state <~ %{state() | count: state().count + 1}
+      state <~ %{state() | total: state().total + val}
+      state().total / state().count ~> current
+    end
+  end
+  ```
+
+  In order to streamline the use of this pattern, this macro defines a struct and uses this struct
+  as the initial state of the component. Moreover, the `sigil_f/2` and `~>/2` macros are designed
+  to be used with structs, enabling them to read the state and update it:
+
+  ```
+  defcomponent Average, in: value, out: current do
+    state_struct total: 0, count: 0
+
+    defcb react(val) do
+      count <~ ~f{count} + 1
+      total <~ ~f{total} + val
+      ~f{total} / ~f{count} ~> current
+    end
+  end
+  ```
+
+  The second example generates the code shown in the first example.
+
+  ## Examples
+
+      iex> Component.initial_state(Average)
+      %Average{total: 0, count: 0}
+
+  """
+  defmacro state_struct(fields) do
+    quote do
+      defstruct unquote(fields)
+      state %__MODULE__{}
     end
   end
 
@@ -65,10 +124,10 @@ defmodule Skitter.DSL.Component do
   Define a component module.
 
   This macro is used to define a component module. Using this macro, a component can be defined
-  similar to a normal module. The macro will enable the use of `defcb/2`, ensure a struct is
-  defined to represent the component's state and provide implementations for
-  `c:Skitter.Component._sk_component_info/1`, `c:Skitter.Component._sk_callback_list/0` and
-  `c:Skitter.Component._sk_callback_info/2`.
+  similar to a normal module. The macro will enable the use of `defcb/2` and provides
+  implementations for `c:Skitter.Component._sk_component_info/1`,
+  `c:Skitter.Component._sk_component_initial_state/0`, `c:Skitter.Component._sk_callback_list/0`
+  and `c:Skitter.Component._sk_callback_info/2`.
 
   ## Component strategy and ports
 
@@ -103,7 +162,7 @@ defmodule Skitter.DSL.Component do
 
   ```
   defcomponent Average, in: value, out: current do
-    fields total: 0, count: 0
+    state_struct total: 0, count: 0
 
     defcb react(value) do
       total <~ ~f{total} + value
@@ -134,17 +193,10 @@ defmodule Skitter.DSL.Component do
     out = opts |> Keyword.get(:out, []) |> AST.names_to_atoms()
     strategy = opts |> Keyword.get(:strategy) |> read_strategy(__CALLER__)
 
-    fields_ast =
-      case AST.count_uses(body, :fields) do
-        0 -> quote do: defstruct([])
-        1 -> quote do: nil
-        _ -> DefinitionError.inject("Only one fields declaration is allowed", __CALLER__)
-      end
-
     quote do
       defmodule unquote(name) do
         @behaviour Skitter.Component
-        import unquote(__MODULE__), only: [fields: 1, defcb: 2]
+        import unquote(__MODULE__), only: [state: 1, state_struct: 1, defcb: 2]
 
         @before_compile {unquote(__MODULE__), :generate_callbacks}
         Module.register_attribute(__MODULE__, :_sk_callbacks, accumulate: true)
@@ -153,7 +205,10 @@ defmodule Skitter.DSL.Component do
         @_sk_in_ports unquote(in_)
         @_sk_out_ports unquote(out)
 
-        unquote(fields_ast)
+        @impl true
+        def _sk_component_initial_state, do: nil
+        defoverridable _sk_component_initial_state: 0
+
         unquote(body)
       end
     end
@@ -172,7 +227,13 @@ defmodule Skitter.DSL.Component do
     names = env.module |> _info_before_compile() |> Map.keys()
     metadata = env.module |> _info_before_compile() |> Macro.escape()
 
-    quote bind_quoted: [names: names, metadata: metadata] do
+    state =
+      case Module.get_attribute(env.module, :_sk_initial_state) do
+        :_sk_gen_struct -> quote(do: %__MODULE__{}) |> Macro.escape()
+        any -> any
+      end
+
+    quote bind_quoted: [names: names, metadata: metadata, state: state] do
       @impl true
       def _sk_component_info(:strategy), do: @_sk_strategy
       def _sk_component_info(:in_ports), do: @_sk_in_ports
@@ -207,9 +268,9 @@ defmodule Skitter.DSL.Component do
       Map.update(map, {name, arity}, info, fn s = %Info{} ->
         %{
           s
-          | read: Enum.uniq(s.read ++ info.read),
-            write: Enum.uniq(s.write ++ info.write),
-            emit: Enum.uniq(s.emit ++ info.emit)
+          | read?: s.read? or info.read?,
+            write?: s.write? or info.write?,
+            emit?: s.emit? or info.emit?
         }
       end)
     end)
@@ -225,99 +286,129 @@ defmodule Skitter.DSL.Component do
     |> Enum.to_list()
   end
 
+  defp extract_not_empty?(body, verify) do
+    body |> extract(verify) |> Enum.empty?() |> Kernel.not()
+  end
+
   # State
   # -----
 
-  @doc """
-  Read the state of a field.
+  @doc false
+  def state_var, do: quote(do: var!(state, unquote(__MODULE__)))
 
-  This macro reads the current value of `field` in the state passed to
-  `Skitter.Component.call/4`.
+  @doc """
+  Obtain the current state.
+
+  This macro reads the current value of the state passed to the component callback when it was
+  called. It should only be used inside the body of `defcb/2`.
+
+  ## Examples
+
+  ```
+  defcomponent ReadExample do
+    state 0
+    defcb read(), do: state()
+  end
+  ```
+
+      iex> Component.call(ReadExample, :read, []).result
+      0
+
+      iex> Component.call(ReadExample, :read, :state, []).result
+      :state
+
+      iex> Component.call(ReadExample, :read, :state, []).result
+      :state
+  """
+  defmacro state, do: quote(do: unquote(state_var()))
+
+  @doc """
+  Read the current value of a field stored in state.
+
+  This macro expects that the current component state is a struct (i.e. it expects a component
+  that uses `state_struct/1`), and reads the current value of `field` from the struct.
 
   This macro should only be used inside the body of `defcb/2`.
 
   ## Examples
 
   ```
-  defcomponent ReadExample do
-    fields [:field]
+  defcomponent FieldReadExample do
+    state_struct field: nil
     defcb read(), do: ~f{field}
   end
   ```
 
-      iex> Component.call(ReadExample, :read, %ReadExample{field: 5}, []).result
+      iex> Component.call(FieldReadExample, :read, %FieldReadExample{field: 5}, []).result
       5
 
-      iex> Component.call(ReadExample, :read, %ReadExample{field: :foo}, []).result
+      iex> Component.call(FieldReadExample, :read, %FieldReadExample{field: :foo}, []).result
       :foo
   """
-  defmacro sigil_f({:<<>>, _, [str]}, _), do: str |> String.to_existing_atom() |> state_var()
+  defmacro sigil_f({:<<>>, _, [str]}, _) do
+    field = str |> String.to_existing_atom()
+    quote(do: Map.fetch!(unquote(state_var()), unquote(field)))
+  end
 
   @doc """
-  Update the state of a field.
+  Updates the current state.
 
-  This macro should only be used inside the body of `defcb/2`. It updates the value of
-  `field` to `value` and returns `value` as its result. Note that `field` needs to exist inside
-  `state`. If it does not exist, a `KeyError` will be raised.
+  This macro should only be used inside the body of `defcb/2`. It updates the current value of the
+  component state to the provided value.
+
+  This macro can be used  in two ways: it can be used to update the component state or a field of
+  the component state. The latter option can only be used if the state of the component is a
+  struct (i.e. if the intial state has been defined using `state_struct/1`). The former options
+  modifies the component state as a whole, the second option only modifies the value of the
+  provided field stored in the component state.
 
   ## Examples
 
   ```
   defcomponent WriteExample do
-    fields [:field]
+    defcb write(), do: state <~ :foo
+  end
+  ```
+      iex> Component.call(WriteExample, :write, nil, []).state
+      :foo
+
+  ```
+  defcomponent FieldWriteExample do
+    state_struct [:field]
     defcb write(), do: field <~ :bar
   end
   ```
-      iex> Component.call(WriteExample, :write, %WriteExample{field: :foo}, []).state.field
+      iex> Component.call(FieldWriteExample, :write, %FieldWriteExample{field: :foo}, []).state.field
       :bar
 
   ```
-  defcomponent WrongWriteExample do
+  defcomponent WrongFieldWriteExample do
     fields [:field]
     defcb write(), do: doesnotexist <~ :bar
   end
   ```
-      iex> Component.call(WrongWriteExample, :write, %WriteExample{field: :foo}, [])
-      ** (KeyError) key :doesnotexist not found
+      iex> Component.call(WrongFieldWriteExample, :write, %WrongFieldWriteExample{field: :foo}, [])
+      ** (KeyError) key :doesnotexist not found in: %Skitter.DSL.ComponentTest.WrongFieldWriteExample{field: :foo}
   """
+  defmacro {:state, _, _} <~ value, do: quote(do: unquote(state_var()) = unquote(value))
+
   defmacro {field, _, _} <~ value when is_atom(field) do
     quote do
-      unquote(state_var(field)) = unquote(value)
+      state <~ Map.replace!(state(), unquote(field), unquote(value))
     end
   end
 
-  @doc false
-  def state_var(atom) do
-    context = __MODULE__.State
-    quote(do: var!(unquote(Macro.var(atom, context)), unquote(context)))
-  end
-
-  defp state_init(fields, state_arg) do
-    for atom <- fields do
-      quote do
-        unquote(state_var(atom)) = Map.fetch!(unquote(state_arg), unquote(atom))
-      end
-    end
-  end
-
-  defp state_return(fields, state_arg) do
-    writes = for atom <- fields, do: {atom, state_var(atom)}
-
-    quote do
-      %{unquote(state_arg) | unquote_splicing(writes)}
-    end
-  end
-
-  defp get_reads(body) do
-    extract(body, fn
-      {:sigil_f, _env, [{:<<>>, _, [field]}, _]} -> String.to_existing_atom(field)
+  defp read?(body) do
+    extract_not_empty?(body, fn
+      quote(do: state()) -> true
+      {:sigil_f, _env, [{:<<>>, _, [_]}, _]} -> true
       _ -> false
     end)
   end
 
   @doc false
-  def get_writes(body) do
-    extract(body, fn
+  def write?(body) do
+    extract_not_empty?(body, fn
       {:<~, _env, [{name, _, _}, _]} -> name
       _ -> false
     end)
@@ -325,6 +416,9 @@ defmodule Skitter.DSL.Component do
 
   # Emit
   # ----
+
+  @doc false
+  def emit_var, do: quote(do: var!(emit, unquote(__MODULE__)))
 
   @doc """
   Emit `value` to `port`
@@ -386,16 +480,10 @@ defmodule Skitter.DSL.Component do
   end
 
   @doc false
-  def emit_var, do: quote(do: var!(emit, unquote(__MODULE__)))
-
-  defp emit_init(_), do: quote(do: unquote(emit_var()) = [])
-  defp emit_return(_), do: quote(do: unquote(emit_var()))
-
-  @doc false
-  def get_emitted(body) do
-    extract(body, fn
-      {:~>, _env, [_, {name, _, _}]} -> name
-      {:~>>, _env, [_, {name, _, _}]} -> name
+  def emit?(body) do
+    extract_not_empty?(body, fn
+      {:~>, _env, [_, {_, _, _}]} -> true
+      {:~>>, _env, [_, {_, _, _}]} -> true
       _ -> false
     end)
   end
@@ -437,19 +525,19 @@ defmodule Skitter.DSL.Component do
       [arguments: 2, emit_multi: 0, emit_single: 0, simple: 0, state: 0]
 
       iex> Component.callback_info(CbExample, :simple, 0)
-      %Info{read: [], write: [], emit: []}
+      %Info{read?: false, write?: false, emit?: false}
 
       iex> Component.callback_info(CbExample, :arguments, 2)
-      %Info{read: [], write: [], emit: []}
+      %Info{read?: false, write?: false, emit?: false}
 
       iex> Component.callback_info(CbExample, :state, 0)
-      %Info{read: [:counter], write: [:counter], emit: []}
+      %Info{read?: true, write?: true, emit?: false}
 
       iex> Component.callback_info(CbExample, :emit_single, 0)
-      %Info{read: [], write: [], emit: [:out_port]}
+      %Info{read?: false, write?: false, emit?: true}
 
       iex> Component.callback_info(CbExample, :emit_multi, 0)
-      %Info{read: [], write: [], emit: [:out_port]}
+      %Info{read?: false, write?: false, emit?: true}
 
       iex> Component.call(CbExample, :simple, %{}, [])
       %Result{result: nil, emit: [], state: %{}}
@@ -458,7 +546,7 @@ defmodule Skitter.DSL.Component do
       %Result{result: 30, emit: [], state: %{}}
 
       iex> Component.call(CbExample, :state, %{counter: 10, other: :foo}, [])
-      %Result{result: 11, emit: [], state: %{counter: 11, other: :foo}}
+      %Result{result: %{counter: 11, other: :foo}, emit: [], state: %{counter: 11, other: :foo}}
 
       iex> Component.call(CbExample, :emit_single, %{}, [])
       %Result{result: ~D[1991-12-08], emit: [out_port: [~D[1991-12-08]]], state: %{}}
@@ -469,31 +557,25 @@ defmodule Skitter.DSL.Component do
   defmacro defcb(signature, do: body) do
     body = __MODULE__.ControlFlowOperators.rewrite_special_forms(body)
     {name, args} = Macro.decompose_call(signature)
-    emitted = get_emitted(body)
-    writes = get_writes(body)
-    reads = get_reads(body)
-
-    state_var = Macro.var(:state, __MODULE__)
     arity = length(args)
 
-    info = %Info{read: reads, write: writes, emit: emitted} |> Macro.escape()
+    info = %Info{read?: read?(body), write?: write?(body), emit?: emit?(body)} |> Macro.escape()
 
     quote do
       @doc false
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
-      def unquote(name)(unquote(state_var), unquote_splicing(args)) do
-        import unquote(__MODULE__), only: [sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
+      def unquote(name)(unquote(state_var()), unquote_splicing(args)) do
+        import unquote(__MODULE__), only: [state: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
         use unquote(__MODULE__.ControlFlowOperators)
 
-        unquote(state_init(reads, state_var))
-        unquote(emit_init(emitted))
+        unquote(emit_var()) = []
 
         result = unquote(body)
 
         %Skitter.Component.Callback.Result{
           result: result,
-          state: unquote(state_return(writes, state_var)),
-          emit: unquote(emit_return(body))
+          state: unquote(state_var()),
+          emit: unquote(emit_var())
         }
       end
     end

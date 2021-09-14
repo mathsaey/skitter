@@ -14,32 +14,26 @@ defmodule Skitter.Component do
   distributed over the cluster at runtime.
 
   A skitter component is defined as an elixir module which implements the `Skitter.Component`
-  behaviour. This behaviour defines various callbacks, which are used to track component metadata
-  and callback information. At runtime, a component handles component-specific state. This state
-  is represented as a struct which should be defined by the component module. Thus, a component
-  module should:
+  behaviour. This behaviour defines various elixir callbacks which are used to track component
+  information such as the defined callbacks. Instead of implementing a component as an elixir
+  module, it is recommend to use `Skitter.DSL.Component.defcomponent/3`, which automatically
+  generates the appropriate callbacks.
 
-  - Implement the `Skitter.Component` behaviour.
-  - Define a struct.
-
-  Instead of doing this manually, it is recommend to use `Skitter.DSL.Component.defcomponent/3` to
-  define a component.
-
-  This module defines the component type and behaviour along with some utilities to handle
-  components.
+  This module defines the component type and behaviour along with utilities to handle components.
 
   ## Callbacks
 
-  A component defines various _callbacks_: functions which implement the processing logic of a
-  component. These callbacks need to have the ability to modify state and emit data when they are
-  called. Callbacks are implemented as elixir functions with a few properties:
+  A component defines various _callbacks_: functions which implement the data processing logic of
+  a component. These callbacks need to have the ability to modify state and emit data when they
+  are called. Callbacks are implemented as elixir functions with a few properties:
 
   - Callbacks accept `t:state/0` as their first argument.
   - Callbacks return a `t:result/0` struct, which wraps the result of the callback call along with
   the updated state and emitted data.
 
-  Besides this, callbacks track additional information about how it access state and which data it
-  emits. This information is stored inside the callbacks defined in this module.
+  Besides this, callbacks track additional information about whether they access or modify state
+  and which data they emit. This information is stored inside the behaviour callbacks defined in
+  this module.
 
   ## Examples
 
@@ -51,27 +45,27 @@ defmodule Skitter.Component do
     @behaviour Skitter.Component
     alias Skitter.Component.Callback.{Info, Result}
 
-    defstruct [:field]
-
     def _sk_component_info(:strategy), do: Strategy
     def _sk_component_info(:in_ports), do: [:input]
     def _sk_component_info(:out_ports), do: [:output]
 
+    def _sk_component_initial_state, do: 42
+
     def _sk_callback_list, do: [example: 1]
 
     def _sk_callback_info(:example, 1) do
-      %Info{read: [:field], write: [], emit: [:arg]}
+      %Info{read?: true, write?: false, emit?: true}
     end
 
     def example(state, arg) do
-      result = Map.get(state, :field)
+      result = state * 2
       %Result{state: state, emit: [arg: arg], result: result}
     end
   end
   ```
   """
 
-  alias Skitter.{Port, Strategy, DefinitionError, Component.Callback.Info}
+  alias Skitter.{Port, Strategy, Component.Callback.Info}
 
   # ----- #
   # Types #
@@ -80,7 +74,7 @@ defmodule Skitter.Component do
   @typedoc """
   A component is defined as a module.
 
-  This module should implement the `Skitter.Component` behaviour, and define a struct.
+  This module should implement the `Skitter.Component` behaviour.
   """
   @type t :: module()
 
@@ -93,18 +87,16 @@ defmodule Skitter.Component do
 
   @typedoc """
   State passed to the callback when it is called.
-
-  The state is wrapped in the component's module struct.
   """
-  @type state :: struct()
+  @type state :: any()
 
   @typedoc """
   Output emitted by a callback.
 
-  Emitted data is returned as a list where the output for each out port is specified. When no
-  data is emitted on a port, the port should be omitted from the emit list. The data
-  emitted by a callback for a port should always be wrapped in a list. Each element in this list
-  will be sent to downstream component separately.
+  Emitted data is returned as a list where the output for each out port is specified. When no data
+  is emitted on a port, the port should be omitted from the emit list. The data emitted by a
+  callback for a port should always be wrapped in a list. Each element in this list will be sent
+  to downstream components separately.
   """
   @type emit :: [{Port.t(), [any()]}]
 
@@ -128,14 +120,14 @@ defmodule Skitter.Component do
 
   The following information is stored:
 
-  - `:read`: The state fields read inside the callback.
-  - `:write`: The state fields updated by the callback.
-  - `:emit`: The ports this callback emits to.
+  - `:read?`: Boolean which indicates if the callback reads the component state.
+  - `:write?`: Boolean which indicates if the callback updates the component state.
+  - `:emit`: Boolean which indicates if the callback emits data.
   """
   @type info :: %__MODULE__.Callback.Info{
-          read: [atom()],
-          write: [atom()],
-          emit: [atom()]
+          read?: boolean(),
+          write?: boolean(),
+          emit?: boolean()
         }
 
   # Struct Definitions
@@ -151,7 +143,7 @@ defmodule Skitter.Component do
 
     defmodule Info do
       @moduledoc false
-      defstruct read: [], write: [], emit: []
+      defstruct read?: false, write?: false, emit?: false
     end
   end
 
@@ -187,6 +179,14 @@ defmodule Skitter.Component do
   """
   @callback _sk_callback_info(name :: atom(), arity()) :: info()
 
+  @doc """
+  Returns the initial state of the component.
+
+  This function returns an initial state for the component. The state of a component is component
+  specific: Skitter places no constraints on this state.
+  """
+  @callback _sk_component_initial_state() :: any()
+
   # --------- #
   # Utilities #
   # --------- #
@@ -214,15 +214,15 @@ defmodule Skitter.Component do
   def component?(_), do: false
 
   @doc """
-  Create an empty state struct for the given component.
+  Create the initial state for `component`.
 
   ## Examples
 
-      iex> create_empty_state(ComponentModule)
-      %ComponentModule{field: nil}
+      iex> initial_state(ComponentModule)
+      42
   """
-  @spec create_empty_state(t()) :: state()
-  def create_empty_state(component), do: component.__struct__()
+  @spec initial_state(t()) :: state()
+  def initial_state(component), do: component._sk_component_initial_state()
 
   @doc """
   Obtain the strategy of `component`.
@@ -373,7 +373,7 @@ defmodule Skitter.Component do
   ## Examples
 
       iex> callback_info(ComponentModule, :example, 1)
-      %Info{read: [:field], write: [], emit: [:arg]}
+      %Info{read?: true, write?: false, emit?: true}
 
   """
   @spec callback_info(t(), atom(), arity()) :: info()
@@ -384,263 +384,25 @@ defmodule Skitter.Component do
 
   ## Examples
 
-      iex> call(ComponentModule, :example, %ComponentModule{field: :val}, [42])
-      %Skitter.Component.Callback.Result{state: %ComponentModule{field: :val}, result: :val, emit: [arg: 42]}
+      iex> call(ComponentModule, :example, 10, [:foo])
+      %Skitter.Component.Callback.Result{state: 10, result: 20, emit: [arg: :foo]}
   """
   @spec call(t(), atom(), state(), args()) :: result()
   def call(component, name, state, args), do: apply(component, name, [state | args])
 
   @doc """
-  Call callback `callback_name` with and empty state and `arguments`.
+  Call callback `callback_name` with an empty state and `arguments`.
 
   This function calls `Skitter.Component.call/4` with the state created by
-  `create_empty_state/1`.
+  `initial_state/1`.
 
   ## Examples
 
-      iex> call(ComponentModule, :example, [42])
-      %Skitter.Component.Callback.Result{state: %ComponentModule{field: nil}, result: nil, emit: [arg: 42]}
+      iex> call(ComponentModule, :example, [:foo])
+      %Skitter.Component.Callback.Result{state: 42, result: 84, emit: [arg: :foo]}
   """
   @spec call(t(), atom(), args()) :: result()
   def call(component, callback_name, args) do
-    call(component, callback_name, create_empty_state(component), args)
-  end
-
-  @doc """
-  Verify if the `property` of the provided `info` satisfies `property`
-
-  This function will lookup the property of a callback in the provided `t:info/0` struct and
-  compare it to an expected value.
-
-  - If the property is not present in `t:info/0`, `{:error, :invalid}` is returned.
-
-  - If the property has the same value as `expected`, `:ok` is returned.
-
-  - If the values do not match, the `{:error, actual value}` is returned.
-
-  As a special case, the properties, `read?`, `write?` and `emit?` may be passed along with a
-  boolean value. When this value is `false`, `verify_info` ensures the corresponding property
-  (`read`, `write`, or `emit`) is equal to the empty list. When `true` is passed, any value for
-  `read`, `write` or `emit` is accepted. This is done to enable `verify_info/3` to ensure a
-  callback does not update its state or emit data when this is not allowed.
-
-  ## Examples
-
-      iex> verify_info(%Info{read: [:field]}, :read, [:field])
-      :ok
-
-      iex> verify_info(%Info{read: [:field]}, :read, [])
-      {:error, [:field]}
-
-      iex> verify_info(%Info{read: [:field]}, :red, [:field])
-      {:error, :invalid}
-
-      iex> verify_info(%Info{read: [:field]}, :read?, true)
-      :ok
-
-      iex> verify_info(%Info{read: [:field]}, :read?, false)
-      {:error, [:field]}
-
-      iex> verify_info(%Info{write: []}, :write?, true)
-      :ok
-
-      iex> verify_info(%Info{write: []}, :write?, false)
-      :ok
-
-      iex> verify_info(%Info{emit: []}, :emit?, false)
-      :ok
-
-  """
-  @spec verify_info(info(), atom(), any()) :: :ok | {:error, :invalid | any()}
-
-  def verify_info(_, property, true) when property in [:read?, :write?, :emit?], do: :ok
-
-  def verify_info(info = %Info{}, :read?, false), do: verify_info(info, :read, [])
-  def verify_info(info = %Info{}, :write?, false), do: verify_info(info, :write, [])
-  def verify_info(info = %Info{}, :emit?, false), do: verify_info(info, :emit, [])
-
-  def verify_info(info = %Info{}, property, expected) do
-    case Map.get(info, property) do
-      nil -> {:error, :invalid}
-      ^expected -> :ok
-      value -> {:error, value}
-    end
-  end
-
-  @doc """
-  Verify if the `property` of a callback satisfies `property`
-
-  Works like `verify_info/3`, but raises a `Skitter.DefinitionError` if the properties do not
-  match. `:ok` is returned if the properties match.
-
-  ## Examples
-
-      iex> verify_info!(%Info{write: []}, :write, [], "example")
-      :ok
-
-      iex> verify_info!(%Info{write: []}, :write, [:field], "example")
-      ** (Skitter.DefinitionError) Incorrect write for callback example, expected [:field], got []
-
-      iex> verify_info!(%Info{write: []}, :wrte, [], "example")
-      ** (Skitter.DefinitionError) `wrte` is not a valid property name
-
-      iex> verify_info!(%Info{read: []}, :read?, true, "example")
-      :ok
-
-      iex> verify_info!(%Info{read: [:field]}, :read?, false, "example")
-      ** (Skitter.DefinitionError) Incorrect read for callback example, expected [], got [:field]
-
-      iex> verify_info!(%Info{read: []}, :write?, true, "example")
-      :ok
-
-      iex> verify_info!(%Info{read: []}, :write?, false, "example")
-      :ok
-
-      iex> verify_info!(%Info{emit: []}, :emit?, false, "example")
-      :ok
-
-  """
-  @spec verify_info!(info(), atom(), any(), String.t()) :: :ok | no_return()
-
-  def verify_info!(_, property, true, _) when property in [:read?, :write?, :emit?], do: :ok
-
-  def verify_info!(info = %Info{}, :read?, false, n), do: verify_info!(info, :read, [], n)
-  def verify_info!(info = %Info{}, :write?, false, n), do: verify_info!(info, :write, [], n)
-  def verify_info!(info = %Info{}, :emit?, false, n), do: verify_info!(info, :emit, [], n)
-
-  def verify_info!(info = %Info{}, property, value, name) do
-    case verify_info(info, property, value) do
-      :ok ->
-        :ok
-
-      {:error, :invalid} ->
-        raise DefinitionError, "`#{property}` is not a valid property name"
-
-      {:error, actual} ->
-        value = inspect(value)
-        actual = inspect(actual)
-
-        raise DefinitionError,
-              "Incorrect #{property} for callback #{name}, expected #{value}, got #{actual}"
-    end
-  end
-
-  @doc """
-  Verify the properties of a callback using `verify_info!/4`.
-
-  This function accepts a keyword list of `{property, expected_value}` pairs and compares each of
-  them with `verify_info!/4`.
-
-  ## Examples
-
-      iex> verify_info!(%Info{read: [], write: [:field]}, "example", read?: true, write?: true)
-      :ok
-
-      iex> verify_info!(%Info{read: [], write: [:field]}, "example")
-      :ok
-
-      iex> verify_info!(%Info{write: [:field]}, "example", emit?: true, wrt: [])
-      ** (Skitter.DefinitionError) `wrt` is not a valid property name
-
-      iex> verify_info!(%Info{emit: [:port]}, "example", emit?: false)
-      ** (Skitter.DefinitionError) Incorrect emit for callback example, expected [], got [:port]
-  """
-  @spec verify_info!(info(), String.t(), [{atom(), any()}]) :: :ok | no_return()
-  def verify_info!(info = %Info{}, name, properties \\ []) do
-    Enum.each(properties, fn {property, value} -> verify_info!(info, property, value, name) end)
-  end
-
-  @doc """
-  Verify if the `property` of the provided callback satisfies `property`.
-
-  This function calls `verify_info/3` on the `callback_info/3` of the provided callback. If the
-  callback does not exist, `{error, :missing}` is returned.
-
-  ## Examples
-
-      iex> verify(ComponentModule, :example, 1, :read, [:field])
-      :ok
-
-      iex> verify(ComponentModule, :exampl, 1, :read, [:field])
-      {:error, :missing}
-
-      iex> verify(ComponentModule, :example, 1, :read, [])
-      {:error, [:field]}
-
-      iex> verify(ComponentModule, :example, 1, :red, [:field])
-      {:error, :invalid}
-
-      iex> verify(ComponentModule, :example, 1, :read?, true)
-      :ok
-  """
-  @spec verify(t(), atom(), arity(), atom(), any()) :: :ok | {:error, :invalid | :missing | any()}
-  def verify(component, name, arity, property, value) do
-    if {name, arity} in callback_list(component) do
-      callback_info(component, name, arity) |> verify_info(property, value)
-    else
-      {:error, :missing}
-    end
-  end
-
-  @doc """
-  Verify if the `property` of the provided callback satisfies `property`.
-
-  This function calls `verify_info!/4` on the `callback_info/3` of the provided callback.
-
-  ## Examples
-
-      iex> verify!(ComponentModule, :example, 1, :read, [:field])
-      :ok
-
-      iex> verify!(ComponentModule, :exampl, 1, :read, [:field])
-      ** (Skitter.DefinitionError) Missing required callback exampl with arity 1
-
-      iex> verify!(ComponentModule, :example, 1, :read, [])
-      ** (Skitter.DefinitionError) Incorrect read for callback example, expected [], got [:field]
-
-      iex> verify!(ComponentModule, :example, 1, :red, [:field])
-      ** (Skitter.DefinitionError) `red` is not a valid property name
-
-      iex> verify!(ComponentModule, :example, 1, :read?, true)
-      :ok
-  """
-  @spec verify!(t(), atom(), arity(), atom(), any()) :: :ok | no_return()
-  def verify!(component, name, arity, property, value) do
-    if {name, arity} in callback_list(component) do
-      callback_info(component, name, arity) |> verify_info!(property, value, Atom.to_string(name))
-    else
-      raise Skitter.DefinitionError, "Missing required callback #{name} with arity #{arity}"
-    end
-  end
-
-  @doc """
-  Verify the properties of a callback using `verify_info!/3`.
-
-  This function calls `verify_info!/3` on the `callback_info/3` of the provided callback.
-
-  ## Examples
-
-      iex> verify!(ComponentModule, :example, 1, read?: true, write?: true)
-      :ok
-
-      iex> verify!(ComponentModule, :example, 1)
-      :ok
-
-      iex> verify!(ComponentModule, :exampl, 1)
-      ** (Skitter.DefinitionError) Missing required callback exampl with arity 1
-
-      iex> verify!(ComponentModule, :example, 1, emit?: true, wrt: [])
-      ** (Skitter.DefinitionError) `wrt` is not a valid property name
-
-      iex> verify!(ComponentModule, :example, 1, emit?: false)
-      ** (Skitter.DefinitionError) Incorrect emit for callback example, expected [], got [:arg]
-  """
-  @spec verify!(t(), atom(), arity(), [{atom(), any()}]) :: :ok | no_return()
-  def verify!(component, name, arity, properties \\ []) do
-    if {name, arity} in callback_list(component) do
-      callback_info(component, name, arity) |> verify_info!(Atom.to_string(name), properties)
-    else
-      raise Skitter.DefinitionError, "Missing required callback #{name} with arity #{arity}"
-    end
+    call(component, callback_name, initial_state(component), args)
   end
 end

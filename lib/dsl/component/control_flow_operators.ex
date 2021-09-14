@@ -7,12 +7,14 @@
 defmodule Skitter.DSL.Component.ControlFlowOperators do
   @moduledoc false
   # State updates in `defcb` are handled by creating hidden variables which keep track of the
-  # various parts of the callback state. This is a lot faster than using the process dictionary.
-  # One drawback of using this approach is that state updates are sensitive to scoping rules.
+  # callback state and emitted data. This approach is a lot faster than using the process
+  # dictionary.  One drawback of using this approach is that state updates are sensitive to
+  # scoping rules.
   #
   # To solve this, we introduce our own version of common control flow constructs and ensure the
-  # modified fields are returned as a part of the result of the control flow construct. These
-  # constructs are defined here, to avoid name clashes with the Kernel in `Skitter.DSL.Component`.
+  # modified variables are returned as a part of the result of the control flow construct. These
+  # constructs are defined here, to avoid name clashes with the Kernel module in
+  # `Skitter.DSL.Component`.
 
   alias Skitter.DSL.Component
   import Kernel, except: [if: 2]
@@ -47,16 +49,16 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
   end
 
   defmacro if(pred, do: thn, else: els) do
-    fields = fields([thn, els])
+    updates = updates([thn, els])
 
     quote do
-      {result, unquote_splicing(fields)} =
+      {result, unquote_splicing(updates)} =
         Kernel.if unquote(pred) do
           result = unquote(thn)
-          {result, unquote_splicing(fields)}
+          {result, unquote_splicing(updates)}
         else
           result = unquote(els)
-          {result, unquote_splicing(fields)}
+          {result, unquote_splicing(updates)}
         end
 
       result
@@ -64,7 +66,7 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
   end
 
   defmacro case_(expr, do: branches) do
-    fields = fields(branches)
+    updates = updates(branches)
 
     branches =
       Enum.flat_map(branches, fn
@@ -72,12 +74,12 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
           quote do
             unquote_splicing(head) ->
               result = unquote(body)
-              {result, unquote_splicing(fields)}
+              {result, unquote_splicing(updates)}
           end
       end)
 
     quote do
-      {result, unquote_splicing(fields)} =
+      {result, unquote_splicing(updates)} =
         case unquote(expr) do
           unquote(branches)
         end
@@ -86,35 +88,15 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
     end
   end
 
-  defp fields(branches) do
-    writes = Enum.map(branches, &Component.get_writes/1)
-    fields = writes |> Enum.map(&MapSet.new/1) |> Enum.dedup()
-    emit? = Enum.any?(branches, &(Component.get_emitted(&1) != []))
+  defp updates(branches) do
+    write? = branches |> Enum.map(&Component.write?/1) |> Enum.any?()
+    emit? = branches |> Enum.map(&Component.emit?/1) |> Enum.any?()
 
-    Kernel.if length(fields) == 1 do
-      fields = fields |> hd() |> Enum.to_list() |> Enum.map(&Component.state_var/1)
-      Kernel.if(emit?, do: [Component.emit_var() | fields], else: fields)
-    else
-      incompatible_writes(writes)
+    cond do
+      write? && emit? -> [Component.state_var(), Component.emit_var()]
+      write? -> [Component.state_var()]
+      emit? -> [Component.emit_var()]
+      true -> []
     end
-  end
-
-  defp incompatible_writes(writes) do
-    branches =
-      writes
-      |> Enum.map(fn lst -> lst |> Enum.map(&Atom.to_string/1) |> Enum.join(", ") end)
-      |> Enum.with_index(1)
-      |> Enum.map(fn {el, idx} -> "\tBranch #{idx} updates: #{el}" end)
-      |> Enum.join("\n")
-
-    raise(
-      Skitter.DefinitionError,
-      """
-      Incompatible writes in control structure.
-      \tBranches of control flow structures inside `defcb` should mutate the same state fields.
-      \tTo solve this problem, ensure all branches mutate the same fields.
-      #{branches}
-      """
-    )
   end
 end

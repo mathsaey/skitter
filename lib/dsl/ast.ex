@@ -18,16 +18,4 @@ defmodule Skitter.DSL.AST do
   """
   def names_to_atoms(lst) when is_list(lst), do: Enum.map(lst, &name_to_atom/1)
   def names_to_atoms(any), do: names_to_atoms([any])
-
-  @doc """
-  Count how many times `symbol` occurs in `ast`.
-  """
-  def count_uses(ast, symbol) do
-    ast
-    |> Macro.prewalk(0, fn
-      ast = {^symbol, _env, _args}, acc -> {ast, acc + 1}
-      ast, acc -> {ast, acc}
-    end)
-    |> elem(1)
-  end
 end

@@ -23,7 +23,7 @@ defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLo
   * out ports: `_`
   * default strategy: `Skitter.BIS.ImmutableLocal`
   """
-  fields [:label]
+  state_struct label: ""
 
   defcb init(str), do: label <~ str
   defcb react(val), do: IO.inspect(val, label: ~f{label}) ~> _

@@ -14,20 +14,20 @@ defmodule Skitter.ComponentTest do
     @behaviour Skitter.Component
     alias Skitter.Component.Callback.{Info, Result}
 
-    defstruct [:field]
-
     def _sk_component_info(:strategy), do: Strategy
     def _sk_component_info(:in_ports), do: [:input]
     def _sk_component_info(:out_ports), do: [:output]
 
+    def _sk_component_initial_state, do: 42
+
     def _sk_callback_list, do: [example: 1]
 
     def _sk_callback_info(:example, 1) do
-      %Info{read: [:field], write: [], emit: [:arg]}
+      %Info{read?: true, write?: false, emit?: true}
     end
 
     def example(state, arg) do
-      result = Map.get(state, :field)
+      result = state * 2
       %Result{state: state, emit: [arg: arg], result: result}
     end
   end

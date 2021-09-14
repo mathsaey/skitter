@@ -13,36 +13,46 @@ defmodule Skitter.DSL.ComponentTest do
   alias Skitter.Component
   alias Skitter.Component.Callback.{Info, Result}
 
-  defcomponent FieldsExample do
-    fields foo: 42
+  defcomponent NoStateExample do
+    defcb return_state, do: state()
   end
 
-  defcomponent NoFields do
+  defcomponent StateExample do
+    state 0
+    defcb return_state, do: state()
   end
 
   defcomponent Average, in: value, out: current do
-    fields total: 0, count: 0
+    state_struct total: 0, count: 0
 
-    defcb react(value) do
-      total <~ (~f{total} + value)
+    defcb react(val) do
       count <~ (~f{count} + 1)
-
+      total <~ (~f{total} + val)
       (~f{total} / ~f{count}) ~> current
     end
   end
 
   defcomponent ReadExample do
-    fields [:field]
+    state 0
+    defcb read(), do: state()
+  end
+
+  defcomponent FieldReadExample do
+    state_struct field: nil
     defcb read(), do: ~f{field}
   end
 
   defcomponent WriteExample do
-    fields [:field]
+    defcb write(), do: state <~ :foo
+  end
+
+  defcomponent FieldWriteExample do
+    state_struct [:field]
     defcb write(), do: field <~ :bar
   end
 
-  defcomponent WrongWriteExample do
-    fields [:field]
+  defcomponent WrongFieldWriteExample do
+    state_struct [:field]
     defcb write(), do: doesnotexist <~ :bar
   end
 
@@ -71,15 +81,6 @@ defmodule Skitter.DSL.ComponentTest do
   doctest Skitter.DSL.Component
 
   describe "defcomponent" do
-    test "multiple fields results in error" do
-      assert_definition_error ~r/.*: Only one fields declaration is allowed/ do
-        defcomponent ShouldError do
-          fields a: 1
-          fields b: 2
-        end
-      end
-    end
-
     test "invalid strategy results in error" do
       assert_definition_error ~r/Invalid strategy: `5`/ do
         defcomponent ShouldError, strategy: 5 do
@@ -89,7 +90,7 @@ defmodule Skitter.DSL.ComponentTest do
   end
 
   defcomponent Clauses do
-    fields [:x, :y]
+    state_struct [:x, :y]
 
     defcb f(:foo), do: x <~ :foo
     defcb f(:bar), do: y <~ :bar
@@ -98,19 +99,19 @@ defmodule Skitter.DSL.ComponentTest do
 
   test "multiple callback clauses" do
     assert Component.callback_info(Clauses, :f, 1) == %Info{
-             read: [],
-             write: [:y, :x],
-             emit: [:z]
+             read?: false,
+             write?: true,
+             emit?: true
            }
 
     assert Component.call(Clauses, :f, [:foo]) == %Result{
-             result: :foo,
+             result: %Clauses{x: :foo, y: nil},
              state: %Clauses{x: :foo, y: nil},
              emit: []
            }
 
     assert Component.call(Clauses, :f, [:bar]) == %Result{
-             result: :bar,
+             result: %Clauses{x: nil, y: :bar},
              state: %Clauses{x: nil, y: :bar},
              emit: []
            }
@@ -182,21 +183,7 @@ defmodule Skitter.DSL.ComponentTest do
              }
     end
 
-    test "if throws when fields are incompatible" do
-      assert_definition_error ~r/Incompatible writes in control structure..*/ do
-        defcomponent ErrorIf do
-          defcb test() do
-            if true do
-              x <~ :foo
-            else
-              y <~ :bar
-            end
-          end
-        end
-      end
-    end
-
-    test "case does not influece normal case" do
+    test "case does not influence normal case" do
       defcomponent NormalCase do
         defcb test() do
           case 5 do
@@ -233,19 +220,6 @@ defmodule Skitter.DSL.ComponentTest do
 
       assert Component.call(EmitCase, :test, [1]).emit == [out: [:foo]]
       assert Component.call(EmitCase, :test, [2]).emit == [other: [:bar, :baz]]
-    end
-
-    test "case throws when fields are incompatible" do
-      assert_definition_error ~r/Incompatible writes in control structure..*/ do
-        defcomponent ErrorCase do
-          defcb test() do
-            case arg do
-              1 -> x <~ 1
-              2 -> y <~ 2
-            end
-          end
-        end
-      end
     end
   end
 end

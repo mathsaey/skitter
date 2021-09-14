@@ -14,10 +14,11 @@
     error: :*,
     # Skitter DSL
     defcomponent: :*,
-    defcb: :*,
-    fields: :*,
+    defcb: 2,
+    state: 1,
+    state_struct: 1,
     defstrategy: :*,
-    defhook: :*,
+    defhook: 2,
     workflow: :*,
     node: :*,
     # Skitter config
@@ -29,9 +30,10 @@
     locals_without_parens: [
       defcomponent: :*,
       defcb: :*,
-      fields: :*,
+      state: 1,
+      state_struct: 1,
       defstrategy: :*,
-      defhook: :*,
+      defhook: 2,
       workflow: :*,
       node: :*
     ]
