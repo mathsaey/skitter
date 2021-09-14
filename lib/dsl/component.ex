@@ -26,7 +26,7 @@ defmodule Skitter.DSL.Component do
   used, the initial state of a component is `nil`.
 
   Internally, this macro generates a definition of
-  `c:Skitter.Component._sk_component_intial_state/0`.
+  `c:Skitter.Component._sk_component_initial_state/0`.
 
   ## Examples
 
