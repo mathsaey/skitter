@@ -21,7 +21,8 @@ defmodule Mix.Tasks.Skitter.Worker do
 
   * `--no-shutdown-with-master`: By default, a worker node shuts itself down when its connected
   master node disconnects. This option can be passed to override this behaviour.
-  * `--tag` or `-t`: Specify a `t:Skitter.Nodes.tag/0` for this worker node.
+  * `--tag` or `-t`: Specify a `t:Skitter.Nodes.tag/0` for this worker node. This option can be
+  used multiple times.
 
   Besides this, the name of a master node can be passed as an argument. The worker will attempt to
   connect to the specified master. If this is not successful, a warning is logged, however, the
