@@ -38,7 +38,7 @@ defmodule <%= @module_name %>.MixProject do
       # e.g.:
 
       # Adds Skitter as a project dependency
-      {:skitter, github: "mathsaey/skitter.git"},
+      {:skitter, github: "mathsaey/skitter"},
     ]
   end
 end
