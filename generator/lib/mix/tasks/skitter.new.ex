@@ -21,7 +21,6 @@ defmodule Mix.Tasks.Skitter.New do
   alias Mix.Generator, as: Gen
 
   @elixir_version "~> 1.12"
-  @template_path Path.expand("../../../templates", __DIR__)
 
   @impl Mix.Task
   def run(args) do
@@ -87,19 +86,21 @@ defmodule Mix.Tasks.Skitter.New do
   end
 
   defp copy_files!(base_path) do
-    Gen.copy_file("#{@template_path}/gitignore", "#{base_path}/.gitignore")
-    Gen.copy_file("#{@template_path}/config/config.exs", "#{base_path}/config/config.exs")
+    Gen.copy_file("#{template_path()}/gitignore", "#{base_path}/.gitignore")
+    Gen.copy_file("#{template_path()}/config/config.exs", "#{base_path}/config/config.exs")
   end
 
   defp copy_templates!(base_path, app_name, module_name) do
     assigns = [app_name: app_name, module_name: module_name, elixir_version: @elixir_version]
-    Gen.copy_template("#{@template_path}/mix.exs.eex", "#{base_path}/mix.exs", assigns)
-    Gen.copy_template("#{@template_path}/README.md.eex", "#{base_path}/README.md", assigns)
+    Gen.copy_template("#{template_path()}/mix.exs.eex", "#{base_path}/mix.exs", assigns)
+    Gen.copy_template("#{template_path()}/README.md.eex", "#{base_path}/README.md", assigns)
 
     Gen.copy_template(
-      "#{@template_path}/lib/app_name.ex.eex",
+      "#{template_path()}/lib/app_name.ex.eex",
       "#{base_path}/lib/#{app_name}.ex",
       assigns
     )
   end
+
+  defp template_path, do: __DIR__ |> Path.join("../../../templates") |> Path.relative_to_cwd()
 end
