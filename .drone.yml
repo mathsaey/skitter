@@ -1,5 +1,39 @@
 kind: pipeline
 type: docker
+name: test
+
+steps:
+  - name: test
+    image: elixir:latest
+    environment:
+      MIX_ENV: test
+    commands:
+      - mix local.hex --force
+      - mix local.rebar --force
+      - mix deps.get --only test
+      - mix deps.compile
+      - epmd -daemon
+      - mix test
+
+---
+kind: pipeline
+type: docker
+name: typecheck
+
+steps:
+  - name: dialyzer
+    image: elixir:latest
+    environment:
+      MIX_ENV: dev
+    commands:
+      - mix local.hex --force
+      - mix local.rebar --force
+      - mix deps.get --only dev
+      - mix deps.compile
+      - mix dialyzer --quiet --format short
+---
+kind: pipeline
+type: docker
 name: installer
 
 steps:
@@ -24,6 +58,9 @@ steps:
       source: generator/
       target: ~/public_html/skitter/
 
+depends_on:
+- test
+- typecheck
 ---
 kind: pipeline
 type: docker
@@ -58,40 +95,9 @@ steps:
         - refs/heads/develop
         - refs/tags/*
 
----
-kind: pipeline
-type: docker
-name: test
-
-steps:
-  - name: test
-    image: elixir:latest
-    environment:
-      MIX_ENV: test
-    commands:
-      - mix local.hex --force
-      - mix local.rebar --force
-      - mix deps.get --only test
-      - mix deps.compile
-      - epmd -daemon
-      - mix test
-
----
-kind: pipeline
-type: docker
-name: typecheck
-
-steps:
-  - name: dialyzer
-    image: elixir:latest
-    environment:
-      MIX_ENV: dev
-    commands:
-      - mix local.hex --force
-      - mix local.rebar --force
-      - mix deps.get --only dev
-      - mix deps.compile
-      - mix dialyzer --quiet --format short
+depends_on:
+- test
+- typecheck
 ---
 
 kind: pipeline
