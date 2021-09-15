@@ -70,8 +70,11 @@ function deploy_usage() {
   printf '\t\t\t\t%s\n'                          "to the current working directory."
   printf '%s\n'           "Command Arguments:"
   printf '\t%s\t\t\t%s\n' "WORKERS" "List of worker nodes to spawn. A node is"
-  printf '\t\t\t\t%s\n'             "specified as [name@]hostname. If name is"
-  printf '\t\t\t\t%s\n'             "not specified, it defaults to skitter_worker."
+  printf '\t\t\t\t%s\n'             "specified as [name@]hostname[:tag1,tag2]. If"
+  printf '\t\t\t\t%s\n'             "name is not specified, it defaults to skitter_worker."
+  printf '\t\t\t\t%s\n'             "tags may not contain white space characters and must be"
+  printf '\t\t\t\t%s\n'             "separated from the hostname by a colon character and from"
+  printf '\t\t\t\t%s\n'             "each other with a comma."
 }
 
 function local_usage() {
@@ -102,6 +105,8 @@ function worker_usage() {
   runtime_usage "worker"
   opt_header
   opt_name
+  printf '\t%s\t\t%s\n' "-t, --tag TAG"         "Spawn the worker node with the given tag"
+  printf '\t\t\t\t%s\n'                         "This option can be used multiple times"
   opt_cookie
   opt_no_log
   printf '\t%s\t%s\n'   "--no-stop-with-master" "By default, Skitter worker runtimes shut down"
@@ -255,6 +260,8 @@ function maybe_add_name() {
 }
 
 function worker_start_parse() {
+  local tags
+
   while test $# -gt 0
     do
       case "$1" in
@@ -271,6 +278,11 @@ function worker_start_parse() {
           $maybe_dry_run export RELEASE_NODE="$2"
           shift
           ;;
+        -t|--tag)
+          test $# -lt 2 && argerr "worker" "Missing value for optional argument '--tag'."
+          tags="$tags $2"
+          shift
+          ;;
         --no-log)
           $maybe_dry_run unset SKITTER_LOG
           ;;
@@ -281,6 +293,11 @@ function worker_start_parse() {
       esac
       shift
   done
+
+  if [ -n "$tags" ]
+  then
+    $maybe_dry_run export SKITTER_TAGS="$tags"
+  fi
 }
 
 function master_start_parse() {
@@ -392,20 +409,25 @@ function for_workers() {
 
   for remote in $1
   do
-    printf '%s %s' "$5" "$remote"
+    worker=${remote%%:*}
+    tags=${remote##*:}
+
+    if [ -n "$tags" ] ; then tags="--tag ${tags//,/ --tag }" ; fi
+
+    printf '%s %s' "$5" "$worker"
     if [ -z "$maybe_dry_run" ]
     then
-      if ssh -q "$remote" "$cmd"
+      if ssh -q "$worker" "$cmd" "$tags"
       then
         printf ' %s\n' "$(color "$green" ✓)"
-        connected="$connected $remote"
+        connected="$connected $worker"
       else
         printf ' %s\n' "$(color "$red" ✗)"
-        failed="$remote"
+        failed="$worker"
         return 1
       fi
       else
-        $maybe_dry_run ssh "$remote" "$cmd"
+        $maybe_dry_run ssh "$worker" "$cmd" "$tags"
     fi
   done
 }
@@ -425,7 +447,7 @@ function start_deploy() {
   then
     printf "\nWorkers initialized, starting master.\n"
     $maybe_dry_run sleep 1
-    do_worker_master_local master start_iex "$3" "$1"
+    do_worker_master_local master start_iex "$3" "$connected"
   else
     printf '\n%s\n' "Failed to initialize some workers:"
     printf '> Succeeded: %s\n' "$(color "$green" "$connected")"

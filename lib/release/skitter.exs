@@ -17,6 +17,10 @@ config_from_env :mode, "SKITTER_MODE", &String.to_atom/1
 config_from_env :master, "SKITTER_MASTER", &String.to_atom/1
 config_enabled_unless_set :shutdown_with_master, "SKITTER_NO_SHUTDOWN_WITH_MASTER"
 
+config_from_env :tags, "SKITTER_TAGS", fn str ->
+  str |> String.split() |> Enum.map(&String.to_atom/1)
+end
+
 # Master
 config_from_env :workers, "SKITTER_WORKERS", fn str ->
   str |> String.split() |> Enum.map(&String.to_atom/1)
