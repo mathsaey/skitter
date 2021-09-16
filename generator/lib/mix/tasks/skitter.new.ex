@@ -102,5 +102,5 @@ defmodule Mix.Tasks.Skitter.New do
     )
   end
 
-  defp template_path, do: __DIR__ |> Path.join("../../../templates") |> Path.relative_to_cwd()
+  defp template_path, do: __DIR__ |> Path.join("../../../templates")
 end
