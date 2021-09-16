@@ -48,7 +48,10 @@ defmodule Skitter.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   defp dialyzer do
-    [plt_add_apps: [:mix, :iex, :eex]]
+    [
+      plt_add_apps: [:mix, :iex, :eex],
+      plt_local_path: "_build/dialyzer/"
+    ]
   end
 
   defp xref do

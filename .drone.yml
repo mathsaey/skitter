@@ -21,6 +21,18 @@ type: docker
 name: typecheck
 
 steps:
+  - name: restore-plt-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      restore: true
+      cache_key: "volume"
+      mount:
+        - '_build/dialyzer'
+    volumes:
+    - name: cache
+      path: /tmp/cache
+
   - name: dialyzer
     image: elixir:latest
     environment:
@@ -31,6 +43,23 @@ steps:
       - mix deps.get --only dev
       - mix deps.compile
       - mix dialyzer --quiet --format short
+
+  - name: rebuild-plt-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      rebuild: true
+      cache_key: "volume"
+      mount:
+        - '_build/dialyzer'
+    volumes:
+    - name: cache
+      path: /tmp/cache
+
+volumes:
+  - name: cache
+    host:
+      path: /var/cache/drone/
 ---
 kind: pipeline
 type: docker
