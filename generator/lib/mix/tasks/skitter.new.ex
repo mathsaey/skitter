@@ -125,7 +125,7 @@ defmodule Mix.Tasks.Skitter.New do
   # Set up the console logger. Values for level, format and metadata set here will also be used by
   # the file logger.
   config :logger, :console,
-    format: "[$time][$level$levelpad]$metadata $message\n",
+    format: "[$time][$level$levelpad]$metadata $message\\n",
     device: :standard_error
 
   # Remove all log messages with a priority lower than info at compile time if we are creating a
@@ -164,6 +164,8 @@ defmodule Mix.Tasks.Skitter.New do
     # Mix alias (https://hexdocs.pm/mix/Mix.html#module-aliases) for building a release.
     # We suppress the output of `mix release` to avoid confusion, as it conflicts with the use of
     # the skitter deploy script.
+    # You should adjust or remove this alias when building multiple releases, as each release will
+    # be written to the same destination folder, overwriting other releases.
     defp aliases, do: [release: "release --quiet --path _release"]
 
     # Specifies which releases to build. (https://hexdocs.pm/mix/Mix.Tasks.Release.html)
