@@ -41,5 +41,13 @@ if System.get_env("SKITTER_LOG") do
   File.mkdir_p!(dir)
 
   config :logger, backends: [:console, {LoggerFileBackend, :file_log}]
-  config :logger, :file_log, path: Path.join(dir, file), level: :info
+
+  console_config = Application.get_env(:logger, :console, [])
+
+  config :logger, :file_log,
+    path: Path.join(dir, file),
+    level: console_config[:level] || :info,
+    format: console_config[:format] || "[$time][$level$levelpad]$metadata $message\n",
+    metadata: console_config[:metadata] || [],
+
 end
