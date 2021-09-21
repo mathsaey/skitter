@@ -412,7 +412,7 @@ function for_workers() {
     worker=${remote%%:*}
     tags=${remote##*:}
 
-    if [ -n "$tags" ] ; then tags="--tag ${tags//,/ --tag }" ; fi
+    if [ "$tags" != "$worker" ] ; then tags="--tag ${tags//,/ --tag }" ; fi
 
     printf '%s %s' "$5" "$worker"
     if [ -z "$maybe_dry_run" ]
