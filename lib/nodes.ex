@@ -98,21 +98,21 @@ defmodule Skitter.Nodes do
   done will be divided over the worker nodes in a round robin fashion. This behaviour may change
   in the future.
   """
-  @spec on_n((() -> any()), pos_integer()) :: [[any()]]
-  def on_n(fun, n) do
+  @spec on_n(pos_integer(), (() -> any())) :: [[any()]]
+  def on_n(n, fun) do
     workers()
     |> Enum.shuffle()
     |> Stream.cycle()
     |> Enum.take(n)
     |> Enum.frequencies()
     |> Enum.flat_map(fn {remote, times} ->
-      Skitter.Remote.on(remote, fn -> n_times(fun, times) end)
+      Skitter.Remote.on(remote, fn -> n_times(times, fun) end)
     end)
   end
 
-  @spec n_times((() -> any()), pos_integer()) :: [any()]
-  defp n_times(fun, n), do: Enum.map(1..n, fn _ -> fun.() end)
+  @spec n_times(pos_integer(), (() -> any())) :: [any()]
+  defp n_times(n, fun), do: Enum.map(1..n, fn _ -> fun.() end)
 
   @spec core_times((() -> any())) :: [any()]
-  defp core_times(fun), do: n_times(fun, System.schedulers_online())
+  defp core_times(fun), do: n_times(System.schedulers_online(), fun)
 end
