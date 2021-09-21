@@ -72,8 +72,8 @@ defmodule Skitter.Nodes do
   A list of results will be returned for each worker node. These results will be returned in a
   keyword list of `{worker, result}` pairs.
   """
-  @spec n_times_on_all_workers((() -> any()), pos_integer()) :: [{node(), [any()]}]
-  def n_times_on_all_workers(fun, n), do: on_all_workers(fn -> n_times(fun, n) end)
+  @spec n_times_on_all_workers(pos_integer(), (() -> any())) :: [{node(), [any()]}]
+  def n_times_on_all_workers(n, fun), do: on_all_workers(fn -> n_times(fun, n) end)
 
   @doc """
   Execute a function on every worker runtime tagged with `tag`.
