@@ -10,25 +10,17 @@ defmodule Skitter.Runtime.Spawner do
 
   alias Skitter.Runtime.{Config, Registry}
 
-  def spawn(context, state, tag, nil), do: spawn_random(context, state, tag)
-  def spawn(context, state, tag, on: node), do: spawn_remote(node, context, state, tag)
-  def spawn(context, state, tag, with: ref), do: spawn_remote(node(ref), context, state, tag)
-  def spawn(context, state, tag, tagged: ntag), do: spawn_tagged(ntag, context, state, tag)
+  def spawn_remote(context, state, tag, nil), do: spawn_random(context, state, tag)
+  def spawn_remote(context, state, tag, on: node), do: spawn_on(node, context, state, tag)
+  def spawn_remote(context, state, tag, with: ref), do: spawn_on(node(ref), context, state, tag)
+  def spawn_remote(context, state, tag, tagged: ntag), do: spawn_tagged(ntag, context, state, tag)
 
-  def spawn(context, state, tag, avoid: ref) when is_pid(ref) do
+  def spawn_remote(context, state, tag, avoid: ref) when is_pid(ref) do
     spawn_avoid(node(ref), context, state, tag)
   end
 
-  def spawn(context, state, tag, avoid: node) when is_atom(node) do
+  def spawn_remote(context, state, tag, avoid: node) when is_atom(node) do
     spawn_avoid(node, context, state, tag)
-  end
-
-  def spawn(context, state, tag, :local) do
-    case Config.get(:mode, :local) do
-      :worker -> spawn_local(context, state, tag)
-      :local -> spawn_local(context, state, tag)
-      :master -> spawn_random(context, state, tag)
-    end
   end
 
   def spawn_avoid(avoid, context, state, tag) do
@@ -42,7 +34,7 @@ defmodule Skitter.Runtime.Spawner do
       lst ->
         lst
         |> Enum.random()
-        |> spawn_remote(context, state, tag)
+        |> spawn_on(context, state, tag)
     end
   end
 
@@ -63,14 +55,17 @@ defmodule Skitter.Runtime.Spawner do
   def spawn_random(context, state, tag), do: spawn_random(Registry.all(), context, state, tag)
 
   def spawn_random(lst, context, state, tag) do
-    lst |> Enum.random() |> spawn_remote(context, state, tag)
+    lst |> Enum.random() |> spawn_on(context, state, tag)
+  end
+
+  def spawn_on(node, context, state, tag) do
+    Skitter.Remote.on(node, __MODULE__, :spawn_local, [context, state, tag])
   end
 
   def spawn_local(context, state, tag) do
-    Skitter.Runtime.WorkerSupervisor.add_worker(context, state, tag)
-  end
-
-  def spawn_remote(node, context, state, tag) do
-    Skitter.Remote.on(node, __MODULE__, :spawn_local, [context, state, tag])
+    case Config.get(:mode, :local) do
+      :master -> :error
+      _ -> Skitter.Runtime.WorkerSupervisor.add_worker(context, state, tag)
+    end
   end
 end

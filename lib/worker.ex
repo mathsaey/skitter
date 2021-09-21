@@ -45,15 +45,13 @@ defmodule Skitter.Worker do
   @typedoc """
   Placement constraints.
 
-  When spawning a worker, it is often desirable to tweak on which node the worker will be placed.
-  This type defines a set of placement constraints which can be passed as an argument to
-  `create/4`.
+  When spawning a remote worker, it is often desirable to tweak on which node the worker will be
+  placed.  This type defines a set of placement constraints which can be passed as an argument to
+  `create_remote/4`.
 
   The following constraints are defined:
 
   - `nil`: No constraints.
-  - `local`: Try to spawn the worker on the local node. Note that this constraints will be ignored
-  when executed on a master node.
   - `on: node`: Spawn the worker at the specified node.
   - `with: ref`: Spawn the worker on the same node as the worker identified by `ref`.
   - `avoid: ref`: Try to place the worker on a different node than the worker identified by `ref`.
@@ -72,11 +70,23 @@ defmodule Skitter.Worker do
           | [tagged: Skitter.Nodes.tag()]
 
   @doc """
-  Create a new worker.
+  Create a new worker on a remote node.
+
+  The worker will be placed on a random node, subject to the passed placement constraints.
   """
-  @spec create(Strategy.context(), state(), tag(), placement()) :: ref()
-  def create(context, state, tag, placement \\ nil) do
-    Skitter.Runtime.Spawner.spawn(context, state, tag, placement)
+  @spec create_remote(Strategy.context(), state(), tag(), placement()) :: ref()
+  def create_remote(context, state, tag, placement \\ nil) do
+    Skitter.Runtime.Spawner.spawn_remote(context, state, tag, placement)
+  end
+
+  @doc """
+  Create a new worker on the local node.
+
+  This will raise when executed on a master node.
+  """
+  @spec create_local(Strategy.context(), state(), tag()) :: ref() | :error
+  def create_local(context, state, tag) do
+    Skitter.Runtime.Spawner.spawn_local(context, state, tag)
   end
 
   @doc """
