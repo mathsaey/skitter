@@ -61,6 +61,9 @@ function deploy_usage() {
   printf '\t\t\t\t%s\n'                          "PATH should contain a file where every line"
   printf '\t\t\t\t%s\n'                          "contains a single worker address."
   opt_deploy
+  printf '\t%s\t\t%s\n' "-m, --mode MODE"        "The mode used to start the master runtime."
+  printf '\t\t\t\t%s\n'                          "MODE should be one of start, start_iex,"
+  printf '\t\t\t\t%s\n'                          "daemon, daemon_iex. Defaults to start."
   printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker runtime. Do not start a"
   printf '\t\t\t\t%s\n'                          "master. Only needed if deployment failed."
   opt_cookie
@@ -437,7 +440,7 @@ function stop_deploy() {
   for_workers "$1" "$2" "$3" "stop" "$(color "$orange" "* stopping")"
 }
 
-# 1: workers, 2: remote_dir, 3: opts
+# 1: workers, 2: remote_dir, 3: opts, 4: master_mode
 function start_deploy() {
   printf '%s %s\n' "⬡⬢⬡⬢ Skitter deploy" "<%= @version %>"
   if [ -n "$3" ] ; then printf '> options: %s\n' "$(color "$purple" "$3")" ; fi
@@ -447,7 +450,7 @@ function start_deploy() {
   then
     printf "\nWorkers initialized, starting master.\n"
     $maybe_dry_run sleep 1
-    do_worker_master_local master start_iex "$3" "$connected"
+    do_worker_master_local master "$4" "$3" "$connected"
   else
     printf '\n%s\n' "Failed to initialize some workers:"
     printf '> Succeeded: %s\n' "$(color "$green" "$connected")"
@@ -459,23 +462,46 @@ function start_deploy() {
 }
 
 function do_deploy() {
+  local deploy_mode
+  local master_mode
   local remote_dir
   local workers
   local opts
-  local mode
 
-  mode="start"
+  master_mode="start"
+  deploy_mode="start"
   remote_dir=$(pwd)
 
   while test $# -gt 0
     do
       case "$1" in
         -s|--stop)
-          local mode="stop"
+          local deploy_mode="stop"
           ;;
         -d|--deploy)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--deploy'."
           opts="$opts --deploy $2"
+          shift
+          ;;
+        -m|--mode)
+          test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--mode'."
+          case "$2" in
+            s|start)
+              master_mode="start"
+              ;;
+            S|start_iex)
+              master_mode="start_iex"
+              ;;
+            d|daemon)
+              master_mode="daemon"
+              ;;
+            D|daemon_iex)
+              master_mode="daemon_iex"
+              ;;
+            *)
+              argerr "deploy" "Incorrect value for optional argument '--mode'."
+              ;;
+            esac
           shift
           ;;
         --working-dir)
@@ -507,7 +533,7 @@ function do_deploy() {
     done
 
     if [ -z "$workers" ] ; then argerr "deploy" "Missing workers" ; fi
-    "$mode"_deploy "$workers" "$remote_dir" "$opts"
+    "$deploy_mode"_deploy "$workers" "$remote_dir" "$opts" "$master_mode"
 }
 
 # ------------ #
