@@ -17,15 +17,15 @@ defmodule Skitter.Strategy.Component do
   Deploy a component over the cluster.
 
   This hook is called by the runtime system when a component has to be distributed over the
-  cluster. It receives the arguments passed to `t:Skitter.Workflow.component/0` as its only
-  argument. Any data returned by this hook is made available to other hooks through the
+  cluster. Any data returned by this hook is made available to other hooks through the
   `deployment` field in `t:Skitter.Strategy.context/0`.
 
   ## Context
 
-  When this hook is called, only the current strategy and component are available in the context.
+  When this hook is called, only the current strategy, component and arguments are available in
+  the context.
   """
-  @callback deploy(context :: Strategy.context(), args :: any()) :: Deployment.data()
+  @callback deploy(context :: Strategy.context()) :: Deployment.data()
 
   @doc """
   Send a message to the component.

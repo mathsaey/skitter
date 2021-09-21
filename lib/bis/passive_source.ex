@@ -32,8 +32,8 @@ defstrategy Skitter.BIS.PassiveSource do
     * `process` (required): Called for each received message. This callback should emit the list
     of received data to its out port to push them into the workflow.
   """
-  defhook deploy(args) do
-    create_worker(fn -> call_component(:subscribe, [args]) end, :source)
+  defhook deploy do
+    create_worker(fn -> call_component(:subscribe, [args()]) end, :source)
     Nodes.on_all_workers(fn -> create_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 

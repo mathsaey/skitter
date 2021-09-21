@@ -23,9 +23,9 @@ defstrategy Skitter.BIS.ImmutableLocal do
     * `init` (optional): Called at deployment time. The resulting state will be passed to each
     invocation of `react`.
   """
-  defhook deploy(args) do
+  defhook deploy do
     Nodes.on_all_worker_cores(fn ->
-      create_worker(fn -> init_or_initial_state([args]) end, :worker, :local)
+      create_worker(fn -> init_or_initial_state([args()]) end, :worker, :local)
     end)
     |> Map.new()
   end

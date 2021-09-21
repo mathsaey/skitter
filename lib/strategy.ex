@@ -35,6 +35,7 @@ defmodule Skitter.Strategy do
 
   - `component`: The component for which the hook is called.
   - `strategy`: The strategy of the component.
+  - `args`: The arguments passed to the component in the workflow.
   - `deployment`: The current deployment data. `nil` if the deployment is not created yet (e.g. in
   `deploy`)
   - `invocation`: The current invocation data. `nil` for hooks that do not have access to the
@@ -44,6 +45,7 @@ defmodule Skitter.Strategy do
   @type context :: %__MODULE__.Context{
           component: Component.t(),
           strategy: t(),
+          args: any(),
           deployment: Deployment.data() | nil,
           invocation: Invocation.t() | nil,
           _skr: any()
@@ -52,6 +54,6 @@ defmodule Skitter.Strategy do
   defmodule Context do
     @moduledoc false
     @derive {Inspect, except: [:_skr]}
-    defstruct [:component, :strategy, :deployment, :invocation, :_skr]
+    defstruct [:component, :strategy, :args, :deployment, :invocation, :_skr]
   end
 end

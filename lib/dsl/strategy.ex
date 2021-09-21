@@ -161,6 +161,11 @@ defmodule Skitter.DSL.Strategy do
   defmacro strategy, do: quote(do: context().strategy)
 
   @doc """
+  Obtain the context's arguments.
+  """
+  defmacro args, do: quote(do: context().args)
+
+  @doc """
   Obtain the context's component.
 
   ## Examples
@@ -253,6 +258,7 @@ defmodule Skitter.DSL.Strategy do
             context: 0,
             component: 0,
             strategy: 0,
+            args: 0,
             deployment: 0,
             invocation: 0
           ]

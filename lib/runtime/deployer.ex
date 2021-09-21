@@ -46,8 +46,14 @@ defmodule Skitter.Runtime.Deployer do
   end
 
   defp deploy_component({comp, strat, args, idx}, ref) do
-    context = %Strategy.Context{component: comp, strategy: strat, _skr: {:deploy, ref, idx}}
-    strat.deploy(context, args)
+    context = %Strategy.Context{
+      component: comp,
+      strategy: strat,
+      args: args,
+      _skr: {:deploy, ref, idx}
+    }
+
+    strat.deploy(context)
   end
 
   defp expand_links({port, lst}, ref), do: {port, Enum.map(lst, &expand_link(&1, ref))}
