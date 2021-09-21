@@ -73,7 +73,7 @@ defmodule Skitter.Nodes do
   keyword list of `{worker, result}` pairs.
   """
   @spec n_times_on_all_workers(pos_integer(), (() -> any())) :: [{node(), [any()]}]
-  def n_times_on_all_workers(n, fun), do: on_all_workers(fn -> n_times(fun, n) end)
+  def n_times_on_all_workers(n, fun), do: on_all_workers(fn -> n_times(n, fun) end)
 
   @doc """
   Execute a function on every worker runtime tagged with `tag`.
