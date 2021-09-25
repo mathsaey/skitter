@@ -55,6 +55,11 @@ defmodule Skitter.Strategy.Component do
   - `emit`: data to emit. A keyword list of `{port, lst}` pairs. Each element in `lst` will be
   sent to each component connected to `port`.
 
+  - `emit_invocation`: data to emit. A keyword list of `{port, lst}` pairs. Each element in `lst`
+  should be a `{value, invocation}` tuple. This value will be sent to each component connect to
+  `port` with the  provided invocation. `Skitter.Invocation.wrap/2` can be used to add new
+  invocations to a list of emitted data.
+
   ## Context
 
   All context data (component, strategy, deployment data and the invocation) is available when
@@ -69,5 +74,9 @@ defmodule Skitter.Strategy.Component do
               message :: any(),
               state :: Worker.state(),
               tag :: Worker.tag()
-            ) :: [state: Worker.state(), emit: Component.emit()]
+            ) :: [
+              state: Worker.state(),
+              emit: Component.emit(),
+              emit_invocation: Component.emit()
+            ]
 end

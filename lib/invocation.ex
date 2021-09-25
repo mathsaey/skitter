@@ -15,6 +15,8 @@ defmodule Skitter.Invocation do
   This module defines the invocation type and the operations that can be performed on it.
   """
 
+  alias Skitter.Component
+
   @typedoc """
   Invocation definition.
 
@@ -29,8 +31,34 @@ defmodule Skitter.Invocation do
   - The message is a "meta-message". This occurs when strategies wish to propagate information
   through the workflow that is not data to be processed. When this is the case, the message is
   marked as `:meta`.
+
+  Regular invocation contain an `:_id` field, which contains a unique identifer. This can be used
+  to differentiate between invocations created at different points in time.
   """
   @type t() :: %{required(:_id) => reference()} | :external | :meta
 
+  @doc "Create a new regular invocation."
+  @spec new() :: t()
   def new, do: %{_id: make_ref()}
+
+  @doc "Create a new meta invocation."
+  @spec meta() :: t()
+  def meta, do: :meta
+
+  @doc """
+  Modify the invocation of emitted data.
+
+  This function accepts a list of data emitted by a component callback and a 0-arity function.
+  The function should return an invocation. It will be called once for every emitted element. The
+  returned invocation will be used as the invocation for the data element when returned using
+  `emit_invocation` inside `c:Skitter.Strategy.Component.receive/4`.
+
+  When no function is provided, `new/0` is used, wrapping each element in a new invocation.
+  """
+  @spec wrap(Component.emit(), (() -> t())) :: Component.emit()
+  def wrap(lst, make_inv \\ &new/0) do
+    Enum.map(lst, fn {port, lst} ->
+      {port, Enum.map(lst, fn el -> {el, make_inv.()} end)}
+    end)
+  end
 end

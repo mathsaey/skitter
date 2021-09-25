@@ -53,7 +53,8 @@ defmodule Skitter.Runtime.Worker do
 
   defp recv_hook(msg, inv, srv) do
     res = srv.strategy.receive(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
-    maybe_emit(res[:emit], srv, inv)
+    maybe_emit(res[:emit], srv, &({&1, inv}))
+    maybe_emit(res[:emit_invocation], srv, &(&1))
 
     case Keyword.fetch(res, :state) do
       {:ok, state} -> %{srv | state: state}
@@ -63,11 +64,12 @@ defmodule Skitter.Runtime.Worker do
 
   defp maybe_emit(nil, _, _), do: nil
 
-  defp maybe_emit(ports, srv, inv) do
+  defp maybe_emit(ports, srv, select) do
     Enum.each(ports, fn {port, lst} ->
-      Enum.each(lst, fn value ->
+      Enum.each(lst, fn el ->
+        {val, inv} = select.(el)
         Enum.each(srv.links[port] || [], fn {ctx, port} ->
-          ctx.strategy.send(%{ctx | invocation: inv}, value, port)
+          ctx.strategy.send(%{ctx | invocation: inv}, val, port)
         end)
       end)
     end)

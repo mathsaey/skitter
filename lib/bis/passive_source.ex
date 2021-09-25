@@ -43,6 +43,6 @@ defstrategy Skitter.BIS.PassiveSource do
   end
 
   defhook receive(msg, _, :sender) do
-    [emit: call_component(:process, [msg]).emit]
+    [emit_invocation: Invocation.wrap(call_component(:process, [msg]).emit)]
   end
 end
