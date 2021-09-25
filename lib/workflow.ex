@@ -45,7 +45,7 @@ defmodule Skitter.Workflow do
   Component embedded inside a workflow.
 
   A component in a workflow is stored along with its strategy, initialization arguments (which
-  are passed to `c:Skitter.Strategy.Component.deploy/2`) and the outgoing links of each of its out
+  are passed to `c:Skitter.Strategy.Component.deploy/1`) and the outgoing links of each of its out
   ports.
 
   Workflows can override the strategy of a component, therefore, the strategy specified here may
