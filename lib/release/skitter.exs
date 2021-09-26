@@ -48,6 +48,5 @@ if System.get_env("SKITTER_LOG") do
     path: Path.join(dir, file),
     level: console_config[:level] || :info,
     format: console_config[:format] || "[$time][$level$levelpad]$metadata $message\n",
-    metadata: console_config[:metadata] || [],
-
+    metadata: console_config[:metadata] || []
 end
