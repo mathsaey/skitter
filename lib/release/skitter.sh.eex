@@ -60,6 +60,7 @@ function deploy_usage() {
   printf '\t%s\t%s\n'   "-f, --worker-file PATH" "Read the list of workers to spawn from PATH"
   printf '\t\t\t\t%s\n'                          "PATH should contain a file where every line"
   printf '\t\t\t\t%s\n'                          "contains a single worker address."
+  printf '\t%s\t%s\n'   "-q, --quiet"            "Do not show status when deploying"
   opt_deploy
   printf '\t%s\t\t%s\n' "-m, --mode MODE"        "The mode used to start the master runtime."
   printf '\t\t\t\t%s\n'                          "MODE should be one of start, start_iex,"
@@ -199,6 +200,15 @@ function argerr() {
   echoerr "$2"
   "$1"_usage
   exit 1
+}
+
+function maybe_printf() {
+  if [ -z "$quiet_deploy" ]
+  then
+    printf "$@"
+  else
+    printf "$@" > /dev/null
+  fi
 }
 
 # Colors
@@ -422,15 +432,15 @@ function for_workers() {
       tags=""
     fi
 
-    printf '%s %s' "$5" "$worker"
+    maybe_printf '%s %s' "$5" "$worker"
     if [ -z "$maybe_dry_run" ]
     then
       if ssh -q "$worker" "$cmd" "$tags"
       then
-        printf ' %s\n' "$(color "$green" ✓)"
+        maybe_printf ' %s\n' "$(color "$green" ✓)"
         connected="$connected $worker"
       else
-        printf ' %s\n' "$(color "$red" ✗)"
+        maybe_printf ' %s\n' "$(color "$red" ✗)"
         failed="$worker"
         return 1
       fi
@@ -447,21 +457,21 @@ function stop_deploy() {
 
 # 1: workers, 2: remote_dir, 3: master opts, 4: worker opts, 5: master_mode
 function start_deploy() {
-  printf '%s %s\n' "⬡⬢⬡⬢ Skitter deploy" "<%= @version %>"
-  if [ -n "$3" ] ; then printf '> options: %s\n' "$(color "$purple" "$3 $4")" ; fi
-  printf '> workers: %s\n\n' "$(color "$purple" "$1")"
+  maybe_printf '%s %s\n' "⬡⬢⬡⬢ Skitter deploy" "<%= @version %>"
+  if [ -n "$3" ] ; then maybe_printf '> options: %s\n' "$(color "$purple" "$3 $4")" ; fi
+  maybe_printf '> workers: %s\n\n' "$(color "$purple" "$1")"
 
   if for_workers "$1" "$2" "$4" "daemon" "$(color "$green" "* starting")"
   then
-    printf "\nWorkers initialized, starting master.\n"
+    maybe_printf "\nWorkers initialized, starting master.\n"
     $maybe_dry_run sleep 1
     do_worker_master_local master "$5" "$3" "$connected"
   else
-    printf '\n%s\n' "Failed to initialize some workers:"
-    printf '> Succeeded: %s\n' "$(color "$green" "$connected")"
-    printf '> Failed: %s\n' "$(color "$red" "$failed")"
+    maybe_printf '\n%s\n' "Failed to initialize some workers:"
+    maybe_printf '> Succeeded: %s\n' "$(color "$green" "$connected")"
+    maybe_printf '> Failed: %s\n' "$(color "$red" "$failed")"
 
-    printf '\n%s\n' "Shutting down initialized workers:"
+    maybe_printf '\n%s\n' "Shutting down initialized workers:"
     stop_deploy "$connected" "$2" "$4"
   fi
 }
@@ -485,6 +495,9 @@ function do_deploy() {
       case "$1" in
         -s|--stop)
           local deploy_mode="stop"
+          ;;
+        -q|--quiet)
+          quiet_deploy=1
           ;;
         -d|--deploy)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--deploy'."
