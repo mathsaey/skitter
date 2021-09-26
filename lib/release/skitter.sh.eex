@@ -445,24 +445,24 @@ function stop_deploy() {
   for_workers "$1" "$2" "$3" "stop" "$(color "$orange" "* stopping")"
 }
 
-# 1: workers, 2: remote_dir, 3: opts, 4: master_mode
+# 1: workers, 2: remote_dir, 3: master opts, 4: worker opts, 5: master_mode
 function start_deploy() {
   printf '%s %s\n' "⬡⬢⬡⬢ Skitter deploy" "<%= @version %>"
-  if [ -n "$3" ] ; then printf '> options: %s\n' "$(color "$purple" "$3")" ; fi
+  if [ -n "$3" ] ; then printf '> options: %s\n' "$(color "$purple" "$3 $4")" ; fi
   printf '> workers: %s\n\n' "$(color "$purple" "$1")"
 
-  if for_workers "$1" "$2" "$3" "daemon" "$(color "$green" "* starting")"
+  if for_workers "$1" "$2" "$4" "daemon" "$(color "$green" "* starting")"
   then
     printf "\nWorkers initialized, starting master.\n"
     $maybe_dry_run sleep 1
-    do_worker_master_local master "$4" "$3" "$connected"
+    do_worker_master_local master "$5" "$3" "$connected"
   else
     printf '\n%s\n' "Failed to initialize some workers:"
     printf '> Succeeded: %s\n' "$(color "$green" "$connected")"
     printf '> Failed: %s\n' "$(color "$red" "$failed")"
 
     printf '\n%s\n' "Shutting down initialized workers:"
-    stop_deploy "$connected" "$2" "$3"
+    stop_deploy "$connected" "$2" "$4"
   fi
 }
 
@@ -471,10 +471,13 @@ function do_deploy() {
   local master_mode
   local remote_dir
   local workers
-  local opts
+  local master_opts
+  local worker_opts
 
   master_mode="start"
   deploy_mode="start"
+  master_opts=""
+  worker_opts=""
   remote_dir=$(pwd)
 
   while test $# -gt 0
@@ -485,7 +488,7 @@ function do_deploy() {
           ;;
         -d|--deploy)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--deploy'."
-          opts="$opts --deploy $2"
+          master_opts="$master_opts --deploy $2"
           shift
           ;;
         -m|--mode)
@@ -516,7 +519,8 @@ function do_deploy() {
           ;;
         -c|--cookie)
           test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--cookie'."
-          opts="$opts --cookie $2"
+          master_opts="$master_opts --cookie $2"
+          worker_opts="$worker_opts --cookie $2"
           shift
           ;;
         -f|--worker-file)
@@ -528,7 +532,8 @@ function do_deploy() {
           shift
           ;;
         --no-log)
-          opts="$opts --no-log"
+          master_opts="$master_opts --no-log"
+          worker_opts="$worker_opts --no-log"
           ;;
         *)
           local workers="$workers $1"
@@ -538,7 +543,7 @@ function do_deploy() {
     done
 
     if [ -z "$workers" ] ; then argerr "deploy" "Missing workers" ; fi
-    "$deploy_mode"_deploy "$workers" "$remote_dir" "$opts" "$master_mode"
+    "$deploy_mode"_deploy "$workers" "$remote_dir" "$master_opts" "$worker_opts" "$master_mode"
 }
 
 # ------------ #
