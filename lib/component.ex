@@ -65,7 +65,7 @@ defmodule Skitter.Component do
   ```
   """
 
-  alias Skitter.{Port, Strategy, Component.Callback.Info}
+  alias Skitter.{Port, Strategy, Invocation, Component.Callback.Info}
 
   # ----- #
   # Types #
@@ -325,6 +325,20 @@ defmodule Skitter.Component do
   """
   @spec index_to_out_port(t(), Port.index()) :: Port.t() | nil
   def index_to_out_port(component, idx), do: component |> out_ports() |> Enum.at(idx)
+
+  @doc """
+  Generate a `t:emit/0` which emits the given message to all out ports.
+
+  This function creates an emit list which will send `message` to each out port of `component`.
+  The message will be wrapped with `Skitter.Invocation.meta/0` and should be published by using
+  `:emit_invocation` inside `c:Skitter.Strategy.Component.receive/4`.
+  """
+  @spec meta_message_for_all_ports(t(), any()) :: emit()
+  def meta_message_for_all_ports(component, message) do
+    component
+    |> out_ports()
+    |> Enum.map(&({&1, [{message, Invocation.meta()}]}))
+  end
 
   @doc """
   Check if a component is a source.

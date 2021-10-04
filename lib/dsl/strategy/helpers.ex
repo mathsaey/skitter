@@ -123,6 +123,15 @@ defmodule Skitter.DSL.Strategy.Helpers do
   end
 
   @doc """
+  Send `message` to all out ports of the component.
+
+  Generates a call to `Skitter.Component.meta_message_for_all_ports/2`.
+  """
+  defmacro meta_message_for_all_ports(message) do
+    quote(do: Skitter.Component.meta_message_for_all_ports(component(), unquote(message)))
+  end
+
+  @doc """
   Create the initial state of the component using `init` or an empty state.
 
   This macro creates an initial state for a component, either by calling the `:init` callback of
