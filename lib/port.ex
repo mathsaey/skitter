@@ -12,8 +12,9 @@ defmodule Skitter.Port do
   module defines the port type.
   """
 
-  @typedoc """
-  A port is defined by its name, which is stored as an atom.
-  """
+  @typedoc "A port is defined by its name, which is stored as an atom."
   @type t() :: atom()
+
+  @typedoc "A port is associated with an index."
+  @type index() :: non_neg_integer()
 end

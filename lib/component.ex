@@ -280,7 +280,7 @@ defmodule Skitter.Component do
       iex> in_port_to_index(ComponentModule, :other)
       nil
   """
-  @spec in_port_to_index(t(), Port.t()) :: non_neg_integer() | nil
+  @spec in_port_to_index(t(), Port.t()) :: Port.index() | nil
   def in_port_to_index(component, port) do
     component |> in_ports() |> Enum.find_index(&(&1 == port))
   end
@@ -295,7 +295,7 @@ defmodule Skitter.Component do
       iex> out_port_to_index(ComponentModule, :other)
       nil
   """
-  @spec out_port_to_index(t(), Port.t()) :: non_neg_integer() | nil
+  @spec out_port_to_index(t(), Port.t()) :: Port.index() | nil
   def out_port_to_index(component, port) do
     component |> out_ports() |> Enum.find_index(&(&1 == port))
   end
@@ -310,7 +310,7 @@ defmodule Skitter.Component do
       iex> index_to_in_port(ComponentModule, 1)
       nil
   """
-  @spec index_to_in_port(t(), non_neg_integer()) :: Port.t() | nil
+  @spec index_to_in_port(t(), Port.index()) :: Port.t() | nil
   def index_to_in_port(component, idx), do: component |> in_ports() |> Enum.at(idx)
 
   @doc """
@@ -323,7 +323,7 @@ defmodule Skitter.Component do
       iex> index_to_out_port(ComponentModule, 1)
       nil
   """
-  @spec index_to_out_port(t(), non_neg_integer()) :: Port.t() | nil
+  @spec index_to_out_port(t(), Port.index()) :: Port.t() | nil
   def index_to_out_port(component, idx), do: component |> out_ports() |> Enum.at(idx)
 
   @doc """
