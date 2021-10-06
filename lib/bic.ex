@@ -35,6 +35,30 @@ defmodule Skitter.BIC do
   end
 
   @doc """
+  `Skitter.BIC.KeyBy` node.
+
+  Inserts a `Skitter.BIC.KeyBy` `Skitter.DSL.Workflow.node/2` in the workflow. The provided `func`
+  will be passed as an argument to `Skitter.BIC.KeyBy`. Other arguments (`as:`, `with:`) should be
+  passed as the optional, third argument.
+  """
+  defmacro key_by(func, opts \\ []) do
+    opts = [args: func] ++ opts
+    quote(do: node(Skitter.BIC.KeyBy, unquote(opts)))
+  end
+
+  @doc """
+  `Skitter.BIC.KeyedReduce` node.
+
+  Inserts a `Skitter.BIC.KeyedReduce` `Skitter.DSL.Workflow.node/2` in the workflow. The `func` and
+  `initial` arguments passed to this macro are passed as arguments to `Skitter.BIC.KeyedReduce`.
+  Other options (`as:`, `with:`) can be passed as a third argument.
+  """
+  defmacro keyed_reduce(func, initial, opts \\ []) do
+    opts = [args: [func, initial]] ++ opts
+    quote(do: node(Skitter.BIC.Reduce, unquote(opts)))
+  end
+
+  @doc """
   `Skitter.BIC.Print` node.
 
   Insert a `Skitter.BIC.Print` node in the workflow. The argument passed to this macro is passed

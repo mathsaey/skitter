@@ -40,7 +40,10 @@ defmodule Skitter.MixProject do
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
 
       # Runtime
-      {:logger_file_backend, "~> 0.0.12"}
+      {:logger_file_backend, "~> 0.0.12"},
+
+      # Used by built-in strategies
+      {:murmur, "~> 1.0"}
     ]
   end
 
