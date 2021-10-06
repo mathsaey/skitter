@@ -16,6 +16,6 @@ defcomponent Skitter.BIC.Map, in: _, out: _, strategy: Skitter.BIS.ImmutableLoca
   out port.
   """
 
-  defcb init(func), do: func
+  defcb conf(func), do: func
   defcb react(arg), do: config().(arg) ~> _
 end

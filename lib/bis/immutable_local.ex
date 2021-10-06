@@ -20,12 +20,12 @@ defstrategy Skitter.BIS.ImmutableLocal do
   * out ports: This strategy places no limitations on the out ports of the component.
   * callbacks:
     * `react` (required): Called for each incoming data element.
-    * `init` (optional): Called at deployment time. The result will be passed as config to each
+    * `conf` (optional): Called at deployment time. The result will be passed as config to each
     invocation of `react`.
   """
   defhook deploy do
     Nodes.on_all_worker_cores(fn ->
-      local_worker(fn -> call_if_exists(:init, [args()]).result end, :worker)
+      local_worker(fn -> call_if_exists(:conf, [args()]).result end, :worker)
     end)
     |> Map.new()
   end
