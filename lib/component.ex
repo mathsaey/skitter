@@ -27,7 +27,7 @@ defmodule Skitter.Component do
   a component. These callbacks need to have the ability to modify state and emit data when they
   are called. Callbacks are implemented as elixir functions with a few properties:
 
-  - Callbacks accept `t:state/0` as their first argument.
+  - Callbacks accept `t:state/0` and `t:config/0` as their first and second arguments.
   - Callbacks return a `t:result/0` struct, which wraps the result of the callback call along with
   the updated state and emitted data.
 
@@ -57,8 +57,8 @@ defmodule Skitter.Component do
       %Info{read?: true, write?: false, emit?: true}
     end
 
-    def example(state, arg) do
-      result = state * 2
+    def example(state, config, arg) do
+      result = state * config
       %Result{state: state, emit: [arg: arg], result: result}
     end
   end
@@ -89,6 +89,15 @@ defmodule Skitter.Component do
   State passed to the callback when it is called.
   """
   @type state :: any()
+
+  @typedoc """
+  Configuration passed to the callback when it is called.
+
+  The configuration represents the immutable state of a component. It is explicitly separated from
+  the mutable `t:state/0` to enable strategies to explicitly differentiate between handling
+  mutable and immutable data.
+  """
+  @type config :: any()
 
   @typedoc """
   Output emitted by a callback.
@@ -394,29 +403,31 @@ defmodule Skitter.Component do
   def callback_info(component, name, arity), do: component._sk_callback_info(name, arity)
 
   @doc """
-  Call callback `callback_name` with `state` and `arguments`.
+  Call callback `callback_name` with `state`, `config` and `arguments`.
 
   ## Examples
 
-      iex> call(ComponentModule, :example, 10, [:foo])
+      iex> call(ComponentModule, :example, 10, 2, [:foo])
       %Skitter.Component.Callback.Result{state: 10, result: 20, emit: [arg: :foo]}
   """
-  @spec call(t(), atom(), state(), args()) :: result()
-  def call(component, name, state, args), do: apply(component, name, [state | args])
+  @spec call(t(), atom(), state(), config(), args()) :: result()
+  def call(component, name, state, config, args) do
+    apply(component, name, [state, config | args])
+  end
 
   @doc """
-  Call callback `callback_name` with an empty state and `arguments`.
+  Call callback `callback_name` with an empty state, `config` and `arguments`.
 
-  This function calls `Skitter.Component.call/4` with the state created by
-  `initial_state/1`.
+  This function calls `Skitter.Component.call/5` with the state created by `initial_state/1`. If
+  `config` is omitted, it will be passed as `nil`.
 
   ## Examples
 
-      iex> call(ComponentModule, :example, [:foo])
+      iex> call(ComponentModule, :example, 2, [:foo])
       %Skitter.Component.Callback.Result{state: 42, result: 84, emit: [arg: :foo]}
   """
-  @spec call(t(), atom(), args()) :: result()
-  def call(component, callback_name, args) do
-    call(component, callback_name, initial_state(component), args)
+  @spec call(t(), atom(), config(), args()) :: result()
+  def call(component, callback_name, config \\ nil, args) do
+    call(component, callback_name, initial_state(component), config, args)
   end
 end

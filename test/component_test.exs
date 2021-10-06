@@ -26,8 +26,8 @@ defmodule Skitter.ComponentTest do
       %Info{read?: true, write?: false, emit?: true}
     end
 
-    def example(state, arg) do
-      result = state * 2
+    def example(state, config, arg) do
+      result = state * config
       %Result{state: state, emit: [arg: arg], result: result}
     end
   end

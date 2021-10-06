@@ -53,10 +53,10 @@ defmodule Skitter.DSL.Component do
       iex> Component.call(StateExample, :return_state, []).state
       0
 
-      iex> Component.call(NoStateExample, :return_state, :some_state, []).state
+      iex> Component.call(NoStateExample, :return_state, :some_state, nil, []).state
       :some_state
 
-      iex> Component.call(StateExample, :return_state, :some_state, []).state
+      iex> Component.call(StateExample, :return_state, :some_state, nil, []).state
       :some_state
 
 
@@ -185,7 +185,7 @@ defmodule Skitter.DSL.Component do
       iex> Component.call(Average, :react, [10])
       %Result{result: 10.0, emit: [current: [10.0]], state: %Average{count: 1, total: 10}}
 
-      iex> Component.call(Average, :react, %Average{count: 1, total: 10}, [10])
+      iex> Component.call(Average, :react, %Average{count: 1, total: 10}, nil, [10])
       %Result{result: 10.0, emit: [current: [10.0]], state: %Average{count: 2, total: 20}}
 
   ## Documentation
@@ -326,6 +326,36 @@ defmodule Skitter.DSL.Component do
     body |> extract(verify) |> Enum.empty?() |> Kernel.not()
   end
 
+  # Config
+  # ------
+
+  def config_var, do: quote(do: var!(config, unquote(__MODULE__)))
+
+  @doc """
+  Obtain the component configuration.
+
+  This macro reads the current value of the configuration passed to the component callback when
+  it was called. It should only be used inside the body of `defcb/2`.
+
+  ## Examples
+
+  ```
+  defcomponent ConfigExample do
+    defcb read(), do: config()
+  end
+  ```
+
+      iex> Component.call(ConfigExample, :read, []).result
+      nil
+
+      iex> Component.call(ConfigExample, :read, :config, []).result
+      :config
+
+      iex> Component.call(ConfigExample, :read, :state, :config, []).result
+      :config
+  """
+  defmacro config, do: quote(do: unquote(config_var()))
+
   # State
   # -----
 
@@ -350,10 +380,10 @@ defmodule Skitter.DSL.Component do
       iex> Component.call(ReadExample, :read, []).result
       0
 
-      iex> Component.call(ReadExample, :read, :state, []).result
+      iex> Component.call(ReadExample, :read, :state, nil, []).result
       :state
 
-      iex> Component.call(ReadExample, :read, :state, []).result
+      iex> Component.call(ReadExample, :read, :state, nil, []).result
       :state
   """
   defmacro state, do: quote(do: unquote(state_var()))
@@ -375,10 +405,10 @@ defmodule Skitter.DSL.Component do
   end
   ```
 
-      iex> Component.call(FieldReadExample, :read, %FieldReadExample{field: 5}, []).result
+      iex> Component.call(FieldReadExample, :read, %FieldReadExample{field: 5}, nil, []).result
       5
 
-      iex> Component.call(FieldReadExample, :read, %FieldReadExample{field: :foo}, []).result
+      iex> Component.call(FieldReadExample, :read, %FieldReadExample{field: :foo}, nil, []).result
       :foo
   """
   defmacro sigil_f({:<<>>, _, [str]}, _) do
@@ -405,7 +435,7 @@ defmodule Skitter.DSL.Component do
     defcb write(), do: state <~ :foo
   end
   ```
-      iex> Component.call(WriteExample, :write, nil, []).state
+      iex> Component.call(WriteExample, :write, nil, nil, []).state
       :foo
 
   ```
@@ -414,7 +444,7 @@ defmodule Skitter.DSL.Component do
     defcb write(), do: field <~ :bar
   end
   ```
-      iex> Component.call(FieldWriteExample, :write, %FieldWriteExample{field: :foo}, []).state.field
+      iex> Component.call(FieldWriteExample, :write, %FieldWriteExample{field: :foo}, nil, []).state.field
       :bar
 
   ```
@@ -423,7 +453,7 @@ defmodule Skitter.DSL.Component do
     defcb write(), do: doesnotexist <~ :bar
   end
   ```
-      iex> Component.call(WrongFieldWriteExample, :write, %WrongFieldWriteExample{field: :foo}, [])
+      iex> Component.call(WrongFieldWriteExample, :write, %WrongFieldWriteExample{field: :foo}, nil, [])
       ** (KeyError) key :doesnotexist not found in: %Skitter.DSL.ComponentTest.WrongFieldWriteExample{field: :foo}
   """
   defmacro {:state, _, _} <~ value, do: quote(do: unquote(state_var()) = unquote(value))
@@ -575,19 +605,19 @@ defmodule Skitter.DSL.Component do
       iex> Component.callback_info(CbExample, :emit_multi, 0)
       %Info{read?: false, write?: false, emit?: true}
 
-      iex> Component.call(CbExample, :simple, %{}, [])
+      iex> Component.call(CbExample, :simple, %{}, nil, [])
       %Result{result: nil, emit: [], state: %{}}
 
-      iex> Component.call(CbExample, :arguments, %{}, [10, 20])
+      iex> Component.call(CbExample, :arguments, %{}, nil, [10, 20])
       %Result{result: 30, emit: [], state: %{}}
 
-      iex> Component.call(CbExample, :state, %{counter: 10, other: :foo}, [])
+      iex> Component.call(CbExample, :state, %{counter: 10, other: :foo}, nil, [])
       %Result{result: %{counter: 11, other: :foo}, emit: [], state: %{counter: 11, other: :foo}}
 
-      iex> Component.call(CbExample, :emit_single, %{}, [])
+      iex> Component.call(CbExample, :emit_single, %{}, nil, [])
       %Result{result: ~D[1991-12-08], emit: [out_port: [~D[1991-12-08]]], state: %{}}
 
-      iex> Component.call(CbExample, :emit_multi, %{}, [])
+      iex> Component.call(CbExample, :emit_multi, %{}, nil, [])
       %Result{result: [~D[1991-12-08], ~D[2021-07-08]], emit: [out_port: [~D[1991-12-08], ~D[2021-07-08]]], state: %{}}
   """
   defmacro defcb(signature, do: body) do
@@ -600,8 +630,8 @@ defmodule Skitter.DSL.Component do
     quote do
       @doc false
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
-      def unquote(name)(unquote(state_var()), unquote_splicing(args)) do
-        import unquote(__MODULE__), only: [state: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
+      def unquote(name)(unquote(state_var()), unquote(config_var()), unquote_splicing(args)) do
+        import unquote(__MODULE__), only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
         use unquote(__MODULE__.ControlFlowOperators)
 
         unquote(emit_var()) = []

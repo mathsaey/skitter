@@ -32,6 +32,10 @@ defmodule Skitter.DSL.ComponentTest do
     end
   end
 
+  defcomponent ConfigExample do
+    defcb read(), do: config()
+  end
+
   defcomponent ReadExample do
     state 0
     defcb read(), do: state()
@@ -175,9 +179,12 @@ defmodule Skitter.DSL.ComponentTest do
                false_port: [:foo]
              ]
 
-      assert Component.call(StateIf, :state, %{x: true, y: nil}, []).state == %{x: true, y: :foo}
+      assert Component.call(StateIf, :state, %{x: true, y: nil}, nil, []).state == %{
+               x: true,
+               y: :foo
+             }
 
-      assert Component.call(StateIf, :state, %{x: false, y: nil}, []).state == %{
+      assert Component.call(StateIf, :state, %{x: false, y: nil}, nil, []).state == %{
                x: false,
                y: :bar
              }
@@ -205,7 +212,7 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(StateCase, :test, %{x: 0}, []).state == %{x: 10}
+      assert Component.call(StateCase, :test, %{x: 0}, nil, []).state == %{x: 10}
     end
 
     test "case can emit" do

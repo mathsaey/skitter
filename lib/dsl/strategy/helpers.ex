@@ -91,13 +91,30 @@ defmodule Skitter.DSL.Strategy.Helpers do
   end
 
   @doc """
-  Call `callback` of the current component with `state` and `args`.
+  Call `callback` of the current component with `state`, `config` and `args`.
+
+  Uses `Skitter.Component.call/5`.
+  """
+  defmacro call_component(callback, state, config, args) do
+    quote do
+      Skitter.Component.call(
+        component(),
+        unquote(callback),
+        unquote(state),
+        unquote(config),
+        unquote(args)
+      )
+    end
+  end
+
+  @doc """
+  Call `callback` of the current component with `args` and `config`.
 
   Uses `Skitter.Component.call/4`.
   """
-  defmacro call_component(callback, state, args) do
+  defmacro call_component(callback, config, args) do
     quote do
-      Skitter.Component.call(component(), unquote(callback), unquote(state), unquote(args))
+      Skitter.Component.call(component(), unquote(callback), unquote(config), unquote(args))
     end
   end
 
