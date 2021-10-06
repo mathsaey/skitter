@@ -350,6 +350,20 @@ defmodule Skitter.Component do
   end
 
   @doc """
+  Map over a list of emitted values.
+
+  This function accepts an emit list and maps a function over each value inside this emit list
+  without modifying the structure of the emit list itself. This enables strategies to modify
+  emitted values or to add invocation information to emitted data.
+  """
+  @spec map_emit(emit(), (any() -> any())) :: emit()
+  def map_emit(emit, func) do
+    Enum.map(emit, fn {port, lst} ->
+      {port, Enum.map(lst, func)}
+    end)
+  end
+
+  @doc """
   Check if a component is a source.
 
   A component is a source if it does not have any in ports.

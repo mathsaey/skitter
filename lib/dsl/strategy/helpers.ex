@@ -213,6 +213,15 @@ defmodule Skitter.DSL.Strategy.Helpers do
   end
 
   @doc """
+  Map over the emitted values.
+
+  Generates a call to `Skitter.Component.map_emit/2`
+  """
+  defmacro map_emit(lst, func) do
+    quote(do: Skitter.Component.map_emit(unquote(lst), unquote(func)))
+  end
+
+  @doc """
   Create an empty state for the component.
 
   This macro creates an initial state for a component, by using
