@@ -33,7 +33,7 @@ defstrategy Skitter.BIS.PassiveSource do
     of received data to its out port to push them into the workflow.
   """
   defhook deploy do
-    remote_worker(fn -> call_component(:subscribe, [args()]) end, :source)
+    remote_worker(fn -> call(:subscribe, [args()]) end, :source)
     Nodes.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 
@@ -43,6 +43,6 @@ defstrategy Skitter.BIS.PassiveSource do
   end
 
   defhook receive(msg, _, :sender) do
-    [emit_invocation: Invocation.wrap(call_component(:process, [msg]).emit)]
+    [emit_invocation: Invocation.wrap(call(:process, [msg]).emit)]
   end
 end

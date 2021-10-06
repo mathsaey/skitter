@@ -95,7 +95,7 @@ defmodule Skitter.DSL.Strategy.Helpers do
 
   Uses `Skitter.Component.call/5`.
   """
-  defmacro call_component(callback, state, config, args) do
+  defmacro call(callback, state, config, args) do
     quote do
       Skitter.Component.call(
         component(),
@@ -112,7 +112,7 @@ defmodule Skitter.DSL.Strategy.Helpers do
 
   Uses `Skitter.Component.call/4`.
   """
-  defmacro call_component(callback, config, args) do
+  defmacro call(callback, config, args) do
     quote do
       Skitter.Component.call(component(), unquote(callback), unquote(config), unquote(args))
     end
@@ -123,8 +123,72 @@ defmodule Skitter.DSL.Strategy.Helpers do
 
   Uses `Skitter.Component.call/3`.
   """
-  defmacro call_component(callback, args) do
+  defmacro call(callback, args) do
     quote(do: Skitter.Component.call(component(), unquote(callback), unquote(args)))
+  end
+
+  @doc """
+  Call `callback` of the current component with `args`.
+
+  Uses `Skitter.Component.call/2`.
+  """
+  defmacro call(callback) do
+    quote(do: Skitter.Component.call(component(), unquote(callback)))
+  end
+
+  @doc """
+  Call `callback` of the current component if it exists.
+
+  Uses `Skitter.Component.call_if_exists/5`.
+  """
+  defmacro call_if_exists(callback, state, config, args) do
+    quote do
+      Skitter.Component.call_if_exists(
+        component(),
+        unquote(callback),
+        unquote(state),
+        unquote(config),
+        unquote(args)
+      )
+    end
+  end
+
+  @doc """
+  Call `callback` of the current component if it exists.
+
+  Uses `Skitter.Component.call_if_exists/4`.
+  """
+  defmacro call_if_exists(callback, config, args) do
+    quote do
+      Skitter.Component.call_if_exists(
+        component(),
+        unquote(callback),
+        unquote(config),
+        unquote(args)
+      )
+    end
+  end
+
+  @doc """
+  Call `callback` of the current component if it exists.
+
+  Uses `Skitter.Component.call_if_exists/3`.
+  """
+  defmacro call_if_exists(callback, args) do
+    quote do
+      Skitter.Component.call_if_exists(component(), unquote(callback), unquote(args))
+    end
+  end
+
+  @doc """
+  Call `callback` of the current component if it exists.
+
+  Uses `Skitter.Component.call_if_exists/2`.
+  """
+  defmacro call_if_exists(callback) do
+    quote do
+      Skitter.Component.call_if_exists(component(), unquote(callback))
+    end
   end
 
   @doc """
@@ -146,23 +210,6 @@ defmodule Skitter.DSL.Strategy.Helpers do
   """
   defmacro meta_message_for_all_ports(message) do
     quote(do: Skitter.Component.meta_message_for_all_ports(component(), unquote(message)))
-  end
-
-  @doc """
-  Create the initial state of the component using `init` or an empty state.
-
-  This macro creates an initial state for a component, either by calling the `:init` callback of
-  the component, or by using `Skitter.Component.initial_state/1`. The init callback is only called
-  if the component defines an init callback with an arity equal to the length of `args`.
-  """
-  defmacro init_or_initial_state(args) do
-    quote do
-      if {:init, length(unquote(args))} in Skitter.Component.callback_list(component()) do
-        Skitter.Component.call(component(), :init, unquote(args)).state
-      else
-        Skitter.Component.initial_state(component())
-      end
-    end
   end
 
   @doc """

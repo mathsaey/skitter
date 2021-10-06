@@ -126,7 +126,7 @@ defmodule Skitter.DSL.Component do
   This macro is used to define a component module. Using this macro, a component can be defined
   similar to a normal module. The macro will enable the use of `defcb/2` and provides
   implementations for `c:Skitter.Component._sk_component_info/1`,
-  `c:Skitter.Component._sk_component_initial_state/0`, `c:Skitter.Component._sk_callback_list/0`
+  `c:Skitter.Component._sk_component_initial_state/0`, `c:Skitter.Component._sk_callbacks/0`
   and `c:Skitter.Component._sk_callback_info/2`.
 
   ## Component strategy and ports
@@ -247,7 +247,7 @@ defmodule Skitter.DSL.Component do
       def _sk_component_info(:out_ports), do: @_sk_out_ports
 
       @impl true
-      def _sk_callback_list, do: unquote(names)
+      def _sk_callbacks, do: unquote(names |> MapSet.new() |> Macro.escape())
 
       # Prevent a warning if no callbacks are defined
       @impl true
@@ -568,7 +568,7 @@ defmodule Skitter.DSL.Component do
   `<~/2`), emit (as updated by `~>/2` and `~>>/2`) and result (which contains the value of the
   last expression in `body`).
 
-  - `c:Skitter.Component._sk_callback_info/2` and `c:Skitter.Callback._sk_callback_list/0` of the
+  - `c:Skitter.Component._sk_callback_info/2` and `c:Skitter.Callback._sk_callbacks/0` of the
   component module contains the required information about the defined callback.
 
   Note that, under the hood, `defcb/2` generates a regular elixir function. Therefore, pattern
@@ -587,8 +587,8 @@ defmodule Skitter.DSL.Component do
   end
   ```
 
-      iex> Component.callback_list(CbExample)
-      [arguments: 2, emit_multi: 0, emit_single: 0, simple: 0, state: 0]
+      iex> Component.callbacks(CbExample)
+      #MapSet<[arguments: 2, emit_multi: 0, emit_single: 0, simple: 0, state: 0]>
 
       iex> Component.callback_info(CbExample, :simple, 0)
       %Info{read?: false, write?: false, emit?: false}

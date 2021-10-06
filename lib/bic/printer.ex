@@ -17,8 +17,6 @@ defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLo
   A single string may be provided as an argument, this string will be used as a prefix for the
   printed output.
   """
-  state_struct label: ""
-
-  defcb init(str), do: label <~ str
-  defcb react(val), do: IO.inspect(val, label: ~f{label}) ~> _
+  defcb init(str), do: str
+  defcb react(val), do: IO.inspect(val, label: config()) ~> _
 end

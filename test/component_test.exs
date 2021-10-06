@@ -20,7 +20,7 @@ defmodule Skitter.ComponentTest do
 
     def _sk_component_initial_state, do: 42
 
-    def _sk_callback_list, do: [example: 1]
+    def _sk_callbacks, do: MapSet.new(example: 1)
 
     def _sk_callback_info(:example, 1) do
       %Info{read?: true, write?: false, emit?: true}

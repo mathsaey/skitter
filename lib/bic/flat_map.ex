@@ -15,6 +15,6 @@ defcomponent Skitter.BIC.FlatMap, in: _, out: _, strategy: Skitter.BIS.Immutable
   component. This function should return a list. Each element in this list will be emitted on the
   `_` out port.
   """
-  defcb init(func), do: state <~ func
-  defcb react(arg), do: state().(arg) ~>> _
+  defcb init(func), do: func
+  defcb react(arg), do: config().(arg) ~>> _
 end

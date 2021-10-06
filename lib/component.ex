@@ -51,7 +51,7 @@ defmodule Skitter.Component do
 
     def _sk_component_initial_state, do: 42
 
-    def _sk_callback_list, do: [example: 1]
+    def _sk_callbacks, do: MapSet.new(example: 1)
 
     def _sk_callback_info(:example, 1) do
       %Info{read?: true, write?: false, emit?: true}
@@ -181,7 +181,7 @@ defmodule Skitter.Component do
   @doc """
   Return the names and arities of all the callbacks defined in this module.
   """
-  @callback _sk_callback_list() :: [{atom(), arity()}]
+  @callback _sk_callbacks() :: MapSet.t({atom(), arity()})
 
   @doc """
   Return the callback information of callback `name`, `arity`.
@@ -379,16 +379,32 @@ defmodule Skitter.Component do
   # ---------
 
   @doc """
-  Obtain the list of all callbacks defined in `component`.
+  Check if `component` defines a callback with `name` and `arity`.
 
   ## Examples
 
-      iex> callback_list(ComponentModule)
-      [example: 1]
+    iex> callback_exists?(ComponentModule, :example, 1)
+    true
+
+    iex> callback_exists?(ComponentModule, :example, 2)
+    false
+  """
+  @spec callback_exists?(t(), atom(), arity()) :: boolean()
+  def callback_exists?(component, name, arity) do
+    {name, arity} in callbacks(component)
+  end
+
+  @doc """
+  Obtain the set of all callbacks defined in `component`.
+
+  ## Examples
+
+  iex> callbacks(ComponentModule)
+  #MapSet<[example: 1]>
 
   """
-  @spec callback_list(t()) :: [{atom(), arity()}]
-  def callback_list(component), do: component._sk_callback_list()
+  @spec callbacks(t()) :: [{atom(), arity()}]
+  def callbacks(component), do: component._sk_callbacks()
 
   @doc """
   Obtain the callback information for callback `name`, `arity` in `component`.
@@ -418,8 +434,7 @@ defmodule Skitter.Component do
   @doc """
   Call callback `callback_name` with an empty state, `config` and `arguments`.
 
-  This function calls `Skitter.Component.call/5` with the state created by `initial_state/1`. If
-  `config` is omitted, it will be passed as `nil`.
+  This function calls `Skitter.Component.call/5` with the state created by `initial_state/1`.
 
   ## Examples
 
@@ -427,7 +442,88 @@ defmodule Skitter.Component do
       %Skitter.Component.Callback.Result{state: 42, result: 84, emit: [arg: :foo]}
   """
   @spec call(t(), atom(), config(), args()) :: result()
-  def call(component, callback_name, config \\ nil, args) do
+  def call(component, callback_name, config, args) do
     call(component, callback_name, initial_state(component), config, args)
+  end
+
+  @doc """
+  Call callback `callback_name` with an empty state and config and `arguments`.
+
+  This function calls `Skitter.Component.call/5` with the state created by `initial_state/1`.
+  `nil` is used as the value for `config`.
+  """
+  @spec call(t(), atom(), args()) :: result()
+  def call(component, callback_name, args) do
+    call(component, callback_name, initial_state(component), nil, args)
+  end
+
+  @doc """
+  Call callback `callback_name` with an empty state and config and arguments.
+
+  This function calls `Skitter.Component.call/5` with the state created by `initial_state/1`.
+  `nil` is used as the value for `config`, no arguments are passed.
+  """
+  @spec call(t(), atom()) :: result()
+  def call(component, callback_name) do
+    call(component, callback_name, initial_state(component), nil, [])
+  end
+
+  @doc """
+  Call `callback_name` defined by `component` if it exists.
+
+  Calls the callback with the given name with `state`, `config` and `args` if
+  `{name, length(args)}` exists. If the callback does not exist, a  result with the
+  `initial_state/1` of the component, an empty emit list and `nil` as result is returned.
+
+  ## Examples
+
+      iex> call_if_exists(ComponentModule, :example, 10, 2, [:foo])
+      %Skitter.Component.Callback.Result{state: 10, result: 20, emit: [arg: :foo]}
+      iex> call_if_exists(ComponentModule, :example, 10, 2, [:foo, :bar])
+      %Skitter.Component.Callback.Result{state: 42, result: nil, emit: []}
+  """
+  @spec call_if_exists(t(), atom(), state(), config(), args()) :: result()
+  def call_if_exists(component, callback_name, state, config, args) do
+    if callback_exists?(component, callback_name, length(args)) do
+      call(component, callback_name, state, config, args)
+    else
+      %Callback.Result{
+        state: initial_state(component),
+        result: nil,
+        emit: []
+      }
+    end
+  end
+
+  @doc """
+  Call `callback_name` defined by `component` if it exists.
+
+  Like `call_if_exists/5`, but `state` is replaced by the initial state of the component.
+  """
+  @spec call_if_exists(t(), atom(), config(), args()) :: result()
+  def call_if_exists(component, callback_name, config, args) do
+    call_if_exists(component, callback_name, initial_state(component), config, args)
+  end
+
+  @doc """
+  Call `callback_name` defined by `component` if it exists.
+
+  Like `call_if_exists/5`, but `state` is replaced by the initial state of the component and
+  `config` is `nil`.
+  """
+  @spec call_if_exists(t(), atom(), args()) :: result()
+  def call_if_exists(component, callback_name, args) do
+    call_if_exists(component, callback_name, initial_state(component), nil, args)
+  end
+
+  @doc """
+  Call `callback_name` defined by `component` if it exists.
+
+  Like `call_if_exists/5`, but `state` is replaced by the initial state of the component, `config`
+  is `nil` and `args` is the empty list.
+  """
+  @spec call_if_exists(t(), atom()) :: result()
+  def call_if_exists(component, callback_name) do
+    call_if_exists(component, callback_name, initial_state(component), nil, [])
   end
 end
