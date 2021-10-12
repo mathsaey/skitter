@@ -53,7 +53,7 @@ defmodule Skitter.Strategy do
 
   defmodule Context do
     @moduledoc false
-    @derive {Inspect, except: [:_skr]}
+    @derive {Inspect, except: [:_skr, :deployment, :invocation, :args]}
     defstruct [:component, :strategy, :args, :deployment, :invocation, :_skr]
   end
 end
