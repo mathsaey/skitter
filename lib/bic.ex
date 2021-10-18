@@ -65,7 +65,7 @@ defmodule Skitter.BIC do
   as the print label described in the component documentation. Workflow options (`as`, `with`) can
   be passed as the optional second argument.
   """
-  defmacro print(label, opts \\ []) do
+  defmacro print(label \\ "", opts \\ []) do
     opts = [args: label] ++ opts
     quote(do: node(Skitter.BIC.Print, unquote(opts)))
   end

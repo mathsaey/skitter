@@ -14,7 +14,7 @@ defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLo
   This makes it possible to insert this component in the middle of a data processing
   pipeline for debugging purposes.
 
-  A single string may be provided as an argument, this string will be used as a prefix for the
+  A single string should be provided as an argument, this string will be used as a prefix for the
   printed output.
   """
   defcb init(str), do: str
