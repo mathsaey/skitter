@@ -81,4 +81,15 @@ defmodule Skitter.BIC do
     opts = [args: [address: address, port: port]] ++ opts
     quote(do: node(Skitter.BIC.TCPSource, unquote(opts)))
   end
+
+  @doc """
+  message source node.
+
+  Inserts a `Skitter.BIC.MessageSource` node in the workflow. The `tag` will be passed as an
+  argument. Provided arguments are passed to the workflow.
+  """
+  defmacro msg_source(tag, opts \\ []) do
+    opts = [args: tag] ++ opts
+    quote(do: node(Skitter.BIC.MessageSource, unquote(opts)))
+  end
 end
