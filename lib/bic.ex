@@ -55,7 +55,7 @@ defmodule Skitter.BIC do
   """
   defmacro keyed_reduce(func, initial, opts \\ []) do
     opts = [args: [func, initial]] ++ opts
-    quote(do: node(Skitter.BIC.Reduce, unquote(opts)))
+    quote(do: node(Skitter.BIC.KeyedReduce, unquote(opts)))
   end
 
   @doc """
