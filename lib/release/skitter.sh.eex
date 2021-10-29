@@ -473,6 +473,8 @@ function start_deploy() {
 
     maybe_printf '\n%s\n' "Shutting down initialized workers:"
     stop_deploy "$connected" "$2" "$4"
+
+    exit 1
   fi
 }
 
