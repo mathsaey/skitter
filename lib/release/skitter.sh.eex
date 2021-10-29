@@ -425,7 +425,7 @@ function for_workers() {
     worker=${remote%%:*}
     tags=${remote##*:}
 
-    if [ "$tags" != "$worker" ] 
+    if [ "$tags" != "$worker" ]
     then
       tags="--tag ${tags//,/ --tag }"
     else
