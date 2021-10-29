@@ -41,15 +41,13 @@ of the runtime. Therefore, you should **not** set the mode yourself. The
 following table shows how to start all types of runtimes based on how you are
 starting the Elixir system.
 
-Mode | Using `iex` | Using `mix` | Using `releases`
+Mode | Using `iex` | Using `mix` | Using releases
 ---- | --------- | --------- | --------------
 `:local` | `iex -S mix` | `mix run` | `skitter local`
 `:worker` | `iex -S mix skitter.worker` | `mix skitter.worker` | `skitter worker`
 `:master` | `iex -S mix skitter.master` | `mix skitter.master` | `skitter master`
 
-## Configuration
-
-### Shared Configuration
+## Shared Configuration
 
 - `:banner`: Determines if the `⬡⬢⬡⬢ Skitter <version> (<mode>)` banner is
   printed when the runtime is started inside `iex`, defaults to `true` for non
@@ -61,9 +59,10 @@ Mode | Using `iex` | Using `mix` | Using `releases`
   workflow returned by the function is automatically deployed after the Skitter
   runtime has started.
   - When using releases, the `--deploy` flag can be passed to `skitter local`,
-    `skitter master` and `skitter deploy`. A `Module.function` should be passed
-    along with this flag. The provided `Module` and `function` will be passed
-    as the value for the `:deploy` key along with an empty argument list.
+    `skitter master` and `skitter deploy`. A `Module.function` argument should
+    be passed along with this flag. The provided `Module` and `function` will
+    be passed as the value for the `:deploy` key along with an empty argument
+    list.
 
 - Skitter logs various messages to `Logger`. These cannot be disabled through
   Skitter itself, however, the `Logger` can be configured to ignore Skitter
@@ -73,7 +72,7 @@ Mode | Using `iex` | Using `mix` | Using `releases`
   Logging to this file may be disabled by passing the `--no-log` option to
   `skitter deploy`, `skitter master`, `skitter worker` or `skitter local`.
 
-### Master Configuration
+## Master Configuration
 
 - `:workers`: A list of workers to which the master will attempt to connect. If
   connecting to any of these workers fail, the master will shut down with an
@@ -83,7 +82,7 @@ Mode | Using `iex` | Using `mix` | Using `releases`
   - When using releases, the worker names can be provided as arguments to the
     script. The worker names may also be passed to `skitter deploy`.
 
-### Worker Configuration
+## Worker Configuration
 
 - `:master`: A master to connect to. After starting, the worker will attempt to
   connect to the master node. If the connection fails, the worker will log a
@@ -91,7 +90,7 @@ Mode | Using `iex` | Using `mix` | Using `releases`
 
 - `:shutdown_with_master`: Determines if the worker should shut down when the
   master it is connected to shuts down. Defaults to true.
-  - Both `skitter.worker` and `skitter worker` accept a
+  - Both `mix skitter.worker` and `skitter worker` accept a
     `--no-shutdown-with-master` flag which disables this behaviour.
 
 - `:tags`: A list of `t:Skitter.Nodes.tag/0` which will be added to the worker.

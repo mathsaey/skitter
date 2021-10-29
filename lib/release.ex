@@ -5,8 +5,54 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Release do
-  @moduledoc false
+  @moduledoc """
+  Utilities for building Skitter releases.
 
+  Releases (`mix release`) are used to deploy Skitter applications over a cluster. Skitter
+  includes several configuration files and scripts to customize the generated release and to
+  faciliate its distribution. In order for your application to use these scripts, your release
+  configuration should use the `step/1` function defined in this module:
+
+  ```
+  def project do
+    ...,
+    releases: [
+      <your_release_name>: [steps: [&Skitter.Release.step/1, :assemble]]
+    ],
+    ...
+  end
+  ```
+
+  This will cause Skitter to customize the configuration of your release to include the required
+  configuration files and scripts.
+
+  See "[Deploying Skitter over a cluster](deployment.html)" for more information about Skitter
+  releases and how to use them.
+  """
+
+  @doc """
+  Customize the release assembly.
+
+  This function customizes the configuration of a release to include several Skitter configuration
+  files and scripts. Concretely, it makes the following modifications:
+
+  - Modify the release to only include unix executables.
+  - Add Skitter-specific `env.sh.eex` and `vm.args` files.
+  - Add the `skitter` deploy script used to manage Skitter runtime systems.
+  - Adds a `skitter.exs` script which is used to configure the Skitter runtime based on
+    environment variables before it starts.
+
+  This function should be added to the `steps` configuration of your release __before__ the
+  `:assemble` step. It is best to include it after any other steps, as this enables the function
+  to verify that the Skitter generated configuration does not overwrite user-provided
+  configuration values.
+
+  The following assumptions about your release configuration are made:
+
+  - The `:include_executables_for` option is not set. Instead, it is set to `[:unix]`.
+  - The `:rel_templates_path` option is not set. Instead, it is set to point to a directory
+    containing Skitter specific `env.sh.eex` and `vm.args.eex` files.
+  """
   def step(rel) do
     rel
     |> override_options()

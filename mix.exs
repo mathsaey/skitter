@@ -65,12 +65,16 @@ defmodule Skitter.MixProject do
     [
       main: "readme",
       assets: "assets",
-      extras: ["README.md"],
       authors: ["Mathijs Saey"],
-      api_reference: false,
       source_ref: "develop",
       logo: "assets/logo-light_docs.png",
       formatters: ["html"],
+      api_reference: false,
+      extras: [
+        {:"README.md", [title: "Skitter", filename: "readme"]},
+        "pages/deployment.md",
+        "pages/configuration.md"
+      ],
       groups_for_modules: [
         "Language Abstractions": [
           Skitter.Port,
@@ -90,7 +94,8 @@ defmodule Skitter.MixProject do
         "Built-in Components": ~r/Skitter.BIC.*/,
         "Built-in Strategies": ~r/Skitter.BIS.*/,
         utilities: [
-          Skitter.Dot
+          Skitter.Dot,
+          Skitter.Release,
         ]
       ]
     ]
