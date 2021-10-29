@@ -346,7 +346,7 @@ defmodule Skitter.Component do
   def meta_message_for_all_ports(component, message) do
     component
     |> out_ports()
-    |> Enum.map(&({&1, [{message, Invocation.meta()}]}))
+    |> Enum.map(&{&1, [{message, Invocation.meta()}]})
   end
 
   @doc """

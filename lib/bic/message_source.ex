@@ -27,6 +27,7 @@ defcomponent Skitter.BIC.MessageSource, out: _, strategy: Skitter.BIS.PassiveSou
     case :persistent_term.get({__MODULE__, tag}, nil) do
       nil ->
         {:error, :missing_tag}
+
       pid ->
         Kernel.send(pid, msg)
         :ok
