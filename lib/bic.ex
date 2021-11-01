@@ -71,9 +71,9 @@ defmodule Skitter.BIC do
   end
 
   @doc """
-  tcp source node.
+  Tcp source node.
 
-  Inserts a `Skitter.BIS.TCPSource` node in the workflow. The address and ports passed to this
+  Inserts a `Skitter.BIC.TCPSource` node in the workflow. The address and ports passed to this
   argument will be passed as arguments to `Skitter.BIC.TCPSource`. Provided options are passed to
   the workflow.
   """
@@ -83,7 +83,18 @@ defmodule Skitter.BIC do
   end
 
   @doc """
-  message source node.
+  Batch source node.
+
+  Inserts a `Skitter.BIC.BatchSource` node in the workflow. The provided `enum` is passed as an
+  argument to `Skitter.BIC.BatchSource`. `opts` are passed as options to the workflow.
+  """
+  defmacro batch_source(enum, opts \\ []) do
+    opts = [args: enum] ++ opts
+    quote(do: node(Skitter.BIC.BatchSource, unquote(opts)))
+  end
+
+  @doc """
+  Message source node.
 
   Inserts a `Skitter.BIC.MessageSource` node in the workflow. The `tag` will be passed as an
   argument. Provided arguments are passed to the workflow.
