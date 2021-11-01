@@ -47,7 +47,8 @@ defmodule Skitter.MixProject do
     ]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "builtin", "test/support"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:dev), do: ["lib", "generator/lib"]
   defp elixirc_paths(_), do: ["lib"]
 
   defp dialyzer do
