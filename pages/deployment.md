@@ -1,4 +1,4 @@
-## Deploying Skitter over a cluster
+# Deployment
 
 This page details how a Skitter system can be deployed over one or many
 machines.
