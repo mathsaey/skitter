@@ -29,7 +29,7 @@ defmodule Skitter.BIC do
 
   Like `map/2`, but with `Skitter.BIC.FlatMap`.
   """
-  defmacro flatmap(func, opts \\ []) do
+  defmacro flat_map(func, opts \\ []) do
     opts = [args: func] ++ opts
     quote(do: node(Skitter.BIC.FlatMap, unquote(opts)))
   end
