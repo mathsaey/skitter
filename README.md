@@ -54,18 +54,13 @@ a cluster and how to configure them.
 
 ## Creating a new Skitter project
 
-Skitter applications can be created in two ways: users can use the
-`mix skitter.new` task to quickly create an initial Skitter application or they
-can create a new Elixir project and add Skitter as a dependency.
-Both of these options require the use of
-[mix](https://hexdocs.pm/mix/Mix.html), the Elixir build tool.
-We recommend the use of `mix skitter.new`.
-
-### `mix skitter.new` (recommended)
-
-`mix skitter.new` is a mix task which generates a basic Skitter application
-which can then be modified to suit your needs. In order to use this task,
-it should be installed on your system:
+We have created a [mix](https://hexdocs.pm/mix/Mix.html) task to help users
+create a new Skitter project.
+This task creates a new mix project, configures it to use Skitter and provides
+initial example code to help you get started.
+In order to use this task, you need to add it to your local `mix` installation
+(mix is installed as a part of Elixir).
+You can do this as follows:
 
 ```
 $ wget soft.vub.ac.be/~mathsaey/skitter/skitter_new.ez
@@ -84,37 +79,28 @@ the generated code and instructions on how to run the Skitter application.
 Furthermore, some example code will be present in `lib/project_name.ex` to help
 you get started.
 
-### Manual setup
-
-To add Skitter to an exsiting project, you need to add it as a dependency and
-configure the release of your application to use Skitter.
-Skitter can be added as a project dependency by adding the following to your
-`mix.exs` file:
-
-```elixir
-  {:skitter, github: "mathsaey/skitter"}
-```
-
-To configure the release of your application, set up a release (see
-`mix release`) and follow the steps outlined in `Skitter.Release`.
-Finally, it is recommended releases are built in production mode.
-
-## Running the Project
+## Running a project
 
 A mix project can be started by using `iex -S mix`. This will start `iex`, the
 interactive Elixir shell and load the current project.
-`mix` will ensure that the Sktter runtime is started.
+`mix` will ensure that the Skitter runtime is started.
 
-To deploy a workflow (if the application was created using `mix skitter.new` an
-function which returns an example workflow will be present in
-`lib/<project_name>.ex`), `Skitter.deploy/1` should be called.
-This function will deploy a workflow, after which it can receive and process
-data.
+When a Skitter runtime is started using `iex -S mix`, it starts in the so
+called _local_ mode.
+In this mode, the runtime acts as both a master and a worker at the same time,
+which is useful for development.
+If you wish to test your application in a slightly more realistic setting,
+`mix skitter.master` and `mix skitter.worker` can be used to simulate multiple
+separate runtime on your local machine.
+Please refer to the
+[deployment documentation](https://soft.vub.ac.be/~mathsaey/skitter/docs/latest/deployment.html#content)
+and the documentation of these tasks for more information.
 
-Note that, in the above explanation, the Skitter runtime is working in _local_
-mode: it is acting as both a master and a worker runtime at the same time.
-This mode is generally used for development, but not suited to deploy an
-application over a cluster.
-Please go to the
-[deployment page of the documentation](https://soft.vub.ac.be/~mathsaey/skitter/docs/latest/deployment.html)
-for information on how an application can be distributed over a cluster.
+[Releases](https://hexdocs.pm/mix/Mix.Tasks.Release.html) are used to deploy a
+Skitter application over a cluster.
+To deploy a skitter application over a cluster, build a release using
+`mix release`, afterwards, the Skitter deploy script can be used to deploy
+your application over the cluster.
+Please run `./_release/bin/skitter help deploy` or refer to the
+[deployment documentation](https://soft.vub.ac.be/~mathsaey/skitter/docs/latest/deployment.html#content)
+for more information.
