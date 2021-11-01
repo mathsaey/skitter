@@ -176,7 +176,7 @@ defmodule Mix.Tasks.Skitter.New do
     # Skitter tweaks the release process: it configures the erlang vm and adds the skitter deploy
     # script. Therefore, each release specified here must contain the following configuration:
     #   [steps: [&Skitter.Release.step/1, :assemble]]
-    #
+    # Please refer to the `Skitter.Release` documentation for more information.
     defp releases do
       [
         <%= @app_name %>: [steps: [&Skitter.Release.step/1, :assemble]]
@@ -209,7 +209,7 @@ defmodule Mix.Tasks.Skitter.New do
   `config/config.exs` | Configures your application and its dependencies (e.g. skitter, logger).
   `lib/*.ex` | Files in this directory define your application and are compiled by mix.
   `_build` | Contains compilation artefacts, can safely be deleted
-  `_release` | Contains the release created when running `mix release`
+  `_release` | Contains the release created when running `mix release`, can safely be deleted.
 
   Application code should be stored in the `lib` directory. `skitter.new` defined some example
   code in `lib/<%= @app_name %>` to help you get started.
