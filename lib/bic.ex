@@ -96,11 +96,10 @@ defmodule Skitter.BIC do
   @doc """
   Message source node.
 
-  Inserts a `Skitter.BIC.MessageSource` node in the workflow. The `tag` will be passed as an
-  argument. Provided arguments are passed to the workflow.
+  Inserts a `Skitter.BIC.MessageSource` node in the workflow. Any options are passed to the
+  workflow.
   """
-  defmacro msg_source(tag, opts \\ []) do
-    opts = [args: tag] ++ opts
+  defmacro msg_source(opts \\ []) do
     quote(do: node(Skitter.BIC.MessageSource, unquote(opts)))
   end
 end
