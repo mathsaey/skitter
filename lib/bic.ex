@@ -71,6 +71,18 @@ defmodule Skitter.BIC do
   end
 
   @doc """
+  `Skitter.BIC.Send` node.
+
+  Insert a `Skitter.BIC.Send` sink in the workflow. The argument passed to this macro is passed
+  as the pid described in the component documentation. Workflow options (`as`, `with`) can
+  be passed as the optional second argument. When no argument is provided, `self()` will be used.
+  """
+  defmacro send_sink(pid \\ quote(do: self()), opts \\ []) do
+    opts = [args: pid] ++ opts
+    quote(do: node(Skitter.BIC.Send, unquote(opts)))
+  end
+
+  @doc """
   Tcp source node.
 
   Inserts a `Skitter.BIC.TCPSource` node in the workflow. The address and ports passed to this
