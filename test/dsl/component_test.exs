@@ -109,19 +109,19 @@ defmodule Skitter.DSL.ComponentTest do
            }
 
     assert Component.call(Clauses, :f, [:foo]) == %Result{
-             result: %Clauses{x: :foo, y: nil},
+             result: nil,
              state: %Clauses{x: :foo, y: nil},
              emit: []
            }
 
     assert Component.call(Clauses, :f, [:bar]) == %Result{
-             result: %Clauses{x: nil, y: :bar},
+             result: nil,
              state: %Clauses{x: nil, y: :bar},
              emit: []
            }
 
     assert Component.call(Clauses, :f, [:baz]) == %Result{
-             result: :baz,
+             result: nil,
              state: %Clauses{},
              emit: [z: [:baz]]
            }

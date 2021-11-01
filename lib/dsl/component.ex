@@ -183,10 +183,10 @@ defmodule Skitter.DSL.Component do
       nil
 
       iex> Component.call(Average, :react, [10])
-      %Result{result: 10.0, emit: [current: [10.0]], state: %Average{count: 1, total: 10}}
+      %Result{result: nil, emit: [current: [10.0]], state: %Average{count: 1, total: 10}}
 
       iex> Component.call(Average, :react, %Average{count: 1, total: 10}, nil, [10])
-      %Result{result: 10.0, emit: [current: [10.0]], state: %Average{count: 2, total: 20}}
+      %Result{result: nil, emit: [current: [10.0]], state: %Average{count: 2, total: 20}}
 
   ## Documentation
 
@@ -456,7 +456,12 @@ defmodule Skitter.DSL.Component do
       iex> Component.call(WrongFieldWriteExample, :write, %WrongFieldWriteExample{field: :foo}, nil, [])
       ** (KeyError) key :doesnotexist not found in: %Skitter.DSL.ComponentTest.WrongFieldWriteExample{field: :foo}
   """
-  defmacro {:state, _, _} <~ value, do: quote(do: unquote(state_var()) = unquote(value))
+  defmacro {:state, _, _} <~ value do
+    quote do
+      unquote(state_var()) = unquote(value)
+      nil
+    end
+  end
 
   defmacro {field, _, _} <~ value when is_atom(field) do
     quote do
@@ -510,9 +515,8 @@ defmodule Skitter.DSL.Component do
   """
   defmacro value ~> {port, _, _} when is_atom(port) do
     quote do
-      value = unquote(value)
-      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), [value])
-      value
+      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), [unquote(value)])
+      nil
     end
   end
 
@@ -539,9 +543,8 @@ defmodule Skitter.DSL.Component do
   """
   defmacro lst ~>> {port, _, _} when is_atom(port) do
     quote do
-      lst = unquote(lst)
-      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), lst)
-      lst
+      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), unquote(lst))
+      nil
     end
   end
 
@@ -612,13 +615,13 @@ defmodule Skitter.DSL.Component do
       %Result{result: 30, emit: [], state: %{}}
 
       iex> Component.call(CbExample, :state, %{counter: 10, other: :foo}, nil, [])
-      %Result{result: %{counter: 11, other: :foo}, emit: [], state: %{counter: 11, other: :foo}}
+      %Result{result: nil, emit: [], state: %{counter: 11, other: :foo}}
 
       iex> Component.call(CbExample, :emit_single, %{}, nil, [])
-      %Result{result: ~D[1991-12-08], emit: [out_port: [~D[1991-12-08]]], state: %{}}
+      %Result{result: nil, emit: [out_port: [~D[1991-12-08]]], state: %{}}
 
       iex> Component.call(CbExample, :emit_multi, %{}, nil, [])
-      %Result{result: [~D[1991-12-08], ~D[2021-07-08]], emit: [out_port: [~D[1991-12-08], ~D[2021-07-08]]], state: %{}}
+      %Result{result: nil, emit: [out_port: [~D[1991-12-08], ~D[2021-07-08]]], state: %{}}
   """
   defmacro defcb(signature, do: body) do
     body = __MODULE__.ControlFlowOperators.rewrite_special_forms(body)
