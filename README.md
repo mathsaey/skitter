@@ -1,5 +1,8 @@
 ![skitter logo](assets/logo_header.png)
 
+[ [Homepage](https://soft.vub.ac.be/~mathsaey/skitter/) ]
+[ [Documentation](https://soft.vub.ac.be/~mathsaey/skitter/docs/latest/readme.html) ]
+
 A domain specific language for building scalable, distributed stream processing
 applications with custom distribution strategies.
 
@@ -37,67 +40,81 @@ Information on using this earlier version of Skitter can be found
 
 # Getting started
 
-## Installation
-
 Skitter is developed as a DSL in [Elixir](https://elixir-lang.org/). Therefore,
-Elixir should be installed to use Skitter. In order to install Elixir, please
-refer to the [official documentation](https://elixir-lang.org/install.html).
+Elixir is required to write and run Skitter applications.
+To install Elixir, please refer to the
+[official documentation](https://elixir-lang.org/install.html).
 
-Once Elixir is installed, Skitter can be used by creating a `mix` (the Elixir
-build tool) project which includes Skitter as a dependency. We provide a `mix`
-task which automates this process by creating a project with the required
-dependencies and configuration. It can be installed as follows:
+We provide a brief introduction to creating and running Skitter projects below.
+For more detailed information, we recommend browsing the
+[docs](https://soft.vub.ac.be/~mathsaey/skitter/docs/latest/).
+There, you can find detailed documentation on the language abstractions offered
+by Skitter along with guides detailing how to deploy Skitter applications over
+a cluster and how to configure them.
+
+## Creating a new Skitter project
+
+Skitter applications can be created in two ways: users can use the
+`mix skitter.new` task to quickly create an initial Skitter application or they
+can create a new Elixir project and add Skitter as a dependency.
+Both of these options require the use of
+[mix](https://hexdocs.pm/mix/Mix.html), the Elixir build tool.
+We recommend the use of `mix skitter.new`.
+
+### `mix skitter.new` (recommended)
+
+`mix skitter.new` is a mix task which generates a basic Skitter application
+which can then be modified to suit your needs. In order to use this task,
+it should be installed on your system:
 
 ```
 $ wget soft.vub.ac.be/~mathsaey/skitter/skitter_new.ez
 $ mix archive.install skitter_new.ez
 ```
 
-The first command downloads a compiled version of the installer, while the
-second adds the command to your local `mix` installation. After installation,
-`mix help skitter.new` can be used to verify if the installation of the package
-was successful.
+The first command downloads a compiled version of the task, while the second
+adds the task to your local `mix` installation.
 
-## Creating a Skitter project
-
-Using the installer, a Skitter project can be created by using:
-
-```
-$ mix skitter.new <project_name>
-```
-
+Once installed, `mix skitter.new <project_name>` can be used to create a new
+Skitter project.
 `<project_name>` should consist of lower case characters, spaces should be
 replaced by underscores.
-
 The generated project will contain a `README.md` file with information about
 the generated code and instructions on how to run the Skitter application.
 Furthermore, some example code will be present in `lib/project_name.ex` to help
 you get started.
 
+### Manual setup
+
+To add Skitter to an exsiting project, you need to add it as a dependency and
+configure the release of your application to use Skitter.
+Skitter can be added as a project dependency by adding the following to your
+`mix.exs` file:
+
+```elixir
+  {:skitter, github: "mathsaey/skitter"}
+```
+
+To configure the release of your application, set up a release (see
+`mix release`) and follow the steps outlined in `Skitter.Release`.
+Finally, it is recommended releases are built in production mode.
+
 ## Running the Project
 
 A mix project can be started by using `iex -S mix`. This will start `iex`, the
-interactive Elixir shell, and load the current project (this is done by
-providing the `-S mix` argument). Starting a project that uses Skitter as a
-dependency this way will automatically start the Skitter runtime in _local_
-mode, which causes it to act as both a _master_ and a _worker_ at the same
-time. Local mode is generally used when developing applications.
+interactive Elixir shell and load the current project.
+`mix` will ensure that the Sktter runtime is started.
 
-Once the Skitter system is up and running, the workflow defined in
-`lib/project_name.ex` can be _deployed_ by calling `Skitter.deploy/1`. This
-will deploy the workflow, enabling it to receive and process data.
+To deploy a workflow (if the application was created using `mix skitter.new` an
+function which returns an example workflow will be present in
+`lib/<project_name>.ex`), `Skitter.deploy/1` should be called.
+This function will deploy a workflow, after which it can receive and process
+data.
 
-## Distributed Execution
-
-It is useful to simulate the distributed execution of an application before
-actually deploying it over a cluster. This can be done by using `mix
-skitter.worker` and `mix skitter.master` on your local machine. Please refer to
-their documentation (`mix help skitter.master` or `mix help skitter.worker`)
-for more information.
-
-We use [releases](https://hexdocs.pm/mix/master/Mix.Tasks.Release.html) to
-deploy a complete skitter system over a cluster. Running `mix release` will
-create a self-contained version of Elixir, Skitter and your application, which
-can be stored on the various nodes of your cluster. Once this is done, the
-provided `skitter` script can be used to deploy your application over the
-cluster. Please use `./_release/bin/skitter help` for more information.
+Note that, in the above explanation, the Skitter runtime is working in _local_
+mode: it is acting as both a master and a worker runtime at the same time.
+This mode is generally used for development, but not suited to deploy an
+application over a cluster.
+Please go to the
+[deployment page of the documentation](https://soft.vub.ac.be/~mathsaey/skitter/docs/latest/deployment.html)
+for information on how an application can be distributed over a cluster.
