@@ -46,7 +46,10 @@ defmodule Mix.Tasks.Skitter.New do
     Mix.shell().info("""
 
       Your skitter project has been created at `#{base_path}`.
-      You can now start working on your Skitter application.
+      You can now start working on your Skitter application:
+
+      $ cd #{base_path}
+      $ iex -S mix
 
       For your convenience, the generated README.md file contains a
       summary of the generated files and a summary of elixir commands.
@@ -75,7 +78,7 @@ defmodule Mix.Tasks.Skitter.New do
     assigns = [app_name: app_name, module_name: module_name, elixir_version: @elixir_version]
 
     create_file("#{base_path}/mix.exs", mix_template(assigns))
-    create_file("#{base_path}/config/config.exs", config_text())
+    create_file("#{base_path}/config/config.exs", config_template(assigns))
     create_file("#{base_path}/lib/#{app_name}.ex", module_template(assigns))
     create_file("#{base_path}/.gitignore", gitignore_text())
     create_file("#{base_path}/README.md", readme_template(assigns))
@@ -113,14 +116,16 @@ defmodule Mix.Tasks.Skitter.New do
   erl_crash.dump
   """)
 
-  embed_text(:config, """
+  embed_template(:config, """
   # This file is used by mix to configure your application before it is compiled.
   # See: https://hexdocs.pm/elixir/Config.html for more information.
-  #
-  # Here, we only configure the logger.
-  # You are free to delete or modify this file.
 
   import Config
+
+  # Set up Skitter to start the workflow defined in `lib/<%= @app_name %>`
+  # If you remove this you need to manually call `Skitter.deploy/1` to deploy a workflow.
+  # You can also pass the `--deploy` option to the skitter deploy script when using releases.
+  config :skitter, deploy: {<%= @module_name %>, :workflow, []}
 
   # Set up the console logger. Values for level, format and metadata set here will also be used by
   # the file logger.
@@ -238,8 +243,10 @@ defmodule Mix.Tasks.Skitter.New do
   # The lib directory contains the various modules which define your application.
   # Any module (and thus any component or strategy) defined in this directory is compiled by mix and
   # included when you assemble a release.
+  #
   # In this file, we provide an example workflow to help you get started with Skitter.
-  # Happy hacking!
+  # config/config.exs contains configuration to automatically deploy this workflow when a Skitter
+  # runtime is started.
 
   defmodule <%= @module_name %> do
     use Skitter.DSL

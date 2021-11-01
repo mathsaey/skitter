@@ -109,11 +109,13 @@ The skitter deploy script does not deploy any workflows over the cluster by
 default, it only spawns master and worker runtimes and connects them together.
 In order to start a workflow, a few options are available:
 
+- Setting the `deploy:` key of the Skitter application environment to a
+  `{Mod, func, args}` tuple. The workflow returned by calling
+  `Module.func(args)` will be deployed over the cluster by Skitter. This option
+  is automatically set in `config/config.exs` if `mix skitter.new` was used to
+  create the application.
 - Passing the `--deploy Module.func` flag to the deploy script. This will cause
   Skitter to deploy the workflow returned by calling `Module.func()` over the
   cluster.
-- Setting the `deploy:` key of the Skitter application environment to a
-  `{Mod, func, args}` tuple. The workflow returned by calling
-  `Module.func(args)` will be deployed over the cluster by Skitter.
 - Using `--mode start_iex` to start an interactive shell on the master node,
   which can be used to call `Skitter.deploy/1`.
