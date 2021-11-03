@@ -13,7 +13,7 @@ defcomponent Skitter.BIC.KeyedReduce, in: _, out: _, strategy: Skitter.BIS.Keyed
   This component implements a reduce operation. It accepts two arguments when embedded inside a
   workflow: a function and an initial state. When this component receives data, the function is
   called with the received data as its first argument and the current state as the second
-  argument. The function should then returnn a new state to be used by the next data element.
+  argument. The function should then return a new state to be used by the next data element.
 
   The state of this componennt is grouped by key. The key that will be used is determined by a
   previous element in the workflow, such as the `Skitter.BIC.KeyBy` component. When no state is
