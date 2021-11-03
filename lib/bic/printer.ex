@@ -18,5 +18,11 @@ defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLo
   printed output.
   """
   defcb conf(str), do: str
-  defcb react(val), do: IO.inspect(val, label: config()) ~> _
+
+  defcb react(val) do
+    case config() do
+      nil -> IO.inspect(val)
+      label -> IO.inspect(val, label: label)
+    end ~> _
+  end
 end
