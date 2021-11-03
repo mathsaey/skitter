@@ -21,8 +21,8 @@ defcomponent Skitter.BIC.KeyedReduce, in: _, out: _, strategy: Skitter.BIS.Keyed
   the state.
   """
 
-  defcb init(_, initial_state), do: state <~ initial_state
-  defcb conf(function, _), do: function
+  defcb init({_, initial_state}), do: state <~ initial_state
+  defcb conf({function, _}), do: function
   defcb key(_, inv), do: inv[:key]
 
   defcb react(tup) do

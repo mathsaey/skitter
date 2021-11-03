@@ -54,7 +54,7 @@ defmodule Skitter.BIC do
   Other options (`as:`, `with:`) can be passed as a third argument.
   """
   defmacro keyed_reduce(func, initial, opts \\ []) do
-    opts = [args: [func, initial]] ++ opts
+    opts = [args: {func, initial}] ++ opts
     quote(do: node(Skitter.BIC.KeyedReduce, unquote(opts)))
   end
 

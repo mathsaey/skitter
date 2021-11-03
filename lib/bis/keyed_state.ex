@@ -28,7 +28,7 @@ defstrategy Skitter.BIS.KeyedState do
     * `conf` (optional): Called to create a configuration for the component.
   """
   defhook deploy do
-    config = call_if_exists(:conf, args()).result
+    config = call_if_exists(:conf, [args()]).result
 
     aggregators =
       Nodes.on_all_worker_cores(fn -> local_worker(Map.new(), :aggregator) end)
@@ -49,7 +49,7 @@ defstrategy Skitter.BIS.KeyedState do
   defhook receive(data, state_map, :aggregator) do
     {config, _} = deployment()
     key = call(:key, [data, invocation()]).result
-    state = Map.get_lazy(state_map, key, fn -> call_if_exists(:init, args()).state end)
+    state = Map.get_lazy(state_map, key, fn -> call_if_exists(:init, [args()]).state end)
     res = call(:react, state, config, [data])
     state_map = Map.put(state_map, key, res.state)
     [state: state_map, emit: res.emit]
