@@ -73,6 +73,7 @@ defmodule Skitter.MixProject do
       api_reference: false,
       extras: [
         {:"README.md", [title: "Skitter", filename: "readme"]},
+        "pages/concepts.livemd",
         "pages/deployment.md",
         "pages/configuration.md"
       ],
@@ -96,7 +97,7 @@ defmodule Skitter.MixProject do
         "Built-in Strategies": ~r/Skitter.BIS.*/,
         utilities: [
           Skitter.Dot,
-          Skitter.Release,
+          Skitter.Release
         ]
       ]
     ]
