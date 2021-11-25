@@ -12,7 +12,7 @@ defmodule Skitter.Runtime.WorkflowManager do
   alias Skitter.{Remote, Runtime}
 
   alias Skitter.Runtime.Config
-  alias Skitter.Node.Master.WorkerConnection
+  alias Skitter.Mode.Master.WorkerConnection
 
   alias Skitter.Runtime.ConstantStore
   require Skitter.Runtime.ConstantStore

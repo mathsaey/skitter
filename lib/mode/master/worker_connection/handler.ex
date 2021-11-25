@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Node.Master.WorkerConnection.Handler do
+defmodule Skitter.Mode.Master.WorkerConnection.Handler do
   @moduledoc false
   require Logger
 
@@ -12,8 +12,8 @@ defmodule Skitter.Node.Master.WorkerConnection.Handler do
 
   alias Skitter.Remote
   alias Skitter.Runtime.Registry
-  alias Skitter.Node.Worker.Tags
-  alias Skitter.Node.Master.WorkerConnection.Notifier
+  alias Skitter.Mode.Worker.Tags
+  alias Skitter.Mode.Master.WorkerConnection.Notifier
 
   @impl true
   def init do

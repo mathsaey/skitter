@@ -11,7 +11,7 @@ defmodule Skitter.Runtime.Application do
   require Logger
 
   alias Skitter.{Remote, Runtime}
-  alias Skitter.Node.{Worker, Master}
+  alias Skitter.Mode.{Worker, Master}
   alias Skitter.Runtime.{Config, Registry}
 
   def start(:normal, []), do: start(mode())

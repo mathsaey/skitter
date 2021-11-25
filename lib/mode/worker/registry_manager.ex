@@ -4,14 +4,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Node.Worker.RegistryManager do
+defmodule Skitter.Mode.Worker.RegistryManager do
   @moduledoc false
 
   use GenServer
 
   alias Skitter.Remote
   alias Skitter.Runtime.Registry
-  alias Skitter.Node.Master.WorkerConnection.Notifier
+  alias Skitter.Mode.Master.WorkerConnection.Notifier
 
   def start_link([]) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)

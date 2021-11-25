@@ -4,11 +4,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Node.Master.WorkerConnectionTest do
+defmodule Skitter.Mode.Master.WorkerConnectionTest do
   alias Skitter.Remote
 
   alias Skitter.Runtime.Registry
-  alias Skitter.Node.Master.WorkerConnection
+  alias Skitter.Mode.Master.WorkerConnection
 
   use Skitter.Remote.Test.Case,
     mode: :master,
