@@ -11,11 +11,8 @@ defmodule Skitter.Runtime.WorkflowManager do
 
   use GenServer
 
-  alias Skitter.{Remote, Runtime}
-
-  alias Skitter.Runtime.Config
+  alias Skitter.{Config, Remote, Runtime}
   alias Skitter.Mode.Master.WorkerConnection
-
   alias Skitter.Runtime.ConstantStore
   require Skitter.Runtime.ConstantStore
 
