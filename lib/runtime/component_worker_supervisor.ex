@@ -6,6 +6,8 @@
 
 defmodule Skitter.Runtime.ComponentWorkerSupervisor do
   @moduledoc false
+  # This supervisor manages the supervisors spawned for each component.
+
   use Supervisor, restart: :temporary
   alias Skitter.Runtime.WorkerSupervisor
 

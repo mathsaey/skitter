@@ -6,6 +6,21 @@
 
 defmodule Skitter.Runtime.Deployer do
   @moduledoc false
+  # This module is responsible for deploying a workflow over the cluster.
+  # This is done in a few steps:
+  #   - A reference is spawned which uniquely identifies the spawned workflow.
+  #   - The workflow is converted in a compact, tuple-based format which allows constant time
+  #   fetching of component instances.
+  #   - A supervision tree is spawned on each runtime, a reference to each WorkerSupervisor is
+  #   stored on each runtime for easy access.
+  #   - Each component is deployed. The returned data is stored on every runtime (this is
+  #   effectively the deployment data). The same tuple-based format is used for constant-time
+  #   access.
+  #   - The context of each outgoing link is fetched and stored. This is done to enable this
+  #   lookup at runtime to occur in constant time instead of logarithmic time.
+  #   - The spawned workers are notified that the deployment is finished. This is done to ensure
+  #   no workers start to emit data before deployment is complete.
+  #   - A workflow manager is spawned and returned.
 
   alias Skitter.Runtime.{
     ConstantStore,

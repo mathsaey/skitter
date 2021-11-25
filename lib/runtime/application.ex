@@ -6,6 +6,16 @@
 
 defmodule Skitter.Runtime.Application do
   @moduledoc false
+  # Application callback module.
+  #
+  # The layout of the Skitter supervision tree depends on the configured runtime mode. If no mode
+  # is specified, :local is assumed.
+  #
+  # After the application is started, the three start phases specified in the application callback
+  # in mix.exs are executed:
+  #   - The first phase prints a welcome message
+  #   - The second connects to remote nodes if possible
+  #   - The final deploys the workflow configured by `:deploy`.
 
   use Application
   require Logger

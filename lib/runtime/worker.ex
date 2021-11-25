@@ -6,6 +6,7 @@
 
 defmodule Skitter.Runtime.Worker do
   @moduledoc false
+  # This module defines a GenServer that specifies the behaviour of Skitter Workers.
 
   use GenServer, restart: :transient
   alias Skitter.Runtime.ConstantStore

@@ -6,6 +6,9 @@
 
 defmodule Skitter.Runtime.ConstantStore do
   @moduledoc false
+  # This module is used to store constant data on the various nodes of the cluster.
+  # It uses persistent_term under the hood, so it should not be used to manage mutable data.
+
   alias Skitter.Runtime.Registry
 
   @type ref() :: {atom(), reference()}
@@ -22,6 +25,7 @@ defmodule Skitter.Runtime.ConstantStore do
     Registry.on_all(__MODULE__, :put, [term, atom, ref]) |> hd()
   end
 
+  @spec get_all(atom(), reference()) :: [any()]
   def get_all(atom, ref) do
     {atom, ref}
     |> :persistent_term.get()

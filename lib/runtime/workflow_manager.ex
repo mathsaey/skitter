@@ -6,6 +6,8 @@
 
 defmodule Skitter.Runtime.WorkflowManager do
   @moduledoc false
+  # This module defines the workflow manager, which is intended to be used by the developer to
+  # obtain information about the running workflow.
 
   use GenServer
 

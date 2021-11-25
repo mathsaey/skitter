@@ -6,6 +6,7 @@
 
 defmodule Skitter.Remote.Handler do
   @moduledoc false
+
   alias __MODULE__.Dispatcher
 
   defmacro __using__(_opts) do

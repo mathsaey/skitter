@@ -6,8 +6,11 @@
 
 defmodule Skitter.Runtime.WorkerSupervisor do
   @moduledoc false
+  # This supervisor supervises the various workers spawned for a component
+
   use DynamicSupervisor
 
+  alias Skitter.{Strategy, Worker}
   alias Skitter.Runtime.ConstantStore
   require Skitter.Runtime.ConstantStore
 
@@ -20,6 +23,12 @@ defmodule Skitter.Runtime.WorkerSupervisor do
     DynamicSupervisor.init(strategy: :one_for_one, max_restarts: 0)
   end
 
+  @doc """
+  Start a worker with `state` and `tag` for the given `ctx`.
+
+  The appropriate supervisor will be selected based on the data captured in the context.
+  """
+  @spec add_worker(Strategy.context(), Worker.state(), Worker.tag()) :: Worker.ref()
   def add_worker(ctx, state, tag) do
     {ref, idx} =
       case ctx._skr do
@@ -32,6 +41,8 @@ defmodule Skitter.Runtime.WorkerSupervisor do
     pid
   end
 
+  @doc "Get a list of the workers for a given supervisor."
+  @spec children(pid()) :: [pid()]
   def children(pid) do
     pid
     |> DynamicSupervisor.which_children()

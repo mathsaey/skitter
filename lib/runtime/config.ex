@@ -6,6 +6,7 @@
 
 defmodule Skitter.Runtime.Config do
   @moduledoc false
+  # Convenience functions to obtain data from the Skitter application environment.
 
   @doc """
   Get configuration `key` from the application environment.

@@ -6,6 +6,8 @@
 
 defmodule Skitter.Runtime.Spawner do
   @moduledoc false
+  # This module is responsible for spawning workers.
+
   require Logger
 
   alias Skitter.Runtime.{Config, Registry}

@@ -6,6 +6,8 @@
 
 defmodule Skitter.Runtime.WorkflowWorkerSupervisor do
   @moduledoc false
+  # This supervisors supervises the components supervisors of a workflow.
+
   use DynamicSupervisor
   alias Skitter.Runtime.ComponentWorkerSupervisor
 

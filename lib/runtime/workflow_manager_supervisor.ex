@@ -6,6 +6,8 @@
 
 defmodule Skitter.Runtime.WorkflowManagerSupervisor do
   @moduledoc false
+  # Supervisor which supervises workflow managers.
+
   use DynamicSupervisor
   alias Skitter.Runtime.WorkflowManager
 
