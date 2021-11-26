@@ -7,8 +7,7 @@
 defmodule Skitter.Mode.Master.WorkerConnection do
   @moduledoc false
 
-  alias Skitter.Remote
-  alias Skitter.Runtime.Config
+  alias Skitter.{Config, Remote}
   alias __MODULE__.Notifier
 
   def connect, do: connect(Config.get(:workers, []))

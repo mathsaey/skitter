@@ -10,14 +10,14 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
 
   use Skitter.Remote.Handler
 
-  alias Skitter.Remote
-  alias Skitter.Runtime.Registry
-  alias Skitter.Mode.Worker.Tags
+  alias Skitter.Remote.{Registry, Tags}
   alias Skitter.Mode.Master.WorkerConnection.Notifier
 
   @impl true
   def init do
+    Tags.start_link()
     Registry.start_link()
+    Registry.add(Node.self(), :master)
     nil
   end
 
@@ -26,10 +26,11 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
     if Registry.connected?(node) do
       {:error, :already_connected, state}
     else
-      tags = Remote.on(node, &Tags.get/0)
+      tags = Tags.remote(node)
       Logger.info("Connected to `#{node}`, tags: #{inspect(tags)}")
       Notifier.notify_up(node, tags)
-      Registry.add(node, tags)
+      Registry.add(node, :worker)
+      Tags.add(node, tags)
       {:ok, state}
     end
   end
@@ -39,6 +40,7 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
     Logger.info("Disconnected from `#{node}`")
     Notifier.notify_down(node)
     Registry.remove(node)
+    Tags.remove(node)
     state
   end
 
@@ -47,6 +49,7 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
     Logger.info("Worker `#{node}` disconnected")
     Notifier.notify_down(node)
     Registry.remove(node)
+    Tags.remove(node)
     state
   end
 end

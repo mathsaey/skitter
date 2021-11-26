@@ -9,7 +9,7 @@ defmodule Skitter.Runtime.ConstantStore do
   # This module is used to store constant data on the various nodes of the cluster.
   # It uses persistent_term under the hood, so it should not be used to manage mutable data.
 
-  alias Skitter.Runtime.Registry
+  alias Skitter.Remote
 
   @type ref() :: {atom(), reference()}
 
@@ -22,7 +22,7 @@ defmodule Skitter.Runtime.ConstantStore do
   @spec put_everywhere([any()], atom(), reference()) :: ref()
   def put_everywhere(term, atom, ref) do
     put(term, atom, ref)
-    Registry.on_all(__MODULE__, :put, [term, atom, ref]) |> hd()
+    Remote.on_all_workers(__MODULE__, :put, [term, atom, ref]) |> hd()
   end
 
   @spec get_all(atom(), reference()) :: [any()]

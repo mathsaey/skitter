@@ -34,7 +34,7 @@ defstrategy Skitter.BIS.PassiveSource do
   """
   defhook deploy do
     remote_worker(fn -> call(:subscribe, [args()]) end, :source)
-    Nodes.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
+    Remote.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 
   defhook receive(msg, _, :source) do

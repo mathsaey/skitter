@@ -73,7 +73,6 @@ defmodule Skitter.MixProject do
       api_reference: false,
       extras: [
         {:"README.md", [title: "Skitter", filename: "readme"]},
-        "pages/concepts.livemd",
         "pages/deployment.md",
         "pages/configuration.md"
       ],
@@ -90,7 +89,7 @@ defmodule Skitter.MixProject do
           Skitter.Worker,
           Skitter.Deployment,
           Skitter.Invocation,
-          Skitter.Nodes
+          Skitter.Remote
         ],
         dsl: ~r/Skitter.DSL*/,
         "Built-in Components": ~r/Skitter.BIC.*/,

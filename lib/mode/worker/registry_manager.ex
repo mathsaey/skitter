@@ -10,7 +10,7 @@ defmodule Skitter.Mode.Worker.RegistryManager do
   use GenServer
 
   alias Skitter.Remote
-  alias Skitter.Runtime.Registry
+  alias Skitter.Remote.{Registry, Tags}
   alias Skitter.Mode.Master.WorkerConnection.Notifier
 
   def start_link([]) do
@@ -23,6 +23,11 @@ defmodule Skitter.Mode.Worker.RegistryManager do
   @impl true
   def init([]) do
     Registry.start_link()
+    Tags.start_link()
+
+    Registry.add(Node.self(), :worker)
+    Tags.add(Node.self(), Tags.local())
+
     {:ok, :no_master}
   end
 
@@ -31,9 +36,14 @@ defmodule Skitter.Mode.Worker.RegistryManager do
     :ok = Notifier.subscribe_up(remote)
     :ok = Notifier.subscribe_down(remote)
 
+    Registry.add(remote, :master)
+
     remote
-    |> Remote.on(Registry, :all_with_tags, [])
-    |> Enum.each(fn {node, tags} -> Registry.add(node, tags) end)
+    |> Remote.on(Tags, :of_all_workers, [])
+    |> Enum.each(fn {node, tags} ->
+      Registry.add(node, :worker)
+      Tags.add(node, tags)
+    end)
 
     {:noreply, remote}
   end
@@ -41,19 +51,27 @@ defmodule Skitter.Mode.Worker.RegistryManager do
   def handle_cast({:master_down, remote}, _) do
     :ok = Notifier.unsubscribe_up(remote)
     :ok = Notifier.unsubscribe_down(remote)
+
     Registry.remove_all()
+    Registry.add(Node.self(), :worker)
+
+    Tags.remove_all()
+    Tags.add(Node.self(), Tags.local())
+
     {:noreply, :no_master}
   end
 
   @impl true
   def handle_info({:worker_up, node, tags}, state) do
-    Registry.add(node, tags)
+    Registry.add(node, :worker)
+    Tags.add(node, tags)
     {:noreply, state}
   end
 
   @impl true
   def handle_info({:worker_down, node}, state) do
     Registry.remove(node)
+    Tags.remove(node)
     {:noreply, state}
   end
 end

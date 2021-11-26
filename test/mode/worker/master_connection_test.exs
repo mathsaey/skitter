@@ -7,7 +7,7 @@
 defmodule Skitter.Mode.Worker.MasterConnectionTest do
   import ExUnit.CaptureLog
 
-  alias Skitter.{Remote, Runtime.Registry}
+  alias Skitter.Remote
   alias Skitter.Mode.Worker.{MasterConnection, RegistryManager}
 
   use Skitter.Remote.Test.Case,
@@ -67,18 +67,18 @@ defmodule Skitter.Mode.Worker.MasterConnectionTest do
     assert MasterConnection.connect(master) == :ok
 
     :sys.get_state(manager)
-    assert Node.self() in Registry.all()
-    assert worker1 in Registry.all()
+    assert Node.self() in Remote.workers()
+    assert worker1 in Remote.workers()
 
     Cluster.rpc(worker2, MasterConnection, :connect, [master])
     # Give the changes some time to propagate
     Process.sleep(100)
     :sys.get_state(manager)
-    assert worker2 in Registry.all()
+    assert worker2 in Remote.workers()
 
     Cluster.kill_node(worker1)
     Process.sleep(100)
     :sys.get_state(manager)
-    assert worker1 not in Registry.all()
+    assert worker1 not in Remote.workers()
   end
 end

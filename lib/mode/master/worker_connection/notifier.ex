@@ -7,7 +7,7 @@
 defmodule Skitter.Mode.Master.WorkerConnection.Notifier do
   @moduledoc false
   use GenServer
-  alias Skitter.Nodes
+  alias Skitter.Remote
 
   def start_link([]) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -84,7 +84,7 @@ defmodule Skitter.Mode.Master.WorkerConnection.Notifier do
   @doc """
   Notify subscribers a node has joined the cluster.
   """
-  @spec notify_up(node(), Nodes.tag()) :: :ok
+  @spec notify_up(node(), Remote.tag()) :: :ok
   def notify_up(worker, tags), do: GenServer.cast(__MODULE__, {:worker_up, worker, tags})
 
   @doc """

@@ -24,12 +24,12 @@ defstrategy Skitter.BIS.ImmutableLocal do
     invocation of `react`.
   """
   defhook deploy do
-    Nodes.on_all_worker_cores(fn ->
+    Remote.on_all_worker_cores(fn ->
       local_worker(fn -> call_if_exists(:conf, [args()]).result end, :worker)
     end)
     |> Map.new()
   end
 
-  defhook send(msg, _), do: send(Enum.random(deployment()[Nodes.self()]), msg)
+  defhook send(msg, _), do: send(Enum.random(deployment()[Remote.self()]), msg)
   defhook receive(msg, conf, :worker), do: [emit: call(:react, conf, [msg]).emit]
 end

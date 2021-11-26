@@ -1,8 +1,27 @@
 defmodule Skitter.Remote do
-  @moduledoc false
+  @moduledoc """
+  Facilities to interact with remote Skitter runtimes.
 
-  alias __MODULE__.{Beacon, Handler}
+  This module offers facilities to query Skitter about the available remote Skitter runtimes and
+  their properites. It also defines various functions which can be used to spawn Skitter workers
+  on remote Skitter nodes.
+  """
+
+  alias __MODULE__.{Beacon, Handler, Registry, Tags}
   alias __MODULE__.TaskSupervisor, as: Sup
+
+  # ---------- #
+  # Connecting #
+  # ---------- #
+
+  @typedoc """
+  Worker tag.
+
+  A worker may be started with a tag, which indicates properties of the node. For instance, a
+  `:gpu` tag could be added to a node which has a gpu. Various functions in this module can be
+  used to only spawn workers on nodes with given tags.
+  """
+  @type tag :: atom()
 
   @doc """
   Attempt to connect to `remote`.
@@ -73,6 +92,38 @@ defmodule Skitter.Remote do
     end
   end
 
+  # ----------------- #
+  # Local Information #
+  # ----------------- #
+
+  @doc "Get the name of the current Skitter runtime."
+  @spec self() :: node()
+  def self(), do: Node.self()
+
+  @doc "Get the name of the master node of the cluster."
+  @spec master() :: node()
+  def master(), do: Registry.master()
+
+  @doc "Get a list of the names of all the worker runtimes in the cluster."
+  @spec workers() :: [node()]
+  def workers(), do: Registry.workers()
+
+  @doc "Get a list of all the worker runtimes tagged with a given `t:tag/0`."
+  @spec with_tag(tag()) :: [node()]
+  def with_tag(tag), do: Tags.workers_with(tag)
+
+  @doc "Get a list of all the tags of `node()`."
+  @spec tags(node()) :: [tag()]
+  def tags(node), do: Tags.of_worker(node)
+
+  @doc "Check if the local runtime is connected to the specified remote runtime."
+  @spec connected?(node()) :: boolean()
+  def connected?(node), do: Registry.connected?(node)
+
+  # ---------------- #
+  # Remote Execution #
+  # ---------------- #
+
   @doc """
   Execute `mod.func(args)` on every specified remote runtime, obtain results in a list.
   """
@@ -104,4 +155,79 @@ defmodule Skitter.Remote do
   """
   @spec on(node(), (() -> any())) :: any()
   def on(remote, fun), do: on_many([remote], fun) |> hd() |> elem(1)
+
+  @doc """
+  Execute a function on every worker runtime.
+
+  The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
+  """
+  @spec on_all_workers(module(), atom(), [any()]) :: [{node(), any()}]
+  def on_all_workers(mod, func, args), do: on_many(Registry.workers(), mod, func, args)
+
+  @doc """
+  Execute a function on every worker runtime.
+
+  The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
+  """
+  @spec on_all_workers((() -> any())) :: [{node(), any()}]
+  def on_all_workers(fun), do: on_many(Registry.workers(), fun)
+
+  @doc """
+  Execute a function on every core on every worker runtime.
+
+  A list of results will be returned for each worker node. These results will be returned in a
+  keyword list of `{worker, result}` pairs.
+  """
+  @spec on_all_worker_cores((() -> any())) :: [{node(), [any()]}]
+  def on_all_worker_cores(fun), do: on_all_workers(fn -> core_times(fun) end)
+
+  @doc """
+  Execute a function n times on every worker runtime.
+
+  A list of results will be returned for each worker node. These results will be returned in a
+  keyword list of `{worker, result}` pairs.
+  """
+  @spec n_times_on_all_workers(pos_integer(), (() -> any())) :: [{node(), [any()]}]
+  def n_times_on_all_workers(n, fun), do: on_all_workers(fn -> n_times(n, fun) end)
+
+  @doc """
+  Execute a function on every worker runtime tagged with `tag`.
+
+  The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
+  """
+  @spec on_tagged_workers(tag(), (() -> any())) :: [{node(), any()}]
+  def on_tagged_workers(tag, fun), do: on_many(Tags.workers_with(tag), fun)
+
+  @doc """
+  Execute a function on every core on every worker runtime tagged with `tag`.
+
+  The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
+  """
+  @spec on_tagged_worker_cores(tag(), (() -> any())) :: [{node(), any()}]
+  def on_tagged_worker_cores(tag, fun), do: on_tagged_workers(tag, fn -> core_times(fun) end)
+
+  @doc """
+  Execute a function n times, distributed over the available workers.
+
+  This is handy when you wish to create n workers distributed over the cluster. The work to be
+  done will be divided over the worker nodes in a round robin fashion. This behaviour may change
+  in the future.
+  """
+  @spec on_n(pos_integer(), (() -> any())) :: [[any()]]
+  def on_n(n, fun) do
+    workers()
+    |> Enum.shuffle()
+    |> Stream.cycle()
+    |> Enum.take(n)
+    |> Enum.frequencies()
+    |> Enum.flat_map(fn {remote, times} ->
+      on(remote, fn -> n_times(times, fun) end)
+    end)
+  end
+
+  @spec n_times(pos_integer(), (() -> any())) :: [any()]
+  defp n_times(n, fun), do: Enum.map(1..n, fn _ -> fun.() end)
+
+  @spec core_times((() -> any())) :: [any()]
+  defp core_times(fun), do: n_times(System.schedulers_online(), fun)
 end

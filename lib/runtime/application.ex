@@ -20,16 +20,16 @@ defmodule Skitter.Runtime.Application do
   use Application
   require Logger
 
-  alias Skitter.{Remote, Runtime}
+  alias Skitter.{Config, Remote, Runtime}
+  alias Skitter.Remote.Registry
   alias Skitter.Mode.{Worker, Master}
-  alias Skitter.Runtime.{Config, Registry}
 
   def start(:normal, []), do: start(mode())
   def start_phase(:sk_welcome, :normal, []), do: welcome(mode())
   def start_phase(:sk_connect, :normal, []), do: connect(mode())
   def start_phase(:sk_deploy, :normal, []), do: deploy(mode())
 
-  defp mode, do: Skitter.Runtime.Config.get(:mode, :local)
+  defp mode, do: Config.get(:mode, :local)
 
   # Application Supervision Tree
   # ----------------------------
@@ -108,7 +108,8 @@ defmodule Skitter.Runtime.Application do
 
   defp connect(:local) do
     Registry.start_link()
-    Registry.add(Node.self())
+    Registry.add(Node.self(), :master)
+    Registry.add(Node.self(), :worker)
     :ok
   end
 

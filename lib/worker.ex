@@ -67,7 +67,7 @@ defmodule Skitter.Worker do
           | [on: node()]
           | [with: ref()]
           | [avoid: ref() | node()]
-          | [tagged: Skitter.Nodes.tag()]
+          | [tagged: Skitter.Remote.tag()]
 
   @doc """
   Create a new worker on a remote node.

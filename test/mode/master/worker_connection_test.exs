@@ -7,7 +7,7 @@
 defmodule Skitter.Mode.Master.WorkerConnectionTest do
   alias Skitter.Remote
 
-  alias Skitter.Runtime.Registry
+  alias Skitter.Remote
   alias Skitter.Mode.Master.WorkerConnection
 
   use Skitter.Remote.Test.Case,
@@ -30,22 +30,22 @@ defmodule Skitter.Mode.Master.WorkerConnectionTest do
       assert WorkerConnection.connect([first, second, third]) ==
                {:error, [{first, :mode_mismatch}, {third, :mode_mismatch}]}
 
-      assert second in Registry.all()
-      assert Registry.connected?(second)
+      assert second in Remote.workers()
+      assert Remote.connected?(second)
     end
 
     @tag remote: [worker: []]
     test "to a single node", %{worker: worker} do
       assert WorkerConnection.connect(worker) == :ok
-      assert Registry.connected?(worker)
-      assert worker in Registry.all()
+      assert Remote.connected?(worker)
+      assert worker in Remote.workers()
     end
 
     @tag remote: [remote: [config: [mode: :test], start_on_remote: [mode: :not_worker]]]
     test "rejects non-workers", %{remote: remote} do
       assert WorkerConnection.connect(remote) == {:error, [{remote, :mode_mismatch}]}
-      assert not Registry.connected?(remote)
-      assert remote not in Registry.all()
+      assert not Remote.connected?(remote)
+      assert remote not in Remote.workers()
     end
 
     @tag remote: [
@@ -61,8 +61,8 @@ defmodule Skitter.Mode.Master.WorkerConnectionTest do
       # wait for handler to finish
       :sys.get_state(handler)
 
-      first_tags = Registry.tags(first)
-      second_tags = Registry.tags(second)
+      first_tags = Remote.tags(first)
+      second_tags = Remote.tags(second)
 
       assert :a in first_tags
       assert :b in first_tags
@@ -78,8 +78,8 @@ defmodule Skitter.Mode.Master.WorkerConnectionTest do
 
       # wait for handler to finish
       :sys.get_state(handler)
-      assert worker not in Registry.all()
-      assert not Registry.connected?(worker)
+      assert worker not in Remote.workers()
+      assert not Remote.connected?(worker)
     end
   end
 

@@ -9,7 +9,7 @@ defmodule Skitter.Mode.Worker.MasterConnection do
   require Logger
 
   use Skitter.Remote.Handler
-  alias Skitter.Runtime.Config
+  alias Skitter.Config
   alias Skitter.Mode.Worker.RegistryManager
 
   def connect, do: connect(Config.get(:master))

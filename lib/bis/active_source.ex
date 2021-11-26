@@ -39,7 +39,7 @@ defstrategy Skitter.BIS.ActiveSource do
         end,
         :source
       )
-    Nodes.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
+    Remote.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 
   defhook receive(:tick, {state, conf}, :source) do

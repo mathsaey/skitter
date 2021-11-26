@@ -31,7 +31,7 @@ defstrategy Skitter.BIS.KeyedState do
     config = call_if_exists(:conf, [args()]).result
 
     aggregators =
-      Nodes.on_all_worker_cores(fn -> local_worker(Map.new(), :aggregator) end)
+      Remote.on_all_worker_cores(fn -> local_worker(Map.new(), :aggregator) end)
       |> Enum.flat_map(fn {_node, workers} -> workers end)
       |> List.to_tuple()
 

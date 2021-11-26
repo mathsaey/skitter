@@ -24,7 +24,6 @@ defmodule Skitter.Runtime.Deployer do
 
   alias Skitter.Runtime.{
     ConstantStore,
-    Registry,
     WorkflowManagerSupervisor,
     WorkflowWorkerSupervisor,
     WorkerSupervisor,
@@ -32,7 +31,7 @@ defmodule Skitter.Runtime.Deployer do
   }
 
   require ConstantStore
-  alias Skitter.{Component, Workflow, Port, Strategy}
+  alias Skitter.{Component, Workflow, Port, Strategy, Remote}
 
   def deploy(workflow) do
     ref = make_ref()
@@ -85,7 +84,7 @@ defmodule Skitter.Runtime.Deployer do
   end
 
   defp store_supervisors(ref, components) do
-    Registry.on_all(__MODULE__, :store_local_supervisors, [ref, components])
+    Remote.on_all_workers(__MODULE__, :store_local_supervisors, [ref, components])
   end
 
   def store_local_supervisors(ref, components) do
@@ -100,7 +99,7 @@ defmodule Skitter.Runtime.Deployer do
   end
 
   defp notify_workers(ref) do
-    Registry.on_all(__MODULE__, :notify_local_workers, [ref])
+    Remote.on_all_workers(__MODULE__, :notify_local_workers, [ref])
   end
 
   def notify_local_workers(ref) do
