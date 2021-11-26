@@ -10,14 +10,14 @@ defmodule Skitter.Remote.Registry do
   # keeping this table up to date.
 
   def start_link do
-    :ets.new(__MODULE__, [:named_table, {:read_concurrency, true}])
+    :ets.new(__MODULE__, [:bag, :named_table, {:read_concurrency, true}])
     :ok
   end
 
   # Handler Functions
   # -----------------
 
-  def add(node, mode), do: :ets.insert_new(__MODULE__, {node, mode})
+  def add(node, mode), do: :ets.insert(__MODULE__, {node, mode})
   def remove(node), do: :ets.delete(__MODULE__, node)
   def remove_all(), do: :ets.delete_all_objects(__MODULE__)
 
