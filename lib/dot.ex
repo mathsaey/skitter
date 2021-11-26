@@ -47,7 +47,7 @@ defmodule Skitter.Dot do
   ```
   """
   @spec render(Workflow.t(), String.t(), dot_exe: String.t(), extra: [String.t()]) ::
-          {:ok, String.t()} | {:error, String.t()}
+          {:ok, binary()} | {:error, String.t()}
   def render(w = %Workflow{}, format, opts \\ []) do
     dotfile = System.tmp_dir!() |> Path.join("skitter_export.gv")
     File.write!(dotfile, to_dot(w))
