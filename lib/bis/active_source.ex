@@ -42,14 +42,14 @@ defstrategy Skitter.BIS.ActiveSource do
     Remote.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 
-  defhook receive(:tick, {state, conf}, :source) do
+  defhook process(:tick, {state, conf}, :source) do
     res = call(:produce, state, conf, [])
     send(Enum.random(deployment()), {:emit, res.emit})
     unless(res.result == :stop, do: send(self(), :tick))
     [state: {res.state, conf}]
   end
 
-  defhook receive({:emit, emit}, _, :sender) do
+  defhook process({:emit, emit}, _, :sender) do
     [emit_invocation: Invocation.wrap(emit)]
   end
 end

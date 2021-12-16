@@ -27,7 +27,7 @@ defmodule Skitter.Runtime.Worker do
     {:noreply, init_state({context, state, tag})}
   end
 
-  def handle_cast({:sk_msg, msg, inv}, srv), do: {:noreply, recv_hook(msg, inv, srv)}
+  def handle_cast({:sk_msg, msg, inv}, srv), do: {:noreply, process_hook(msg, inv, srv)}
   def handle_cast(:sk_stop, srv), do: {:stop, :normal, srv}
 
   defp init_state({context, state, tag}) when is_function(state, 0) do
@@ -50,10 +50,10 @@ defmodule Skitter.Runtime.Worker do
   end
 
   @impl true
-  def handle_info(msg, srv), do: {:noreply, recv_hook(msg, :external, srv)}
+  def handle_info(msg, srv), do: {:noreply, process_hook(msg, :external, srv)}
 
-  defp recv_hook(msg, inv, srv) do
-    res = srv.strategy.receive(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
+  defp process_hook(msg, inv, srv) do
+    res = srv.strategy.process(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
     maybe_emit(res[:emit], srv, &{&1, inv})
     maybe_emit(res[:emit_invocation], srv, & &1)
 
@@ -71,7 +71,7 @@ defmodule Skitter.Runtime.Worker do
         {val, inv} = select.(el)
 
         Enum.each(srv.links[port] || [], fn {ctx, port} ->
-          ctx.strategy.send(%{ctx | invocation: inv}, val, port)
+          ctx.strategy.deliver(%{ctx | invocation: inv}, val, port)
         end)
       end)
     end)

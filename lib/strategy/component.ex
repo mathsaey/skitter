@@ -28,21 +28,24 @@ defmodule Skitter.Strategy.Component do
   @callback deploy(context :: Strategy.context()) :: Deployment.data()
 
   @doc """
-  Send a message to the component.
+  Accept data sent to the component and send it to a worker.
 
-  This hook is called by the runtime system when data needs to be sent to a given component (e.g.
+  This hook is called by the runtime system when data needs to be sent to a given component (i.e.
   when a predecessor of the component emits data). It receives the data to be sent along with the
-  index of the port to which the data should be sent. The result of this hook is ignored.
+  index of the port to which the data should be sent.
+
+  The result of this hook is ignored. Instead, this hook should use `Skitter.Worker.send/3` to
+  transfer the received data to a worker.
 
   ## Context
 
   All context data (component, strategy, deployment data and the invocation) is available when
   this hook is called.
   """
-  @callback send(context :: Strategy.context(), data :: any(), port :: Port.index()) :: any()
+  @callback deliver(context :: Strategy.context(), data :: any(), port :: Port.index()) :: any()
 
   @doc """
-  Handle a message received by the component.
+  Handle a message received by a worker.
 
   This hook is called by the runtime when a worker process receives a message. It is called with
   the received message, the data of the worker that received the message and its tag.
@@ -69,7 +72,7 @@ defmodule Skitter.Strategy.Component do
   regular message), the invocation is set to `:external`. This can be used by e.g. sources to
   respond to external data.
   """
-  @callback receive(
+  @callback process(
               context :: Strategy.context(),
               message :: any(),
               state :: Worker.state(),

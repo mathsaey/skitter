@@ -26,7 +26,7 @@ defstrategy Skitter.BIS.ImmutableLocalInvocation, extends: Skitter.BIS.Immutable
     invocation of `react`.
   """
 
-  defhook receive(msg, conf, :worker) do
+  defhook process(msg, conf, :worker) do
     res = call(:react_with_invocation, conf, [invocation(), msg])
     emit = map_emit(res.emit, &{&1, res.result})
     [emit_invocation: emit]
