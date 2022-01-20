@@ -30,15 +30,14 @@ defstrategy Skitter.BIS.ActiveSource do
       callback.
   """
   defhook deploy do
-    source =
-      remote_worker(
-        fn ->
-          send(self(), :tick, Invocation.meta())
-          res = call_if_exists(:init, [args()])
-          {res.state, res.result}
-        end,
-        :source
-      )
+    remote_worker(
+      fn ->
+        send(self(), :tick, Invocation.meta())
+        res = call_if_exists(:init, [args()])
+        {res.state, res.result}
+      end,
+      :source
+    )
     Remote.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 
