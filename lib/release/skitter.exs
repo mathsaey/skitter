@@ -28,8 +28,8 @@ end
 
 # Master & Local
 config_from_env :deploy, "SKITTER_DEPLOY", fn str ->
-  [mod, func] = str |> String.split(".")
-  mod = Module.safe_concat([mod])
+  {mods, [func]} = str |> String.split(".") |> Enum.split(-1)
+  mod = Module.safe_concat(mods)
   func = String.to_existing_atom(func)
   {mod, func, []}
 end
