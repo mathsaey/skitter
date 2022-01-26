@@ -35,6 +35,14 @@ defmodule Skitter.Worker do
   @type state :: any()
 
   @typedoc """
+  Worker state or a function which returns a worker state.
+
+  Functions which create workers may be created with an initial state, or with a function which
+  returns an initial state.
+  """
+  @type state_or_state_fn :: state() | (-> state())
+
+  @typedoc """
   Worker tag.
 
   Each worker is tagged with an atom which allows the strategy to differentiate between the various
@@ -74,7 +82,7 @@ defmodule Skitter.Worker do
 
   The worker will be placed on a random node, subject to the passed placement constraints.
   """
-  @spec create_remote(Strategy.context(), state(), tag(), placement()) :: ref()
+  @spec create_remote(Strategy.context(), state_or_state_fn(), tag(), placement()) :: ref()
   def create_remote(context, state, tag, placement \\ nil) do
     Skitter.Runtime.Spawner.spawn_remote(context, state, tag, placement)
   end
@@ -84,7 +92,7 @@ defmodule Skitter.Worker do
 
   This will raise when executed on a master node.
   """
-  @spec create_local(Strategy.context(), state(), tag()) :: ref() | :error
+  @spec create_local(Strategy.context(), state_or_state_fn(), tag()) :: ref() | :error
   def create_local(context, state, tag) do
     Skitter.Runtime.Spawner.spawn_local(context, state, tag)
   end

@@ -28,7 +28,7 @@ defmodule Skitter.Runtime.WorkerSupervisor do
 
   The appropriate supervisor will be selected based on the data captured in the context.
   """
-  @spec add_worker(Strategy.context(), Worker.state(), Worker.tag()) :: Worker.ref()
+  @spec add_worker(Strategy.context(), Worker.state_or_state_fn(), Worker.tag()) :: Worker.ref()
   def add_worker(ctx, state, tag) do
     {ref, idx} =
       case ctx._skr do
