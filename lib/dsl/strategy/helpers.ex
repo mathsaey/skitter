@@ -192,14 +192,57 @@ defmodule Skitter.DSL.Strategy.Helpers do
   end
 
   @doc """
+  Get the name of the in port with the given `index`.
+
+  Calls `Skitter.Component.index_to_in_port/2`.
+  """
+  defmacro index_to_in_port(index) do
+    quote do
+      Skitter.Component.index_to_in_port(component(), unquote(index))
+    end
+  end
+
+  @doc """
+  Get the name of the out port with the given `index`.
+
+  Calls `Skitter.Component.index_to_out_port/2`.
+  """
+  defmacro index_to_out_port(index) do
+    quote do
+      Skitter.Component.index_to_out_port(component(), unquote(index))
+    end
+  end
+
+  @doc """
+  Get the index of the given in `port`.
+
+  Calls `Skitter.Component.in_port_to_index/2`.
+  """
+  defmacro in_port_to_index(port) do
+    quote do
+      Skitter.Component.in_port_to_index(component(), unquote(port))
+    end
+  end
+
+  @doc """
+  Get the index of the given out `port`.
+
+  Calls `Skitter.Component.out_port_to_index/2`.
+  """
+  defmacro out_port_to_index(port) do
+    quote do
+      Skitter.Component.out_port_to_index(component(), unquote(port))
+    end
+  end
+
+  @doc """
   Programmatically create output for the out port with `index`.
 
   The data must be wrapped in a list.
   """
   defmacro wrap_output(list, index \\ 0) do
     quote do
-      port = Skitter.Component.index_to_out_port(component(), unquote(index))
-      [{port, unquote(list)}]
+      [{index_to_out_port(unquote(index)), unquote(list)}]
     end
   end
 
