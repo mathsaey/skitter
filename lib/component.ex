@@ -340,7 +340,7 @@ defmodule Skitter.Component do
 
   This function creates an emit list which will send `message` to each out port of `component`.
   The message will be wrapped with `Skitter.Invocation.meta/0` and should be published by using
-  `:emit_invocation` inside `c:Skitter.Strategy.Component.receive/4`.
+  `:emit_invocation` inside `c:Skitter.Strategy.Component.process/4`.
   """
   @spec meta_message_for_all_ports(t(), any()) :: emit()
   def meta_message_for_all_ports(component, message) do
