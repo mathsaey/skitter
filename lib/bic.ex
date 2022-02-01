@@ -95,14 +95,14 @@ defmodule Skitter.BIC do
   end
 
   @doc """
-  Batch source node.
+  Stream source node.
 
-  Inserts a `Skitter.BIC.BatchSource` node in the workflow. The provided `enum` is passed as an
-  argument to `Skitter.BIC.BatchSource`. `opts` are passed as options to the workflow.
+  Inserts a `Skitter.BIC.StreamSource` node in the workflow. The provided `enum` is passed as an
+  argument to `Skitter.BIC.StreamSource`. `opts` are passed as options to the workflow.
   """
-  defmacro batch_source(enum, opts \\ []) do
+  defmacro stream_source(enum, opts \\ []) do
     opts = [args: enum] ++ opts
-    quote(do: node(Skitter.BIC.BatchSource, unquote(opts)))
+    quote(do: node(Skitter.BIC.StreamSource, unquote(opts)))
   end
 
   @doc """

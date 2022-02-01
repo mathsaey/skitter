@@ -6,22 +6,12 @@
 
 import Skitter.DSL.Component, only: :macros
 
-defcomponent Skitter.BIC.BatchSource, out: _, strategy: Skitter.BIS.ActiveSource do
+defcomponent Skitter.BIC.StreamSource, out: _, strategy: Skitter.BIS.StreamSource do
   @componentdoc """
-  Source which produces a set of predefined data.
+  Source which produces a stream of predefined data.
 
   This component is a source which is created with a set of data (an Elixir `Enumerable`). Once
   deployed, it will emit each element in the enumerable in order.
   """
-  defcb init(enum), do: state <~ enum
-
-  defcb produce do
-    case state() |> Stream.take(1) |> Enum.to_list() do
-      [] ->
-        :stop
-      [el] ->
-        el ~> _
-        state <~ Stream.drop(state(), 1)
-    end
-  end
+  defcb stream(stream), do: stream
 end
