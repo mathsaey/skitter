@@ -55,13 +55,15 @@ defmodule Skitter.Strategy.Component do
   - `state`: the new state of the worker that received the message. If this key is not present the
   state of the worker remains unchanged.
 
-  - `emit`: data to emit. A keyword list of `{port, lst}` pairs. Each element in `lst` will be
-  sent to each component connected to `port`.
+  - `emit`: data to emit. A keyword list of `{port, enum}` pairs. Each element in `enum` will be
+  sent to each component connected to `port`. Note that `enum` may be a (potentially infinite)
+  stream. This can be useful when creating strategies for source components which generate
+  (infinite) streams of data.
 
-  - `emit_invocation`: data to emit. A keyword list of `{port, lst}` pairs. Each element in `lst`
-  should be a `{value, invocation}` tuple. This value will be sent to each component connect to
-  `port` with the  provided invocation. `Skitter.Invocation.wrap/2` can be used to add new
-  invocations to a list of emitted data.
+  - `emit_invocation`: data to emit. A keyword list of `{port, enum}` pairs. Each element in
+  `enum` should be a `{value, invocation}` tuple. This value will be sent to each component
+  connect to `port` with the  provided invocation. `Skitter.Invocation.wrap/2` can be used to add
+  new invocations to a list of emitted data.
 
   ## Context
 

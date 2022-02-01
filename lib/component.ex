@@ -102,12 +102,12 @@ defmodule Skitter.Component do
   @typedoc """
   Output emitted by a callback.
 
-  Emitted data is returned as a list where the output for each out port is specified. When no data
-  is emitted on a port, the port should be omitted from the emit list. The data emitted by a
-  callback for a port should always be wrapped in a list. Each element in this list will be sent
-  to downstream components separately.
+  Emitted data is returned as a keyword list where the output for each out port is specified. When
+  no data is emitted on a port, the port should be omitted from the list. The data emitted by a
+  callback for a port should be wrapped in an `t:Enumerable.t/0`. Each element in this enumerable
+  will be sent to downstream components separately.
   """
-  @type emit :: [{Port.t(), [any()]}]
+  @type emit :: [{Port.t(), Enumerable.t()}]
 
   @typedoc """
   Values returned by a callback when it is called.

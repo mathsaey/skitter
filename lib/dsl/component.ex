@@ -521,11 +521,11 @@ defmodule Skitter.DSL.Component do
   end
 
   @doc """
-  Emit a list of values to `port`
+  Emit several values to `port`
 
-
-  This macro works like `~>/2`, but emits a list of output values to the port instead of a single
-  value. Each value in the provided list will be sent to downstream components individually.
+  This macro works like `~>/2`, but emits several output values to the port instead of a single
+  value. Each value in the provided `t:Enumerable.t/0` will be sent to downstream components
+  individually.
 
   ## Examples
 
@@ -541,9 +541,9 @@ defmodule Skitter.DSL.Component do
       iex> Component.call(MultiEmitExample, :emit, [:bar]).emit
       [some_other_port: [:foo, :bar], some_port: [:bar]]
   """
-  defmacro lst ~>> {port, _, _} when is_atom(port) do
+  defmacro enum ~>> {port, _, _} when is_atom(port) do
     quote do
-      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), unquote(lst))
+      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), unquote(enum))
       nil
     end
   end

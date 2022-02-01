@@ -48,7 +48,7 @@ defmodule Skitter.Invocation do
   @doc """
   Modify the invocation of emitted data.
 
-  This function accepts a list of data emitted by a component callback and a 0-arity function.
+  This function accepts an enum of data emitted by a component callback and a 0-arity function.
   The function should return an invocation. It will be called once for every emitted element. The
   returned invocation will be used as the invocation for the data element when returned using
   `emit_invocation` inside `c:Skitter.Strategy.Component.receive/4`.
@@ -57,8 +57,11 @@ defmodule Skitter.Invocation do
   """
   @spec wrap(Component.emit(), (() -> t())) :: Component.emit()
   def wrap(lst, make_inv \\ &new/0) do
-    Enum.map(lst, fn {port, lst} ->
-      {port, Enum.map(lst, fn el -> {el, make_inv.()} end)}
+    Enum.map(lst, fn {port, enum} ->
+      case enum do
+        lst when is_list(lst) -> {port, Enum.map(lst, &{&1, make_inv.()})}
+        enum -> {port, Stream.map(enum, &{&1, make_inv.()})}
+      end
     end)
   end
 end

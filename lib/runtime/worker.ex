@@ -66,14 +66,19 @@ defmodule Skitter.Runtime.Worker do
   defp maybe_emit(nil, _, _), do: nil
 
   defp maybe_emit(ports, srv, select) do
-    Enum.each(ports, fn {port, lst} ->
-      Enum.each(lst, fn el ->
-        {val, inv} = select.(el)
+    Enum.each(ports, fn {port, enum} ->
+      links = srv.links[port] || []
+      case enum do
+        lst when is_list(lst) -> Enum.each(lst, &emit_value(&1, links, select))
+        enum -> Stream.each(enum, &emit_value(&1, links, select)) |> Stream.run()
+      end
+    end)
+  end
 
-        Enum.each(srv.links[port] || [], fn {ctx, port} ->
-          ctx.strategy.deliver(%{ctx | invocation: inv}, val, port)
-        end)
-      end)
+  defp emit_value(val, links, select) do
+    {val, inv} = select.(val)
+    Enum.each(links, fn {ctx, port} ->
+      ctx.strategy.deliver(%{ctx | invocation: inv}, val, port)
     end)
   end
 end
