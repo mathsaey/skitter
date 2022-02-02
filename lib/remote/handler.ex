@@ -5,8 +5,13 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Remote.Handler do
-  @moduledoc false
+  @moduledoc """
+  Remote connection module.
 
+  This module defines a behaviour used when two Skitter runtimes attempt to connect to each other.
+  Each Skitter runtime has a mode. Based on this mode, a handler module defines how the local
+  runtime should connect to the remote runtime.
+  """
   alias __MODULE__.Dispatcher
 
   defmacro __using__(_opts) do

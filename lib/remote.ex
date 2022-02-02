@@ -6,7 +6,6 @@ defmodule Skitter.Remote do
   their properites. It also defines various functions which can be used to spawn Skitter workers
   on remote Skitter nodes.
   """
-
   alias __MODULE__.{Beacon, Handler, Registry, Tags}
   alias __MODULE__.TaskSupervisor, as: Sup
 

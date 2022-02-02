@@ -5,18 +5,18 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime.Application do
-  @moduledoc false
-  # Application callback module.
-  #
-  # The layout of the Skitter supervision tree depends on the configured runtime mode. If no mode
-  # is specified, :local is assumed.
-  #
-  # After the application is started, the three start phases specified in the application callback
-  # in mix.exs are executed:
-  #   - The first phase prints a welcome message
-  #   - The second connects to remote nodes if possible
-  #   - The final deploys the workflow configured by `:deploy`.
+  @moduledoc """
+  Application callback module.
 
+  The layout of the Skitter supervision tree depends on the configured runtime mode. If no mode
+  is specified, `:local` is assumed.
+
+  After the application is started, the three start phases specified in the application callback
+  in mix.exs are executed:
+    - The first phase prints a welcome message
+    - The second connects to remote nodes if possible
+    - The final deploys the workflow configured by `:deploy`.
+  """
   use Application
   require Logger
 
@@ -24,7 +24,10 @@ defmodule Skitter.Runtime.Application do
   alias Skitter.Remote.Registry
   alias Skitter.Mode.{Worker, Master}
 
+  @impl true
   def start(:normal, []), do: start(mode())
+
+  @impl true
   def start_phase(:sk_welcome, :normal, []), do: welcome(mode())
   def start_phase(:sk_connect, :normal, []), do: connect(mode())
   def start_phase(:sk_deploy, :normal, []), do: deploy(mode())
@@ -38,7 +41,7 @@ defmodule Skitter.Runtime.Application do
     Supervisor.start_link(
       [
         {Task.Supervisor, name: Remote.TaskSupervisor},
-        Runtime.WorkflowComponentSupervisor,
+        Runtime.WorkflowWorkerSupervisor,
         Runtime.WorkflowManagerSupervisor
       ],
       strategy: :rest_for_one,
@@ -61,7 +64,7 @@ defmodule Skitter.Runtime.Application do
     Supervisor.start_link(
       [
         Worker.RemoteSupervisor,
-        Runtime.WorkflowComponentSupervisor
+        Runtime.WorkflowWorkerSupervisor
       ],
       strategy: :one_for_one,
       name: __MODULE__
@@ -123,8 +126,7 @@ defmodule Skitter.Runtime.Application do
       {m, f, a} = mfa
       Logger.info("Deploying #{m}.#{f}(#{a |> Enum.map(&inspect/1) |> Enum.join(", ")})")
       workflow = apply(m, f, a)
-      # TODO: store result when manager becomes useful
-      Skitter.deploy(workflow)
+      Runtime.deploy(workflow)
     end
 
     :ok

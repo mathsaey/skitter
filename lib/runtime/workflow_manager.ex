@@ -5,16 +5,18 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime.WorkflowManager do
-  @moduledoc false
-  # This module defines the workflow manager, which is intended to be used by the developer to
-  # obtain information about the running workflow.
+  @moduledoc """
+  Workflow monitor
 
+  This module defines a genserver which monitors a deployed workflow. It is responsible for
+  ensuring the state of the deployed workflow is available when new workers are added to the
+  cluster.
+  """
   use GenServer
 
-  alias Skitter.{Config, Remote, Runtime}
+  alias Skitter.{Config, Remote}
   alias Skitter.Mode.Master.WorkerConnection
-  alias Skitter.Runtime.ConstantStore
-  require Skitter.Runtime.ConstantStore
+  alias Skitter.Runtime.{ComponentStore, WorkflowWorkerSupervisor}
 
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
 
@@ -24,13 +26,13 @@ defmodule Skitter.Runtime.WorkflowManager do
   end
 
   def handle_info({:worker_up, node, _}, ref) do
-    deployment = ConstantStore.get_all(:skitter_deployment, ref)
-    links = ConstantStore.get_all(:skitter_links, ref)
+    links = ComponentStore.get_all(:skitter_links, ref)
+    deployment = ComponentStore.get_all(:skitter_deployment, ref)
 
     Remote.on(node, fn ->
-      ConstantStore.put(deployment, :skitter_deployment, ref)
-      ConstantStore.put(links, :skitter_links, ref)
-      Runtime.Deployer.store_local_supervisors(ref, length(links))
+      ComponentStore.put(links, :skitter_links, ref)
+      ComponentStore.put(deployment, :skitter_deployment, ref)
+      WorkflowWorkerSupervisor.spawn_local_workflow(ref, length(links))
     end)
 
     {:noreply, ref}

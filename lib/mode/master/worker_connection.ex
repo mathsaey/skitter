@@ -5,8 +5,12 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Mode.Master.WorkerConnection do
-  @moduledoc false
+  @moduledoc """
+  Module to manage connections with remote worker runtimes.
 
+  This module contains code to connect to worker runtimes and to subscribe to messages about their
+  status.
+  """
   alias Skitter.{Config, Remote}
   alias __MODULE__.Notifier
 
@@ -29,8 +33,71 @@ defmodule Skitter.Mode.Master.WorkerConnection do
     |> Enum.map(fn {node, {:error, error}} -> {node, error} end)
   end
 
-  def subscribe_up(), do: Notifier.subscribe_up()
-  def subscribe_down(), do: Notifier.subscribe_down()
-  def unsubscribe_up(), do: Notifier.unsubscribe_up()
-  def unsubscribe_down(), do: Notifier.unsubscribe_down()
+  @doc """
+  Subscribe to worker_up events.
+
+  Every time a new worker is connected, the process that called this function
+  will receive a `{:worker_up, worker, tags}` message.
+  """
+  @spec subscribe_up() :: :ok
+  def subscribe_up(), do: GenServer.call(Notifier, {:subscribe, :worker_up})
+
+  @doc """
+  Subscribe to worker_up events on the remote node.
+
+  Every time a new worker is connected, the process that called this function
+  will receive a `{:worker_up, worker, tags}` message.
+  """
+  @spec subscribe_up(node()) :: :ok
+  def subscribe_up(node) do
+    GenServer.call({Notifier, node}, {:subscribe, :worker_up}, :infinity)
+  end
+
+  @doc """
+  Subscribe to worker_down events.
+
+  Every time a new worker disconnects, the process that called this function
+  will receive a `{:worker_down, worker}` message.
+  """
+  @spec subscribe_down() :: :ok
+  def subscribe_down(), do: GenServer.call(Notifier, {:subscribe, :worker_down})
+
+  @doc """
+  Subscribe to worker_down events on the remote node.
+
+  Every time a new worker is connected, the process that called this function
+  will receive a `{:worker_down, worker}` message.
+  """
+  @spec subscribe_down(node()) :: :ok
+  def subscribe_down(node) do
+    GenServer.call({Notifier, node}, {:subscribe, :worker_down}, :infinity)
+  end
+
+  @doc """
+  Unsubscribe from all future worker_up events.
+  """
+  @spec unsubscribe_up() :: :ok
+  def unsubscribe_up(), do: GenServer.cast(Notifier, {:unsubscribe, self(), :worker_up})
+
+  @doc """
+  Unsubscribe from all future worker_up events.
+  """
+  @spec unsubscribe_up(node()) :: :ok
+  def unsubscribe_up(node) do
+    GenServer.cast({Notifier, node}, {:unsubscribe, self(), :worker_up})
+  end
+
+  @doc """
+  Unsubscribe from all future worker_down events.
+  """
+  @spec unsubscribe_down() :: :ok
+  def unsubscribe_down(), do: GenServer.cast(Notifier, {:unsubscribe, self(), :worker_down})
+
+  @doc """
+  Unsubscribe from all future worker_up events.
+  """
+  @spec unsubscribe_down(node()) :: :ok
+  def unsubscribe_down(node) do
+    GenServer.cast({Notifier, node}, {:unsubscribe, self(), :worker_down})
+  end
 end

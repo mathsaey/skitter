@@ -5,8 +5,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Remote.Handler.Dispatcher do
-  @moduledoc false
-
   use GenServer
 
   defstruct map: %{}, default: nil

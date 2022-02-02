@@ -17,7 +17,7 @@ defmodule Skitter.Strategy do
 
   This module defines the strategy and context types.
   """
-  alias Skitter.{Component, Deployment, Invocation}
+  alias Skitter.{Component, Workflow, Deployment, Invocation}
 
   @typedoc """
   A strategy is defined as a module.
@@ -45,7 +45,7 @@ defmodule Skitter.Strategy do
   @type context :: %__MODULE__.Context{
           component: Component.t(),
           strategy: t(),
-          args: any(),
+          args: Workflow.args(),
           deployment: Deployment.data() | nil,
           invocation: Invocation.t() | nil,
           _skr: any()

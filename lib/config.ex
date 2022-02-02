@@ -5,8 +5,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Config do
-  @moduledoc false
-  # Convenience functions to obtain data from the Skitter application environment.
+  @moduledoc """
+  Convenience functions to obtain data from the Skitter application environment.
+  """
 
   @doc """
   Get configuration `key` from the application environment.

@@ -9,7 +9,7 @@ defmodule Skitter.Strategy.Component do
   Component strategy behaviour.
 
   This module defines and documents the various hooks a `Skitter.Strategy` for a component should
-  implement.
+  implement, along with the functions it can use to access the runtime system.
   """
   alias Skitter.{Component, Strategy, Deployment, Worker, Port}
 
@@ -84,4 +84,13 @@ defmodule Skitter.Strategy.Component do
               emit: Component.emit(),
               emit_invocation: Component.emit()
             ]
+
+  def emit(context, enum) do
+    # TODO:
+    # - Hook this into runtime, emitter?
+    # - Make several functions to publish, publish with invocation, etc
+    # - Adjust strategies
+    # - Adjust paper
+    # - In this module because it needs to access the context
+  end
 end

@@ -6,6 +6,7 @@
 
 defmodule Skitter.Mode.Master.RemoteSupervisor do
   @moduledoc false
+
   use Supervisor
   alias Skitter.{Remote, Mode.Master}
 

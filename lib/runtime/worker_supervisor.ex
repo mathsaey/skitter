@@ -5,14 +5,25 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0
 
 defmodule Skitter.Runtime.WorkerSupervisor do
-  @moduledoc false
-  # This supervisor supervises the various workers spawned for a component
+  @moduledoc """
+  This supervisor manages the various workers spawned for a component
 
+  ```
+  + ------------------ +        + --------- +        + ------ +
+  | ComponentWorkerSup | - n -> | WorkerSup | - n -> | Worker |
+  + ------------------ +        + --------- +        + ------ +
+  ```
+
+  When a workflow is deployed, a `Skitter.Runtime.WorkerSupervisor` will be spawned for
+  each component. This supervisor is responsible for managing the `Skitter.Runtime.Worker`s
+  spawned by the strategy of the component.
+  """
   use DynamicSupervisor
 
   alias Skitter.{Strategy, Worker}
-  alias Skitter.Runtime.ConstantStore
-  require Skitter.Runtime.ConstantStore
+  alias Skitter.Runtime.ComponentStore
+
+  require ComponentStore
 
   def start_link(arg) do
     DynamicSupervisor.start_link(__MODULE__, arg)
@@ -36,16 +47,22 @@ defmodule Skitter.Runtime.WorkerSupervisor do
         {ref, idx} -> {ref, idx}
       end
 
-    pid = ConstantStore.get(:skitter_supervisors, ref, idx)
+    pid = ComponentStore.get(:local_supervisors, ref, idx)
     {:ok, pid} = DynamicSupervisor.start_child(pid, {Skitter.Runtime.Worker, {ctx, state, tag}})
     pid
   end
 
-  @doc "Get a list of the workers for a given supervisor."
-  @spec children(pid()) :: [pid()]
-  def children(pid) do
+  def on_all_children(ref, fun) when is_reference(ref) do
+    ComponentStore.get_all(:local_supervisors, ref) |> on_all_children(fun)
+  end
+
+  def on_all_children(lst, fun) when is_list(lst) do
+    Enum.each(lst, &on_all_children(&1, fun))
+  end
+
+  def on_all_children(pid, fun) when is_pid(pid) do
     pid
     |> DynamicSupervisor.which_children()
-    |> Enum.map(&elem(&1, 1))
+    |> Enum.each(fn {_, pid, _, _} -> fun.(pid) end)
   end
 end

@@ -5,24 +5,24 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Runtime.Worker do
-  @moduledoc false
-  # This module defines a GenServer that specifies the behaviour of Skitter Workers.
-
+  @moduledoc """
+  This module defines a GenServer that specifies the behaviour of Skitter Workers.
+  """
   use GenServer, restart: :transient
-  alias Skitter.Runtime.ConstantStore
-  require Skitter.Runtime.ConstantStore
+  alias Skitter.Runtime.ComponentStore
+  require Skitter.Runtime.ComponentStore
 
   defstruct [:component, :strategy, :context, :idx, :ref, :links, :state, :tag]
 
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
-  def notify_deploy_complete(pid), do: GenServer.cast(pid, :sk_deployment_complete)
+  def deploy_complete(pid), do: GenServer.cast(pid, :sk_deploy_complete)
 
   @impl true
   def init({context = %{_skr: {:deploy, _, _}}, state, tag}), do: {:ok, {context, state, tag}}
   def init({context, state, tag}), do: {:ok, init_state({context, state, tag})}
 
   @impl true
-  def handle_cast(:sk_deployment_complete, {context, state, tag}) do
+  def handle_cast(:sk_deploy_complete, {context, state, tag}) do
     context = update_in(context._skr, fn {:deploy, ref, idx} -> {ref, idx} end)
     {:noreply, init_state({context, state, tag})}
   end
@@ -40,8 +40,8 @@ defmodule Skitter.Runtime.Worker do
     %__MODULE__{
       component: context.component,
       strategy: context.strategy,
-      context: %{context | deployment: ConstantStore.get(:skitter_deployment, ref, idx)},
-      links: ConstantStore.get(:skitter_links, ref, idx),
+      context: %{context | deployment: ComponentStore.get(:deployment, ref, idx)},
+      links: ComponentStore.get(:links, ref, idx),
       state: state,
       idx: idx,
       ref: ref,

@@ -54,7 +54,7 @@ defmodule Skitter.Workflow do
   @type component :: %__MODULE__.Node.Component{
           component: Component.t(),
           strategy: Strategy.t(),
-          args: any(),
+          args: args(),
           links: links()
         }
 
@@ -91,6 +91,13 @@ defmodule Skitter.Workflow do
   A name is used to refer to a component embedded inside a workflow.
   """
   @type name :: atom()
+
+  @typedoc """
+  Component initialization arguments
+
+  This type stores the arguments passed to the component in the workflow definition.
+  """
+  @type args :: any()
 
   # Struct Definitions
   # ------------------

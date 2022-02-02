@@ -6,12 +6,11 @@
 
 defmodule Skitter.Mode.Worker.RegistryManager do
   @moduledoc false
-
   use GenServer
 
   alias Skitter.Remote
   alias Skitter.Remote.{Registry, Tags}
-  alias Skitter.Mode.Master.WorkerConnection.Notifier
+  alias Skitter.Mode.Master.WorkerConnection
 
   def start_link([]) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -33,8 +32,8 @@ defmodule Skitter.Mode.Worker.RegistryManager do
 
   @impl true
   def handle_cast({:master_up, remote}, :no_master) do
-    :ok = Notifier.subscribe_up(remote)
-    :ok = Notifier.subscribe_down(remote)
+    :ok = WorkerConnection.subscribe_up(remote)
+    :ok = WorkerConnection.subscribe_down(remote)
 
     Registry.add(remote, :master)
 
@@ -49,8 +48,8 @@ defmodule Skitter.Mode.Worker.RegistryManager do
   end
 
   def handle_cast({:master_down, remote}, _) do
-    :ok = Notifier.unsubscribe_up(remote)
-    :ok = Notifier.unsubscribe_down(remote)
+    :ok = WorkerConnection.unsubscribe_up(remote)
+    :ok = WorkerConnection.unsubscribe_down(remote)
 
     Registry.remove_all()
     Registry.add(Node.self(), :worker)

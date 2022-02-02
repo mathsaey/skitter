@@ -5,7 +5,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Skitter.Mode.Worker.MasterConnection do
-  @moduledoc false
+  @moduledoc """
+  Module to manage connections with remote master runtimes.
+
+  This module contains code to connect to master runtimes.
+  """
   require Logger
 
   use Skitter.Remote.Handler

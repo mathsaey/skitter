@@ -51,7 +51,7 @@ defmodule Skitter.Invocation do
   This function accepts an enum of data emitted by a component callback and a 0-arity function.
   The function should return an invocation. It will be called once for every emitted element. The
   returned invocation will be used as the invocation for the data element when returned using
-  `emit_invocation` inside `c:Skitter.Strategy.Component.receive/4`.
+  `emit_invocation` inside `c:Skitter.Strategy.Component.process/4`.
 
   When no function is provided, `new/0` is used, wrapping each element in a new invocation.
   """
