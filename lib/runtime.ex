@@ -61,7 +61,7 @@ defmodule Skitter.Runtime do
   end
 
   @spec expand_links(%{Workflow.name() => Workflow.component()}, reference()) ::
-          [%{Port.name() => [{Strategy.context(), Port.index()}]}]
+          [%{Port.t() => [{Strategy.context(), Port.index()}]}]
   defp expand_links(nodes, ref) do
     lookup =
       nodes

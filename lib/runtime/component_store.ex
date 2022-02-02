@@ -31,10 +31,11 @@ defmodule Skitter.Runtime.ComponentStore do
   @doc """
   Store data on the current node and all worker nodes.
   """
-  @spec put_everywhere([any()], atom(), reference()) :: ref()
+  @spec put_everywhere([any()], atom(), reference()) :: :ok
   def put_everywhere(term, atom, ref) do
     put(term, atom, ref)
-    Remote.on_all_workers(__MODULE__, :put, [term, atom, ref]) |> hd()
+    Remote.on_all_workers(__MODULE__, :put, [term, atom, ref])
+    :ok
   end
 
   @doc """
