@@ -4,9 +4,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0
 
-defmodule Skitter.Runtime.WorkflowWorkerSupervisor do
+defmodule Skitter.Runtime.WorkflowComponentSupervisor do
   @moduledoc false
-  # This supervisors supervises the components supervisors of a workflow.
+  # This supervisors supervises the component supervisors of a workflow.
 
   use DynamicSupervisor
   alias Skitter.Runtime.ComponentWorkerSupervisor

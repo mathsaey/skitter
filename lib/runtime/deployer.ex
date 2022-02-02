@@ -8,14 +8,13 @@ defmodule Skitter.Runtime.Deployer do
   @moduledoc false
   # This module is responsible for deploying a workflow over the cluster.
   # This is done in a few steps:
-  #   - A reference is spawned which uniquely identifies the spawned workflow.
+  #   - A reference is created which uniquely identifies the spawned workflow.
   #   - The workflow is converted in a compact, tuple-based format which allows constant time
   #   fetching of component instances.
   #   - A supervision tree is spawned on each runtime, a reference to each WorkerSupervisor is
   #   stored on each runtime for easy access.
   #   - Each component is deployed. The returned data is stored on every runtime (this is
-  #   effectively the deployment data). The same tuple-based format is used for constant-time
-  #   access.
+  #   the deployment data). The same tuple-based format is used for constant-time access.
   #   - The context of each outgoing link is fetched and stored. This is done to enable this
   #   lookup at runtime to occur in constant time instead of logarithmic time.
   #   - The spawned workers are notified that the deployment is finished. This is done to ensure
@@ -25,7 +24,7 @@ defmodule Skitter.Runtime.Deployer do
   alias Skitter.Runtime.{
     ConstantStore,
     WorkflowManagerSupervisor,
-    WorkflowWorkerSupervisor,
+    WorkflowComponentSupervisor,
     WorkerSupervisor,
     Worker
   }
@@ -88,7 +87,7 @@ defmodule Skitter.Runtime.Deployer do
   end
 
   def store_local_supervisors(ref, components) do
-    {:ok, pid} = WorkflowWorkerSupervisor.add_workflow(ref, components)
+    {:ok, pid} = WorkflowComponentSupervisor.add_workflow(ref, components)
 
     pid
     |> Supervisor.which_children()
