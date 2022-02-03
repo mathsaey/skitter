@@ -31,5 +31,9 @@ defstrategy Skitter.BIS.ImmutableLocal do
   end
 
   defhook deliver(msg, _), do: send(Enum.random(deployment()[Remote.self()]), msg)
-  defhook process(msg, conf, :worker), do: [emit: call(:react, conf, [msg]).emit]
+
+  defhook process(msg, conf, :worker) do
+    emit(call(:react, conf, [msg]).emit)
+    conf
+  end
 end

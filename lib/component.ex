@@ -336,34 +336,6 @@ defmodule Skitter.Component do
   def index_to_out_port(component, idx), do: component |> out_ports() |> Enum.at(idx)
 
   @doc """
-  Generate a `t:emit/0` which emits the given message to all out ports.
-
-  This function creates an emit list which will send `message` to each out port of `component`.
-  The message will be wrapped with `Skitter.Invocation.meta/0` and should be published by using
-  `:emit_invocation` inside `c:Skitter.Strategy.Component.process/4`.
-  """
-  @spec meta_message_for_all_ports(t(), any()) :: emit()
-  def meta_message_for_all_ports(component, message) do
-    component
-    |> out_ports()
-    |> Enum.map(&{&1, [{message, Invocation.meta()}]})
-  end
-
-  @doc """
-  Map over a list of emitted values.
-
-  This function accepts an emit list and maps a function over each value inside this emit list
-  without modifying the structure of the emit list itself. This enables strategies to modify
-  emitted values or to add invocation information to emitted data.
-  """
-  @spec map_emit(emit(), (any() -> any())) :: emit()
-  def map_emit(emit, func) do
-    Enum.map(emit, fn {port, lst} ->
-      {port, Enum.map(lst, func)}
-    end)
-  end
-
-  @doc """
   Check if a component is a source.
 
   A component is a source if it does not have any in ports.

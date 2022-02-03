@@ -11,7 +11,7 @@ defmodule Skitter.Strategy.Component do
   This module defines and documents the various hooks a `Skitter.Strategy` for a component should
   implement, along with the functions it can use to access the runtime system.
   """
-  alias Skitter.{Component, Strategy, Deployment, Worker, Port}
+  alias Skitter.{Component, Strategy, Strategy.Context, Deployment, Invocation, Worker, Port}
 
   @doc """
   Deploy a component over the cluster.
@@ -48,22 +48,8 @@ defmodule Skitter.Strategy.Component do
   Handle a message received by a worker.
 
   This hook is called by the runtime when a worker process receives a message. It is called with
-  the received message, the data of the worker that received the message and its tag.
-
-  This callback should return a keyword list which may contain the following keys:
-
-  - `state`: the new state of the worker that received the message. If this key is not present the
-  state of the worker remains unchanged.
-
-  - `emit`: data to emit. A keyword list of `{port, enum}` pairs. Each element in `enum` will be
-  sent to each component connected to `port`. Note that `enum` may be a (potentially infinite)
-  stream. This can be useful when creating strategies for source components which generate
-  (infinite) streams of data.
-
-  - `emit_invocation`: data to emit. A keyword list of `{port, enum}` pairs. Each element in
-  `enum` should be a `{value, invocation}` tuple. This value will be sent to each component
-  connect to `port` with the  provided invocation. `Skitter.Invocation.wrap/2` can be used to add
-  new invocations to a list of emitted data.
+  the received message, the data of the worker that received the message and its tag. This hook
+  should return the new state of the worker that received the message.
 
   ## Context
 
@@ -79,18 +65,35 @@ defmodule Skitter.Strategy.Component do
               message :: any(),
               state :: Worker.state(),
               tag :: Worker.tag()
-            ) :: [
-              state: Worker.state(),
-              emit: Component.emit(),
-              emit_invocation: Component.emit()
-            ]
+            ) :: Worker.state()
 
-  def emit(context, enum) do
-    # TODO:
-    # - Hook this into runtime, emitter?
-    # - Make several functions to publish, publish with invocation, etc
-    # - Adjust strategies
-    # - Adjust paper
-    # - In this module because it needs to access the context
-  end
+  @doc """
+  Emit values.
+
+  This function causes the current component to emit data. In other words, the provided data will
+  be sent to the components connected to the out ports of the current component. This function
+  accepts a keyword list of `{out_port, enum}` pairs. Each element in `enum` will be sent to the
+  in ports of the components connected to `out_port`.
+
+  The values are emitted with the invocation of the passed context, use `emit/3` if you need to
+  modify the invocation of the data to emit.
+
+  Note that data is emitted from the current worker. This may cause issues when infinite streams
+  of data are emitted.
+  """
+  @spec emit(Strategy.context(), Component.emit()) :: :ok
+  def emit(context = %Context{invocation: inv}, emit), do: emit(context, emit, inv)
+
+  @doc """
+  Emit values with a custom invocation.
+
+  This function emits values, like `emit/2`. Unlike `emit/2`, this function allows you to specify
+  the invocation of the emitted data. An invocation or a 0-arity function which returns an
+  invocation should be passed as an invocation to this function. If an invocation is passed, it
+  will be used as the invocation for every data element to publish. If a function is passed, it
+  will be called once for every data element to publish. The returned invocation will be used as
+  the invocation for the data element.
+  """
+  @spec emit(Strategy.context(), Component.emit(), Invocation.t() | (() -> Invocation.t())) :: :ok
+  def emit(context, enum, invocation), do: Skitter.Runtime.Emit.emit(context, enum, invocation)
 end

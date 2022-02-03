@@ -77,6 +77,24 @@ defmodule Skitter.DSL.Strategy.Helpers do
   end
 
   @doc """
+  Emit data for the current context.
+
+  Uses `Skitter.Strategy.Component.emit/2`
+  """
+  defmacro emit(emit) do
+    quote(do: Skitter.Strategy.Component.emit(context(), unquote(emit)))
+  end
+
+  @doc """
+  Emit data for the current context.
+
+  Uses `Skitter.Strategy.Component.emit/3`
+  """
+  defmacro emit(emit, invocation) do
+    quote(do: Skitter.Strategy.Component.emit(context(), unquote(emit), unquote(invocation)))
+  end
+
+  @doc """
   Stop the given worker using `Skitter.Worker.stop/1`
   """
   defmacro stop_worker(worker) do
@@ -240,28 +258,23 @@ defmodule Skitter.DSL.Strategy.Helpers do
 
   The data must be wrapped in a list.
   """
-  defmacro wrap_output(list, index \\ 0) do
+  defmacro to_port(index, list) do
     quote do
       [{index_to_out_port(unquote(index)), unquote(list)}]
     end
   end
 
   @doc """
-  Send `message` to all out ports of the component.
+  Programmatically create output for all out ports.
 
-  Generates a call to `Skitter.Component.meta_message_for_all_ports/2`.
+  The data must be wrapped in a list.
   """
-  defmacro meta_message_for_all_ports(message) do
-    quote(do: Skitter.Component.meta_message_for_all_ports(component(), unquote(message)))
-  end
-
-  @doc """
-  Map over the emitted values.
-
-  Generates a call to `Skitter.Component.map_emit/2`
-  """
-  defmacro map_emit(lst, func) do
-    quote(do: Skitter.Component.map_emit(unquote(lst), unquote(func)))
+  defmacro to_all_ports(list) do
+    quote do
+      component()
+      |> Skitter.Component.out_ports()
+      |> Enum.map(&{&1, unquote(list)})
+    end
   end
 
   @doc """

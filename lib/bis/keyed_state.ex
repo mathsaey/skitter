@@ -51,7 +51,7 @@ defstrategy Skitter.BIS.KeyedState do
     key = call(:key, [data, invocation()]).result
     state = Map.get_lazy(state_map, key, fn -> call_if_exists(:init, [args()]).state end)
     res = call(:react, state, config, [data])
-    state_map = Map.put(state_map, key, res.state)
-    [state: state_map, emit: res.emit]
+    emit(res.emit)
+    Map.put(state_map, key, res.state)
   end
 end

@@ -15,9 +15,5 @@ defcomponent Skitter.BIC.KeyBy, in: _, out: _, strategy: Skitter.BIS.ImmutableLo
   incoming data element and return the key for this data element.
   """
   defcb conf(func), do: func
-
-  defcb react_with_invocation(inv, val) do
-    val ~> _
-    Map.put(inv, :key, config().(val))
-  end
+  defcb update_invocation(inv, val), do: Map.put(inv, :key, config().(val))
 end

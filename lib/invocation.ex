@@ -44,24 +44,4 @@ defmodule Skitter.Invocation do
   @doc "Create a new meta invocation."
   @spec meta() :: t()
   def meta, do: :meta
-
-  @doc """
-  Modify the invocation of emitted data.
-
-  This function accepts an enum of data emitted by a component callback and a 0-arity function.
-  The function should return an invocation. It will be called once for every emitted element. The
-  returned invocation will be used as the invocation for the data element when returned using
-  `emit_invocation` inside `c:Skitter.Strategy.Component.process/4`.
-
-  When no function is provided, `new/0` is used, wrapping each element in a new invocation.
-  """
-  @spec wrap(Component.emit(), (() -> t())) :: Component.emit()
-  def wrap(lst, make_inv \\ &new/0) do
-    Enum.map(lst, fn {port, enum} ->
-      case enum do
-        lst when is_list(lst) -> {port, Enum.map(lst, &{&1, make_inv.()})}
-        enum -> {port, Stream.map(enum, &{&1, make_inv.()})}
-      end
-    end)
-  end
 end

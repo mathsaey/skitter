@@ -41,10 +41,10 @@ defstrategy Skitter.BIS.StreamSource do
     stream
     |> Stream.each(&send(Enum.random(deployment()), {:emit, &1}))
     |> Stream.run()
-    []
   end
 
-  defhook process({:emit, emit}, _, :sender) do
-    [emit_invocation: Invocation.wrap([{index_to_out_port(0), [emit]}])]
+  defhook process({:emit, emit}, nil, :sender) do
+    emit(to_port(0, [emit]), Invocation.new())
+    nil
   end
 end
