@@ -329,6 +329,7 @@ defmodule Skitter.DSL.Component do
   # Config
   # ------
 
+  @doc false
   def config_var, do: quote(do: var!(config, unquote(__MODULE__)))
 
   @doc """
