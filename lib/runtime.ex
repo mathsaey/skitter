@@ -24,7 +24,7 @@ defmodule Skitter.Runtime do
 
   Starts a Skitter application (i.e. a workflow) by deploying it over the cluster.
   """
-  @spec deploy(Workflow.t()) :: :ok
+  @spec deploy(Workflow.t()) :: reference()
   def deploy(workflow) do
     ref = make_ref()
     nodes = Workflow.flatten(workflow).nodes
@@ -36,7 +36,7 @@ defmodule Skitter.Runtime do
     create_workflow_manager(nodes, ref)
     notify_workers(nodes, ref)
 
-    :ok
+    ref
   end
 
   defp create_worker_supervisors(nodes, ref) do
