@@ -65,7 +65,7 @@ defmodule Skitter.Component do
   ```
   """
 
-  alias Skitter.{Port, Strategy, Invocation, Component.Callback.Info}
+  alias Skitter.{Port, Strategy, Component.Callback.Info}
 
   # ----- #
   # Types #

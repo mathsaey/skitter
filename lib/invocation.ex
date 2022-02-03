@@ -15,8 +15,6 @@ defmodule Skitter.Invocation do
   This module defines the invocation type and the operations that can be performed on it.
   """
 
-  alias Skitter.Component
-
   @typedoc """
   Invocation definition.
 
