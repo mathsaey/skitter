@@ -92,7 +92,31 @@ defmodule Skitter.Runtime do
     {:ok, _} = WorkflowManagerSupervisor.add_manager(ref)
   end
 
+  # We notify components to finish deploying in reverse topological order.
+  # This avoids race conditions where components can send data to other components which did not
+  # finish deploying yet.
   defp notify_workers(_, ref) do
-    Remote.on_all_workers(WorkerSupervisor, :on_all_children, [ref, &Worker.deploy_complete/1])
+    ComponentStore.get_all(:links, ref)
+    |> Enum.map(&Map.values/1)
+    |> Enum.map(&Enum.concat/1)
+    |> Enum.map(&Enum.map(&1, fn {%Strategy.Context{_skr: {_, i}}, _} -> i end))
+    |> Enum.map(&MapSet.new/1)
+    |> Enum.with_index()
+    |> notify_reverse_topological(ref)
+  end
+
+  def notify_reverse_topological([], _), do: :ok
+
+  def notify_reverse_topological(lst, ref) do
+    {to_notify, remaining} = Enum.split_with(lst, &(MapSet.size(elem(&1, 0)) == 0))
+    to_notify = MapSet.new(to_notify, &elem(&1, 1))
+
+    Enum.each(to_notify, fn idx ->
+      Remote.on_all_workers(WorkerSupervisor, :all_children, [ref, idx, &Worker.deploy_complete/1])
+    end)
+
+    remaining
+    |> Enum.map(fn {set, idx} -> {MapSet.difference(set, to_notify), idx} end)
+    |> notify_reverse_topological(ref)
   end
 end

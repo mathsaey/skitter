@@ -52,16 +52,8 @@ defmodule Skitter.Runtime.WorkerSupervisor do
     pid
   end
 
-  def on_all_children(ref, fun) when is_reference(ref) do
-    ComponentStore.get_all(:local_supervisors, ref) |> on_all_children(fun)
-  end
-
-  def on_all_children(lst, fun) when is_list(lst) do
-    Enum.each(lst, &on_all_children(&1, fun))
-  end
-
-  def on_all_children(pid, fun) when is_pid(pid) do
-    pid
+  def all_children(ref, idx, fun) when is_reference(ref) do
+    ComponentStore.get(:local_supervisors, ref, idx)
     |> DynamicSupervisor.which_children()
     |> Enum.each(fn {_, pid, _, _} -> fun.(pid) end)
   end
