@@ -81,6 +81,11 @@ Mode | Using `iex` | Using `mix` | Using releases
   - When using releases, the worker names can be provided as arguments to the
     script. The worker names may also be passed to `skitter deploy`.
 
+- `:shutdown_with_workers`: Determines if the master should shut down when _any_
+  worker it is connected to shuts down. Defaults to false.
+  - `mix skitter.worker`, `skitter master` and `skitter deploy` accept a
+    `--shutdown-with-workers` flag which enables this behaviour.
+
 ## Worker Configuration
 
 - `:master`: A master to connect to. After starting, the worker will attempt to
@@ -89,7 +94,7 @@ Mode | Using `iex` | Using `mix` | Using releases
 
 - `:shutdown_with_master`: Determines if the worker should shut down when the
   master it is connected to shuts down. Defaults to true.
-  - Both `mix skitter.worker` and `skitter worker` accept a
+  - `mix skitter.worker`, `skitter worker` and `skitter deploy` accept a
     `--no-shutdown-with-master` flag which disables this behaviour.
 
 - `:tags`: A list of `t:Skitter.Nodes.tag/0` which will be added to the worker.

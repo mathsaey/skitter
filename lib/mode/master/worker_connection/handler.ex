@@ -10,6 +10,7 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
 
   use Skitter.Remote.Handler
 
+  alias Skitter.{Config, ExitCodes}
   alias Skitter.Remote.{Registry, Tags}
   alias Skitter.Mode.Master.WorkerConnection.Notifier
 
@@ -50,6 +51,12 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
     Notifier.notify_down(node)
     Registry.remove(node)
     Tags.remove(node)
+
+    if Config.get(:shutdown_with_workers, false) do
+      Logger.notice("Lost connection to worker, shutting down...")
+      System.stop(ExitCodes.remote_shutdown())
+    end
+
     state
   end
 end

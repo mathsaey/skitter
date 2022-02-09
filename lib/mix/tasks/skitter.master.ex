@@ -45,25 +45,29 @@ defmodule Mix.Tasks.Skitter.Master do
       OptionParser.parse(
         args,
         aliases: [d: :deploy],
-        strict: [deploy: :string]
+        strict: [deploy: :string, shutdown_with_workers: :boolean]
       )
 
     workers = [workers: Enum.map(workers, &String.to_atom/1)]
+    deploy = maybe_deploy(options[:deploy])
+    shutdown_with_workers = maybe_shutdown_with_workers(options[:shutdown_with_workers])
 
-    options =
-      if str = options[:deploy] do
-        [
-          {:deploy,
-           fn ->
-             {wf, _} = Code.eval_string(str)
-             wf
-           end}
-          | workers
-        ]
-      else
-        workers
-      end
-
-    Mix.Tasks.Skitter.start(:master, options)
+    Mix.Tasks.Skitter.start(:master, workers ++ deploy ++ shutdown_with_workers)
   end
+
+  defp maybe_deploy(nil), do: []
+
+  defp maybe_deploy(str) do
+    [
+      deploy: fn ->
+        fn ->
+          {wf, _} = Code.eval_string(str)
+          wf
+        end
+      end
+    ]
+  end
+
+  defp maybe_shutdown_with_workers(nil), do: []
+  defp maybe_shutdown_with_workers(val), do: [shutdown_with_workers: val]
 end

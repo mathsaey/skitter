@@ -26,6 +26,8 @@ config_from_env :workers, "SKITTER_WORKERS", fn str ->
   str |> String.split() |> Enum.map(&String.to_atom/1)
 end
 
+config_enabled_if_set :shutdown_with_workers, "SKITTER_SHUTDOWN_WITH_WORKERS"
+
 # Master & Local
 config_from_env :deploy, "SKITTER_DEPLOY", fn str ->
   fn -> case Code.eval_string(str) do
