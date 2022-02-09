@@ -26,7 +26,7 @@ defmodule Skitter.Release do
   This will cause Skitter to customize the configuration of your release to include the required
   configuration files and scripts.
 
-  Please refer to the [deployment page](deployment.html) for more information about Skitter
+  Please refer to the [deployment page](deployment.html#releases) for more information about Skitter
   releases and how to use them.
   """
 
