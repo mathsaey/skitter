@@ -28,10 +28,11 @@ end
 
 # Master & Local
 config_from_env :deploy, "SKITTER_DEPLOY", fn str ->
-  {mods, [func]} = str |> String.split(".") |> Enum.split(-1)
-  mod = Module.safe_concat(mods)
-  func = String.to_existing_atom(func)
-  {mod, func, []}
+  fn -> case Code.eval_string(str) do
+    {wf = %Skitter.Workflow{}, _} -> wf
+    {val, _} -> raise "Evaluating `#{str}` returned `#{inspect val}`, expected a workflow."
+    end
+  end
 end
 
 # Logging

@@ -20,7 +20,7 @@ defmodule Skitter.Runtime.Application do
   use Application
   require Logger
 
-  alias Skitter.{Config, Remote, Runtime}
+  alias Skitter.{Workflow, Config, Remote, Runtime}
   alias Skitter.Remote.Registry
   alias Skitter.Mode.{Worker, Master}
 
@@ -100,14 +100,8 @@ defmodule Skitter.Runtime.Application do
   # Connect
   # -------
 
-  defp connect(:worker) do
-    Worker.MasterConnection.connect()
-    :ok
-  end
-
-  defp connect(:master) do
-    Master.WorkerConnection.connect()
-  end
+  defp connect(:worker), do: validate_connect(Worker.MasterConnection.connect())
+  defp connect(:master), do: validate_connect(Master.WorkerConnection.connect())
 
   defp connect(:local) do
     Registry.start_link()
@@ -118,19 +112,30 @@ defmodule Skitter.Runtime.Application do
 
   defp connect(_), do: :ok
 
+  defp validate_connect(:ok), do: :ok
+  defp validate_connect({:error, reason}), do: {:error, {:connect, reason}}
+
   # Deploy
   # ------
 
-  defp deploy(mode) when mode in [:master, :local] do
-    if mfa = Config.get(:deploy) do
-      {m, f, a} = mfa
-      Logger.info("Deploying #{m}.#{f}(#{a |> Enum.map(&inspect/1) |> Enum.join(", ")})")
-      workflow = apply(m, f, a)
-      Runtime.deploy(workflow)
-    end
+  defp deploy(mode) when mode in [:master, :local], do: do_deploy()
+  defp deploy(_), do: :ok
 
-    :ok
+  defp do_deploy do
+    with {:ok, fun} <- validate_config(Config.get(:deploy)),
+         {:ok, wf} <- validate_result(fun.()) do
+      Logger.info("Deploying #{inspect fun}")
+      Runtime.deploy(wf)
+      :ok
+    else
+      :ok -> :ok
+    end
   end
 
-  defp deploy(_), do: :ok
+  defp validate_config(nil), do: :ok
+  defp validate_config(fun) when is_function(fun, 0), do: {:ok, fun}
+  defp validate_config(any), do: {:error, {:deploy, :invalid_config, any}}
+
+  defp validate_result(wf = %Workflow{}), do: {:ok, wf}
+  defp validate_result(res), do: {:error, {:deploy, :invalid_value, res}}
 end

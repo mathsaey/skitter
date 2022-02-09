@@ -7,17 +7,11 @@
 defmodule Mix.Tasks.Skitter do
   @moduledoc false
 
-  def start(mode, config, args) do
-    config |> update_config(mode) |> put()
-    args |> update_args() |> Mix.Tasks.Run.run()
-  end
-
-  defp update_config(config, mode) do
-    Keyword.merge(config, mode: mode, interactive: IEx.started?())
+  def start(mode, config) do
+    config |> Keyword.merge(mode: mode) |> put()
+    Mix.Tasks.Run.run(if(IEx.started?(), do: [], else: ["--no-halt"]))
   end
 
   def put(lst) when is_list(lst), do: Enum.each(lst, &put/1)
   def put({k, v}), do: Skitter.Config.put(k, v)
-
-  defp update_args(args), do: if(IEx.started?(), do: args, else: ["--no-halt" | args])
 end

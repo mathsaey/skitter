@@ -49,20 +49,15 @@ Mode | Using `iex` | Using `mix` | Using releases
 
 ## Shared Configuration
 
-- `:banner`: Determines if the `⬡⬢⬡⬢ Skitter <version> (<mode>)` banner is
-  printed when the runtime is started inside `iex`, defaults to `true` for non
-  release versions.
-
-- `:deploy`: Used in `:local` and `:master` mode. This key should be set to a
-  `{module, function, arguments}` tuple. This tuple represents the application
-  of a function which should return a workflow. When this key is set, the
-  workflow returned by the function is automatically deployed after the Skitter
-  runtime has started.
-  - When using releases, the `--deploy` flag can be passed to `skitter local`,
-    `skitter master` and `skitter deploy`. A `Module.function` argument should
-    be passed along with this flag. The provided `Module` and `function` will
-    be passed as the value for the `:deploy` key along with an empty argument
-    list.
+- `:deploy` Used in `:local` and `:master` mode. This key should be set to a
+  0-arity function which should return a `t:Skitter.Workflow.t/0`.
+  This workflow will be deployed after the Skitter runtime has started.
+  - When using releases, a string can be passed to the `--deploy` flag. This
+    string will be evaluated (using `Code.eval_string/3`). The resulting value
+    should be a workflow, which will be deployed after the Skitter runtime has
+    started.
+  - When using `mix`, the `--deploy` flag can be used to pass a string to `mix
+    skitter.master`, which will be used in the same way.
 
 - Skitter logs various messages to `Logger`. These cannot be disabled through
   Skitter itself, however, the `Logger` can be configured to ignore Skitter
@@ -71,6 +66,10 @@ Mode | Using `iex` | Using `mix` | Using releases
   settings passed to this file will mirror the settings of the console logger.
   Logging to this file may be disabled by passing the `--no-log` option to
   `skitter deploy`, `skitter master`, `skitter worker` or `skitter local`.
+
+- `:banner`: Determines if the `⬡⬢⬡⬢ Skitter <version> (<mode>)` banner is
+  printed when the runtime is started inside `iex`, defaults to `true` for non
+  release versions.
 
 ## Master Configuration
 

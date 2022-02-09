@@ -66,6 +66,6 @@ defmodule Mix.Tasks.Skitter.Worker do
           []
       end
 
-    Mix.Tasks.Skitter.start(:worker, options, [])
+    Mix.Tasks.Skitter.start(:worker, options)
   end
 end

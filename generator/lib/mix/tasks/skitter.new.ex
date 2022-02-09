@@ -123,9 +123,9 @@ defmodule Mix.Tasks.Skitter.New do
   import Config
 
   # Set up Skitter to start the workflow defined in `lib/<%= @app_name %>`
-  # If you remove this you need to manually call `Skitter.deploy/1` to deploy a workflow.
+  # If you remove this you need to manually call `Skitter.Runtime.deploy/1` to deploy a workflow.
   # You can also pass the `--deploy` option to the skitter deploy script when using releases.
-  config :skitter, deploy: {<%= @module_name %>, :workflow, []}
+  config :skitter, deploy: &<%= @module_name %>.workflow/0
 
   # Set up the console logger. Values for level, format and metadata set here will also be used by
   # the file logger.

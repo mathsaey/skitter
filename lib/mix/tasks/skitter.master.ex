@@ -8,19 +8,20 @@ defmodule Mix.Tasks.Skitter.Master do
   @moduledoc """
   Start a Skitter master node
 
-  This task starts a Skitter master node. It accepts a single option (`--eval`) and multiple
+  This task starts a Skitter master node. It accepts a single option (`--deploy`) and multiple
   arguments, which represent worker nodes to connect to. In order to connect to the specified
   workers, additional arguments need to be passed to the `elixir` or `iex` command used to start
   the system. More information can be found in the "Distribution Parameters" section below.
 
-  It is not recommended to use this task in production. Consider using the `skitter.release` task
-  to build a release instead. If mix is used anyway, be sure to start in production mode.
+  It is not recommended to use this task in production. Consider building a release (as described
+  on the [deployment page](deployment.html#releases)) instead. If mix is used anyway, be sure to
+  start in production mode.
 
   ## Options and Arguments
 
-  * `--eval`, `-e`: Evaluate the given code after skitter has started.
+  * `--deploy`, `-d`: Deploy the workflow returned by the expression.
 
-  Besides the `--eval` option, any other argument is interpreted as the name of a worker node.
+  Besides the `--deploy` option, any other argument is interpreted as the name of a worker node.
   The master node will attempt to connect to all the specified nodes when it is starting. If this
   fails, the master exits.
 
@@ -40,12 +41,29 @@ defmodule Mix.Tasks.Skitter.Master do
 
   @impl Mix.Task
   def run(args) do
-    {options, workers, _} = OptionParser.parse(args, aliases: [e: :eval], strict: [eval: :keep])
+    {options, workers, _} =
+      OptionParser.parse(
+        args,
+        aliases: [d: :deploy],
+        strict: [deploy: :string]
+      )
 
-    Mix.Tasks.Skitter.start(
-      :master,
-      [workers: Enum.map(workers, &String.to_atom/1)],
-      OptionParser.to_argv(options)
-    )
+    workers = [workers: Enum.map(workers, &String.to_atom/1)]
+
+    options =
+      if str = options[:deploy] do
+        [
+          {:deploy,
+           fn ->
+             {wf, _} = Code.eval_string(str)
+             wf
+           end}
+          | workers
+        ]
+      else
+        workers
+      end
+
+    Mix.Tasks.Skitter.start(:master, options)
   end
 end
