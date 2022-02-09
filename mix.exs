@@ -104,7 +104,8 @@ defmodule Skitter.MixProject do
         utilities: [
           Skitter.Dot,
           Skitter.Config,
-          Skitter.Release
+          Skitter.Release,
+          Skitter.ExitCodes
         ],
         "Runtime System (private)": ~r/Skitter.Runtime\..*/,
         "Remote Runtimes (private)": ~r/Skitter.Remote\..*/,

@@ -13,7 +13,7 @@ defmodule Skitter.Mode.Worker.MasterConnection do
   require Logger
 
   use Skitter.Remote.Handler
-  alias Skitter.Config
+  alias Skitter.{Config, ExitCodes}
   alias Skitter.Mode.Worker.RegistryManager
 
   def connect, do: connect(Config.get(:master))
@@ -51,7 +51,7 @@ defmodule Skitter.Mode.Worker.MasterConnection do
 
     if Config.get(:shutdown_with_master, true) do
       Logger.notice("Lost connection to master, shutting down...")
-      System.stop()
+      System.stop(ExitCodes.remote_shutdown())
     end
   end
 end
