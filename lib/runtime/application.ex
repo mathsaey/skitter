@@ -127,8 +127,6 @@ defmodule Skitter.Runtime.Application do
       Logger.info("Deploying #{inspect fun}")
       Runtime.deploy(wf)
       :ok
-    else
-      :ok -> :ok
     end
   end
 
