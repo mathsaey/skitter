@@ -28,7 +28,7 @@ defmodule Skitter.Mode.Master.WorkerConnection do
   defp do_connect(workers) when is_list(workers) do
     workers
     |> Enum.map(&Task.async(fn -> {&1, Remote.connect(&1, :worker)} end))
-    |> Enum.map(&Task.await(&1))
+    |> Enum.map(&Task.await(&1, :infinity))
     |> Enum.reject(fn {_, ret} -> ret == {:ok, :worker} end)
     |> Enum.map(fn {node, {:error, error}} -> {node, error} end)
   end

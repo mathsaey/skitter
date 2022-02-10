@@ -130,7 +130,7 @@ defmodule Skitter.Remote do
   def on_many(remotes, mod, func, args) do
     remotes
     |> Enum.map(&{&1, Task.Supervisor.async({Sup, &1}, mod, func, args)})
-    |> Enum.map(fn {n, t} -> {n, Task.await(t)} end)
+    |> Enum.map(fn {n, t} -> {n, Task.await(t, :infinity)} end)
   end
 
   @doc """
@@ -140,7 +140,7 @@ defmodule Skitter.Remote do
   def on_many(remotes, fun) do
     remotes
     |> Enum.map(&{&1, Task.Supervisor.async({Sup, &1}, fun)})
-    |> Enum.map(fn {n, t} -> {n, Task.await(t)} end)
+    |> Enum.map(fn {n, t} -> {n, Task.await(t, :infinity)} end)
   end
 
   @doc """
