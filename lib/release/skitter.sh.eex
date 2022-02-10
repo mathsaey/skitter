@@ -457,7 +457,6 @@ function for_workers() {
       else
         maybe_printf ' %s\n' "$(color "$red" ✗)"
         failed="$worker"
-        return 1
       fi
       else
         $maybe_dry_run ssh "$worker" "$cmd" "$tags"
@@ -476,7 +475,9 @@ function start_deploy() {
   if [ -n "$3" ] ; then maybe_printf '> options: %s\n' "$(color "$purple" "$3 $4")" ; fi
   maybe_printf '> workers: %s\n\n' "$(color "$purple" "$1")"
 
-  if for_workers "$1" "$2" "$4" "daemon" "$(color "$green" "* starting")"
+  for_workers "$1" "$2" "$4" "daemon" "$(color "$green" "* starting")"
+
+  if [ -z "$failed" ]
   then
     maybe_printf "\nWorkers initialized, starting master.\n"
     $maybe_dry_run sleep 1
