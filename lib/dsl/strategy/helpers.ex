@@ -61,6 +61,22 @@ defmodule Skitter.DSL.Strategy.Helpers do
   end
 
   @doc """
+  Send a message to a worker using the Elixir's `Kernel.send/2`.
+
+  `send/2` and `send/3` defined in this module call `Skitter.Worker.send/3` which will send a
+  message to a worker, eventually causing its `c:Skitter.Strategy.Component.process/4` hook to be
+  called.
+
+  In contrast, this function uses the built-in `Kernel.send/2` of Elixir, which sends a message to
+  a pid. This is useful when you need to use `Kernel.SpecialForms.receive/1` inside a hook.
+  """
+  defmacro plain_send(pid, message) do
+    quote do
+      Kernel.send(unquote(pid), unquote(message))
+    end
+  end
+
+  @doc """
   Send a message to a worker with `Skitter.Worker.send/3`
 
   The invocation is inferred from the current invocation.
