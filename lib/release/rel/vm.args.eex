@@ -7,8 +7,8 @@
 # Erlang configuration
 # This file is copied into every release and configures the parameters of the Erlang VM.
 # This is mainly used to apply some Skitter-specific optimizations.
-
-# TODO: benchmark this more to fine-tune parameters.
+#
+# For more information on these parameters, see: https://www.erlang.org/doc/man/erl.html
 
 # Attempt to pin schedulers to processors. Don't complain if it is not possible
 +stbt db
@@ -17,6 +17,12 @@
 +sbwt long
 +swct eager
 +swt low
+
+# Store messages off heap instead of on heap.
+# This improves gc times for processes with large message queues. As a tradeoff, the cost of
+# sending data increates.
+# https://www.erlang.org/doc/man/erlang.html#process_flag_message_queue_data
++hmqd off_heap
 
 # Buffer more messages for distribution
 # should lower latency and heighten throughput at the expense of memory use
