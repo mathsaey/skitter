@@ -20,7 +20,7 @@
 
 # Store messages off heap instead of on heap.
 # This improves gc times for processes with large message queues. As a tradeoff, the cost of
-# sending data increates.
+# sending data increases.
 # https://www.erlang.org/doc/man/erlang.html#process_flag_message_queue_data
 +hmqd off_heap
 
