@@ -14,13 +14,35 @@ defmodule SkitterNew.MixProject do
       version: skitter_project[:version],
       elixir: skitter_project[:elixir],
       start_permanent: Mix.env() == :prod,
-      deps: []
+      deps: [],
+      description: description(),
+      package: package(skitter_project),
+      source_url: skitter_project[:source_url],
+      homepage_url: skitter_project[:homepage_url]
     ]
   end
 
   def application do
     [
       extra_applications: [:eex]
+    ]
+  end
+
+  defp description do
+    """
+    Skitter project generator.
+
+    Provides a `mix skitter.new` task to set up a Skitter project.
+    """
+  end
+
+  defp package(skitter_project) do
+    [
+      licenses:  ["MPL-2.0"],
+      links: %{
+        github: skitter_project[:source_url],
+        homepage: skitter_project[:homepage_url]
+      }
     ]
   end
 end

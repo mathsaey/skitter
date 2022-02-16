@@ -6,49 +6,76 @@
 
 defmodule Mix.Tasks.Skitter.New do
   @moduledoc """
-  Create a Skitter project.
+  Create a Skitter project. It expects the path of the project as an argument.
 
-  This task creates a new Skitter project, similar to `mix new` and `mix phx.new`. Concretely, it
-  creates a mix project set up to allow the use of Skitter. It expects the name of the project as
-  an argument:
+      $ mix skitter.new PATH [--module MODULE] [--no-fetch-deps] [--fetch-deps] [--develop]
 
-      $ mix skitter.new NAME
+  This task creates a new Skitter project, similar to `mix new` and `mix phx.new`. The project is
+  created at PATH and is set up to allow the use of Skitter.
 
-  The provided NAME will be used as the path for the new project.
+  Specifically, the generated project will contain the following files:
 
-  After creating the project files, this task will fetch the project dependencies, installing hex
-  if needed.
+  * a `mix.exs` file which declares Skitter as a dependency and which is set up to build a
+    Skitter release.
+
+  * a `config/config.exs` file which provides some initial configuration for Skitter and the
+    logger.
+
+  * a `lib/MODULE.ex` file which contain an empty workflow to get started.
+
+  * a `README.md` file which documents the project layout.
+
+  * a `.gitignore` file.
+
+  After setting up the project file, this task will fetch the project dependencies if required.
+
+  ## Flags and arguments
+
+  * `--develop`: use the latest development version of Skitter (from github) instead of the
+    current stable version (from hex.pm).
+
+  * `--module MODULE`: specify the name of the generated module. If this is not provided, a name
+    is generated based on PATH.
+
+  * `--(no-)deps`: By default, the installer asks the user if it should run `mix deps.get` and
+  `mix deps.compile` after creating the project. Set this flag to skip this prompt and to
+  explicitly opt in or out of automatically running these commands.
   """
   @shortdoc "Create a new Skitter project"
   use Mix.Task
   import Mix.Generator
 
-  @elixir_version "~> 1.12"
+  @elixir_version Mix.Project.get!().project()[:elixir]
+  @skitter_version Mix.Project.get!().project()[:version]
 
   @impl Mix.Task
   def run(args) do
-    {[], [name]} = OptionParser.parse!(args, strict: [])
-
-    if name == "skitter" do
-      Mix.raise("You must not use skitter as the name of your application")
+    flags = [deps: :boolean, develop: :boolean, module: :string]
+    {opts, path} = case OptionParser.parse!(args, strict: flags) do
+      {_, []} -> Mix.raise("You must specify a path!")
+      {_ , ["skitter"]} -> Mix.raise(~s("skitter" is not a valid path name))
+      {opts, [name]} -> {opts, name}
     end
 
-    app_name = String.to_atom(name)
-    module_name = Macro.camelize(name)
-    base_path = name
+    app_name = path |> Path.basename() |> String.to_atom()
+    module_name = opts[:module] || Macro.camelize(path)
+
+    module_path = module_name |> String.split(".") |> Enum.map(&Macro.underscore/1) |> Path.join()
+    module_path = Path.join("lib", "#{module_path}.ex")
 
     version_check!()
-    directory_check!(base_path)
-    create_dirs!(base_path)
-    create_files!(base_path, app_name, module_name)
-    prepare_environment!(base_path)
+    directory_check!(path)
+
+    create_dirs!(path, Path.dirname(module_path))
+    create_files!(path, app_name, module_name, module_path, skitter_version(opts[:develop]))
+    maybe_deps(path, opts[:deps])
 
     Mix.shell().info("""
 
-      Your skitter project has been created at `#{base_path}`.
+      Your skitter project has been created at `#{path}`.
       You can now start working on your Skitter application:
 
-      $ cd #{base_path}
+      $ cd #{path}
       $ iex -S mix
 
       For your convenience, the generated README.md file contains a
@@ -58,37 +85,50 @@ defmodule Mix.Tasks.Skitter.New do
 
   defp version_check! do
     unless Version.match?(System.version(), @elixir_version) do
-      Mix.raise("Skitter requires Elixir version 1.12 or higher.")
+      Mix.raise("Skitter requires Elixir version #{@elixir_version} or higher.")
     end
   end
 
-  defp directory_check!(base_path) do
-    if File.exists?(base_path) do
-      Mix.raise("Directory #{base_path} already exists.")
+  defp directory_check!(path) do
+    if File.exists?(path) do
+      Mix.raise("Directory #{path} already exists.")
     end
   end
 
-  defp create_dirs!(base_path) do
-    create_directory(base_path)
-    create_directory("#{base_path}/lib")
-    create_directory("#{base_path}/config")
+  defp create_dirs!(path, module_path) do
+    create_directory(path)
+    create_directory(Path.join(path, module_path))
+    create_directory(Path.join(path, "config"))
   end
 
-  defp create_files!(base_path, app_name, module_name) do
-    assigns = [app_name: app_name, module_name: module_name, elixir_version: @elixir_version]
+  defp create_files!(path, app_name, module_name, module_path, version) do
+    assigns = [
+      app_name: app_name,
+      module_name: module_name, module_path: module_path,
+      elixir_version: @elixir_version,
+      skitter_version: version
+    ]
 
-    create_file("#{base_path}/mix.exs", mix_template(assigns))
-    create_file("#{base_path}/config/config.exs", config_template(assigns))
-    create_file("#{base_path}/lib/#{app_name}.ex", module_template(assigns))
-    create_file("#{base_path}/.gitignore", gitignore_text())
-    create_file("#{base_path}/README.md", readme_template(assigns))
+    create_file(Path.join(path, "mix.exs"), mix_template(assigns))
+    create_file(Path.join(path, "config/config.exs"), config_template(assigns))
+    create_file(Path.join(path, module_path), module_template(assigns))
+    create_file(Path.join(path, ".gitignore"), gitignore_text())
+    create_file(Path.join(path, "README.md"), readme_template(assigns))
   end
 
-  defp prepare_environment!(base_path) do
-    if Mix.shell().yes?("Fetch and build dependencies?") do
-      run_cmd(base_path, "mix deps.get")
-      run_cmd(base_path, "mix deps.compile")
-    end
+  defp skitter_version(true), do: ~s({:skitter, github: "mathsaey/skitter"})
+  defp skitter_version(_), do: ~s({:skitter, "~> #{@skitter_version}"})
+
+  defp maybe_deps(path, true), do: do_deps(path)
+  defp maybe_deps(_, false), do: nil
+
+  defp maybe_deps(path, nil) do
+    maybe_deps(path, Mix.shell().yes?("Fetch and build dependencies?"))
+  end
+
+  defp do_deps(path) do
+    run_cmd(path, "mix deps.get")
+    run_cmd(path, "mix deps.compile")
   end
 
   defp run_cmd(dir, cmd) do
@@ -192,7 +232,7 @@ defmodule Mix.Tasks.Skitter.New do
     # Skitter must be included here, but you are free to add additional dependencies as needed.
     defp deps do
       [
-        {:skitter, github: "mathsaey/skitter"},
+        <%= @skitter_version %>,
       ]
     end
   end
@@ -217,7 +257,7 @@ defmodule Mix.Tasks.Skitter.New do
   `_release` | Contains the release created when running `mix release`, can safely be deleted.
 
   Application code should be stored in the `lib` directory. `skitter.new` defined some example
-  code in `lib/<%= @app_name %>` to help you get started.
+  code in `lib/<%= @module_path %>` to help you get started.
 
   ## Executing the Project
 

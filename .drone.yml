@@ -63,36 +63,6 @@ volumes:
 ---
 kind: pipeline
 type: docker
-name: installer
-
-steps:
-  - name: build
-    image: elixir:latest
-    environment:
-      MIX_ENV: prod
-    commands:
-      - cd generator
-      - mix archive.build -o skitter_new.ez
-
-  - name: publish
-    image: drillster/drone-rsync
-    settings:
-      hosts: [ soft.vub.ac.be ]
-      user:
-        from_secret: publish_ssh_user
-      key:
-        from_secret: publish_ssh_key
-      include: [ "skitter_new.ez" ]
-      exclude: [ "*" ]
-      source: generator/
-      target: ~/public_html/skitter/
-
-depends_on:
-- test
-- typecheck
----
-kind: pipeline
-type: docker
 name: docs
 
 steps:
