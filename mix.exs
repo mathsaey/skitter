@@ -71,6 +71,7 @@ defmodule Skitter.MixProject do
       logo: "assets/logo-light_docs.png",
       formatters: ["html"],
       api_reference: false,
+      javascript_config_path: "assets/docs/versions.js",
       filter_modules: if System.get_env("EX_DOC_PUBLIC") do
         private = ~w(Skitter.Config Skitter.Runtime. Skitter.Remote. Skitter.Mode.)
         fn mod, _ -> not String.contains?(to_string(mod), private) end
