@@ -231,9 +231,9 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-  ![](assets/docs_workflow_inline_before.png)
+  ![](assets/docs/workflow_inline_before.png)
   will be converted to:
-  ![](assets/docs_workflow_inline_after.png)
+  ![](assets/docs/workflow_inline_after.png)
 
       iex> defcomponent Simple, in: p, out: p do
       ...> end
