@@ -8,10 +8,11 @@ defmodule SkitterNew.MixProject do
   use Mix.Project
 
   def project do
+    skitter_project = Mix.Project.in_project(:skitter, "../", &(&1.project()))
     [
       app: :skitter_new,
-      version: "0.1.0",
-      elixir: "~> 1.12",
+      version: skitter_project[:version],
+      elixir: skitter_project[:elixir],
       start_permanent: Mix.env() == :prod,
       deps: []
     ]
