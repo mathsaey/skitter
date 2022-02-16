@@ -14,9 +14,9 @@ defmodule SkitterNew.MixProject do
       version: skitter_project[:version],
       elixir: skitter_project[:elixir],
       start_permanent: Mix.env() == :prod,
-      deps: [],
       description: description(),
       package: package(skitter_project),
+      deps: deps(skitter_project[:deps]),
       source_url: skitter_project[:source_url],
       homepage_url: skitter_project[:homepage_url]
     ]
@@ -44,5 +44,9 @@ defmodule SkitterNew.MixProject do
         homepage: skitter_project[:homepage_url]
       }
     ]
+  end
+
+  defp deps(skitter_deps) do
+    Enum.filter(skitter_deps, &(elem(&1, 0) == :ex_doc))
   end
 end
