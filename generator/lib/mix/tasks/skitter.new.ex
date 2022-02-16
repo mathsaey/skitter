@@ -91,7 +91,7 @@ defmodule Mix.Tasks.Skitter.New do
 
   defp directory_check!(path) do
     if File.exists?(path) do
-      Mix.raise("Directory #{path} already exists.")
+      Mix.raise(~s(Directory "#{path}" already exists.))
     end
   end
 
@@ -117,7 +117,10 @@ defmodule Mix.Tasks.Skitter.New do
   end
 
   defp skitter_version(true), do: ~s({:skitter, github: "mathsaey/skitter"})
-  defp skitter_version(_), do: ~s({:skitter, "~> #{@skitter_version}"})
+  defp skitter_version(_) do
+    version = Version.parse!(@skitter_version)
+    ~s({:skitter, "~> #{version.major}.#{version.minor}"})
+  end
 
   defp maybe_deps(path, true), do: do_deps(path)
   defp maybe_deps(_, false), do: nil
