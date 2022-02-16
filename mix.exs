@@ -15,7 +15,7 @@ defmodule Skitter.MixProject do
       app: :skitter,
       name: "Skitter",
       elixir: "~> 1.13",
-      version: "0.5.0-dev",
+      version: "0.5.0",
       source_url: @github_url,
       homepage_url: @home_url,
       start_permanent: Mix.env() == :prod,
@@ -90,6 +90,7 @@ defmodule Skitter.MixProject do
       logo: "assets/logo-light_docs.png",
       formatters: ["html"],
       api_reference: false,
+      javascript_config_path: "assets/docs/versions.js",
       filter_modules: if System.get_env("EX_DOC_PRIVATE") do
         fn _, _ -> true end
       else

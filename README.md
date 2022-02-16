@@ -1,7 +1,7 @@
 ![skitter logo](assets/logo_header.png)
 
 [ [Homepage](https://soft.vub.ac.be/~mathsaey/skitter/) ]
-[ [Documentation](https://soft.vub.ac.be/~mathsaey/skitter/docs/latest/readme.html) ]
+[ [Documentation](https://hexdocs.pm/skitter/) ]
 
 A domain specific language for building scalable, distributed stream processing
 applications with custom distribution strategies.
@@ -47,7 +47,7 @@ To install Elixir, please refer to the
 
 We provide a brief introduction to creating and running Skitter projects below.
 For more detailed information, we recommend browsing the
-[docs](https://soft.vub.ac.be/~mathsaey/skitter/docs/latest/).
+[docs](https://hexdocs.pm/skitter/).
 There, you can find detailed documentation on the language abstractions offered
 by Skitter along with guides detailing how to deploy Skitter applications over
 a cluster and how to configure them.
@@ -63,12 +63,8 @@ In order to use this task, you need to add it to your local `mix` installation
 You can do this as follows:
 
 ```
-$ wget soft.vub.ac.be/~mathsaey/skitter/skitter_new.ez
-$ mix archive.install skitter_new.ez
+$ mix archive.install hex skitter_new
 ```
-
-The first command downloads a compiled version of the task, while the second
-adds the task to your local `mix` installation.
 
 Once installed, `mix skitter.new <project_name>` can be used to create a new
 Skitter project.
