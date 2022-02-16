@@ -29,20 +29,6 @@ defmodule Skitter.MixProject do
     ]
   end
 
-  defp description do
-    """
-    A domain specific language for building scalable, distributed stream processing applications
-    with custom distribution strategies.
-    """
-  end
-
-  defp package do
-    [
-      licenses:  ["MPL-2.0"],
-      links: %{github: @github_url, homepage: @home_url}
-    ]
-  end
-
   def application do
     [
       mod: {Skitter.Runtime.Application, []},
@@ -81,6 +67,20 @@ defmodule Skitter.MixProject do
     [exclude: IEx]
   end
 
+  defp description do
+    """
+    A domain specific language for building scalable, distributed stream processing applications
+    with custom distribution strategies.
+    """
+  end
+
+  defp package do
+    [
+      licenses:  ["MPL-2.0"],
+      links: %{github: @github_url, homepage: @home_url}
+    ]
+  end
+
   defp docs do
     [
       main: "readme",
@@ -90,7 +90,6 @@ defmodule Skitter.MixProject do
       logo: "assets/logo-light_docs.png",
       formatters: ["html"],
       api_reference: false,
-      javascript_config_path: "assets/docs/versions.js",
       filter_modules: if System.get_env("EX_DOC_PRIVATE") do
         fn _, _ -> true end
       else
