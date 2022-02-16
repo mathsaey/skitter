@@ -7,20 +7,39 @@
 defmodule Skitter.MixProject do
   use Mix.Project
 
+  @github_url "https://github.com/mathsaey/skitter/"
+  @home_url "https://soft.vub.ac.be/~mathsaey/skitter/"
+
   def project do
     [
       app: :skitter,
       name: "Skitter",
       elixir: "~> 1.13",
       version: "0.5.0-dev",
-      source_url: "https://github.com/mathsaey/skitter/",
-      homepage_url: "https://soft.vub.ac.be/~mathsaey/skitter/",
+      source_url: @github_url,
+      homepage_url: @home_url,
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
+      description: description(),
       dialyzer: dialyzer(),
+      package: package(),
       deps: deps(),
       docs: docs(),
-      xref: xref()
+      xref: xref(),
+    ]
+  end
+
+  defp description do
+    """
+    A domain specific language for building scalable, distributed stream processing applications
+    with custom distribution strategies.
+    """
+  end
+
+  defp package do
+    [
+      licenses:  ["MPL-2.0"],
+      links: %{github: @github_url, homepage: @home_url}
     ]
   end
 
@@ -71,12 +90,11 @@ defmodule Skitter.MixProject do
       logo: "assets/logo-light_docs.png",
       formatters: ["html"],
       api_reference: false,
-      javascript_config_path: "assets/docs/versions.js",
-      filter_modules: if System.get_env("EX_DOC_PUBLIC") do
+      filter_modules: if System.get_env("EX_DOC_PRIVATE") do
+        fn _, _ -> true end
+      else
         private = ~w(Skitter.Config Skitter.Runtime. Skitter.Remote. Skitter.Mode.)
         fn mod, _ -> not String.contains?(to_string(mod), private) end
-      else
-        fn _, _ -> true end
       end,
       extras: [
         {:"README.md", [title: "Skitter", filename: "readme"]},

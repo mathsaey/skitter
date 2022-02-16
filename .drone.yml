@@ -70,7 +70,6 @@ steps:
     image: elixir:latest
     environment:
       MIX_ENV: dev
-      EX_DOC_PUBLIC: yes
     commands:
       - mix local.hex --force
       - mix local.rebar --force
@@ -94,10 +93,6 @@ steps:
       ref:
         - refs/heads/develop
         - refs/tags/*
-
-depends_on:
-- test
-- typecheck
 ---
 
 kind: pipeline
@@ -128,4 +123,3 @@ depends_on:
 - docs
 - test
 - typecheck
-- installer
