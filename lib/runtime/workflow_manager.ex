@@ -14,14 +14,14 @@ defmodule Skitter.Runtime.WorkflowManager do
   """
   use GenServer
 
-  alias Skitter.{Config, Remote}
+  alias Skitter.{Runtime, Remote}
   alias Skitter.Mode.Master.WorkerConnection
   alias Skitter.Runtime.{ComponentStore, WorkflowWorkerSupervisor}
 
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
 
   def init(ref) do
-    unless Config.get(:mode, :local) == :local, do: WorkerConnection.subscribe_up()
+    unless Runtime.mode() == :local, do: WorkerConnection.subscribe_up()
     {:ok, ref}
   end
 

@@ -10,7 +10,7 @@ defmodule Skitter.Runtime.Spawner do
 
   require Logger
 
-  alias Skitter.Config
+  alias Skitter.Runtime
   alias Skitter.Remote
 
   def spawn_remote(context, state, tag, nil), do: spawn_random(context, state, tag)
@@ -66,7 +66,7 @@ defmodule Skitter.Runtime.Spawner do
   end
 
   def spawn_local(context, state, tag) do
-    case Config.get(:mode, :local) do
+    case Runtime.mode() do
       :master -> :error
       _ -> Skitter.Runtime.WorkerSupervisor.add_worker(context, state, tag)
     end

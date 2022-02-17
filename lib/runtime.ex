@@ -8,7 +8,7 @@ defmodule Skitter.Runtime do
   @moduledoc """
   Interface to the skitter runtime system.
   """
-  alias Skitter.{Remote, Workflow, Component, Strategy, Port, Deployment}
+  alias Skitter.{Config, Remote, Workflow, Component, Strategy, Port, Deployment}
   alias Skitter.Runtime.{
     Worker,
     ComponentStore,
@@ -18,6 +18,16 @@ defmodule Skitter.Runtime do
   }
 
   require ComponentStore
+
+  @doc """
+  Get the current runtime mode.
+
+  This function returns the mode of the current runtime. The available modes and their goal are
+  documented in the [configuration documentation](configuration.html#modes). This function may
+  also return `:test`, which is only used for testing.
+  """
+  @spec mode :: :worker | :master | :local | :test
+  def mode, do: Config.get(:mode, :local)
 
   @doc """
   Deploy a workflow.

@@ -25,14 +25,12 @@ defmodule Skitter.Runtime.Application do
   alias Skitter.Mode.{Worker, Master}
 
   @impl true
-  def start(:normal, []), do: start(mode())
+  def start(:normal, []), do: start(Runtime.mode())
 
   @impl true
-  def start_phase(:sk_welcome, :normal, []), do: welcome(mode())
-  def start_phase(:sk_connect, :normal, []), do: connect(mode())
-  def start_phase(:sk_deploy, :normal, []), do: deploy(mode())
-
-  defp mode, do: Config.get(:mode, :local)
+  def start_phase(:sk_welcome, :normal, []), do: welcome(Runtime.mode())
+  def start_phase(:sk_connect, :normal, []), do: connect(Runtime.mode())
+  def start_phase(:sk_deploy, :normal, []), do: deploy(Runtime.mode())
 
   # Application Supervision Tree
   # ----------------------------
