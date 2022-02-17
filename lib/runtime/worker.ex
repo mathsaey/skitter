@@ -9,6 +9,8 @@ defmodule Skitter.Runtime.Worker do
   This module defines a GenServer that specifies the behaviour of Skitter Workers.
   """
   use GenServer, restart: :transient
+
+  use Skitter.Telemetry, prefix: :worker
   alias Skitter.Runtime.ComponentStore
   require Skitter.Runtime.ComponentStore
 
@@ -40,6 +42,8 @@ defmodule Skitter.Runtime.Worker do
   defp init_state({context, state, tag}) do
     {ref, idx} = context._skr
 
+    Telemetry.emit([:init], %{}, %{pid: self(), ref: ref, idx: idx, tag: tag})
+
     %__MODULE__{
       component: context.component,
       strategy: context.strategy,
@@ -52,7 +56,9 @@ defmodule Skitter.Runtime.Worker do
   end
 
   defp process_hook(msg, inv, srv) do
-    state = srv.strategy.process(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
-    %{srv | state: state}
+    Telemetry.wrap([:process], %{pid: self(), message: msg, invocation: inv}) do
+      state = srv.strategy.process(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
+      %{srv | state: state}
+    end
   end
 end

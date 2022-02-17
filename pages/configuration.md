@@ -71,6 +71,14 @@ Mode | Using `iex` | Using `mix` | Using releases
   printed when the runtime is started inside `iex`, defaults to `true` for non
   release versions.
 
+- `:telemetry`: Skitter can optionally emit telemetry events through the use of
+  the `telemetry` package. This option determines whether these events are
+  emitted or not. If this option is set to `false` (the default), all telemetry
+  code is purged at compile time. Therefore, this option can not be adjusted
+  after compile time. Note that Skitter does not register any handlers for the
+  emitted telemetry data. An overview of the events emitted by Skitter can be
+  found on the [telemetry page](telemetry.html).
+
 ## Master Configuration
 
 - `:workers`: A list of workers to which the master will attempt to connect. If

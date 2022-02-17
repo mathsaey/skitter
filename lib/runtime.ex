@@ -9,6 +9,7 @@ defmodule Skitter.Runtime do
   Interface to the skitter runtime system.
   """
   alias Skitter.{Config, Remote, Workflow, Component, Strategy, Port, Deployment}
+
   alias Skitter.Runtime.{
     Worker,
     ComponentStore,
@@ -18,6 +19,7 @@ defmodule Skitter.Runtime do
   }
 
   require ComponentStore
+  use Skitter.Telemetry
 
   @doc """
   Get the current runtime mode.
@@ -37,14 +39,21 @@ defmodule Skitter.Runtime do
   @spec deploy(Workflow.t()) :: reference()
   def deploy(workflow) do
     ref = make_ref()
-    nodes = Workflow.flatten(workflow).nodes
+    flattened = Workflow.flatten(workflow)
+    nodes = flattened.nodes
 
-    create_worker_supervisors(nodes, ref)
-    deploy_components(nodes, ref) |> ComponentStore.put_everywhere(:deployment, ref)
-    expand_links(nodes, ref) |> ComponentStore.put_everywhere(:links, ref)
+    Telemetry.wrap [:deploy], %{
+      ref: ref,
+      workflow: flattened,
+      nodes: nodes |> Map.keys() |> Enum.with_index()
+    } do
+      create_worker_supervisors(nodes, ref)
+      deploy_components(nodes, ref) |> ComponentStore.put_everywhere(:deployment, ref)
+      expand_links(nodes, ref) |> ComponentStore.put_everywhere(:links, ref)
 
-    create_workflow_manager(nodes, ref)
-    notify_workers(nodes, ref)
+      create_workflow_manager(nodes, ref)
+      notify_workers(nodes, ref)
+    end
 
     ref
   end

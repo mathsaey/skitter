@@ -46,6 +46,7 @@ defmodule Skitter.MixProject do
 
       # Runtime
       {:logger_file_backend, "~> 0.0.13"},
+      {:telemetry, "~> 1.0"},
 
       # Used by built-in strategies
       {:murmur, "~> 1.0"}
@@ -93,13 +94,20 @@ defmodule Skitter.MixProject do
       filter_modules: if System.get_env("EX_DOC_PRIVATE") do
         fn _, _ -> true end
       else
-        private = ~w(Skitter.Config Skitter.Runtime. Skitter.Remote. Skitter.Mode.)
+        private = ~w(
+          Skitter.Config
+          Skitter.Telemetry
+          Skitter.Runtime.
+          Skitter.Remote.
+          Skitter.Mode.
+        )
         fn mod, _ -> not String.contains?(to_string(mod), private) end
       end,
       extras: [
         {:"README.md", [title: "Skitter", filename: "readme"]},
         "pages/deployment.md",
-        "pages/configuration.md"
+        "pages/configuration.md",
+        "pages/telemetry.md"
       ],
       groups_for_modules: [
         "Language Abstractions": [
@@ -123,6 +131,7 @@ defmodule Skitter.MixProject do
         utilities: [
           Skitter.Dot,
           Skitter.Config,
+          Skitter.Telemetry,
           Skitter.Release,
           Skitter.ExitCodes
         ],
