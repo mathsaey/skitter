@@ -105,9 +105,9 @@ defmodule Skitter.Runtime do
     |> notify_reverse_topological(ref)
   end
 
-  def notify_reverse_topological([], _), do: :ok
+  defp notify_reverse_topological([], _), do: :ok
 
-  def notify_reverse_topological(lst, ref) do
+  defp notify_reverse_topological(lst, ref) do
     {to_notify, remaining} = Enum.split_with(lst, &(MapSet.size(elem(&1, 0)) == 0))
     to_notify = MapSet.new(to_notify, &elem(&1, 1))
 
