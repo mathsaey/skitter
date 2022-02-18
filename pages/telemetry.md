@@ -76,7 +76,9 @@ The events described in this section are not wrapped and are emitted by
 
 #### Runtime
 
-* `[:skitter, :worker, :init]`: Emitted when a new worker is initialized.
+* `[:skitter, :worker, :init]`: Emitted when a new worker is initialized. Note
+  that, when a workflow is deployed, the workers are only initialized after the
+  `deploy` hook of each component is called.
   * `context`: The context the worker was deployed with.
   * `state`: The initial state of the worker.
   * `tag`: The worker `t:Skitter.Worker.tag/0`
@@ -93,6 +95,9 @@ The events described in this section are not wrapped and are emitted by
   * `emit`: The emitted data: `t:Skitter.Component.emit/0`.
   * `invocation`: The invocation to use. May be a function which returns an
   invocation when called.
+* `[:skitter, :runtime, :deploy]`: Emitted when a workflow is deployed. The
+  event is emitted after everything is ready, but before
+  `Skitter.Runtime.deploy/1` returns.
 
 #### Remote
 

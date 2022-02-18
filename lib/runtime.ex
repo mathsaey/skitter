@@ -79,6 +79,7 @@ defmodule Skitter.Runtime do
     create_workflow_manager(nodes, ref)
     notify_workers(nodes, ref)
 
+    Telemetry.emit([:runtime, :deploy], %{}, %{ref: ref})
     ref
   end
 
