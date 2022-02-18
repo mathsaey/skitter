@@ -57,7 +57,7 @@ defmodule Mix.Tasks.Skitter.New do
       {opts, [name]} -> {opts, name}
     end
 
-    app_name = path |> Path.basename() |> String.to_atom()
+    app_name = Path.basename(path)
     module_name = opts[:module] || Macro.camelize(path)
 
     module_path = module_name |> String.split(".") |> Enum.map(&Macro.underscore/1) |> Path.join()
@@ -194,7 +194,7 @@ defmodule Mix.Tasks.Skitter.New do
   # This file configures how your project is build: it instructs mix on where to find the project
   # dependencies and on how to build a self-contained "release" of this application.
 
-  defmodule <%= @module_name %>.MixProject do
+  defmodule <%= Macro.camelize(@app_name) %>.MixProject do
     use Mix.Project
 
     def project do
