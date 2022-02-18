@@ -12,20 +12,16 @@ defmodule Skitter.Telemetry do
   telemetry events in Skitter are emitted through the use of the macros defined in this module.
   When telemetry is disabled, these macros compile to no-ops.
   """
-  defmacro __using__(opts) do
-    prefix = if(pre = opts[:prefix], do: [:skitter, pre], else: [:skitter])
-
+  defmacro __using__(_) do
     quote do
       alias unquote(__MODULE__)
       require (__MODULE__)
-
-      @telemetry_prefix unquote(prefix)
     end
   end
 
   @enabled Application.compile_env(:skitter, :telemetry, false)
 
-  def prefix(name), do: quote(do: @telemetry_prefix ++ unquote(name))
+  def prefix(name), do: quote(do: [:skitter | unquote(name)])
 
   defmacro emit(name, measurements, metadata) do
     if @enabled do
@@ -39,7 +35,8 @@ defmodule Skitter.Telemetry do
     if @enabled do
       quote do
         :telemetry.span(unquote(prefix(name)), unquote(metadata), fn ->
-          {unquote(body), %{}}
+          result = unquote(body)
+          {result, Map.put(unquote(metadata), :result, result)}
         end)
       end
     else

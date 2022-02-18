@@ -104,7 +104,7 @@ defmodule Skitter.Worker do
   @spec send(ref(), any(), Invocation.t()) :: :ok
   def send(worker, message, invocation) do
     Telemetry.emit(
-      [:send],
+      [:worker, :send],
       %{},
       %{from: self(), to: worker, message: message, invocation: invocation}
     )

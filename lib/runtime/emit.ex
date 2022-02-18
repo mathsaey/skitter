@@ -9,12 +9,15 @@ defmodule Skitter.Runtime.Emit do
   alias Skitter.Runtime.ComponentStore
   alias Skitter.Strategy.Context
   require ComponentStore
+  use Skitter.Telemetry
 
   def emit(%Context{_skr: {:deploy, _, _}}, _, _) do
     raise(Skitter.DefinitionError, "Attempted to emit data inside a deploy hook")
   end
 
-  def emit(%Context{_skr: {ref, idx}}, emit, inv) do
+  def emit(ctx = %Context{_skr: {ref, idx}}, emit, inv) do
+    Telemetry.emit([:runtime, :emit], %{}, %{context: ctx, emit: emit, invocation: inv})
+
     component_links = ComponentStore.get(:links, ref, idx)
 
     Enum.each(emit, fn {out_port, enum} ->
@@ -30,6 +33,12 @@ defmodule Skitter.Runtime.Emit do
   defp value(dsts, val, inv_fun) when is_function(inv_fun), do: value(dsts, val, inv_fun.())
 
   defp value(dsts, val, inv) do
-    Enum.each(dsts, fn {ctx, prt} -> ctx.strategy.deliver(%{ctx | invocation: inv}, val, prt) end)
+    Enum.each(dsts, fn {ctx, prt} ->
+      ctx = %{ctx | invocation: inv}
+
+      Telemetry.wrap [:hook, :deliver], %{pid: self(), context: ctx, data: val, port: prt} do
+        ctx.strategy.deliver(ctx, val, prt)
+      end
+    end)
   end
 end

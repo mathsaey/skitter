@@ -8,6 +8,7 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
   @moduledoc false
   require Logger
 
+  use Skitter.Telemetry
   use Skitter.Remote.Handler
 
   alias Skitter.{Config, ExitCodes}
@@ -28,6 +29,7 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
       {:error, :already_connected, state}
     else
       tags = Tags.remote(node)
+      Telemetry.emit([:remote, :up, :worker], %{}, %{remote: node, tags: tags})
       Logger.info("Connected to `#{node}`, tags: #{inspect(tags)}")
       Notifier.notify_up(node, tags)
       Registry.add(node, :worker)
@@ -38,6 +40,7 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
 
   @impl true
   def remove_connection(node, state) do
+    Telemetry.emit([:remote, :down, :worker], %{}, %{remote: node, reason: :remove})
     Logger.info("Disconnected from `#{node}`")
     Notifier.notify_down(node)
     Registry.remove(node)
@@ -47,6 +50,7 @@ defmodule Skitter.Mode.Master.WorkerConnection.Handler do
 
   @impl true
   def remote_down(node, state) do
+    Telemetry.emit([:remote, :down, :worker], %{}, %{remote: node, reason: :down})
     Logger.info("Worker `#{node}` disconnected")
     Notifier.notify_down(node)
     Registry.remove(node)

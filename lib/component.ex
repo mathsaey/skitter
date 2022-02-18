@@ -65,6 +65,7 @@ defmodule Skitter.Component do
   ```
   """
 
+  use Skitter.Telemetry
   alias Skitter.{Port, Strategy, Component.Callback.Info}
 
   # ----- #
@@ -414,7 +415,16 @@ defmodule Skitter.Component do
   """
   @spec call(t(), atom(), state(), config(), args()) :: result()
   def call(component, name, state, config, args) do
-    apply(component, name, [state, config | args])
+    Telemetry.wrap [:component, :call], %{
+      pid: self(),
+      component: component,
+      name: name,
+      state: state,
+      config: config,
+      args: args
+    } do
+      apply(component, name, [state, config | args])
+    end
   end
 
   @doc """

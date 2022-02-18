@@ -42,18 +42,12 @@ defmodule Skitter.Runtime do
     flattened = Workflow.flatten(workflow)
     nodes = flattened.nodes
 
-    Telemetry.wrap [:deploy], %{
-      ref: ref,
-      workflow: flattened,
-      nodes: nodes |> Map.keys() |> Enum.with_index()
-    } do
-      create_worker_supervisors(nodes, ref)
-      deploy_components(nodes, ref) |> ComponentStore.put_everywhere(:deployment, ref)
-      expand_links(nodes, ref) |> ComponentStore.put_everywhere(:links, ref)
+    create_worker_supervisors(nodes, ref)
+    deploy_components(nodes, ref) |> ComponentStore.put_everywhere(:deployment, ref)
+    expand_links(nodes, ref) |> ComponentStore.put_everywhere(:links, ref)
 
-      create_workflow_manager(nodes, ref)
-      notify_workers(nodes, ref)
-    end
+    create_workflow_manager(nodes, ref)
+    notify_workers(nodes, ref)
 
     ref
   end
@@ -75,7 +69,9 @@ defmodule Skitter.Runtime do
         _skr: {:deploy, ref, i}
       }
 
-      comp.strategy.deploy(context)
+      Telemetry.wrap [:hook, :deploy], %{context: context} do
+        comp.strategy.deploy(context)
+      end
     end)
   end
 

@@ -10,7 +10,7 @@ defmodule Skitter.Runtime.Worker do
   """
   use GenServer, restart: :transient
 
-  use Skitter.Telemetry, prefix: :worker
+  use Skitter.Telemetry
   alias Skitter.Runtime.ComponentStore
   require Skitter.Runtime.ComponentStore
 
@@ -42,7 +42,11 @@ defmodule Skitter.Runtime.Worker do
   defp init_state({context, state, tag}) do
     {ref, idx} = context._skr
 
-    Telemetry.emit([:init], %{}, %{pid: self(), ref: ref, idx: idx, tag: tag})
+    Telemetry.emit(
+      [:worker, :init],
+      %{},
+      %{pid: self(), context: context, state: state, tag: tag}
+    )
 
     %__MODULE__{
       component: context.component,
@@ -56,9 +60,19 @@ defmodule Skitter.Runtime.Worker do
   end
 
   defp process_hook(msg, inv, srv) do
-    Telemetry.wrap([:process], %{pid: self(), message: msg, invocation: inv}) do
-      state = srv.strategy.process(%{srv.context | invocation: inv}, msg, srv.state, srv.tag)
-      %{srv | state: state}
-    end
+    ctx = %{srv.context | invocation: inv}
+
+    state =
+      Telemetry.wrap [:hook, :process], %{
+        pid: self(),
+        context: ctx,
+        message: msg,
+        state: srv.state,
+        tag: srv.tag
+      } do
+        srv.strategy.process(ctx, msg, srv.state, srv.tag)
+      end
+
+    %{srv | state: state}
   end
 end
