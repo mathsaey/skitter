@@ -19,6 +19,8 @@ defmodule Skitter.Telemetry do
     end
   end
 
+  # Dialyzer does not like compile time values.
+  @dialyzer :no_match
   @enabled Application.compile_env(:skitter, :telemetry, false)
 
   def prefix(name), do: quote(do: [:skitter | unquote(name)])
