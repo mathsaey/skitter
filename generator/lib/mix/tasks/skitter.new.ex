@@ -165,10 +165,14 @@ defmodule Mix.Tasks.Skitter.New do
 
   import Config
 
-  # Set up Skitter to start the workflow defined in `lib/<%= @app_name %>`
-  # If you remove this you need to manually call `Skitter.Runtime.deploy/1` to deploy a workflow.
-  # You can also pass the `--deploy` option to the skitter deploy script when using releases.
-  config :skitter, deploy: &<%= @module_name %>.workflow/0
+  config :skitter,
+    # Set up Skitter to start the workflow defined in `lib/<%= @app_name %>`
+    # If you remove this you need to manually call `Skitter.Runtime.deploy/1` to deploy a workflow.
+    # You can also pass the `--deploy` option to the skitter deploy script when using releases.
+    deploy: &<%= @module_name %>.workflow/0,
+    # Skitter reports runtime events through the use of `:telemetry`. These reports are disabled
+    # at compile-time by default. Set this to true to enable telemetry reports.
+    telemetry: false
 
   # Set up the console logger. Values for level, format and metadata set here will also be used by
   # the file logger.
