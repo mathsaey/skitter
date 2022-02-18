@@ -12,11 +12,11 @@ defmodule Skitter.Runtime.ComponentStore do
   tuple. Each component knows its own index in this tuple, which enables constant-time access to
   any data stored in this store.
 
-  This module uses `:persistent_term`, so it should _not_ be used to manage mutable state.
+  This module uses `Skitter.Runtime.ConstantStore` under the hood. As such, it should _not_ be
+  used to handle mutable data.
   """
-  alias Skitter.Remote
-
-  @type ref() :: {module(), atom(), reference()}
+  alias Skitter.Runtime.ConstantStore
+  require ConstantStore
 
   @doc """
   Store a list of information inside the local component store.
@@ -24,34 +24,25 @@ defmodule Skitter.Runtime.ComponentStore do
   Data is implicitly converted to a tuple before insertion.
   """
   @spec put([any()], atom(), reference()) :: :ok
-  def put(term, atom, ref) do
-    :persistent_term.put({__MODULE__, atom, ref}, List.to_tuple(term))
-  end
+  def put(lst, atom, ref), do: ConstantStore.put(List.to_tuple(lst), atom, ref)
 
-  @doc """
-  Store data on the current node and all worker nodes.
-  """
+  @doc "Store data on the current node and all worker nodes."
   @spec put_everywhere([any()], atom(), reference()) :: :ok
-  def put_everywhere(term, atom, ref) do
-    put(term, atom, ref)
-    Remote.on_all_workers(__MODULE__, :put, [term, atom, ref])
-    :ok
+  def put_everywhere(lst, atom, ref) do
+    ConstantStore.put_everywhere(List.to_tuple(lst), atom, ref)
   end
 
   @doc """
   Get all data stored in a component store.
   """
   @spec get_all(atom(), reference()) :: [any()]
-  def get_all(atom, ref), do: Tuple.to_list(:persistent_term.get({__MODULE__, atom, ref}))
+  def get_all(atom, ref), do: ConstantStore.get(atom, ref) |> Tuple.to_list()
 
-  @doc """
-  Fetch data from the store for the component at `idx`.
-  """
+  @doc "Fetch data from the store for the component at `idx`."
   defmacro get(atom, ref, idx) do
     quote do
-      {unquote(__MODULE__), unquote(atom), unquote(ref)}
-      |> :persistent_term.get()
-      |> elem(unquote(idx))
+      require Skitter.Runtime.ConstantStore
+      Skitter.Runtime.ConstantStore.get(unquote(atom), unquote(ref)) |> elem(unquote(idx))
     end
   end
 end
