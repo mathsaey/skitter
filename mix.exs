@@ -7,6 +7,8 @@
 defmodule Skitter.MixProject do
   use Mix.Project
 
+  # Be sure to update generator/mix.exs when updating this file!
+
   @github_url "https://github.com/mathsaey/skitter/"
   @home_url "https://soft.vub.ac.be/~mathsaey/skitter/"
 
@@ -15,7 +17,7 @@ defmodule Skitter.MixProject do
       app: :skitter,
       name: "Skitter",
       elixir: "~> 1.13",
-      version: "0.5.1",
+      version: "0.5.2",
       source_url: @github_url,
       homepage_url: @home_url,
       start_permanent: Mix.env() == :prod,
