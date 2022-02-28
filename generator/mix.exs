@@ -7,18 +7,20 @@
 defmodule SkitterNew.MixProject do
   use Mix.Project
 
+  @github_url "https://github.com/mathsaey/skitter/"
+  @home_url "https://soft.vub.ac.be/~mathsaey/skitter/"
+
   def project do
-    skitter_project = Mix.Project.in_project(:skitter, "../", &(&1.project()))
     [
       app: :skitter_new,
-      version: skitter_project[:version],
-      elixir: skitter_project[:elixir],
+      elixir: "~> 1.13",
+      version: "0.6.0-dev",
+      source_url: @github_url,
+      homepage_url: @home_url,
       start_permanent: Mix.env() == :prod,
       description: description(),
-      package: package(skitter_project),
-      deps: deps(skitter_project[:deps]),
-      source_url: skitter_project[:source_url],
-      homepage_url: skitter_project[:homepage_url]
+      package: package(),
+      deps: deps()
     ]
   end
 
@@ -36,17 +38,19 @@ defmodule SkitterNew.MixProject do
     """
   end
 
-  defp package(skitter_project) do
+  defp package do
     [
       licenses:  ["MPL-2.0"],
       links: %{
-        github: skitter_project[:source_url],
-        homepage: skitter_project[:homepage_url]
+        github: @github_url,
+        homepage: @home_url
       }
     ]
   end
 
-  defp deps(skitter_deps) do
-    Enum.filter(skitter_deps, &(elem(&1, 0) == :ex_doc))
+  defp deps do
+    [
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+    ]
   end
 end

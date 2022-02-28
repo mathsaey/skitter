@@ -7,6 +7,8 @@
 defmodule Skitter.MixProject do
   use Mix.Project
 
+  # Be sure to update generator/mix.exs when updating this file!
+
   @github_url "https://github.com/mathsaey/skitter/"
   @home_url "https://soft.vub.ac.be/~mathsaey/skitter/"
 
