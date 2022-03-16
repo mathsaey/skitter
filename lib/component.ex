@@ -66,7 +66,7 @@ defmodule Skitter.Component do
   """
 
   use Skitter.Telemetry
-  alias Skitter.{Port, Strategy, Component.Callback.Info}
+  alias Skitter.{Strategy, Component.Callback.Info}
 
   # ----- #
   # Types #
@@ -78,6 +78,28 @@ defmodule Skitter.Component do
   This module should implement the `Skitter.Component` behaviour.
   """
   @type t :: module()
+
+  @typedoc """
+  Input/output interface of Skitter components.
+
+  The ports of a component determine its external interface. A port can be referred to by its
+  name, which is stored as an atom.
+
+  `in_port_to_index/2` and `out_port_to_index/2` can be used to convert a port name to a port
+  index.
+  """
+  @type port_name() :: atom()
+
+  @typedoc """
+  Input/output interface of Skitter components.
+
+  The ports of a component determine its external interface. A port can be referred to by its
+  index in the in or out ports list of a component.
+
+  `index_to_in_port/2` and `index_to_out_port/2` can be used to obtain the name of a port given
+  its index.
+  """
+  @type port_index() :: non_neg_integer()
 
   @typedoc """
   Arguments passed to a callback when it is called.
@@ -108,7 +130,7 @@ defmodule Skitter.Component do
   callback for a port should be wrapped in an `t:Enumerable.t/0`. Each element in this enumerable
   will be sent to downstream components separately.
   """
-  @type emit :: [{Port.t(), Enumerable.t()}]
+  @type emit :: [{port_name(), Enumerable.t()}]
 
   @typedoc """
   Values returned by a callback when it is called.
@@ -175,8 +197,8 @@ defmodule Skitter.Component do
   - `:strategy`: The `Skitter.Strategy` of the component. `nil` may be provided instead, in which
   case a strategy must be provided when the component is embedded in a workflow.
   """
-  @callback _sk_component_info(:in_ports) :: [Port.t()]
-  @callback _sk_component_info(:out_ports) :: [Port.t()]
+  @callback _sk_component_info(:in_ports) :: [port_name()]
+  @callback _sk_component_info(:out_ports) :: [port_name()]
   @callback _sk_component_info(:strategy) :: Strategy.t() | nil
 
   @doc """
@@ -266,7 +288,7 @@ defmodule Skitter.Component do
       iex> in_ports(ComponentModule)
       [:input]
   """
-  @spec in_ports(t()) :: [Port.t()]
+  @spec in_ports(t()) :: [port_name()]
   def in_ports(component), do: component._sk_component_info(:in_ports)
 
   @doc """
@@ -277,7 +299,7 @@ defmodule Skitter.Component do
       iex> out_ports(ComponentModule)
       [:output]
   """
-  @spec out_ports(t()) :: [Port.t()]
+  @spec out_ports(t()) :: [port_name()]
   def out_ports(component), do: component._sk_component_info(:out_ports)
 
   @doc """
@@ -290,7 +312,7 @@ defmodule Skitter.Component do
       iex> in_port_to_index(ComponentModule, :other)
       nil
   """
-  @spec in_port_to_index(t(), Port.t()) :: Port.index() | nil
+  @spec in_port_to_index(t(), port_name()) :: port_index() | nil
   def in_port_to_index(component, port) do
     component |> in_ports() |> Enum.find_index(&(&1 == port))
   end
@@ -305,7 +327,7 @@ defmodule Skitter.Component do
       iex> out_port_to_index(ComponentModule, :other)
       nil
   """
-  @spec out_port_to_index(t(), Port.t()) :: Port.index() | nil
+  @spec out_port_to_index(t(), port_name()) :: port_index() | nil
   def out_port_to_index(component, port) do
     component |> out_ports() |> Enum.find_index(&(&1 == port))
   end
@@ -320,7 +342,7 @@ defmodule Skitter.Component do
       iex> index_to_in_port(ComponentModule, 1)
       nil
   """
-  @spec index_to_in_port(t(), Port.index()) :: Port.t() | nil
+  @spec index_to_in_port(t(), port_index()) :: port_name() | nil
   def index_to_in_port(component, idx), do: component |> in_ports() |> Enum.at(idx)
 
   @doc """
@@ -333,7 +355,7 @@ defmodule Skitter.Component do
       iex> index_to_out_port(ComponentModule, 1)
       nil
   """
-  @spec index_to_out_port(t(), Port.index()) :: Port.t() | nil
+  @spec index_to_out_port(t(), port_index()) :: port_name() | nil
   def index_to_out_port(component, idx), do: component |> out_ports() |> Enum.at(idx)
 
   @doc """

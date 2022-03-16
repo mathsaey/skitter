@@ -15,7 +15,7 @@ defmodule Skitter.Runtime.Emit do
     raise(Skitter.DefinitionError, "Attempted to emit data inside a deploy hook")
   end
 
-  def emit(ctx = %Context{_skr: {ref, idx}}, emit, inv) do
+  def emit(%Context{_skr: {ref, idx}}, emit, inv) do
     Telemetry.emit([:runtime, :emit], %{}, %{context: ctx, emit: emit, invocation: inv})
 
     component_links = ComponentStore.get(:links, ref, idx)

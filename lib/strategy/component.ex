@@ -11,7 +11,7 @@ defmodule Skitter.Strategy.Component do
   This module defines and documents the various hooks a `Skitter.Strategy` for a component should
   implement, along with the functions it can use to access the runtime system.
   """
-  alias Skitter.{Component, Strategy, Strategy.Context, Deployment, Invocation, Worker, Port}
+  alias Skitter.{Component, Strategy, Strategy.Context, Deployment, Invocation, Worker}
 
   @doc """
   Deploy a component over the cluster.
@@ -42,7 +42,11 @@ defmodule Skitter.Strategy.Component do
   All context data (component, strategy, deployment data and the invocation) is available when
   this hook is called.
   """
-  @callback deliver(context :: Strategy.context(), data :: any(), port :: Port.index()) :: any()
+  @callback deliver(
+              context :: Strategy.context(),
+              data :: any(),
+              port :: Component.port_index()
+            ) :: any()
 
   @doc """
   Handle a message received by a worker.

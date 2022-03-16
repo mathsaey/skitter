@@ -20,7 +20,7 @@ defmodule Skitter.Workflow do
   not recommended to define a workflow manually. Instead, the use of
   `Skitter.DSL.Workflow.workflow/2` is preferred.
   """
-  alias Skitter.{Component, Strategy, Port, DefinitionError}
+  alias Skitter.{Component, Strategy, DefinitionError}
 
   # ----- #
   # Types #
@@ -35,7 +35,7 @@ defmodule Skitter.Workflow do
   """
   @type t :: %__MODULE__{
           in: links(),
-          out: [Port.t()],
+          out: [Component.port_name()],
           nodes: %{name() => component() | workflow()}
         }
 
@@ -74,7 +74,7 @@ defmodule Skitter.Workflow do
   Links are stored as a keyword list. Each key in this list represents an out port, while the
   value of this key is a list which references the destinations of this out port.
   """
-  @type links :: [{Port.t(), [destination()]}]
+  @type links :: [{Component.port_name(), [destination()]}]
 
   @typedoc """
   Link destination.
@@ -83,7 +83,7 @@ defmodule Skitter.Workflow do
   the workflow. In the first case, the name of the component and the name of the out port are
   stored, in the second, only the name of the out port is stored.
   """
-  @type destination :: {name(), Port.t()} | Port.t()
+  @type destination :: {name(), Component.port_name()} | Component.port_name()
 
   @typedoc """
   Instance name
