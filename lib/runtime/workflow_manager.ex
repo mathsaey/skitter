@@ -12,16 +12,20 @@ defmodule Skitter.Runtime.WorkflowManager do
   ensuring the state of the deployed workflow is available when new workers are added to the
   cluster.
   """
-  use GenServer
+  use GenServer, restart: :transient
 
   alias Skitter.{Runtime, Remote}
   alias Skitter.Mode.Master.WorkerConnection
-  alias Skitter.Runtime.{ComponentStore, WorkflowWorkerSupervisor}
+  alias Skitter.Runtime.{ConstantStore, ComponentStore, WorkflowWorkerSupervisor}
+
+  require ConstantStore
 
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
+  def stop(ref), do: GenServer.stop(ConstantStore.get(:manager, ref))
 
   def init(ref) do
     unless Runtime.mode() == :local, do: WorkerConnection.subscribe_up()
+    ConstantStore.put(self(), :manager, ref)
     {:ok, ref}
   end
 

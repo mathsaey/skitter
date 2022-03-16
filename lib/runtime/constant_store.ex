@@ -31,6 +31,8 @@ defmodule Skitter.Runtime.ConstantStore do
     :ok
   end
 
+  def remove(atom, ref), do: :persistent_term.erase({__MODULE__, atom, ref})
+
   @doc """
   Fetch data from the constant store.
 

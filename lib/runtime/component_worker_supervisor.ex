@@ -21,6 +21,7 @@ defmodule Skitter.Runtime.ComponentWorkerSupervisor do
   alias Skitter.Runtime.{WorkerSupervisor, ComponentStore}
 
   def start_link(args), do: Supervisor.start_link(__MODULE__, args)
+  def stop_child(pid), do: DynamicSupervisor.terminate_child(__MODULE__, pid)
 
   @impl true
   def init({_ref, components}) do

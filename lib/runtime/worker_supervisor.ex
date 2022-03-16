@@ -18,21 +18,18 @@ defmodule Skitter.Runtime.WorkerSupervisor do
   each component. This supervisor is responsible for managing the `Skitter.Runtime.Worker`s
   spawned by the strategy of the component.
   """
-  use DynamicSupervisor
+  use DynamicSupervisor, restart: :transient
 
   alias Skitter.{Strategy, Worker}
   alias Skitter.Runtime.ComponentStore
 
   require ComponentStore
 
-  def start_link(arg) do
-    DynamicSupervisor.start_link(__MODULE__, arg)
-  end
+  def start_link(arg), do: DynamicSupervisor.start_link(__MODULE__, arg)
+  def stop(pid), do: DynamicSupervisor.stop(pid)
 
   @impl true
-  def init(_arg) do
-    DynamicSupervisor.init(strategy: :one_for_one, max_restarts: 0)
-  end
+  def init(_arg), do: DynamicSupervisor.init(strategy: :one_for_one, max_restarts: 0)
 
   @doc """
   Start a worker with `state` and `tag` for the given `ctx`.
