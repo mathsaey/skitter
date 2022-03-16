@@ -17,12 +17,24 @@ defmodule Skitter.Strategy do
 
   This module defines the strategy and context types.
   """
-  alias Skitter.{Component, Workflow, Deployment, Invocation}
+  alias Skitter.{Component, Workflow, Invocation}
 
   @typedoc """
   A strategy is defined as a module.
   """
   @type t :: module()
+
+  @typedoc """
+  Constant data of a data processing pipeline.
+
+  A component which is deployed over the cluster has access to an immutable set of data which is
+  termed the _deployment_. A strategy can specify which data to store in its deployment inside the
+  `c:Skitter.Strategy.Component.deploy/1` hook. Afterwards, the other strategy hooks have access
+  to the data stored within the deployment.
+
+  Note that a component strategy can only access its own deployment data.
+  """
+  @type deployment :: any()
 
   @typedoc """
   Context information for strategy hooks.
@@ -46,7 +58,7 @@ defmodule Skitter.Strategy do
           component: Component.t(),
           strategy: t(),
           args: Workflow.args(),
-          deployment: Deployment.data() | nil,
+          deployment: deployment() | nil,
           invocation: Invocation.t() | nil,
           _skr: any()
         }
