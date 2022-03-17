@@ -60,7 +60,7 @@ defmodule Skitter.Runtime do
   end
 
   @doc """
-  Get the workflow node based on a context
+  Get the workflow node based on a context.
 
   The workflow node will always be a component node.
 
@@ -69,6 +69,15 @@ defmodule Skitter.Runtime do
   """
   @spec node_for_context(Strategy.context()) :: Workflow.component()
   def node_for_context(context), do: get_workflow(context).nodes[node_name_for_context(context)]
+
+  @doc """
+  Get the reference based on a context.
+
+  This can be used to link a telemetry event which contained a context to a deployed workflow.
+  """
+  @spec ref_for_context(Strategy.context()) :: ref()
+  def ref_for_context(%Strategy.Context{_skr: {ref, _}}), do: ref
+  def ref_for_context(%Strategy.Context{_skr: {:deploy, ref, _}}), do: ref
 
   @doc """
   Deploy a workflow.
@@ -163,11 +172,11 @@ defmodule Skitter.Runtime do
   @doc "Stop the workflow with reference `ref`."
   @spec stop(ref()) :: :ok
   def stop(ref) do
-    WorkflowManager.stop(ref)
+    Telemetry.emit([:runtime, :stop], %{}, %{ref: ref})
 
+    WorkflowManager.stop(ref)
     # TODO: stop hook if introduced
     stop_workers(ref)
-
     Remote.on_all_workers(WorkflowWorkerSupervisor, :stop_local_workflow, [ref])
     remove_constants(ref)
     :ok

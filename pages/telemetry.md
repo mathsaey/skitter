@@ -98,6 +98,13 @@ The events described in this section are not wrapped and are emitted by
 * `[:skitter, :runtime, :deploy]`: Emitted when a workflow is deployed. The
   event is emitted after everything is ready, but before
   `Skitter.Runtime.deploy/1` returns.
+  * `ref`: A unique reference to the deployed workflow.
+* `[:skitter, :runtime, :stop]`: Emitted when a deployed workflow is stopped
+  using `Skitter.Runtime.stop/1`. The event is emitted before any workers are
+  stopped. Telemetry events for `ref` received after this event should be
+  ignored, as no guarantees are made about the internal consistency of the
+  workflow.
+  * `ref`: The reference of the deployed workflow.
 
 #### Remote
 
