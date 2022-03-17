@@ -89,7 +89,7 @@ The events described in this section are not wrapped and are emitted by
   * `:to`: The `t:pid/0` of the worker receiving the message.
   * `:message`: The message being sent.
   * `:invocation`: The `t:Skitter.Invocation.t/0` of the message being sent.
-* `[:skitter, :runtime, emit]`: Emitted when a strategy emits data using
+* `[:skitter, :runtime, :emit]`: Emitted when a strategy emits data using
   `Skitter.Strategy.Component.emit/3`.
   * `context`: The context of the hook emitting the data.
   * `emit`: The emitted data: `t:Skitter.Component.emit/0`.
