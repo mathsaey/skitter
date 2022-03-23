@@ -34,6 +34,7 @@ defstrategy Skitter.BIS.StreamSource do
       end,
       :source
     )
+
     Remote.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 

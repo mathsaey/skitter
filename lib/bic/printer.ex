@@ -23,6 +23,7 @@ defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLo
     case config() do
       nil -> IO.inspect(val)
       label -> IO.inspect(val, label: label)
-    end ~> _
+    end
+    ~> _
   end
 end

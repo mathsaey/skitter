@@ -38,9 +38,12 @@ defmodule Skitter.Runtime.WorkflowWorkerSupervisor do
   `Skitter.Runtime.ConstantStore` with the `:skitter_component_worker_superivor` key.
   """
   def spawn_local_workflow(ref, components) do
-    {:ok, pid} = DynamicSupervisor.start_child(
-      __MODULE__, {ComponentWorkerSupervisor, {ref, components}}
-    )
+    {:ok, pid} =
+      DynamicSupervisor.start_child(
+        __MODULE__,
+        {ComponentWorkerSupervisor, {ref, components}}
+      )
+
     ComponentWorkerSupervisor.store_supervisors(pid, ref)
     ConstantStore.put(pid, :component_worker_supervisor, ref)
   end

@@ -41,7 +41,7 @@ defmodule Skitter.Worker do
   Functions which create workers may be created with an initial state, or with a function which
   returns an initial state.
   """
-  @type state_or_state_fn :: state() | (-> state())
+  @type state_or_state_fn :: state() | (() -> state())
 
   @typedoc """
   Worker tag.

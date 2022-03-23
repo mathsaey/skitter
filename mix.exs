@@ -27,7 +27,7 @@ defmodule Skitter.MixProject do
       package: package(),
       deps: deps(),
       docs: docs(),
-      xref: xref(),
+      xref: xref()
     ]
   end
 
@@ -79,7 +79,7 @@ defmodule Skitter.MixProject do
 
   defp package do
     [
-      licenses:  ["MPL-2.0"],
+      licenses: ["MPL-2.0"],
       links: %{github: @github_url, homepage: @home_url}
     ]
   end
@@ -93,18 +93,19 @@ defmodule Skitter.MixProject do
       logo: "assets/logo-light_docs.png",
       formatters: ["html"],
       api_reference: false,
-      filter_modules: if System.get_env("EX_DOC_PRIVATE") do
-        fn _, _ -> true end
-      else
-        private = ~w(
-          Skitter.Config
-          Skitter.Telemetry
-          Skitter.Runtime.
-          Skitter.Remote.
-          Skitter.Mode.
+      filter_modules:
+        if System.get_env("EX_DOC_PRIVATE") do
+          fn _, _ -> true end
+        else
+          private = ~w(
+            Skitter.Config
+            Skitter.Telemetry
+            Skitter.Runtime.
+            Skitter.Remote.
+            Skitter.Mode.
         )
-        fn mod, _ -> not String.contains?(to_string(mod), private) end
-      end,
+          fn mod, _ -> not String.contains?(to_string(mod), private) end
+        end,
       extras: [
         {:"README.md", [title: "Skitter", filename: "readme"]},
         "pages/deployment.md",

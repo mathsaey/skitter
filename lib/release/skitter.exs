@@ -30,9 +30,10 @@ config_enabled_if_set :shutdown_with_workers, "SKITTER_SHUTDOWN_WITH_WORKERS"
 
 # Master & Local
 config_from_env :deploy, "SKITTER_DEPLOY", fn str ->
-  fn -> case Code.eval_string(str) do
-    {wf = %Skitter.Workflow{}, _} -> wf
-    {val, _} -> raise "Evaluating `#{str}` returned `#{inspect val}`, expected a workflow."
+  fn ->
+    case Code.eval_string(str) do
+      {wf = %Skitter.Workflow{}, _} -> wf
+      {val, _} -> raise "Evaluating `#{str}` returned `#{inspect(val)}`, expected a workflow."
     end
   end
 end

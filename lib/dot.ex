@@ -77,6 +77,7 @@ defmodule Skitter.Dot do
         ) :: :ok | {:error, String.t()}
   def render_to_file(w = %Workflow{}, format \\ "pdf", path \\ "dot.pdf", opts \\ []) do
     opts = Keyword.merge(opts, [extra: ["-o", path]], fn _, l, r -> l ++ r end)
+
     case render(w, format, opts) do
       {:ok, _} -> :ok
       {:error, err} -> {:error, err}

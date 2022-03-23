@@ -13,4 +13,3 @@ defmodule Skitter.ExitCodes do
   @spec remote_shutdown :: 4
   def remote_shutdown, do: 4
 end
-

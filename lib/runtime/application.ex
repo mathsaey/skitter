@@ -122,7 +122,7 @@ defmodule Skitter.Runtime.Application do
   defp do_deploy do
     with {:ok, fun} <- validate_config(Config.get(:deploy)),
          {:ok, wf} <- validate_result(fun.()) do
-      Logger.info("Deploying #{inspect fun}")
+      Logger.info("Deploying #{inspect(fun)}")
       Runtime.deploy(wf)
       :ok
     end
