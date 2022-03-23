@@ -1,68 +1,5 @@
 kind: pipeline
 type: docker
-name: test
-
-steps:
-  - name: test
-    image: elixir:latest
-    environment:
-      MIX_ENV: test
-    commands:
-      - mix local.hex --force
-      - mix local.rebar --force
-      - mix deps.get --only test
-      - mix deps.compile
-      - epmd -daemon
-      - mix test
-
----
-kind: pipeline
-type: docker
-name: typecheck
-
-steps:
-  - name: restore-plt-cache
-    image: meltwater/drone-cache
-    settings:
-      backend: "filesystem"
-      restore: true
-      cache_key: "volume"
-      mount:
-        - '_build/dialyzer'
-    volumes:
-    - name: cache
-      path: /tmp/cache
-
-  - name: dialyzer
-    image: elixir:latest
-    environment:
-      MIX_ENV: dev
-    commands:
-      - mix local.hex --force
-      - mix local.rebar --force
-      - mix deps.get --only dev
-      - mix deps.compile
-      - mix dialyzer --quiet --format short
-
-  - name: rebuild-plt-cache
-    image: meltwater/drone-cache
-    settings:
-      backend: "filesystem"
-      rebuild: true
-      cache_key: "volume"
-      mount:
-        - '_build/dialyzer'
-    volumes:
-    - name: cache
-      path: /tmp/cache
-
-volumes:
-  - name: cache
-    host:
-      path: /var/cache/drone/
----
-kind: pipeline
-type: docker
 name: docs
 
 steps:
@@ -121,5 +58,3 @@ trigger:
 
 depends_on:
 - docs
-- test
-- typecheck
