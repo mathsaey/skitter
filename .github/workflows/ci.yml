@@ -1,0 +1,64 @@
+# Copyright 2018 - 2022, Mathijs Saey, Vrije Universiteit Brussel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+on: [push, pull_request]
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    name: Check type annotations with Dialyzer
+    strategy:
+      matrix:
+        otp: ['24.2']
+        elixir: ['1.13.2']
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - name: Get Elixir dependencies
+        run: mix deps.get
+      - name: Run dialyzer to check type annotations
+        run: mix dialyzer
+
+  test:
+    runs-on: ubuntu-latest
+    name: Run tests
+    strategy:
+      matrix:
+        otp: ['24.2']
+        elixir: ['1.13.2']
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - name: Get Elixir dependencies
+        run: mix deps.get
+      - name: Start epmd for distributed tests
+        run: epmd -daemon
+      - name: Run Elixir tests
+        run: mix test
+
+  format:
+    runs-on: ubuntu-latest
+    name: Check Elixir formatting
+    strategy:
+      matrix:
+        otp: ['24.2']
+        elixir: ['1.13.2']
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - name: Get Elixir dependencies
+        run: mix deps.get
+      - name: Check code formatting
+        run: mix format --check-formatted
