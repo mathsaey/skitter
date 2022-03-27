@@ -1,0 +1,19 @@
+# Copyright 2018 - 2022, Mathijs Saey, Vrije Universiteit Brussel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+version: 2
+
+updates:
+  - package-ecosystem: "mix"
+    directory: "/"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "mix"
+    directory: "/generator"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "generator"
