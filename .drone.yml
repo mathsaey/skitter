@@ -13,6 +13,7 @@ steps:
       - mix deps.get --only dev
       - mix deps.compile
       - mix docs
+      - ln -s ../docs_config.js doc/docs_config.js
 
   - name: publish
     image: drillster/drone-rsync
