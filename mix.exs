@@ -48,7 +48,7 @@ defmodule Skitter.MixProject do
 
       # Runtime
       {:logger_file_backend, "~> 0.0.13"},
-      {:telemetry, "~> 1.0"},
+      {:telemetry, "~> 1.1"},
 
       # Used by built-in strategies
       {:murmur, "~> 1.0"}
