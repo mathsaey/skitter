@@ -50,9 +50,6 @@ defmodule Skitter.Runtime do
 
   @doc """
   Get the name of the workflow node based on a context.
-
-  This can only be executed on a runtime in `:master` or `:local` mode, as the information
-  required to link a node to a context is only stored on the master runtime.
   """
   @spec node_name_for_context(Strategy.context()) :: Workflow.name()
   def node_name_for_context(%Strategy.Context{_skr: {ref, idx}}) do
@@ -63,9 +60,6 @@ defmodule Skitter.Runtime do
   Get the workflow node based on a context.
 
   The workflow node will always be a component node.
-
-  This can only be executed on a runtime in `:master` or `:local` mode, as the information
-  required to link a node to a context is only stored on the master runtime.
   """
   @spec node_for_context(Strategy.context()) :: Workflow.component()
   def node_for_context(context), do: get_workflow(context).nodes[node_name_for_context(context)]
@@ -91,8 +85,8 @@ defmodule Skitter.Runtime do
     nodes = Workflow.flatten(workflow).nodes
 
     # Store information to extract workflow information from the context
-    ConstantStore.put(nodes, :wf_nodes, ref)
-    nodes |> Map.keys() |> ComponentStore.put(:wf_node_names, ref)
+    ConstantStore.put_everywhere(nodes, :wf_nodes, ref)
+    nodes |> Map.keys() |> ComponentStore.put_everywhere(:wf_node_names, ref)
 
     # Create supervisors on all workers for every component in the workflow
     Remote.on_all_workers(WorkflowWorkerSupervisor, :spawn_local_workflow, [ref, map_size(nodes)])
@@ -197,7 +191,14 @@ defmodule Skitter.Runtime do
     |> Enum.each(&ConstantStore.remove(&1, ref))
 
     Remote.on_all_workers(fn ->
-      [:component_worker_supervisors, :deployment, :links, :local_supervisors]
+      [
+        :wf_nodes,
+        :wf_node_names,
+        :component_worker_supervisors,
+        :deployment,
+        :links,
+        :local_supervisors
+      ]
       |> Enum.each(&ConstantStore.remove(&1, ref))
     end)
   end

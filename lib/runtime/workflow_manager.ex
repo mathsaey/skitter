@@ -30,12 +30,16 @@ defmodule Skitter.Runtime.WorkflowManager do
   end
 
   def handle_info({:worker_up, node, _}, ref) do
-    links = ComponentStore.get_all(:skitter_links, ref)
-    deployment = ComponentStore.get_all(:skitter_deployment, ref)
+    nodes = ConstantStore.get(:wf_nodes, ref)
+    names = ComponentStore.get_all(:wf_node_names, ref)
+    links = ComponentStore.get_all(:links, ref)
+    deployment = ComponentStore.get_all(:deployment, ref)
 
     Remote.on(node, fn ->
-      ComponentStore.put(links, :skitter_links, ref)
-      ComponentStore.put(deployment, :skitter_deployment, ref)
+      ConstantStore.put(nodes, :wf_nodes, ref)
+      ComponentStore.put(names, :wf_node_names, ref)
+      ComponentStore.put(links, :links, ref)
+      ComponentStore.put(deployment, :deployment, ref)
       WorkflowWorkerSupervisor.spawn_local_workflow(ref, length(links))
     end)
 
