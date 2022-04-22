@@ -35,6 +35,18 @@ defmodule Skitter.BIC do
   end
 
   @doc """
+  `Skitter.BIC.Filter` node.
+
+  Inserts a `Skitter.BIC.Filter` `Skitter.DSL.Workflow.node/2` in the workflow. The argument
+  passed to this macro is passed as an argument to `Skitter.BIC.Filter`, other options (`as:`,
+  `with:`) should be passed as a second, optional argument.
+  """
+  defmacro filter(func, opts \\ []) do
+    opts = [args: func] ++ opts
+    quote(do: node(Skitter.BIC.Filter, unquote(opts)))
+  end
+
+  @doc """
   `Skitter.BIC.KeyBy` node.
 
   Inserts a `Skitter.BIC.KeyBy` `Skitter.DSL.Workflow.node/2` in the workflow. The provided `func`
