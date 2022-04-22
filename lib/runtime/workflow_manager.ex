@@ -22,13 +22,19 @@ defmodule Skitter.Runtime.WorkflowManager do
 
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
   def stop(ref), do: GenServer.stop(ConstantStore.get(:manager, ref))
+  def ref(pid), do: GenServer.call(pid, :ref)
 
+  @impl true
   def init(ref) do
     unless Runtime.mode() == :local, do: WorkerConnection.subscribe_up()
     ConstantStore.put(self(), :manager, ref)
     {:ok, ref}
   end
 
+  @impl true
+  def handle_call(:ref, _, ref), do: {:reply, ref, ref}
+
+  @impl true
   def handle_info({:worker_up, node, _}, ref) do
     nodes = ConstantStore.get(:wf_nodes, ref)
     names = ComponentStore.get_all(:wf_node_names, ref)

@@ -19,4 +19,10 @@ defmodule Skitter.Runtime.WorkflowManagerSupervisor do
   def add_manager(ref) do
     DynamicSupervisor.start_child(__MODULE__, {WorkflowManager, ref})
   end
+
+  def spawned_workflow_references do
+    __MODULE__
+    |> DynamicSupervisor.which_children()
+    |> Enum.map(fn {_, pid, _, _} -> WorkflowManager.ref(pid) end)
+  end
 end

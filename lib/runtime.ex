@@ -73,6 +73,22 @@ defmodule Skitter.Runtime do
   def ref_for_context(%Strategy.Context{_skr: {:deploy, ref, _}}), do: ref
 
   @doc """
+  Get a list with references to every spawned workflow.
+
+  This function communicates with the master node when called from a worker runtime.
+  """
+  @spec spawned_workflows :: [ref()]
+  def spawned_workflows do
+    case mode() do
+      :worker ->
+        Remote.on(Remote.master(), WorkflowManagerSupervisor, :spawned_workflow_references, [])
+
+      _ ->
+        WorkflowManagerSupervisor.spawned_workflow_references()
+    end
+  end
+
+  @doc """
   Deploy a workflow.
 
   Starts a Skitter application (i.e. a workflow) by deploying it over the cluster. Returns a
