@@ -16,7 +16,6 @@ defmodule Skitter.Runtime do
     ComponentStore,
     WorkflowManager,
     WorkerSupervisor,
-    ComponentWorkerSupervisor,
     WorkflowWorkerSupervisor,
     WorkflowManagerSupervisor
   }
