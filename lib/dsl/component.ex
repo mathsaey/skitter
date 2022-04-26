@@ -623,6 +623,121 @@ defmodule Skitter.DSL.Component do
 
       iex> Component.call(CbExample, :emit_multi, %{}, nil, [])
       %Result{result: nil, emit: [out_port: [~D[1991-12-08], ~D[2021-07-08]]], state: %{}}
+
+  ## Mutable state and control flow
+
+  The `<~/2`, `~>/2` and `~>>/2` operators add mutable state to Elixir, which is an immutable
+  language. Internally, hidden variables are used to track the current state and values to emit.
+  To make this work, the callback DSL rewrites several control flow structures offered by elixir.
+  While this approach work well, some limitations are present when the `<~/2`, `~>/2` and `~>>/2`
+  operators are used inside control flow structures.
+
+  The use of these operators is supported in the following control flow constructs:
+
+  * `Kernel.if/2`
+  * `Kernel.unless/2`
+  * `Kernel.SpecialForms.try/1`
+  * `Kernel.SpecialForms.cond/1`
+  * `Kernel.SpecialForms.case/2`
+  * `Kernel.SpecialForms.receive/1`
+
+  With the exception of `Kernel.SpecialForms.try/1`, all of these control flow constructs behave
+  as expected. Said otherwise, state updates performed inside any of these constructs are
+  reflected outside of the control flow construct.
+
+  ### `try`
+
+  The behaviour of `try` blocks is not as straightforward due to implementation limitations. We
+  describe the different behaviours that may occur below.
+
+  ```
+  defcb simple(fun) do
+    try do
+      pre <~ :modified
+      res = fun.()
+      post <~ :modified
+      :emit ~> out
+      res
+    rescue
+      RuntimeError ->
+        x <~ :modified
+        :rescue
+    catch
+      _ ->
+        :emit ~> out
+        :catch
+    end
+  end
+  ```
+
+  If no exception is raised or no value is thrown, updates performed inside the `do` block will
+  always be visible:
+
+      iex> Component.call(TryExample, :simple, %{pre: nil, post: nil}, nil, [fn -> :foo end])
+      %Result{state: %{pre: :modified, post: :modified}, result: :foo, emit: [out: [:emit]]}
+
+  However, when an exception is raised or a value is thrown, any updates performed inside the `do`
+  block are discarded:
+
+      iex> Component.call(TryExample, :simple, %{pre: nil, post: nil, x: nil}, nil, [fn -> raise RuntimeError end])
+      %Result{state: %{pre: :nil, post: :nil, x: :modified}, result: :rescue, emit: []}
+
+      iex> Component.call(TryExample, :simple, %{pre: nil, post: nil}, nil, [fn -> throw :foo end])
+      %Result{state: %{pre: :nil, post: :nil}, result: :catch, emit: [out: [:emit]]}
+
+  As shown above, updates inside the `catch` or `rescue` clauses are reflected in the final
+  result.
+
+  #### `else` and `after`
+
+  ```
+  defcb with_else(fun) do
+    try do
+      pre <~ :modified
+      res = fun.()
+      post <~ :modified
+      :emit ~> out
+      res
+    rescue
+      RuntimeError ->
+        :rescue
+    else
+      res ->
+        x <~ :modified
+        res
+    end
+  end
+  ```
+
+  Updates inside the `do` block _are_ reflected in the `else` block:
+
+      iex> Component.call(TryExample, :with_else, %{pre: nil, post: nil, x: nil}, nil, [fn -> :foo end])
+      %Result{state: %{pre: :modified, post: :modified, x: :modified}, result: :foo, emit: [out: [:emit]]}
+
+  Updates inside the `after` block are ignored:
+
+  ```
+  defcb with_after(fun) do
+    try do
+      pre <~ :modified
+      res = fun.()
+      post <~ :modified
+      :emit ~> out
+      res
+    rescue
+      RuntimeError -> :rescue
+    after
+      x <~ :modified
+      :ignored
+    end
+  end
+  ```
+
+      iex> Component.call(TryExample, :with_after, %{pre: nil, post: nil, x: nil}, nil, [fn -> :foo end])
+      %Result{state: %{pre: :modified, post: :modified, x: nil}, result: :foo, emit: [out: [:emit]]}
+
+  In short, updates are preserved during the normal flow of an operation (i.e. when no values are
+  raised or thrown), updates inside `after` are ignored.
   """
   defmacro defcb(signature, do: body) do
     body = __MODULE__.ControlFlowOperators.rewrite_special_forms(body)

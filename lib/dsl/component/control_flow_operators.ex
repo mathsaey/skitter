@@ -31,7 +31,10 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
   # Rewrite special forms (which cannot be excluded from import)
   def rewrite_special_forms(body) do
     Macro.prewalk(body, fn
-      {:case, env, branches} -> {:case_, env, branches}
+      {:try, env, args} -> {:try_, env, args}
+      {:case, env, args} -> {:case_, env, args}
+      {:cond, env, args} -> {:cond_, env, args}
+      {:receive, env, args} -> {:receive_, env, args}
       any -> any
     end)
   end
@@ -66,17 +69,7 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
   end
 
   defmacro case_(expr, do: branches) do
-    updates = updates(branches)
-
-    branches =
-      Enum.flat_map(branches, fn
-        {:->, _, [head, body]} ->
-          quote do
-            unquote_splicing(head) ->
-              result = unquote(body)
-              {result, unquote_splicing(updates)}
-          end
-      end)
+    {branches, updates} = rewrite_branches(branches)
 
     quote do
       {result, unquote_splicing(updates)} =
@@ -86,6 +79,108 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
 
       result
     end
+  end
+
+  defmacro cond_(do: branches) do
+    {branches, updates} = rewrite_branches(branches)
+
+    quote do
+      {result, unquote_splicing(updates)} =
+        cond do
+          unquote(branches)
+        end
+
+      result
+    end
+  end
+
+  defmacro receive_(do: branches) do
+    {branches, updates} = rewrite_branches(branches)
+
+    quote do
+      {result, unquote_splicing(updates)} =
+        receive do
+          unquote(branches)
+        end
+
+      result
+    end
+  end
+
+  defmacro receive_(do: do_branches, after: after_branches) do
+    updates = updates(do_branches ++ after_branches)
+    do_branches = rewrite_branches(do_branches, updates)
+    after_branches = rewrite_branches(after_branches, updates)
+
+    quote do
+      {result, unquote_splicing(updates)} =
+        receive do
+          unquote(do_branches)
+        after
+          unquote(after_branches)
+        end
+
+      result
+    end
+  end
+
+  defmacro try_(lst) do
+    updates = updates(lst)
+
+    quote do
+      {result, unquote_splicing(updates)} = try(unquote(Enum.map(lst, &rewrite_try(&1, updates))))
+      result
+    end
+  end
+
+  defp rewrite_try({:rescue, branch}, updates), do: {:rescue, rewrite_branches(branch, updates)}
+  defp rewrite_try({:catch, branch}, updates), do: {:catch, rewrite_branches(branch, updates)}
+
+  # Result of after is ignored by elixir, so we do the same here
+  # Might be worth providing an error if write or emits occur here in the future
+  defp rewrite_try({:after, branch}, _), do: {:after, branch}
+
+  defp rewrite_try({:do, body}, updates) do
+    body =
+      quote do
+        result = unquote(body)
+        {result, unquote_splicing(updates)}
+      end
+
+    {:do, body}
+  end
+
+  # The do block returns possibly updated state and emit data. Need to adjust the matched patterns
+  # for this.
+  defp rewrite_try({:else, branches}, updates) do
+    branches =
+      Enum.flat_map(branches, fn
+        {:->, _, [head, body]} ->
+          quote do
+            {unquote_splicing(head), unquote_splicing(updates)} ->
+              result = unquote(body)
+              {result, unquote_splicing(updates)}
+          end
+      end)
+
+    {:else, branches}
+  end
+
+  defp rewrite_branches(branches) do
+    updates = updates(branches)
+    branches = rewrite_branches(branches, updates)
+    {branches, updates}
+  end
+
+  defp rewrite_branches(branches, updates) do
+    Enum.flat_map(branches, fn
+      {:->, _, [head, body]} ->
+        quote do
+          unquote_splicing(head) ->
+            result = unquote(body)
+            {result, unquote_splicing(updates)}
+        end
+    end)
   end
 
   defp updates(branches) do
