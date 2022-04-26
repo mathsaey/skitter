@@ -18,4 +18,26 @@ defmodule Skitter.DSL.AST do
   """
   def names_to_atoms(lst) when is_list(lst), do: Enum.map(lst, &name_to_atom/1)
   def names_to_atoms(any), do: names_to_atoms([any])
+
+  @doc """
+  Extract the name, arguments and guards from a function header.
+  """
+  def decompose_clause({:when, _, [call, guards]}) do
+    {name, args} = Macro.decompose_call(call)
+    {name, args, guards}
+  end
+
+  def decompose_clause(ast) do
+    {name, args} = Macro.decompose_call(ast)
+    {name, args, nil}
+  end
+
+  @doc """
+  Build a function clause
+  """
+  def build_clause(name, args, nil), do: quote(do: unquote(name)(unquote_splicing(args)))
+
+  def build_clause(name, args, guards) do
+    quote(do: unquote(name)(unquote_splicing(args)) when unquote(guards))
+  end
 end

@@ -151,6 +151,10 @@ defmodule Skitter.DSL.ComponentTest do
     defcb f(:foo), do: x <~ :foo
     defcb f(:bar), do: y <~ :bar
     defcb f(:baz), do: :baz ~> z
+
+    defcb g(x) when x > 5, do: :gt
+    defcb g(x) when x < 5, do: :lt
+    defcb g(_), do: :eq
   end
 
   test "multiple callback clauses" do
@@ -177,6 +181,12 @@ defmodule Skitter.DSL.ComponentTest do
              state: %Clauses{},
              emit: [z: [:baz]]
            }
+  end
+
+  test "guards" do
+    assert Component.call(Clauses, :g, [0]).result == :lt
+    assert Component.call(Clauses, :g, [8]).result == :gt
+    assert Component.call(Clauses, :g, [5]).result == :eq
   end
 
   describe "control flow rewrite" do
@@ -497,6 +507,9 @@ defmodule Skitter.DSL.ComponentTest do
             _ ->
               :catch
           else
+            x when x in [:foo, :bar] ->
+              :baz
+
             _ ->
               :else
           after

@@ -739,17 +739,16 @@ defmodule Skitter.DSL.Component do
   In short, updates are preserved during the normal flow of an operation (i.e. when no values are
   raised or thrown), updates inside `after` are ignored.
   """
-  defmacro defcb(signature, do: body) do
+  defmacro defcb(clause, do: body) do
     body = __MODULE__.ControlFlowOperators.rewrite_special_forms(body)
-    {name, args} = Macro.decompose_call(signature)
-    arity = length(args)
-
     info = %Info{read?: read?(body), write?: write?(body), emit?: emit?(body)} |> Macro.escape()
+    {name, args, guards} = AST.decompose_clause(clause)
+    arity = length(args)
 
     quote do
       @doc false
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
-      def unquote(name)(unquote(state_var()), unquote(config_var()), unquote_splicing(args)) do
+      def unquote(AST.build_clause(name, [state_var(), config_var()] ++ args, guards)) do
         import unquote(__MODULE__), only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
         use unquote(__MODULE__.ControlFlowOperators)
 
@@ -765,4 +764,16 @@ defmodule Skitter.DSL.Component do
       end
     end
   end
+
+  defp build_signature(name, args) do
+    quote do
+      unquote(name)(unquote(state_var()), unquote(config_var()), unquote_splicing(args))
+    end
+  end
+
+  defp build_clause(signature, {:when, _, [_, guards]}) do
+    quote(do: unquote(signature) when unquote(guards))
+  end
+
+  defp build_clause(signature, _), do: quote(do: unquote(signature))
 end

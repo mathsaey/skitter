@@ -22,6 +22,7 @@ defmodule Skitter.DSL.Strategy do
   - A trait-like mechanism is introduced, which can be used to create new strategies based on
   existing ones.
   """
+  alias Skitter.DSL.AST
 
   # -------- #
   # Strategy #
@@ -245,8 +246,8 @@ defmodule Skitter.DSL.Strategy do
       "Child says: Hello!"
 
   """
-  defmacro defhook(signature, do: body) do
-    {name, args} = Macro.decompose_call(signature)
+  defmacro defhook(clause, do: body) do
+    {name, args, guards} = AST.decompose_clause(clause)
     body = Macro.prewalk(body, &maybe_modify_call(Macro.decompose_call(&1), &1, __CALLER__))
 
     body =
@@ -266,7 +267,7 @@ defmodule Skitter.DSL.Strategy do
         unquote(body)
       end
 
-    gen_hook(name, args, quote(do: __MODULE__), body)
+    gen_hook(name, args, guards, quote(do: __MODULE__), body)
   end
 
   # Pass the context when a parent hook is called
@@ -280,11 +281,11 @@ defmodule Skitter.DSL.Strategy do
   defp maybe_modify_call(_, node, _), do: node
 
   # Generate a hook implementation, store the module that defined the hook
-  defp gen_hook(name, args, module, body) do
+  defp gen_hook(name, args, guards, module, body) do
     quote do
       @doc false
       @_sk_hook {{unquote(name), unquote(length(args))}, unquote(module)}
-      def unquote(name)(unquote(context_var()), unquote_splicing(args)) do
+      def unquote(AST.build_clause(name, [context_var() | args], guards)) do
         unquote(body)
       end
     end
@@ -318,7 +319,7 @@ defmodule Skitter.DSL.Strategy do
           Enum.map(to_add, fn {hook, arity} ->
             module = parent._sk_hook_module(hook, arity)
             args = Macro.generate_arguments(arity, __MODULE__)
-            gen_hook(hook, args, module, gen_hook_call(module, hook, args))
+            gen_hook(hook, args, nil, module, gen_hook_call(module, hook, args))
           end)
 
         {quote(do: (unquote_splicing(stubs))), MapSet.union(hooks, to_add)}

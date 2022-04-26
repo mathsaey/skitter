@@ -155,6 +155,13 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
   defp rewrite_try({:else, branches}, updates) do
     branches =
       Enum.flat_map(branches, fn
+        {:->, _, [[{:when, _, [head, guards]}], body]} ->
+          quote do
+            {unquote(head), unquote_splicing(updates)} when unquote(guards) ->
+              result = unquote(body)
+              {result, unquote_splicing(updates)}
+          end
+
         {:->, _, [head, body]} ->
           quote do
             {unquote_splicing(head), unquote_splicing(updates)} ->
