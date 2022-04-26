@@ -43,7 +43,7 @@ jobs:
       - name: Start epmd for distributed tests
         run: epmd -daemon
       - name: Run Elixir tests
-        run: mix test
+        run: mix test --include remote:true
 
   format:
     runs-on: ubuntu-latest
