@@ -12,7 +12,7 @@ jobs:
     name: Check type annotations with Dialyzer
     strategy:
       matrix:
-        otp: ['24.2']
+        otp: ['24.3', '25.0']
         elixir: ['1.13.2']
     steps:
       - uses: actions/checkout@v2
@@ -30,7 +30,7 @@ jobs:
     name: Run tests
     strategy:
       matrix:
-        otp: ['24.2']
+        otp: ['24.3', '25.0']
         elixir: ['1.13.2']
     steps:
       - uses: actions/checkout@v2
@@ -50,7 +50,7 @@ jobs:
     name: Check Elixir formatting
     strategy:
       matrix:
-        otp: ['24.2']
+        otp: ['24.3', '25.0']
         elixir: ['1.13.2']
     steps:
       - uses: actions/checkout@v2
