@@ -23,7 +23,7 @@ jobs:
       - name: Get Elixir dependencies
         run: mix deps.get
       - name: Run dialyzer to check type annotations
-        run: mix dialyzer
+        run: mix dialyzer --format github
 
   test:
     runs-on: ubuntu-latest
