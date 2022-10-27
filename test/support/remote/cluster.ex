@@ -28,11 +28,12 @@ defmodule Skitter.Remote.Test.Cluster do
   def spawn_node(name, app, extra_opts) do
     ensure_distributed()
 
-    {:ok, control, node} = :peer.start_link(%{
-      name: name |> to_charlist() |> :peer.random_name(),
-      host: @hostname_charlst,
-      args: spawn_args()
-    })
+    {:ok, control, node} =
+      :peer.start_link(%{
+        name: name |> to_charlist() |> :peer.random_name(),
+        host: @hostname_charlst,
+        args: spawn_args()
+      })
 
     add_code_paths(node)
     transfer_configuration(node)
