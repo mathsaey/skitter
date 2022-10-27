@@ -51,6 +51,6 @@ if System.get_env("SKITTER_LOG") do
   config :logger, :file_log,
     path: Path.join(dir, file),
     level: console_config[:level] || :info,
-    format: console_config[:format] || "[$time][$level$levelpad]$metadata $message\n",
+    format: console_config[:format] || "[$time][$level]$metadata $message\n",
     metadata: console_config[:metadata] || []
 end

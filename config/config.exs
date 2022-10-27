@@ -7,7 +7,7 @@
 import Config
 
 config :logger, :console,
-  format: "\n[$time][$level$levelpad] $message",
+  format: "\n[$time][$level] $message",
   device: :standard_error,
   metadata: :all
 

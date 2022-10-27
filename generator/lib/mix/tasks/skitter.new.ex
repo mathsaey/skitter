@@ -177,7 +177,7 @@ defmodule Mix.Tasks.Skitter.New do
   # Set up the console logger. Values for level, format and metadata set here will also be used by
   # the file logger.
   config :logger, :console,
-    format: "[$time][$level$levelpad]$metadata $message\\n",
+    format: "[$time][$level]$metadata $message\\n",
     device: :standard_error
 
   # Remove all log messages with a priority lower than info at compile time if we are creating a
