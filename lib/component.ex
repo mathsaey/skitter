@@ -409,7 +409,7 @@ defmodule Skitter.Component do
   ## Examples
 
   iex> callbacks(ComponentModule)
-  #MapSet<[example: 1]>
+  MapSet.new([example: 1])
 
   """
   @spec callbacks(t()) :: [{atom(), arity()}]

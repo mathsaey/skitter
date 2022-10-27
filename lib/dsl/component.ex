@@ -592,7 +592,7 @@ defmodule Skitter.DSL.Component do
   ```
 
       iex> Component.callbacks(CbExample)
-      #MapSet<[arguments: 2, emit_multi: 0, emit_single: 0, simple: 0, state: 0]>
+      MapSet.new([arguments: 2, emit_multi: 0, emit_single: 0, simple: 0, state: 0])
 
       iex> Component.callback_info(CbExample, :simple, 0)
       %Info{read?: false, write?: false, emit?: false}
