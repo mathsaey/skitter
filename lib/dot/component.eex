@@ -14,7 +14,8 @@
 
     <TD BORDER="0">
       <%= @id %><BR/>
-      <%= @component |> Module.split() %>
+      <%= @component |> Module.split() |> Enum.join(".") %><BR/>
+      <%= @strategy |> Module.split() |> Enum.join(".") %>
     </TD>
 
     <%= unless @component |> Component.out_ports() |> Enum.empty?() do %>

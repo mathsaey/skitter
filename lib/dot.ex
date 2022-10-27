@@ -108,7 +108,7 @@ defmodule Skitter.Dot do
 
   # Pattern match to treat workflows and components differently
   defp workflow_node(id, c = %C{}, path) do
-    component(id: id, component: c.component, path: path)
+    component(id: id, component: c.component, strategy: c.strategy, path: path)
   end
 
   defp workflow_node(id, w = %W{}, path) do
