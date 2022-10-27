@@ -182,9 +182,8 @@ defmodule Mix.Tasks.Skitter.New do
 
   # Remove all log messages with a priority lower than info at compile time if we are creating a
   # production build.
-  case Mix.env() do
-    :prod -> config :logger, compile_time_purge_matching: [[level_lower_than: :info]]
-    _ -> nil
+  if Mix.env() == :prod do
+     config :logger, compile_time_purge_matching: [[level_lower_than: :info]]
   end
   """)
 
