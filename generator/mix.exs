@@ -24,12 +24,6 @@ defmodule SkitterNew.MixProject do
     ]
   end
 
-  def application do
-    [
-      extra_applications: [:eex]
-    ]
-  end
-
   defp description do
     """
     Skitter project generator.
@@ -41,16 +35,19 @@ defmodule SkitterNew.MixProject do
   defp package do
     [
       licenses:  ["MPL-2.0"],
-      links: %{
-        github: @github_url,
-        homepage: @home_url
-      }
+      links: %{github: @github_url, homepage: @home_url}
     ]
   end
 
   defp deps do
     [
       {:ex_doc, "~> 0.29", only: :dev, runtime: false},
+    ]
+  end
+
+  def application do
+    [
+      extra_applications: [:eex]
     ]
   end
 end

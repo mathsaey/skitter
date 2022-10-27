@@ -31,11 +31,17 @@ defmodule Skitter.MixProject do
     ]
   end
 
-  def application do
+  defp description do
+    """
+    A domain specific language for building scalable, distributed stream processing applications
+    with custom distribution strategies.
+    """
+  end
+
+  defp package do
     [
-      mod: {Skitter.Runtime.Application, []},
-      start_phases: [sk_welcome: [], sk_connect: [], sk_deploy: []],
-      extra_applications: [:logger, :eex]
+      licenses: ["MPL-2.0"],
+      links: %{github: @github_url, homepage: @home_url}
     ]
   end
 
@@ -55,6 +61,14 @@ defmodule Skitter.MixProject do
     ]
   end
 
+  def application do
+    [
+      mod: {Skitter.Runtime.Application, []},
+      start_phases: [sk_welcome: [], sk_connect: [], sk_deploy: []],
+      extra_applications: [:logger, :eex]
+    ]
+  end
+
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(:dev), do: ["lib", "generator/lib"]
   defp elixirc_paths(_), do: ["lib"]
@@ -68,20 +82,6 @@ defmodule Skitter.MixProject do
 
   defp xref do
     [exclude: IEx]
-  end
-
-  defp description do
-    """
-    A domain specific language for building scalable, distributed stream processing applications
-    with custom distribution strategies.
-    """
-  end
-
-  defp package do
-    [
-      licenses: ["MPL-2.0"],
-      links: %{github: @github_url, homepage: @home_url}
-    ]
   end
 
   defp docs do
