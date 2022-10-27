@@ -36,8 +36,8 @@ defmodule Skitter.Remote.Test.Case do
   environment of the remote skitter application.
   - `start_on_remote:`, pass a keyword list with a `mode` and a `handlers` (default to `[]`)
   pair. If this is provided, a skitter remote supervisor will be spawned on the remote node with
-  the given mode and handlers. This can also be set to `false` to override the default value
-  passed to `use`.
+  the given mode and handlers. This can be set to `false` to override the default value passed to
+  `use`.
   - `rpc:` a list of `{module, function, args}` tuples, each mfa triplet in this list will be
   executed on the remote node using `Cluster.rpc/4`.
 
@@ -74,7 +74,6 @@ defmodule Skitter.Remote.Test.Case do
 
     config = Enum.map(config, fn {key, value} -> {:skitter, key, value} end)
     remote = Cluster.spawn_node(name, :skitter, config)
-    on_exit(fn -> Cluster.kill_node(remote) end)
 
     Enum.each(rpcs, fn {m, f, a} -> Cluster.rpc(remote, m, f, a) end)
 

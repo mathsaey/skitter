@@ -28,31 +28,25 @@ defmodule Skitter.Remote.Test.Cluster do
   def spawn_node(name, app, extra_opts) do
     ensure_distributed()
 
-    {:ok, node} = :slave.start(@hostname_charlst, name, spawn_args())
+    {:ok, control, node} = :peer.start_link(%{
+      name: name |> to_charlist() |> :peer.random_name(),
+      host: @hostname_charlst,
+      args: spawn_args()
+    })
 
     add_code_paths(node)
     transfer_configuration(node)
-
     start_application(node, app, extra_opts)
+
+    store_control(node, control)
+
     node
-  end
-
-  @doc """
-  Spawn multiple nodes.
-
-  Accepts a list of `{name, app, extra_opts}` tuples, and calls `spawn_node/1`
-  on each of them.
-  """
-  def spawn_nodes(list) do
-    list
-    |> Enum.map(fn {n, a, o} -> Task.async(fn -> spawn_node(n, a, o) end) end)
-    |> Enum.map(&Task.await(&1))
   end
 
   @doc """
   Kill a node.
   """
-  def kill_node(node), do: :slave.stop(node)
+  def kill_node(node), do: node |> get_control() |> :peer.stop()
 
   @doc """
   Execute function `func` of module `mod` with `args` on node `n`.
@@ -74,6 +68,11 @@ defmodule Skitter.Remote.Test.Cluster do
 
   defp cluster_ready?, do: Node.alive?() and Node.self() == @fullname
 
+  # We only need the control process when stopping a node.
+  # We "hide" the pid of this process in an ets table and fetch it when stopping the node.
+  defp store_control(node, control), do: Process.put(node, control)
+  defp get_control(node), do: Process.get(node)
+
   # Remote setup
   # ------------
 
@@ -93,6 +92,8 @@ defmodule Skitter.Remote.Test.Cluster do
   end
 
   defp spawn_args do
-    to_charlist("-loader inet -hosts #{@hostname} -setcookie #{Node.get_cookie()}")
+    "-loader inet -hosts #{@hostname} -setcookie #{Node.get_cookie()}"
+    |> String.split()
+    |> Enum.map(&to_charlist/1)
   end
 end
