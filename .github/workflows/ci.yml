@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         otp: ['25.0']
-        elixir: ['1.13.2']
+        elixir: ['1.14.1']
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
@@ -30,8 +30,8 @@ jobs:
     name: Run tests
     strategy:
       matrix:
-        otp: ['24.3', '25.0']
-        elixir: ['1.13.2']
+        otp: ['25.0']
+        elixir: ['1.14.1']
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
@@ -51,7 +51,7 @@ jobs:
     strategy:
       matrix:
         otp: ['25.0']
-        elixir: ['1.13.2']
+        elixir: ['1.14.1']
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
