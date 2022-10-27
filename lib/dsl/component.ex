@@ -36,7 +36,7 @@ defmodule Skitter.DSL.Component do
   end
 
   defcomponent StateExample do
-    state 0
+    initial_state 0
     defcb return_state, do: state()
   end
   ```
@@ -61,7 +61,7 @@ defmodule Skitter.DSL.Component do
 
 
   """
-  defmacro state(initial_state) do
+  defmacro initial_state(initial_state) do
     quote do
       @impl true
       def _sk_component_initial_state, do: unquote(initial_state)
@@ -116,7 +116,7 @@ defmodule Skitter.DSL.Component do
   defmacro state_struct(fields) do
     quote do
       defstruct unquote(fields)
-      state %__MODULE__{}
+      initial_state %__MODULE__{}
     end
   end
 
@@ -202,7 +202,7 @@ defmodule Skitter.DSL.Component do
     quote do
       defmodule unquote(name) do
         @behaviour Skitter.Component
-        import unquote(__MODULE__), only: [state: 1, state_struct: 1, defcb: 2]
+        import unquote(__MODULE__), only: [initial_state: 1, state_struct: 1, defcb: 2]
 
         @before_compile {unquote(__MODULE__), :generate_callbacks}
         @before_compile {unquote(__MODULE__), :generate_moduledoc}
@@ -373,7 +373,7 @@ defmodule Skitter.DSL.Component do
 
   ```
   defcomponent ReadExample do
-    state 0
+    initial_state 0
     defcb read(), do: state()
   end
   ```

@@ -15,8 +15,8 @@
     # Skitter DSL
     defcomponent: :*,
     defcb: 2,
-    state: 1,
     state_struct: 1,
+    initial_state: 1,
     defstrategy: :*,
     defhook: 2,
     workflow: :*,

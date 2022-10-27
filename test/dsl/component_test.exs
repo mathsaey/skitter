@@ -18,7 +18,7 @@ defmodule Skitter.DSL.ComponentTest do
   end
 
   defcomponent StateExample do
-    state 0
+    initial_state 0
     defcb return_state, do: state()
   end
 
@@ -37,7 +37,7 @@ defmodule Skitter.DSL.ComponentTest do
   end
 
   defcomponent ReadExample do
-    state 0
+    initial_state 0
     defcb read(), do: state()
   end
 
