@@ -40,7 +40,7 @@ defstrategy Skitter.BIS.KeyedState do
 
   defhook deliver(data, _port) do
     {config, aggregators} = deployment()
-    key = call(:key, config, [data, invocation()]).result
+    key = call(:key, config, [data]).result
     idx = rem(Murmur.hash_x86_32(key), tuple_size(aggregators))
     worker = elem(aggregators, idx)
     send(worker, data)
@@ -48,7 +48,7 @@ defstrategy Skitter.BIS.KeyedState do
 
   defhook process(data, state_map, :aggregator) do
     {config, _} = deployment()
-    key = call(:key, config, [data, invocation()]).result
+    key = call(:key, config, [data]).result
     state = Map.get_lazy(state_map, key, fn -> call_if_exists(:init, [args()]).state end)
     res = call(:react, state, config, [data])
     emit(res.emit)
