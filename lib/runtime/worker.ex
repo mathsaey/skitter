@@ -11,10 +11,10 @@ defmodule Skitter.Runtime.Worker do
   use GenServer, restart: :transient
 
   use Skitter.Telemetry
-  alias Skitter.Runtime.ComponentStore
-  require Skitter.Runtime.ComponentStore
+  alias Skitter.Runtime.NodeStore
+  require Skitter.Runtime.NodeStore
 
-  defstruct [:component, :strategy, :context, :idx, :ref, :state, :tag]
+  defstruct [:operation, :strategy, :context, :idx, :ref, :state, :tag]
 
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
   def deploy_complete(pid), do: GenServer.cast(pid, :sk_deploy_complete)
@@ -49,9 +49,9 @@ defmodule Skitter.Runtime.Worker do
     )
 
     %__MODULE__{
-      component: context.component,
+      operation: context.operation,
       strategy: context.strategy,
-      context: %{context | deployment: ComponentStore.get(:deployment, ref, idx)},
+      context: %{context | deployment: NodeStore.get(:deployment, ref, idx)},
       state: state,
       idx: idx,
       ref: ref,

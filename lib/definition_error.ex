@@ -6,10 +6,10 @@
 
 defmodule Skitter.DefinitionError do
   @moduledoc """
-  Raised when an error is encountered in a Component, Workflow or Strategy.
+  Raised when an error is encountered in a Operation, Workflow or Strategy.
 
   This error can be raised by a Skitter DSL or by a skitter data type. It is raised when invalid
-  syntax is encountered or when a semantic error is present in a `Skitter.Component`,
+  syntax is encountered or when a semantic error is present in a `Skitter.Operation`,
   `Skitter.Workflow` or `Skitter.Strategy`.
   """
   defexception [:message, :env]

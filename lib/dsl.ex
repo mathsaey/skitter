@@ -11,7 +11,7 @@ defmodule Skitter.DSL do
   This module enables the various DSLs offered by Skitter.
   `use Skitter.DSL` imports:
 
-  - `Skitter.DSL.Component.defcomponent/3`
+  - `Skitter.DSL.Operation.defoperation/3`
   - `Skitter.DSL.Strategy.defstrategy/3`
   - `Skitter.DSL.Workflow.workflow/2`
   - This module
@@ -19,7 +19,7 @@ defmodule Skitter.DSL do
 
   defmacro __using__(_opts) do
     quote do
-      import Skitter.DSL.Component, only: [defcomponent: 3, defcomponent: 2]
+      import Skitter.DSL.Operation, only: [defoperation: 3, defoperation: 2]
       import Skitter.DSL.Workflow, only: [workflow: 1, workflow: 2]
       import Skitter.DSL.Strategy, only: [defstrategy: 2, defstrategy: 3]
       import unquote(__MODULE__)

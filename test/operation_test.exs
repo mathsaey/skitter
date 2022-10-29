@@ -4,21 +4,21 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.ComponentTest do
+defmodule Skitter.OperationTest do
   use ExUnit.Case, async: true
 
-  import Skitter.Component
-  alias Skitter.Component.Callback.{Info, Result}
+  import Skitter.Operation
+  alias Skitter.Operation.Callback.{Info, Result}
 
-  defmodule ComponentModule do
-    @behaviour Skitter.Component
-    alias Skitter.Component.Callback.{Info, Result}
+  defmodule OperationModule do
+    @behaviour Skitter.Operation
+    alias Skitter.Operation.Callback.{Info, Result}
 
-    def _sk_component_info(:strategy), do: Strategy
-    def _sk_component_info(:in_ports), do: [:input]
-    def _sk_component_info(:out_ports), do: [:output]
+    def _sk_operation_info(:strategy), do: Strategy
+    def _sk_operation_info(:in_ports), do: [:input]
+    def _sk_operation_info(:out_ports), do: [:output]
 
-    def _sk_component_initial_state, do: 42
+    def _sk_operation_initial_state, do: 42
 
     def _sk_callbacks, do: MapSet.new(example: 1)
 
@@ -32,5 +32,5 @@ defmodule Skitter.ComponentTest do
     end
   end
 
-  doctest Skitter.Component
+  doctest Skitter.Operation
 end

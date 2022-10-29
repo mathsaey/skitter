@@ -11,7 +11,7 @@ defmodule Skitter.WorkflowTest do
   alias Skitter.Workflow.Node
 
   import Skitter.Workflow
-  import Skitter.DSL.Component
+  import Skitter.DSL.Operation
 
   doctest Skitter.Workflow
 end

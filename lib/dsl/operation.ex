@@ -4,59 +4,59 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.DSL.Component do
+defmodule Skitter.DSL.Operation do
   @moduledoc """
-  Callback and Component definition DSL.
+  Callback and Operation definition DSL.
 
-  This module offers macros to define component modules and callbacks. Please refer to the
-  documentation of `defcomponent/3`.
+  This module offers macros to define operation modules and callbacks. Please refer to the
+  documentation of `defoperation/3`.
   """
   alias Skitter.DSL.AST
-  alias Skitter.{Component.Callback.Info, DefinitionError}
+  alias Skitter.{Operation.Callback.Info, DefinitionError}
 
   # --------- #
-  # Component #
+  # Operation #
   # --------- #
 
   @doc """
-  Defines the initial state of a component.
+  Defines the initial state of an operation.
 
-  This macro is used to define the initial state of a component. This state is passed to every
-  called callback when no state is provided by the component's strategy. When this macro is not
-  used, the initial state of a component is `nil`.
+  This macro is used to define the initial state of an operation. This state is passed to every
+  called callback when no state is provided by the operation's strategy. When this macro is not
+  used, the initial state of an operation is `nil`.
 
   Internally, this macro generates a definition of
-  `c:Skitter.Component._sk_component_initial_state/0`.
+  `c:Skitter.Operation._sk_operation_initial_state/0`.
 
   ## Examples
 
   ```
-  defcomponent NoStateExample do
+  defoperation NoStateExample do
     defcb return_state, do: state()
   end
 
-  defcomponent StateExample do
+  defoperation StateExample do
     initial_state 0
     defcb return_state, do: state()
   end
   ```
 
-      iex> Component.initial_state(NoStateExample)
+      iex> Operation.initial_state(NoStateExample)
       nil
 
-      iex> Component.initial_state(StateExample)
+      iex> Operation.initial_state(StateExample)
       0
 
-      iex> Component.call(NoStateExample, :return_state, []).state
+      iex> Operation.call(NoStateExample, :return_state, []).state
       nil
 
-      iex> Component.call(StateExample, :return_state, []).state
+      iex> Operation.call(StateExample, :return_state, []).state
       0
 
-      iex> Component.call(NoStateExample, :return_state, :some_state, nil, []).state
+      iex> Operation.call(NoStateExample, :return_state, :some_state, nil, []).state
       :some_state
 
-      iex> Component.call(StateExample, :return_state, :some_state, nil, []).state
+      iex> Operation.call(StateExample, :return_state, :some_state, nil, []).state
       :some_state
 
 
@@ -64,20 +64,20 @@ defmodule Skitter.DSL.Component do
   defmacro initial_state(initial_state) do
     quote do
       @impl true
-      def _sk_component_initial_state, do: unquote(initial_state)
+      def _sk_operation_initial_state, do: unquote(initial_state)
     end
   end
 
   @doc """
-  Creates an initial struct-based state for a component.
+  Creates an initial struct-based state for an operation.
 
-  In Elixir, it is common to use a struct to store structured information. Therefore, when a
-  component manages a complex state, it often defines a struct and uses this struct as the initial
-  state of the component. Afterwards, the state of the component is updated when it reacts to
+  In Elixir, it is common to use a struct to store structured information. Therefore, when an
+  operation manages a complex state, it often defines a struct and uses this struct as the initial
+  state of the operation. Afterwards, the state of the operation is updated when it reacts to
   incoming data:
 
   ```
-  defcomponent Average, in: value, out: current do
+  defoperation Average, in: value, out: current do
     defstruct [total: 0, count: 0]
     state %__MODULE__{}
 
@@ -90,11 +90,11 @@ defmodule Skitter.DSL.Component do
   ```
 
   In order to streamline the use of this pattern, this macro defines a struct and uses this struct
-  as the initial state of the component. Moreover, the `sigil_f/2` and `~>/2` macros are designed
+  as the initial state of the operation. Moreover, the `sigil_f/2` and `<~/2` macros are designed
   to be used with structs, enabling them to read the state and update it:
 
   ```
-  defcomponent Average, in: value, out: current do
+  defoperation Average, in: value, out: current do
     state_struct total: 0, count: 0
 
     defcb react(val) do
@@ -109,7 +109,7 @@ defmodule Skitter.DSL.Component do
 
   ## Examples
 
-      iex> Component.initial_state(Average)
+      iex> Operation.initial_state(Average)
       %Average{total: 0, count: 0}
 
   """
@@ -121,47 +121,47 @@ defmodule Skitter.DSL.Component do
   end
 
   @doc """
-  Define a component module.
+  Define an operation module.
 
-  This macro is used to define a component module. Using this macro, a component can be defined
+  This macro is used to define an operation module. Using this macro, an operation can be defined
   similar to a normal module. The macro will enable the use of `defcb/2` and provides
-  implementations for `c:Skitter.Component._sk_component_info/1`,
-  `c:Skitter.Component._sk_component_initial_state/0`, `c:Skitter.Component._sk_callbacks/0`
-  and `c:Skitter.Component._sk_callback_info/2`.
+  implementations for `c:Skitter.Operation._sk_operation_info/1`,
+  `c:Skitter.Operation._sk_operation_initial_state/0`, `c:Skitter.Operation._sk_callbacks/0`
+  and `c:Skitter.Operation._sk_callback_info/2`.
 
-  ## Component strategy and ports
+  ## Operation strategy and ports
 
-  The component Strategy and its in -and out ports can be defined in the header of the component
+  The operation strategy and its in -and out ports can be defined in the header of the operation
   declaration as follows:
 
-      iex> defcomponent SignatureExample, in: [a, b, c], out: [y, z], strategy: SomeStrategy do
+      iex> defoperation SignatureExample, in: [a, b, c], out: [y, z], strategy: SomeStrategy do
       ...> end
-      iex> Component.strategy(SignatureExample)
+      iex> Operation.strategy(SignatureExample)
       SomeStrategy
-      iex> Component.in_ports(SignatureExample)
+      iex> Operation.in_ports(SignatureExample)
       [:a, :b, :c]
-      iex> Component.out_ports(SignatureExample)
+      iex> Operation.out_ports(SignatureExample)
       [:y, :z]
 
-  If a component has no `in`, or `out` ports, they can be omitted from the component's header.
-  Furthermore, if the component only has a single `in` or `out` port, the list notation can be
+  If an operation has no `in`, or `out` ports, they can be omitted from the operation's header.
+  Furthermore, if the operation only has a single `in` or `out` port, the list notation can be
   omitted:
 
-      iex> defcomponent PortExample, in: a do
+      iex> defoperation PortExample, in: a do
       ...> end
-      iex> Component.in_ports(PortExample)
+      iex> Operation.in_ports(PortExample)
       [:a]
-      iex> Component.out_ports(PortExample)
+      iex> Operation.out_ports(PortExample)
       []
 
   The strategy may be omitted. In this case, a strategy _must_ be provided when the defined
-  component is embedded inside a workflow. If this is not done, an error will be raised when the
+  operation is embedded inside a workflow. If this is not done, an error will be raised when the
   workflow is deployed.
 
   ## Examples
 
   ```
-  defcomponent Average, in: value, out: current do
+  defoperation Average, in: value, out: current do
     state_struct total: 0, count: 0
 
     defcb react(value) do
@@ -173,35 +173,35 @@ defmodule Skitter.DSL.Component do
   end
   ```
 
-      iex> Component.in_ports(Average)
+      iex> Operation.in_ports(Average)
       [:value]
-      iex> Component.out_ports(Average)
+      iex> Operation.out_ports(Average)
       [:current]
 
 
-      iex> Component.strategy(Average)
+      iex> Operation.strategy(Average)
       nil
 
-      iex> Component.call(Average, :react, [10])
+      iex> Operation.call(Average, :react, [10])
       %Result{result: nil, emit: [current: [10.0]], state: %Average{count: 1, total: 10}}
 
-      iex> Component.call(Average, :react, %Average{count: 1, total: 10}, nil, [10])
+      iex> Operation.call(Average, :react, %Average{count: 1, total: 10}, nil, [10])
       %Result{result: nil, emit: [current: [10.0]], state: %Average{count: 2, total: 20}}
 
   ## Documentation
 
-  When writing documentation for a component, `@componentdoc` can be used instead of the usual
+  When writing documentation for an operation, `@operationdoc` can be used instead of the usual
   `@moduledoc`. When this is done, this macro will automatically add additional information about
-  the component to the generated documentation.
+  the operation to the generated documentation.
   """
-  defmacro defcomponent(name, opts \\ [], do: body) do
+  defmacro defoperation(name, opts \\ [], do: body) do
     in_ = opts |> Keyword.get(:in, []) |> AST.names_to_atoms()
     out = opts |> Keyword.get(:out, []) |> AST.names_to_atoms()
     strategy = opts |> Keyword.get(:strategy) |> read_strategy(__CALLER__)
 
     quote do
       defmodule unquote(name) do
-        @behaviour Skitter.Component
+        @behaviour Skitter.Operation
         import unquote(__MODULE__), only: [initial_state: 1, state_struct: 1, defcb: 2]
 
         @before_compile {unquote(__MODULE__), :generate_callbacks}
@@ -213,8 +213,8 @@ defmodule Skitter.DSL.Component do
         @_sk_out_ports unquote(out)
 
         @impl true
-        def _sk_component_initial_state, do: nil
-        defoverridable _sk_component_initial_state: 0
+        def _sk_operation_initial_state, do: nil
+        defoverridable _sk_operation_initial_state: 0
 
         unquote(body)
       end
@@ -229,7 +229,7 @@ defmodule Skitter.DSL.Component do
   end
 
   @doc false
-  # generate component behaviour callbacks
+  # generate operation behaviour callbacks
   defmacro generate_callbacks(env) do
     names = env.module |> _info_before_compile() |> Map.keys()
     metadata = env.module |> _info_before_compile() |> Macro.escape()
@@ -242,16 +242,16 @@ defmodule Skitter.DSL.Component do
 
     quote bind_quoted: [names: names, metadata: metadata, state: state] do
       @impl true
-      def _sk_component_info(:strategy), do: @_sk_strategy
-      def _sk_component_info(:in_ports), do: @_sk_in_ports
-      def _sk_component_info(:out_ports), do: @_sk_out_ports
+      def _sk_operation_info(:strategy), do: @_sk_strategy
+      def _sk_operation_info(:in_ports), do: @_sk_in_ports
+      def _sk_operation_info(:out_ports), do: @_sk_out_ports
 
       @impl true
       def _sk_callbacks, do: unquote(names |> MapSet.new() |> Macro.escape())
 
       # Prevent a warning if no callbacks are defined
       @impl true
-      def _sk_callback_info(nil, 0), do: %Skitter.Component.Callback.Info{}
+      def _sk_callback_info(nil, 0), do: %Skitter.Operation.Callback.Info{}
 
       for {{name, arity}, info} <- metadata do
         def _sk_callback_info(unquote(name), unquote(arity)), do: unquote(Macro.escape(info))
@@ -265,12 +265,12 @@ defmodule Skitter.DSL.Component do
     out_ports = Module.get_attribute(mod, :_sk_out_ports) |> Enum.join(", ") |> wrap_value()
     strategy = Module.get_attribute(mod, :_sk_strategy) |> wrap_value()
 
-    if Module.has_attribute?(mod, :componentdoc) do
+    if Module.has_attribute?(mod, :operationdoc) do
       quote do
         @moduledoc """
-        #{@componentdoc}
+        #{@operationdoc}
 
-        ## Component Properties
+        ## Operation Properties
 
         * in ports: #{unquote(in_ports)}
         * out ports: #{unquote(out_ports)}
@@ -333,26 +333,26 @@ defmodule Skitter.DSL.Component do
   def config_var, do: quote(do: var!(config, unquote(__MODULE__)))
 
   @doc """
-  Obtain the component configuration.
+  Obtain the operation configuration.
 
-  This macro reads the current value of the configuration passed to the component callback when
+  This macro reads the current value of the configuration passed to the operation callback when
   it was called. It should only be used inside the body of `defcb/2`.
 
   ## Examples
 
   ```
-  defcomponent ConfigExample do
+  defoperation ConfigExample do
     defcb read(), do: config()
   end
   ```
 
-      iex> Component.call(ConfigExample, :read, []).result
+      iex> Operation.call(ConfigExample, :read, []).result
       nil
 
-      iex> Component.call(ConfigExample, :read, :config, []).result
+      iex> Operation.call(ConfigExample, :read, :config, []).result
       :config
 
-      iex> Component.call(ConfigExample, :read, :state, :config, []).result
+      iex> Operation.call(ConfigExample, :read, :state, :config, []).result
       :config
   """
   defmacro config, do: quote(do: unquote(config_var()))
@@ -366,25 +366,25 @@ defmodule Skitter.DSL.Component do
   @doc """
   Obtain the current state.
 
-  This macro reads the current value of the state passed to the component callback when it was
+  This macro reads the current value of the state passed to the operation callback when it was
   called. It should only be used inside the body of `defcb/2`.
 
   ## Examples
 
   ```
-  defcomponent ReadExample do
+  defoperation ReadExample do
     initial_state 0
     defcb read(), do: state()
   end
   ```
 
-      iex> Component.call(ReadExample, :read, []).result
+      iex> Operation.call(ReadExample, :read, []).result
       0
 
-      iex> Component.call(ReadExample, :read, :state, nil, []).result
+      iex> Operation.call(ReadExample, :read, :state, nil, []).result
       :state
 
-      iex> Component.call(ReadExample, :read, :state, nil, []).result
+      iex> Operation.call(ReadExample, :read, :state, nil, []).result
       :state
   """
   defmacro state, do: quote(do: unquote(state_var()))
@@ -392,7 +392,7 @@ defmodule Skitter.DSL.Component do
   @doc """
   Read the current value of a field stored in state.
 
-  This macro expects that the current component state is a struct (i.e. it expects a component
+  This macro expects that the current operation state is a struct (i.e. it expects an operation
   that uses `state_struct/1`), and reads the current value of `field` from the struct.
 
   This macro should only be used inside the body of `defcb/2`.
@@ -400,16 +400,16 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent FieldReadExample do
+  defoperation FieldReadExample do
     state_struct field: nil
     defcb read(), do: ~f{field}
   end
   ```
 
-      iex> Component.call(FieldReadExample, :read, %FieldReadExample{field: 5}, nil, []).result
+      iex> Operation.call(FieldReadExample, :read, %FieldReadExample{field: 5}, nil, []).result
       5
 
-      iex> Component.call(FieldReadExample, :read, %FieldReadExample{field: :foo}, nil, []).result
+      iex> Operation.call(FieldReadExample, :read, %FieldReadExample{field: :foo}, nil, []).result
       :foo
   """
   defmacro sigil_f({:<<>>, _, [str]}, _) do
@@ -421,41 +421,41 @@ defmodule Skitter.DSL.Component do
   Updates the current state.
 
   This macro should only be used inside the body of `defcb/2`. It updates the current value of the
-  component state to the provided value.
+  operation state to the provided value.
 
-  This macro can be used  in two ways: it can be used to update the component state or a field of
-  the component state. The latter option can only be used if the state of the component is a
+  This macro can be used  in two ways: it can be used to update the operation state or a field of
+  the operation state. The latter option can only be used if the state of the operation is a
   struct (i.e. if the intial state has been defined using `state_struct/1`). The former options
-  modifies the component state as a whole, the second option only modifies the value of the
-  provided field stored in the component state.
+  modifies the operation state as a whole, the second option only modifies the value of the
+  provided field stored in the operation state.
 
   ## Examples
 
   ```
-  defcomponent WriteExample do
+  defoperation WriteExample do
     defcb write(), do: state <~ :foo
   end
   ```
-      iex> Component.call(WriteExample, :write, nil, nil, []).state
+      iex> Operation.call(WriteExample, :write, nil, nil, []).state
       :foo
 
   ```
-  defcomponent FieldWriteExample do
+  defoperation FieldWriteExample do
     state_struct [:field]
     defcb write(), do: field <~ :bar
   end
   ```
-      iex> Component.call(FieldWriteExample, :write, %FieldWriteExample{field: :foo}, nil, []).state.field
+      iex> Operation.call(FieldWriteExample, :write, %FieldWriteExample{field: :foo}, nil, []).state.field
       :bar
 
   ```
-  defcomponent WrongFieldWriteExample do
+  defoperation WrongFieldWriteExample do
     fields [:field]
     defcb write(), do: doesnotexist <~ :bar
   end
   ```
-      iex> Component.call(WrongFieldWriteExample, :write, %WrongFieldWriteExample{field: :foo}, nil, [])
-      ** (KeyError) key :doesnotexist not found in: %Skitter.DSL.ComponentTest.WrongFieldWriteExample{field: :foo}
+      iex> Operation.call(WrongFieldWriteExample, :write, %WrongFieldWriteExample{field: :foo}, nil, [])
+      ** (KeyError) key :doesnotexist not found in: %Skitter.DSL.OperationTest.WrongFieldWriteExample{field: :foo}
   """
   defmacro {:state, _, _} <~ value do
     quote do
@@ -496,14 +496,14 @@ defmodule Skitter.DSL.Component do
   Emit `value` to `port`
 
   This macro is used to specify `value` should be emitted on `port`. This means that `value`
-  will be sent to any components downstream of the current component. This macro should only be
+  will be sent to any operations downstream of the current operation. This macro should only be
   used inside the body of `defcb/2`. If a previous value was specified for `port`, it is
   overridden.
 
   ## Examples
 
   ```
-  defcomponent SingleEmitExample do
+  defoperation SingleEmitExample do
     defcb emit(value) do
       value ~> some_port
       :foo ~> some_other_port
@@ -511,7 +511,7 @@ defmodule Skitter.DSL.Component do
   end
   ```
 
-      iex> Component.call(SingleEmitExample, :emit, [:bar]).emit
+      iex> Operation.call(SingleEmitExample, :emit, [:bar]).emit
       [some_other_port: [:foo], some_port: [:bar]]
   """
   defmacro value ~> {port, _, _} when is_atom(port) do
@@ -525,13 +525,13 @@ defmodule Skitter.DSL.Component do
   Emit several values to `port`
 
   This macro works like `~>/2`, but emits several output values to the port instead of a single
-  value. Each value in the provided `t:Enumerable.t/0` will be sent to downstream components
+  value. Each value in the provided `t:Enumerable.t/0` will be sent to downstream operations
   individually.
 
   ## Examples
 
   ```
-  defcomponent MultiEmitExample do
+  defoperation MultiEmitExample do
     defcb emit(value) do
       value ~> some_port
       [:foo, :bar] ~>> some_other_port
@@ -539,7 +539,7 @@ defmodule Skitter.DSL.Component do
   end
   ```
 
-      iex> Component.call(MultiEmitExample, :emit, [:bar]).emit
+      iex> Operation.call(MultiEmitExample, :emit, [:bar]).emit
       [some_other_port: [:foo, :bar], some_port: [:bar]]
   """
   defmacro enum ~>> {port, _, _} when is_atom(port) do
@@ -568,12 +568,12 @@ defmodule Skitter.DSL.Component do
   similar to a regular procedure. Inside the body of the procedure, `~>/2`, `~>>/2` `<~/2` and
   `sigil_f/2` can be used to access the state and to emit output. The macro ensures:
 
-  - The function returns a `t:Skitter.Component.result/0` with the correct state (as updated by
+  - The function returns a `t:Skitter.Operation.result/0` with the correct state (as updated by
   `<~/2`), emit (as updated by `~>/2` and `~>>/2`) and result (which contains the value of the
   last expression in `body`).
 
-  - `c:Skitter.Component._sk_callback_info/2` and `c:Skitter.Callback._sk_callbacks/0` of the
-  component module contains the required information about the defined callback.
+  - `c:Skitter.Operation._sk_callback_info/2` and `c:Skitter.Callback._sk_callbacks/0` of the
+  operation module contains the required information about the defined callback.
 
   Note that, under the hood, `defcb/2` generates a regular elixir function. Therefore, pattern
   matching may still be used in the argument list of the callback. Attributes such as `@doc` may
@@ -582,7 +582,7 @@ defmodule Skitter.DSL.Component do
   ## Examples
 
   ```
-  defcomponent CbExample do
+  defoperation CbExample do
     defcb simple(), do: nil
     defcb arguments(arg1, arg2), do: arg1 + arg2
     defcb state(), do: counter <~ (~f{counter} + 1)
@@ -591,37 +591,37 @@ defmodule Skitter.DSL.Component do
   end
   ```
 
-      iex> Component.callbacks(CbExample)
+      iex> Operation.callbacks(CbExample)
       MapSet.new([arguments: 2, emit_multi: 0, emit_single: 0, simple: 0, state: 0])
 
-      iex> Component.callback_info(CbExample, :simple, 0)
+      iex> Operation.callback_info(CbExample, :simple, 0)
       %Info{read?: false, write?: false, emit?: false}
 
-      iex> Component.callback_info(CbExample, :arguments, 2)
+      iex> Operation.callback_info(CbExample, :arguments, 2)
       %Info{read?: false, write?: false, emit?: false}
 
-      iex> Component.callback_info(CbExample, :state, 0)
+      iex> Operation.callback_info(CbExample, :state, 0)
       %Info{read?: true, write?: true, emit?: false}
 
-      iex> Component.callback_info(CbExample, :emit_single, 0)
+      iex> Operation.callback_info(CbExample, :emit_single, 0)
       %Info{read?: false, write?: false, emit?: true}
 
-      iex> Component.callback_info(CbExample, :emit_multi, 0)
+      iex> Operation.callback_info(CbExample, :emit_multi, 0)
       %Info{read?: false, write?: false, emit?: true}
 
-      iex> Component.call(CbExample, :simple, %{}, nil, [])
+      iex> Operation.call(CbExample, :simple, %{}, nil, [])
       %Result{result: nil, emit: [], state: %{}}
 
-      iex> Component.call(CbExample, :arguments, %{}, nil, [10, 20])
+      iex> Operation.call(CbExample, :arguments, %{}, nil, [10, 20])
       %Result{result: 30, emit: [], state: %{}}
 
-      iex> Component.call(CbExample, :state, %{counter: 10, other: :foo}, nil, [])
+      iex> Operation.call(CbExample, :state, %{counter: 10, other: :foo}, nil, [])
       %Result{result: nil, emit: [], state: %{counter: 11, other: :foo}}
 
-      iex> Component.call(CbExample, :emit_single, %{}, nil, [])
+      iex> Operation.call(CbExample, :emit_single, %{}, nil, [])
       %Result{result: nil, emit: [out_port: [~D[1991-12-08]]], state: %{}}
 
-      iex> Component.call(CbExample, :emit_multi, %{}, nil, [])
+      iex> Operation.call(CbExample, :emit_multi, %{}, nil, [])
       %Result{result: nil, emit: [out_port: [~D[1991-12-08], ~D[2021-07-08]]], state: %{}}
 
   ## Mutable state and control flow
@@ -673,16 +673,16 @@ defmodule Skitter.DSL.Component do
   If no exception is raised or no value is thrown, updates performed inside the `do` block will
   always be visible:
 
-      iex> Component.call(TryExample, :simple, %{pre: nil, post: nil}, nil, [fn -> :foo end])
+      iex> Operation.call(TryExample, :simple, %{pre: nil, post: nil}, nil, [fn -> :foo end])
       %Result{state: %{pre: :modified, post: :modified}, result: :foo, emit: [out: [:emit]]}
 
   However, when an exception is raised or a value is thrown, any updates performed inside the `do`
   block are discarded:
 
-      iex> Component.call(TryExample, :simple, %{pre: nil, post: nil, x: nil}, nil, [fn -> raise RuntimeError end])
+      iex> Operation.call(TryExample, :simple, %{pre: nil, post: nil, x: nil}, nil, [fn -> raise RuntimeError end])
       %Result{state: %{pre: :nil, post: :nil, x: :modified}, result: :rescue, emit: []}
 
-      iex> Component.call(TryExample, :simple, %{pre: nil, post: nil}, nil, [fn -> throw :foo end])
+      iex> Operation.call(TryExample, :simple, %{pre: nil, post: nil}, nil, [fn -> throw :foo end])
       %Result{state: %{pre: :nil, post: :nil}, result: :catch, emit: [out: [:emit]]}
 
   As shown above, updates inside the `catch` or `rescue` clauses are reflected in the final
@@ -711,7 +711,7 @@ defmodule Skitter.DSL.Component do
 
   Updates inside the `do` block _are_ reflected in the `else` block:
 
-      iex> Component.call(TryExample, :with_else, %{pre: nil, post: nil, x: nil}, nil, [fn -> :foo end])
+      iex> Operation.call(TryExample, :with_else, %{pre: nil, post: nil, x: nil}, nil, [fn -> :foo end])
       %Result{state: %{pre: :modified, post: :modified, x: :modified}, result: :foo, emit: [out: [:emit]]}
 
   Updates inside the `after` block are ignored:
@@ -733,7 +733,7 @@ defmodule Skitter.DSL.Component do
   end
   ```
 
-      iex> Component.call(TryExample, :with_after, %{pre: nil, post: nil, x: nil}, nil, [fn -> :foo end])
+      iex> Operation.call(TryExample, :with_after, %{pre: nil, post: nil, x: nil}, nil, [fn -> :foo end])
       %Result{state: %{pre: :modified, post: :modified, x: nil}, result: :foo, emit: [out: [:emit]]}
 
   In short, updates are preserved during the normal flow of an operation (i.e. when no values are
@@ -756,7 +756,7 @@ defmodule Skitter.DSL.Component do
 
         result = unquote(body)
 
-        %Skitter.Component.Callback.Result{
+        %Skitter.Operation.Callback.Result{
           result: result,
           state: unquote(state_var()),
           emit: unquote(emit_var())

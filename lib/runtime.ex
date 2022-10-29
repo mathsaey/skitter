@@ -8,21 +8,21 @@ defmodule Skitter.Runtime do
   @moduledoc """
   Interface to the skitter runtime system.
   """
-  alias Skitter.{Config, Remote, Workflow, Component, Strategy}
+  alias Skitter.{Config, Remote, Workflow, Operation, Strategy}
 
   alias Skitter.Runtime.{
     Worker,
     ConstantStore,
-    ComponentStore,
+    NodeStore,
     WorkflowManager,
     WorkerSupervisor,
     WorkflowWorkerSupervisor,
     WorkflowManagerSupervisor
   }
 
-  require ComponentStore
-  require ConstantStore
   use Skitter.Telemetry
+  require ConstantStore
+  require NodeStore
 
   @typedoc "Reference to a deployed workflow."
   @type ref :: reference()
@@ -40,7 +40,7 @@ defmodule Skitter.Runtime do
   @doc """
   Get the workflow for a reference or context.
 
-  The workflow will not have any in or out ports and only contain component nodes, since
+  The workflow will not have any in or out ports and only contain operation nodes, since
   `deploy/1` flattens workflows before it deploys them.
   """
   @spec get_workflow(ref() | Strategy.context()) :: Workflow.t()
@@ -52,15 +52,15 @@ defmodule Skitter.Runtime do
   """
   @spec node_name_for_context(Strategy.context()) :: Workflow.name()
   def node_name_for_context(%Strategy.Context{_skr: {ref, idx}}) do
-    ComponentStore.get(:wf_node_names, ref, idx)
+    NodeStore.get(:wf_node_names, ref, idx)
   end
 
   @doc """
   Get the workflow node based on a context.
 
-  The workflow node will always be a component node.
+  The workflow node will always be an operation node.
   """
-  @spec node_for_context(Strategy.context()) :: Workflow.component()
+  @spec node_for_context(Strategy.context()) :: Workflow.operation_node()
   def node_for_context(context), do: get_workflow(context).nodes[node_name_for_context(context)]
 
   @doc """
@@ -101,13 +101,13 @@ defmodule Skitter.Runtime do
 
     # Store information to extract workflow information from the context
     ConstantStore.put_everywhere(nodes, :wf_nodes, ref)
-    nodes |> Map.keys() |> ComponentStore.put_everywhere(:wf_node_names, ref)
+    nodes |> Map.keys() |> NodeStore.put_everywhere(:wf_node_names, ref)
 
-    # Create supervisors on all workers for every component in the workflow
+    # Create supervisors on all workers for every node in the workflow
     Remote.on_all_workers(WorkflowWorkerSupervisor, :spawn_local_workflow, [ref, map_size(nodes)])
 
     # Store deployment information and links on all nodes
-    deploy_components(nodes, ref)
+    deploy_nodes(nodes, ref)
     expand_links(nodes, ref)
 
     # Create manager
@@ -118,23 +118,23 @@ defmodule Skitter.Runtime do
     ref
   end
 
-  # Deploy all components
-  defp deploy_components(nodes, ref) do
+  # Deploy all nodes
+  defp deploy_nodes(nodes, ref) do
     nodes
     |> Enum.with_index()
-    |> Enum.map(fn {{_, comp}, i} ->
+    |> Enum.map(fn {{_, node}, i} ->
       context = %Strategy.Context{
-        component: comp.component,
-        strategy: comp.strategy,
-        args: comp.args,
+        operation: node.operation,
+        strategy: node.strategy,
+        args: node.args,
         _skr: {:deploy, ref, i}
       }
 
       Telemetry.wrap [:hook, :deploy], %{context: context} do
-        comp.strategy.deploy(context)
+        node.strategy.deploy(context)
       end
     end)
-    |> ComponentStore.put_everywhere(:deployment, ref)
+    |> NodeStore.put_everywhere(:deployment, ref)
   end
 
   # Lookup link destinations and create contexts in advance to avoid doing this at runtime.
@@ -142,33 +142,33 @@ defmodule Skitter.Runtime do
     lookup =
       nodes
       |> Enum.with_index()
-      |> Map.new(fn {{name, comp}, i} ->
+      |> Map.new(fn {{name, node}, i} ->
         {name,
          %Strategy.Context{
-           component: comp.component,
-           strategy: comp.strategy,
-           args: comp.args,
-           deployment: ComponentStore.get(:deployment, ref, i),
+           operation: node.operation,
+           strategy: node.strategy,
+           args: node.args,
+           deployment: NodeStore.get(:deployment, ref, i),
            _skr: {ref, i}
          }}
       end)
 
     nodes
-    |> Enum.map(fn {_, comp} ->
-      Map.new(comp.links, fn {out_port, destinations} ->
+    |> Enum.map(fn {_, node} ->
+      Map.new(node.links, fn {out_port, destinations} ->
         {out_port,
          Enum.map(destinations, fn {name, in_port} ->
            context = lookup[name]
-           {context, Component.in_port_to_index(context.component, in_port)}
+           {context, Operation.in_port_to_index(context.operation, in_port)}
          end)}
       end)
     end)
-    |> ComponentStore.put_everywhere(:links, ref)
+    |> NodeStore.put_everywhere(:links, ref)
   end
 
-  # We notify components to finish deploying in reverse topological order.
-  # This avoids race conditions where components can send data to other components which did not
-  # finish deploying yet.
+  # We notify workers to finish deploying in reverse topological order of the application DAG.
+  # This avoids race conditions where nodes can send data to other nodes which did not finish
+  # deploying yet.
   defp notify_workers(_, ref) do
     ref
     |> topological_indices()
@@ -196,7 +196,7 @@ defmodule Skitter.Runtime do
     |> topological_indices()
     |> Enum.each(fn idx ->
       Remote.on_all_workers(fn ->
-        WorkerSupervisor.stop(ComponentStore.get(:local_supervisors, ref, idx))
+        WorkerSupervisor.stop(NodeStore.get(:local_supervisors, ref, idx))
       end)
     end)
   end
@@ -209,7 +209,7 @@ defmodule Skitter.Runtime do
       [
         :wf_nodes,
         :wf_node_names,
-        :component_worker_supervisors,
+        :operation_worker_supervisors,
         :deployment,
         :links,
         :local_supervisors
@@ -219,7 +219,7 @@ defmodule Skitter.Runtime do
   end
 
   defp topological_indices(ref) do
-    ComponentStore.get_all(:links, ref)
+    NodeStore.get_all(:links, ref)
     |> Enum.map(&Map.values/1)
     |> Enum.map(&Enum.concat/1)
     |> Enum.map(&Enum.map(&1, fn {%Strategy.Context{_skr: {_, i}}, _} -> i end))

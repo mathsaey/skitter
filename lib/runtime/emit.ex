@@ -6,9 +6,9 @@
 
 defmodule Skitter.Runtime.Emit do
   @moduledoc false
-  alias Skitter.Runtime.ComponentStore
+  alias Skitter.Runtime.NodeStore
   alias Skitter.Strategy.Context
-  require ComponentStore
+  require NodeStore
   use Skitter.Telemetry
 
   def emit(%Context{_skr: {:deploy, _, _}}, _, _) do
@@ -18,10 +18,10 @@ defmodule Skitter.Runtime.Emit do
   def emit(ctx = %Context{_skr: {ref, idx}}, emit, inv) do
     Telemetry.emit([:runtime, :emit], %{}, %{context: ctx, emit: emit, invocation: inv})
 
-    component_links = ComponentStore.get(:links, ref, idx)
+    node_links = NodeStore.get(:links, ref, idx)
 
     Enum.each(emit, fn {out_port, enum} ->
-      enum(enum, Map.fetch(component_links, out_port), inv)
+      enum(enum, Map.fetch(node_links, out_port), inv)
     end)
   end
 

@@ -115,7 +115,7 @@ defmodule Skitter.MixProject do
       groups_for_modules: [
         "Language Abstractions": [
           Skitter.Port,
-          Skitter.Component,
+          Skitter.Operation,
           Skitter.Workflow,
           Skitter.Strategy
         ],
@@ -129,7 +129,7 @@ defmodule Skitter.MixProject do
           Skitter.Runtime
         ],
         dsl: ~r/Skitter.DSL*/,
-        "Built-in Components": ~r/Skitter.BIC.*/,
+        "Built-in Operations": ~r/Skitter.BIO.*/,
         "Built-in Strategies": ~r/Skitter.BIS.*/,
         utilities: [
           Skitter.Dot,

@@ -4,14 +4,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import Skitter.DSL.Component, only: :macros
+import Skitter.DSL.Operation, only: :macros
 
-defcomponent Skitter.BIC.KeyBy, in: _, out: _, strategy: Skitter.BIS.ImmutableLocalInvocation do
-  @componentdoc """
+defoperation Skitter.BIO.KeyBy, in: _, out: _, strategy: Skitter.BIS.ImmutableLocalInvocation do
+  @operationdoc """
   Determine the key of a data element.
 
-  This component associates a key with each incoming data element. The key that is used is
-  determined by a function passed as an argument to the component. This function will accept each
+  This operation associates a key with each incoming data element. The key that is used is
+  determined by a function passed as an argument to the operation. This function will accept each
   incoming data element and return the key for this data element.
   """
   defcb conf(func), do: func

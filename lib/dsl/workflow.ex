@@ -10,11 +10,11 @@ defmodule Skitter.DSL.Workflow do
 
   This module offers a macro to define workflow. To define a workflow, use `workflow/2`. Inside
   the body of the workflow, `node/2` and `~>/2` can be used. Unlike
-  `Skitter.DSL.Component.defcomponent/3` and `Skitter.DSL.Strategy.defstrategy/3`, the
+  `Skitter.DSL.Operation.defoperation/3` and `Skitter.DSL.Strategy.defstrategy/3`, the
   `workflow/2` macro does not generate a module, instead, it generates a `t:Skitter.Workflow.t/0`.
   """
 
-  alias Skitter.{DSL.AST, Component, Workflow}
+  alias Skitter.{DSL.AST, Operation, Workflow}
 
   # -------- #
   # Workflow #
@@ -60,7 +60,7 @@ defmodule Skitter.DSL.Workflow do
       ...>
       ...>   node1.out_port ~> node2.in_port
       ...> end
-      iex> wf.nodes[:node1].component
+      iex> wf.nodes[:node1].operation
       Example
       iex> wf.nodes[:node1].links
       [out_port: [node2: :in_port]]
@@ -143,7 +143,7 @@ defmodule Skitter.DSL.Workflow do
       iex> wf.nodes[:"skitter/dsl/workflow_test/example#2"].links
       [out_port: [:bar]]
 
-  `Skitter.BIC` defines various components along with several macros to use these components in a
+  `Skitter.BIO` defines various operations along with several macros to use these operations in a
   workflow. These macros are automatically imported and available inside the body of `workflow`.
 
       iex> sugar = workflow out: bar do
@@ -152,7 +152,7 @@ defmodule Skitter.DSL.Workflow do
       ...>   ~> bar
       ...> end
       iex> zero = workflow out: bar do
-      ...>   node(Skitter.BIC.TCPSource, args: [address: "127.0.0.1", port: 4555])
+      ...>   node(Skitter.BIO.TCPSource, args: [address: "127.0.0.1", port: 4555])
       ...>   ~> node(Example)
       ...>   ~> bar
       ...>  end
@@ -176,17 +176,17 @@ defmodule Skitter.DSL.Workflow do
         ],
         out: [:baz],
         nodes: %{
-          "skitter/dsl/workflow_test/example#1": %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, strategy: DefaultStrategy, links: [out_port: [joiner: :left]]
+          "skitter/dsl/workflow_test/example#1": %Skitter.Workflow.Node.Operation{
+            operation: Example, args: nil, strategy: DefaultStrategy, links: [out_port: [joiner: :left]]
           },
-          "skitter/dsl/workflow_test/example#2": %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, strategy: DefaultStrategy, links: [out_port: [joiner: :right]]
+          "skitter/dsl/workflow_test/example#2": %Skitter.Workflow.Node.Operation{
+            operation: Example, args: nil, strategy: DefaultStrategy, links: [out_port: [joiner: :right]]
           },
-          joiner: %Skitter.Workflow.Node.Component{
-            component: Join, args: nil, strategy: SomeStrategy, links: [_: ["skitter/dsl/workflow_test/example#3": :in_port]]
+          joiner: %Skitter.Workflow.Node.Operation{
+            operation: Join, args: nil, strategy: SomeStrategy, links: [_: ["skitter/dsl/workflow_test/example#3": :in_port]]
           },
-          "skitter/dsl/workflow_test/example#3": %Skitter.Workflow.Node.Component{
-            component: Example, args: :some_args, strategy: DefaultStrategy, links: [out_port: [:baz]]
+          "skitter/dsl/workflow_test/example#3": %Skitter.Workflow.Node.Operation{
+            operation: Example, args: :some_args, strategy: DefaultStrategy, links: [out_port: [:baz]]
           }
         }
       }
@@ -200,7 +200,7 @@ defmodule Skitter.DSL.Workflow do
       import Kernel, except: [node: 1]
       import unquote(__MODULE__), only: [node: 1, node: 2, ~>: 2, workflow: 2, workflow: 1]
 
-      import Skitter.BIC, only: :macros
+      import Skitter.BIO, only: :macros
 
       unquote(__MODULE__)._gen_name_state_init()
 
@@ -230,30 +230,30 @@ defmodule Skitter.DSL.Workflow do
   # Nodes #
   # ----- #
 
-  alias Skitter.Workflow.Node.Component, as: C
+  alias Skitter.Workflow.Node.Operation, as: O
   alias Skitter.Workflow.Node.Workflow, as: W
 
   @doc """
   Generate a single workflow node.
 
   This macro generates a single node of a workflow. It can only be used inside `workflow/2`. It
-  accepts a `t:Skitter.Component.t/0` or a workflow `t:Skitter.Workflow.t/0` and a list of
-  optional options. The provided component or workflow will be wrapped inside a
-  `t:Skitter.Workflow.component/0` or `t:Skitter.Workflow.workflow/0`. No links will be added to
-  the generated node.
+  accepts a `t:Skitter.Operation.t/0` or a workflow `t:Skitter.Workflow.t/0` and a list of
+  optional options. The provided operation or workflow will be wrapped inside a
+  `t:Skitter.Workflow.operation_node/0` or `t:Skitter.Workflow.workflow_node/0`. No links will be
+  added to the generated node.
 
   Two options can be passed when creating a node: `as:` and `args:`:
 
   - `as:` defines the name of the node inside the workflow. It can be used to refer to the
-  component when creating links with `~>/2`. If no name is specified, this macro will generate a
-  name.
+  node when creating links with `~>/2`. If no name is specified, the node macro will generate a
+  unique name.
   - `args:` defines the arguments to pass to the node. Note that this is only relevant for
-  component nodes. Arguments passed to workflow nodes are ignored. If no arguments are provided,
+  operation nodes. Arguments passed to workflow nodes are ignored. If no arguments are provided,
   the arguments of the node defaults to `nil`.
   - `with:` defines the strategy to pass to the node. Note that this is only relevant for
-  component nodes. When a strategy is provided here, it will override the one defined by the
-  component. If no strategy is provided, the strategy specified by the component will be used. If
-  no strategy is specified by the component, an error will be raised.
+  operation nodes. When a strategy is provided here, it will override the one defined by the
+  operation. If no strategy is provided, the strategy specified by the operation will be used. If
+  no strategy is specified by the operation, an error will be raised.
 
   ## Examples
 
@@ -267,17 +267,17 @@ defmodule Skitter.DSL.Workflow do
         in: [],
         out: [],
         nodes: %{
-          "skitter/dsl/workflow_test/example#1": %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, strategy: DefaultStrategy, links: []
+          "skitter/dsl/workflow_test/example#1": %Skitter.Workflow.Node.Operation{
+            operation: Example, args: nil, strategy: DefaultStrategy, links: []
           },
-          example_1:  %Skitter.Workflow.Node.Component{
-            component: Example, args: nil, strategy: DefaultStrategy, links: []
+          example_1:  %Skitter.Workflow.Node.Operation{
+            operation: Example, args: nil, strategy: DefaultStrategy, links: []
           },
-          "skitter/dsl/workflow_test/example#2": %Skitter.Workflow.Node.Component{
-            component: Example, args: :args, strategy: DefaultStrategy, links: []
+          "skitter/dsl/workflow_test/example#2": %Skitter.Workflow.Node.Operation{
+            operation: Example, args: :args, strategy: DefaultStrategy, links: []
           },
-          example_2:  %Skitter.Workflow.Node.Component{
-            component: Example, args: :args, strategy: SomeStrategy, links: []
+          example_2:  %Skitter.Workflow.Node.Operation{
+            operation: Example, args: :args, strategy: SomeStrategy, links: []
           },
         }
       }
@@ -299,7 +299,7 @@ defmodule Skitter.DSL.Workflow do
       iex> workflow do
       ...>   node Join
       ...> end
-      ** (Skitter.DefinitionError) Component Elixir.Skitter.DSL.WorkflowTest.Join does not define a strategy and no strategy was specified by the workflow
+      ** (Skitter.DefinitionError) Operation Elixir.Skitter.DSL.WorkflowTest.Join does not define a strategy and no strategy was specified by the workflow
 
       iex> workflow do
       ...>   node Join, with: SomeStrategy
@@ -308,13 +308,13 @@ defmodule Skitter.DSL.Workflow do
         in: [],
         out: [],
         nodes: %{
-          "skitter/dsl/workflow_test/join#1": %Skitter.Workflow.Node.Component{
-            component: Join, args: nil, strategy: SomeStrategy, links: []
+          "skitter/dsl/workflow_test/join#1": %Skitter.Workflow.Node.Operation{
+            operation: Join, args: nil, strategy: SomeStrategy, links: []
           }
         }
       }
   """
-  defmacro node(comp_or_wf, opts \\ []) do
+  defmacro node(oper_or_wf, opts \\ []) do
     name =
       case Keyword.get(opts, :as) do
         {name, _, _} -> name
@@ -325,9 +325,9 @@ defmodule Skitter.DSL.Workflow do
     strat = Keyword.get(opts, :with)
 
     quote do
-      node = unquote(comp_or_wf)
+      node = unquote(oper_or_wf)
       name = unquote(name)
-      node = unquote(__MODULE__)._make_node(unquote(comp_or_wf), unquote(args), unquote(strat))
+      node = unquote(__MODULE__)._make_node(unquote(oper_or_wf), unquote(args), unquote(strat))
       unquote(node_var()) = Map.put(unquote(node_var()), name, node)
       {name, node}
     end
@@ -385,7 +385,7 @@ defmodule Skitter.DSL.Workflow do
 
   Where source and destination have one of the following two forms:
 
-  * `<component name>.<port name>`: specifies a component port
+  * `<operation name>.<port name>`: specifies a port of an operation
   * `<port name>`: specifies a workflow port
 
   For instance:
@@ -394,9 +394,9 @@ defmodule Skitter.DSL.Workflow do
       ...>   node Example, as: node1
       ...>   node Example, as: node2
       ...>
-      ...>   foo ~> node1.in_port            # workflow port ~> component port
-      ...>   node1.out_port ~> node2.in_port # component port ~> component port
-      ...>   node2.out_port ~> bar           # component port ~> workflow port
+      ...>   foo ~> node1.in_port            # workflow port ~> operation port
+      ...>   node1.out_port ~> node2.in_port # operation port ~> operation port
+      ...>   node2.out_port ~> bar           # operation port ~> workflow port
       ...> end
       iex> wf.in
       [foo: [node1: :in_port]]
@@ -463,11 +463,11 @@ defmodule Skitter.DSL.Workflow do
   defp maybe_transform_ast(any), do: any
 
   def _make_node(m, a, nil) when is_atom(m) do
-    case Component.strategy(m) do
+    case Operation.strategy(m) do
       nil ->
         raise(
           Skitter.DefinitionError,
-          "Component #{m} does not define a strategy and no strategy was specified by the workflow"
+          "Operation #{m} does not define a strategy and no strategy was specified by the workflow"
         )
 
       s ->
@@ -475,7 +475,7 @@ defmodule Skitter.DSL.Workflow do
     end
   end
 
-  def _make_node(m, a, s) when is_atom(m), do: %C{component: m, args: a, strategy: s}
+  def _make_node(m, a, s) when is_atom(m), do: %O{operation: m, args: a, strategy: s}
 
   def _make_node(wf = %Workflow{}, _, _), do: %W{workflow: wf}
 
@@ -488,10 +488,10 @@ defmodule Skitter.DSL.Workflow do
   def _make_link(src, dst), do: {src, dst}
 
   defp implicit_in_port(%W{workflow: %Workflow{in: [p | _]}}), do: p
-  defp implicit_in_port(%C{component: comp}), do: comp |> Component.in_ports() |> hd()
+  defp implicit_in_port(%O{operation: oper}), do: oper |> Operation.in_ports() |> hd()
 
   defp implicit_out_port(%W{workflow: %Workflow{out: [p | _]}}), do: p
-  defp implicit_out_port(%C{component: comp}), do: comp |> Component.out_ports() |> hd()
+  defp implicit_out_port(%O{operation: oper}), do: oper |> Operation.out_ports() |> hd()
 
   def _merge_links(links, nodes, in_ports) do
     in_ports = Enum.map(in_ports, &{&1, []})

@@ -9,17 +9,17 @@ defmodule Skitter.Runtime.WorkflowWorkerSupervisor do
   This supervisor indirectly manages the workers of all deployed workflows.
 
   ```
-  + --- +        + ----------------- +                                 + ------------------ +
-  | App | - 1 -> | WorkflowWorkerSup | - for each deployed workflow -> | ComponentWorkerSup |
-  + --- +        + ----------------- +                                 + ------------------ +
+  + --- +        + ----------------- +                                 + ------------- +
+  | App | - 1 -> | WorkflowWorkerSup | - for each deployed workflow -> | NodeWorkerSup |
+  + --- +        + ----------------- +                                 + ------------- +
   ```
 
   When a workflow is deployed, this supervisor will spawn a
-  `Skitter.Runtime.ComponentWorkerSupervisor`, which is responsible for managing all the workers
-  spawned by the various components in the workflow.
+  `Skitter.Runtime.NodeWorkerSupervisor`, which is responsible for managing all the workers
+  spawned by the various strategies in the workflow.
   """
   use DynamicSupervisor
-  alias Skitter.Runtime.{ComponentWorkerSupervisor, ConstantStore}
+  alias Skitter.Runtime.{NodeWorkerSupervisor, ConstantStore}
   require ConstantStore
 
   def start_link(arg), do: DynamicSupervisor.start_link(__MODULE__, arg, name: __MODULE__)
@@ -32,25 +32,25 @@ defmodule Skitter.Runtime.WorkflowWorkerSupervisor do
 
   This function spawns a supervision tree under this supervisor which will manage the workers of
   the deployed workflow. The `pid`s of the `Skitter.Runtime.WorkerSupervisor`s will be stored in
-  the `Skitter.Runtime.ComponentStore` with the `:skitter_supervisors` key.
+  the `Skitter.Runtime.NodeStore` with the `:skitter_supervisors` key.
 
-  The pid of the spawned `Skitter.Runtime.ComponentWorkerSupervisor` will be stored in the
-  `Skitter.Runtime.ConstantStore` with the `:skitter_component_worker_superivor` key.
+  The pid of the spawned `Skitter.Runtime.NodeWorkerSupervisor` will be stored in the
+  `Skitter.Runtime.ConstantStore` with the `:skitter_node_worker_superivor` key.
   """
-  def spawn_local_workflow(ref, components) do
+  def spawn_local_workflow(ref, nodes) do
     {:ok, pid} =
       DynamicSupervisor.start_child(
         __MODULE__,
-        {ComponentWorkerSupervisor, {ref, components}}
+        {NodeWorkerSupervisor, {ref, nodes}}
       )
 
-    ComponentWorkerSupervisor.store_supervisors(pid, ref)
-    ConstantStore.put(pid, :component_worker_supervisor, ref)
+    NodeWorkerSupervisor.store_supervisors(pid, ref)
+    ConstantStore.put(pid, :node_worker_supervisor, ref)
   end
 
   @doc "Stop the local workers spawned for the workflow with reference `ref`."
   def stop_local_workflow(ref) do
-    pid = ConstantStore.get(:component_worker_supervisor, ref)
+    pid = ConstantStore.get(:node_worker_supervisor, ref)
     DynamicSupervisor.terminate_child(__MODULE__, pid)
   end
 end

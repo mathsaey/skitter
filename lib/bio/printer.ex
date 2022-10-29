@@ -4,14 +4,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import Skitter.DSL.Component, only: :macros
+import Skitter.DSL.Operation, only: :macros
 
-defcomponent Skitter.BIC.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLocal do
-  @componentdoc """
-  Print component.
+defoperation Skitter.BIO.Print, in: _, out: _, strategy: Skitter.BIS.ImmutableLocal do
+  @operationdoc """
+  Print operation.
 
-  This component print any data element it receives and emits the received value on its out port.
-  This makes it possible to insert this component in the middle of a data processing
+  This operation print any data element it receives and emits the received value on its out port.
+  This makes it possible to insert this operation in the middle of a data processing
   pipeline for debugging purposes.
 
   A single string should be provided as an argument, this string will be used as a prefix for the

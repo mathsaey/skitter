@@ -40,34 +40,34 @@ which contains the result of the wrapped code.
 #### Hooks
 
 * `[:skitter, :hook, :deploy]`: Emitted when the
-  `c:Skitter.Strategy.Component.deploy/1` hook of a strategy is called.
-  * `:context`: The context passed to `c:Skitter.Strategy.Component.deploy/1`
+  `c:Skitter.Strategy.Operation.deploy/1` hook of a strategy is called.
+  * `:context`: The context passed to `c:Skitter.Strategy.Operation.deploy/1`
   * `:result` (only for the `:stop` event): the return value of the hook. This
     data will be stored inside the strategy's deployment.
 * `[:skitter, :hook, deliver]`: Emitted when the `deliver` hook of a strategy is
   * `:context`, `:data`, `:port`: the arguments passed to
-    `c:Skitter.Strategy.Component.deliver/3`.
+    `c:Skitter.Strategy.Operation.deliver/3`.
   * `:pid`: The `t:pid/0` of the process calling the hook. Note that this hook
     is called from within a worker of the strategy emitting the data, so this
-    pid will not refer to a worker of the component which should receive the
+    pid will not refer to a worker of the operation which should receive the
     data. Instead, it will refer to a worker of its predecessor.
   * `:result` (only for the `:stop` event). The result of the
-    `c:Skitter.Strategy.Component.deliver/3` hook is not used by the runtime
+    `c:Skitter.Strategy.Operation.deliver/3` hook is not used by the runtime
     system, so you should not use this.
 * `[:skitter, :hook, process]`: Emitted when the
-  `c:Skitter.Strategy.Component.process/4` hook of a strategy is called.
+  `c:Skitter.Strategy.Operation.process/4` hook of a strategy is called.
   * `:context`, `:message`, `:state`, `:tag`: the arguments passed to
-    `c:Skitter.Strategy.Component.process/4`.
+    `c:Skitter.Strategy.Operation.process/4`.
   * `:pid`: The `t:pid/0` of the worker calling the hook.
   * `:result` (only for the `:stop` event): the return value of the hook. This
     data will be used as the new state of the worker which called the hook.
 
-#### Component Callbacks
+#### Operation Callbacks
 
-* `[:skitter, :component, :call]`: Emitted when a component callback is called.
+* `[:skitter, :operation, :call]`: Emitted when an operation callback is called.
   * `:pid`: The `t:pid/0` of the worker calling the callback.
-  * `:component`, `:name`, `:state`, `:config`, `:args`: The arguments passed
-    `Skitter.Component.call/5`.
+  * `:operation`, `:name`, `:state`, `:config`, `:args`: The arguments passed
+    `Skitter.Operation.call/5`.
 
 ### Unwrapped Events
 
@@ -78,7 +78,7 @@ The events described in this section are not wrapped and are emitted by
 
 * `[:skitter, :worker, :init]`: Emitted when a new worker is initialized. Note
   that, when a workflow is deployed, the workers are only initialized after the
-  `deploy` hook of each component is called.
+  `deploy` hook of each node in the workflow is called.
   * `context`: The context the worker was deployed with.
   * `state`: The initial state of the worker.
   * `tag`: The worker `t:Skitter.Worker.tag/0`
@@ -90,9 +90,9 @@ The events described in this section are not wrapped and are emitted by
   * `:message`: The message being sent.
   * `:invocation`: The `t:Skitter.Invocation.t/0` of the message being sent.
 * `[:skitter, :runtime, :emit]`: Emitted when a strategy emits data using
-  `Skitter.Strategy.Component.emit/3`.
+  `Skitter.Strategy.Operation.emit/3`.
   * `context`: The context of the hook emitting the data.
-  * `emit`: The emitted data: `t:Skitter.Component.emit/0`.
+  * `emit`: The emitted data: `t:Skitter.Operation.emit/0`.
   * `invocation`: The invocation to use. May be a function which returns an
   invocation when called.
 * `[:skitter, :runtime, :deploy]`: Emitted when a workflow is deployed. The

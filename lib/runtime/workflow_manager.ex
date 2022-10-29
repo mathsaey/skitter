@@ -16,7 +16,7 @@ defmodule Skitter.Runtime.WorkflowManager do
 
   alias Skitter.{Runtime, Remote}
   alias Skitter.Mode.Master.WorkerConnection
-  alias Skitter.Runtime.{ConstantStore, ComponentStore, WorkflowWorkerSupervisor}
+  alias Skitter.Runtime.{ConstantStore, NodeStore, WorkflowWorkerSupervisor}
 
   require ConstantStore
 
@@ -37,15 +37,15 @@ defmodule Skitter.Runtime.WorkflowManager do
   @impl true
   def handle_info({:worker_up, node, _}, ref) do
     nodes = ConstantStore.get(:wf_nodes, ref)
-    names = ComponentStore.get_all(:wf_node_names, ref)
-    links = ComponentStore.get_all(:links, ref)
-    deployment = ComponentStore.get_all(:deployment, ref)
+    names = NodeStore.get_all(:wf_node_names, ref)
+    links = NodeStore.get_all(:links, ref)
+    deployment = NodeStore.get_all(:deployment, ref)
 
     Remote.on(node, fn ->
       ConstantStore.put(nodes, :wf_nodes, ref)
-      ComponentStore.put(names, :wf_node_names, ref)
-      ComponentStore.put(links, :links, ref)
-      ComponentStore.put(deployment, :deployment, ref)
+      NodeStore.put(names, :wf_node_names, ref)
+      NodeStore.put(links, :links, ref)
+      NodeStore.put(deployment, :deployment, ref)
       WorkflowWorkerSupervisor.spawn_local_workflow(ref, length(links))
     end)
 

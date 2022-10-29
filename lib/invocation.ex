@@ -22,15 +22,15 @@ defmodule Skitter.Invocation do
   which defines that the data associated with this invocation does not store metadata. This can
   occur in two situations:
 
-  - The data is external. This occurs when a source component receives a message that is not
-  sent through Skitter. In this case, the invocation is marked as `:external`. The strategy
-  handling the message is responsible for creating a proper invocation.
+  - The data is external. This occurs when a source node receives a message that is not sent
+  through Skitter. In this case, the invocation is marked as `:external`. The strategy handling
+  the message is responsible for creating a proper invocation.
 
   - The message is a "meta-message". This occurs when strategies wish to propagate information
   through the workflow that is not data to be processed. When this is the case, the message is
   marked as `:meta`.
 
-  Regular invocation contain an `:_id` field, which contains a unique identifer. This can be used
+  Regular invocation contain an `:_id` field, which contains a unique identifier. This can be used
   to differentiate between invocations created at different points in time.
   """
   @type t() :: %{required(:_id) => reference()} | :external | :meta

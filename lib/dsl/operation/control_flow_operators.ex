@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.DSL.Component.ControlFlowOperators do
+defmodule Skitter.DSL.Operation.ControlFlowOperators do
   @moduledoc false
   # State updates in `defcb` are handled by creating hidden variables which keep track of the
   # callback state and emitted data. This approach is a lot faster than using the process
@@ -14,9 +14,9 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
   # To solve this, we introduce our own version of common control flow constructs and ensure the
   # modified variables are returned as a part of the result of the control flow construct. These
   # constructs are defined here, to avoid name clashes with the Kernel module in
-  # `Skitter.DSL.Component`.
+  # `Skitter.DSL.Operation`.
 
-  alias Skitter.DSL.Component
+  alias Skitter.DSL.Operation
   import Kernel, except: [if: 2]
 
   # Imports the constructs defined in this module, and ensures those in the kernel are not
@@ -191,13 +191,13 @@ defmodule Skitter.DSL.Component.ControlFlowOperators do
   end
 
   defp updates(branches) do
-    write? = branches |> Enum.map(&Component.write?/1) |> Enum.any?()
-    emit? = branches |> Enum.map(&Component.emit?/1) |> Enum.any?()
+    write? = branches |> Enum.map(&Operation.write?/1) |> Enum.any?()
+    emit? = branches |> Enum.map(&Operation.emit?/1) |> Enum.any?()
 
     cond do
-      write? && emit? -> [Component.state_var(), Component.emit_var()]
-      write? -> [Component.state_var()]
-      emit? -> [Component.emit_var()]
+      write? && emit? -> [Operation.state_var(), Operation.emit_var()]
+      write? -> [Operation.state_var()]
+      emit? -> [Operation.emit_var()]
       true -> []
     end
   end

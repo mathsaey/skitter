@@ -287,7 +287,7 @@ defmodule Mix.Tasks.Skitter.New do
 
   embed_template(:module, """
   # The lib directory contains the various modules which define your application.
-  # Any module (and thus any component or strategy) defined in this directory is compiled by mix and
+  # Any module (and thus any operation or strategy) defined in this directory is compiled by mix and
   # included when you assemble a release.
   #
   # In this file, we provide an example workflow to help you get started with Skitter.

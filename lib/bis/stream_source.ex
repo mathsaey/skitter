@@ -8,23 +8,23 @@ import Skitter.DSL.Strategy, only: :macros
 
 defstrategy Skitter.BIS.StreamSource do
   @moduledoc """
-  Strategy for stream-based source components.
+  Strategy for stream-based source operations.
 
-  This strategy can be used to create a source component. It is designed for components which
+  This strategy can be used to create a source operation. It is designed for operations which
   generate a stream of data that is to be sent into the workflow.
 
-  When the component is deployed, this strategy will spawn a single worker and call the components
+  When the operation is deployed, this strategy will spawn a single worker and call the operations
   `stream` callback. This callback should return a stream. Once deployed, the elements of this
   stream will be emitted by one by one. The strategy ensures these values are shuffled over the
   available worker nodes.
 
-  ## Component Properties
+  ## Operation Properties
 
   * in ports: none
   * out ports: a single out port.
   * callbacks:
     * `stream`: Called at deployment time. This callback should return a stream, which will be
-    emitted once the component has been deployed.
+    emitted once the operation has been deployed.
   """
   defhook deploy do
     remote_worker(

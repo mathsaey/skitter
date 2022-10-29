@@ -16,6 +16,6 @@ defmodule Skitter.StrategyError do
 
   @impl true
   def message(%__MODULE__{message: msg, context: cont}) do
-    "Raised by #{inspect(cont.strategy)} handling #{inspect(cont.component)}:\n\t#{msg}"
+    "Raised by #{inspect(cont.strategy)} handling #{inspect(cont.operation)}:\n\t#{msg}"
   end
 end

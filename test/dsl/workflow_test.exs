@@ -8,12 +8,12 @@ defmodule Skitter.DSL.WorkflowTest do
   use ExUnit.Case, async: true
 
   import Skitter.DSL.Workflow
-  import Skitter.DSL.Component, only: [defcomponent: 3]
+  import Skitter.DSL.Operation, only: [defoperation: 3]
 
-  defcomponent Example, in: in_port, out: out_port, strategy: DefaultStrategy do
+  defoperation Example, in: in_port, out: out_port, strategy: DefaultStrategy do
   end
 
-  defcomponent Join, in: [left, right], out: _ do
+  defoperation Join, in: [left, right], out: _ do
   end
 
   doctest Skitter.DSL.Workflow

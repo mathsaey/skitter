@@ -6,7 +6,7 @@
 
 defmodule Skitter.Runtime.WorkerSupervisor do
   @moduledoc """
-  This supervisor manages the various workers spawned for a component
+  This supervisor manages the various workers spawned for a node
 
   ```
   + ------------------ +        + --------- +        + ------ +
@@ -15,15 +15,15 @@ defmodule Skitter.Runtime.WorkerSupervisor do
   ```
 
   When a workflow is deployed, a `Skitter.Runtime.WorkerSupervisor` will be spawned for
-  each component. This supervisor is responsible for managing the `Skitter.Runtime.Worker`s
-  spawned by the strategy of the component.
+  each node. This supervisor is responsible for managing the `Skitter.Runtime.Worker`s
+  spawned by the strategy of the node.
   """
   use DynamicSupervisor, restart: :transient
 
   alias Skitter.{Strategy, Worker}
-  alias Skitter.Runtime.ComponentStore
+  alias Skitter.Runtime.NodeStore
 
-  require ComponentStore
+  require NodeStore
 
   def start_link(arg), do: DynamicSupervisor.start_link(__MODULE__, arg)
   def stop(pid), do: DynamicSupervisor.stop(pid)
@@ -44,13 +44,13 @@ defmodule Skitter.Runtime.WorkerSupervisor do
         {ref, idx} -> {ref, idx}
       end
 
-    pid = ComponentStore.get(:local_supervisors, ref, idx)
+    pid = NodeStore.get(:local_supervisors, ref, idx)
     {:ok, pid} = DynamicSupervisor.start_child(pid, {Skitter.Runtime.Worker, {ctx, state, tag}})
     pid
   end
 
   def all_children(ref, idx, fun) when is_reference(ref) do
-    ComponentStore.get(:local_supervisors, ref, idx)
+    NodeStore.get(:local_supervisors, ref, idx)
     |> DynamicSupervisor.which_children()
     |> Enum.each(fn {_, pid, _, _} -> fun.(pid) end)
   end

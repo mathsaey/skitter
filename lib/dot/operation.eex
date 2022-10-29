@@ -6,21 +6,21 @@
 "<%= expand_path(@path, @id) %>" [shape=none label=<
   <TABLE STYLE="rounded"><TR>
 
-    <%= unless @component |> Component.in_ports() |> Enum.empty?() do %>
+    <%= unless @operation |> Operation.in_ports() |> Enum.empty?() do %>
       <TD BORDER="0">
-        <%= component_ports(ports: Component.in_ports(@component), prefix: "in") %>
+        <%= operation_ports(ports: Operation.in_ports(@operation), prefix: "in") %>
       </TD>
     <% end %>
 
     <TD BORDER="0">
       <%= @id %><BR/>
-      <%= @component |> Module.split() |> Enum.join(".") %><BR/>
+      <%= @operation |> Module.split() |> Enum.join(".") %><BR/>
       <%= @strategy |> Module.split() |> Enum.join(".") %>
     </TD>
 
-    <%= unless @component |> Component.out_ports() |> Enum.empty?() do %>
+    <%= unless @operation |> Operation.out_ports() |> Enum.empty?() do %>
       <TD BORDER="0">
-        <%= component_ports(ports: Component.out_ports(@component), prefix: "out") %>
+        <%= operation_ports(ports: Operation.out_ports(@operation), prefix: "out") %>
       </TD>
     <% end %>
   </TR></TABLE>

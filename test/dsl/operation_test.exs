@@ -4,25 +4,25 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.DSL.ComponentTest do
+defmodule Skitter.DSL.OperationTest do
   use ExUnit.Case, async: true
 
-  import Skitter.DSL.Component
+  import Skitter.DSL.Operation
   import Skitter.DSL.Test.Assertions
 
-  alias Skitter.Component
-  alias Skitter.Component.Callback.{Info, Result}
+  alias Skitter.Operation
+  alias Skitter.Operation.Callback.{Info, Result}
 
-  defcomponent NoStateExample do
+  defoperation NoStateExample do
     defcb return_state, do: state()
   end
 
-  defcomponent StateExample do
+  defoperation StateExample do
     initial_state 0
     defcb return_state, do: state()
   end
 
-  defcomponent Average, in: value, out: current do
+  defoperation Average, in: value, out: current do
     state_struct total: 0, count: 0
 
     defcb react(val) do
@@ -32,49 +32,49 @@ defmodule Skitter.DSL.ComponentTest do
     end
   end
 
-  defcomponent ConfigExample do
+  defoperation ConfigExample do
     defcb read(), do: config()
   end
 
-  defcomponent ReadExample do
+  defoperation ReadExample do
     initial_state 0
     defcb read(), do: state()
   end
 
-  defcomponent FieldReadExample do
+  defoperation FieldReadExample do
     state_struct field: nil
     defcb read(), do: ~f{field}
   end
 
-  defcomponent WriteExample do
+  defoperation WriteExample do
     defcb write(), do: state <~ :foo
   end
 
-  defcomponent FieldWriteExample do
+  defoperation FieldWriteExample do
     state_struct [:field]
     defcb write(), do: field <~ :bar
   end
 
-  defcomponent WrongFieldWriteExample do
+  defoperation WrongFieldWriteExample do
     state_struct [:field]
     defcb write(), do: doesnotexist <~ :bar
   end
 
-  defcomponent SingleEmitExample do
+  defoperation SingleEmitExample do
     defcb emit(value) do
       value ~> some_port
       :foo ~> some_other_port
     end
   end
 
-  defcomponent MultiEmitExample do
+  defoperation MultiEmitExample do
     defcb emit(value) do
       value ~> some_port
       [:foo, :bar] ~>> some_other_port
     end
   end
 
-  defcomponent CbExample do
+  defoperation CbExample do
     defcb simple(), do: nil
     defcb arguments(arg1, arg2), do: arg1 + arg2
     defcb state(), do: counter <~ (~f{counter} + 1)
@@ -82,7 +82,7 @@ defmodule Skitter.DSL.ComponentTest do
     defcb emit_multi(), do: [~D[1991-12-08], ~D[2021-07-08]] ~>> out_port
   end
 
-  defcomponent TryExample do
+  defoperation TryExample do
     defcb simple(fun) do
       try do
         pre <~ :modified
@@ -134,18 +134,18 @@ defmodule Skitter.DSL.ComponentTest do
     end
   end
 
-  doctest Skitter.DSL.Component
+  doctest Skitter.DSL.Operation
 
-  describe "defcomponent" do
+  describe "defoperation" do
     test "invalid strategy results in error" do
       assert_definition_error ~r/Invalid strategy: `5`/ do
-        defcomponent ShouldError, strategy: 5 do
+        defoperation ShouldError, strategy: 5 do
         end
       end
     end
   end
 
-  defcomponent Clauses do
+  defoperation Clauses do
     state_struct [:x, :y]
 
     defcb f(:foo), do: x <~ :foo
@@ -158,25 +158,25 @@ defmodule Skitter.DSL.ComponentTest do
   end
 
   test "multiple callback clauses" do
-    assert Component.callback_info(Clauses, :f, 1) == %Info{
+    assert Operation.callback_info(Clauses, :f, 1) == %Info{
              read?: false,
              write?: true,
              emit?: true
            }
 
-    assert Component.call(Clauses, :f, [:foo]) == %Result{
+    assert Operation.call(Clauses, :f, [:foo]) == %Result{
              result: nil,
              state: %Clauses{x: :foo, y: nil},
              emit: []
            }
 
-    assert Component.call(Clauses, :f, [:bar]) == %Result{
+    assert Operation.call(Clauses, :f, [:bar]) == %Result{
              result: nil,
              state: %Clauses{x: nil, y: :bar},
              emit: []
            }
 
-    assert Component.call(Clauses, :f, [:baz]) == %Result{
+    assert Operation.call(Clauses, :f, [:baz]) == %Result{
              result: nil,
              state: %Clauses{},
              emit: [z: [:baz]]
@@ -184,14 +184,14 @@ defmodule Skitter.DSL.ComponentTest do
   end
 
   test "guards" do
-    assert Component.call(Clauses, :g, [0]).result == :lt
-    assert Component.call(Clauses, :g, [8]).result == :gt
-    assert Component.call(Clauses, :g, [5]).result == :eq
+    assert Operation.call(Clauses, :g, [0]).result == :lt
+    assert Operation.call(Clauses, :g, [8]).result == :gt
+    assert Operation.call(Clauses, :g, [5]).result == :eq
   end
 
   describe "control flow rewrite" do
     test "if without updates" do
-      defcomponent NormalIf do
+      defoperation NormalIf do
         defcb test1() do
           if true, do: 10
         end
@@ -205,13 +205,13 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(NormalIf, :test1, []).result == 10
-      assert Component.call(NormalIf, :test2, []).result == 10
-      assert Component.call(NormalIf, :test3, []).result == 20
+      assert Operation.call(NormalIf, :test1, []).result == 10
+      assert Operation.call(NormalIf, :test2, []).result == 10
+      assert Operation.call(NormalIf, :test3, []).result == 20
     end
 
     test "if with state and emit updates" do
-      defcomponent StateIf do
+      defoperation StateIf do
         defcb emit(arg) do
           if arg do
             :foo ~> true_port
@@ -231,29 +231,29 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(StateIf, :emit, [true]).emit == [
+      assert Operation.call(StateIf, :emit, [true]).emit == [
                true_multi: [:bar, :baz],
                true_port: [:foo]
              ]
 
-      assert Component.call(StateIf, :emit, [false]).emit == [
+      assert Operation.call(StateIf, :emit, [false]).emit == [
                false_multi: [:bar, :baz],
                false_port: [:foo]
              ]
 
-      assert Component.call(StateIf, :state, %{x: true, y: nil}, nil, []).state == %{
+      assert Operation.call(StateIf, :state, %{x: true, y: nil}, nil, []).state == %{
                x: true,
                y: :foo
              }
 
-      assert Component.call(StateIf, :state, %{x: false, y: nil}, nil, []).state == %{
+      assert Operation.call(StateIf, :state, %{x: false, y: nil}, nil, []).state == %{
                x: false,
                y: :bar
              }
     end
 
     test "case without updates" do
-      defcomponent NormalCase do
+      defoperation NormalCase do
         defcb test() do
           case 5 do
             5 -> 10
@@ -261,11 +261,11 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(NormalCase, :test, []).result == 10
+      assert Operation.call(NormalCase, :test, []).result == 10
     end
 
     test "case with state update" do
-      defcomponent StateCase do
+      defoperation StateCase do
         defcb test() do
           case 5 do
             5 ->
@@ -274,11 +274,11 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(StateCase, :test, %{x: 0}, nil, []).state == %{x: 10}
+      assert Operation.call(StateCase, :test, %{x: 0}, nil, []).state == %{x: 10}
     end
 
     test "case with emit" do
-      defcomponent EmitCase do
+      defoperation EmitCase do
         defcb test(arg) do
           case arg do
             1 -> :foo ~> out
@@ -287,12 +287,12 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(EmitCase, :test, [1]).emit == [out: [:foo]]
-      assert Component.call(EmitCase, :test, [2]).emit == [other: [:bar, :baz]]
+      assert Operation.call(EmitCase, :test, [1]).emit == [out: [:foo]]
+      assert Operation.call(EmitCase, :test, [2]).emit == [other: [:bar, :baz]]
     end
 
     test "cond without updates" do
-      defcomponent NormalCond do
+      defoperation NormalCond do
         defcb test(arg_1, arg_2) do
           cond do
             arg_1 -> :arg_1
@@ -302,13 +302,13 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(NormalCond, :test, [true, true]).result == :arg_1
-      assert Component.call(NormalCond, :test, [false, true]).result == :arg_2
-      assert Component.call(NormalCond, :test, [false, false]).result == :else
+      assert Operation.call(NormalCond, :test, [true, true]).result == :arg_1
+      assert Operation.call(NormalCond, :test, [false, true]).result == :arg_2
+      assert Operation.call(NormalCond, :test, [false, false]).result == :else
     end
 
     test "cond" do
-      defcomponent RewriteCond do
+      defoperation RewriteCond do
         defcb test(state, emit, both) do
           cond do
             state ->
@@ -330,21 +330,21 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(RewriteCond, :test, %{x: :unchanged}, nil, [true, true, true]) ==
+      assert Operation.call(RewriteCond, :test, %{x: :unchanged}, nil, [true, true, true]) ==
                %Result{emit: [], state: %{x: :modified}, result: :state}
 
-      assert Component.call(RewriteCond, :test, %{x: :unchanged}, nil, [false, true, true]) ==
+      assert Operation.call(RewriteCond, :test, %{x: :unchanged}, nil, [false, true, true]) ==
                %Result{emit: [out: [:emit]], state: %{x: :unchanged}, result: :emit}
 
-      assert Component.call(RewriteCond, :test, %{x: :unchanged}, nil, [false, false, true]) ==
+      assert Operation.call(RewriteCond, :test, %{x: :unchanged}, nil, [false, false, true]) ==
                %Result{emit: [out: [:emit]], state: %{x: :modified}, result: :both}
 
-      assert Component.call(RewriteCond, :test, %{x: :unchanged}, nil, [false, false, false]) ==
+      assert Operation.call(RewriteCond, :test, %{x: :unchanged}, nil, [false, false, false]) ==
                %Result{emit: [], state: %{x: :unchanged}, result: :else}
     end
 
     test "receive without updates" do
-      defcomponent NormalReceive do
+      defoperation NormalReceive do
         defcb test do
           receive do
             :foo -> :bar
@@ -353,11 +353,11 @@ defmodule Skitter.DSL.ComponentTest do
       end
 
       send(self(), :foo)
-      assert Component.call(NormalReceive, :test, []).result == :bar
+      assert Operation.call(NormalReceive, :test, []).result == :bar
     end
 
     test "receive" do
-      defcomponent RewriteReceive do
+      defoperation RewriteReceive do
         defcb test do
           receive do
             :foo ->
@@ -381,7 +381,7 @@ defmodule Skitter.DSL.ComponentTest do
 
       send(self(), :foo)
 
-      assert Component.call(RewriteReceive, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceive, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [],
                state: %{x: :unchanged},
                result: :bar
@@ -389,7 +389,7 @@ defmodule Skitter.DSL.ComponentTest do
 
       send(self(), :state)
 
-      assert Component.call(RewriteReceive, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceive, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [],
                state: %{x: :modified},
                result: :state
@@ -397,7 +397,7 @@ defmodule Skitter.DSL.ComponentTest do
 
       send(self(), :emit)
 
-      assert Component.call(RewriteReceive, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceive, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [out: [:emit]],
                state: %{x: :unchanged},
                result: :emit
@@ -405,7 +405,7 @@ defmodule Skitter.DSL.ComponentTest do
 
       send(self(), :both)
 
-      assert Component.call(RewriteReceive, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceive, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [out: [:emit]],
                state: %{x: :modified},
                result: :both
@@ -413,7 +413,7 @@ defmodule Skitter.DSL.ComponentTest do
     end
 
     test "receive with after without updates" do
-      defcomponent NormalReceiveAfter do
+      defoperation NormalReceiveAfter do
         defcb test do
           receive do
             :foo -> :bar
@@ -424,12 +424,12 @@ defmodule Skitter.DSL.ComponentTest do
       end
 
       send(self(), :foo)
-      assert Component.call(NormalReceiveAfter, :test, []).result == :bar
-      assert Component.call(NormalReceiveAfter, :test, []).result == :none
+      assert Operation.call(NormalReceiveAfter, :test, []).result == :bar
+      assert Operation.call(NormalReceiveAfter, :test, []).result == :none
     end
 
     test "receive with after" do
-      defcomponent RewriteReceiveAfter do
+      defoperation RewriteReceiveAfter do
         defcb test do
           receive do
             :foo ->
@@ -458,7 +458,7 @@ defmodule Skitter.DSL.ComponentTest do
 
       send(self(), :foo)
 
-      assert Component.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [],
                state: %{x: :unchanged},
                result: :bar
@@ -466,7 +466,7 @@ defmodule Skitter.DSL.ComponentTest do
 
       send(self(), :state)
 
-      assert Component.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [],
                state: %{x: :modified},
                result: :state
@@ -474,7 +474,7 @@ defmodule Skitter.DSL.ComponentTest do
 
       send(self(), :emit)
 
-      assert Component.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [out: [:emit]],
                state: %{x: :unchanged},
                result: :emit
@@ -482,13 +482,13 @@ defmodule Skitter.DSL.ComponentTest do
 
       send(self(), :both)
 
-      assert Component.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [out: [:emit]],
                state: %{x: :modified},
                result: :both
              }
 
-      assert Component.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
+      assert Operation.call(RewriteReceiveAfter, :test, %{x: :unchanged}, nil, []) == %Result{
                emit: [out: [:emit]],
                state: %{x: :modified},
                result: :none
@@ -496,7 +496,7 @@ defmodule Skitter.DSL.ComponentTest do
     end
 
     test "try without updates" do
-      defcomponent NormalTry do
+      defoperation NormalTry do
         defcb test(fun) do
           try do
             fun.()
@@ -518,9 +518,9 @@ defmodule Skitter.DSL.ComponentTest do
         end
       end
 
-      assert Component.call(NormalTry, :test, [fn -> raise RuntimeError end]).result == :rescue
-      assert Component.call(NormalTry, :test, [fn -> throw(:foo) end]).result == :catch
-      assert Component.call(NormalTry, :test, [fn -> :ok end]).result == :else
+      assert Operation.call(NormalTry, :test, [fn -> raise RuntimeError end]).result == :rescue
+      assert Operation.call(NormalTry, :test, [fn -> throw(:foo) end]).result == :catch
+      assert Operation.call(NormalTry, :test, [fn -> :ok end]).result == :else
     end
   end
 end

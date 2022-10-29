@@ -8,9 +8,10 @@ defmodule Skitter.Workflow do
   @moduledoc """
   Workflow type definition and utilities.
 
-  A reactive workflow defines a data processing pipeline. It is defined as a set of components
-  connected through various links. A workflow stores these components and links, along with some
-  additional information about the workflow.
+  A reactive workflow defines a data processing pipeline. It is defined as a set of nodes
+  connected through various links. A node contains a data processing operation and its
+  distribution strategy. A workflow stores these nodes and links between them, along with
+  additional meta-information about the workflow.
 
   In order to enable the reuse of workflows, workflows may define in -and out ports. When this is
   done, these workflows may be embedded inside another workflow. Note that a workflow is always
@@ -20,7 +21,7 @@ defmodule Skitter.Workflow do
   not recommended to define a workflow manually. Instead, the use of
   `Skitter.DSL.Workflow.workflow/2` is preferred.
   """
-  alias Skitter.{Component, Strategy, DefinitionError}
+  alias Skitter.{Operation, Strategy, DefinitionError}
 
   # ----- #
   # Types #
@@ -30,29 +31,29 @@ defmodule Skitter.Workflow do
   Internal workflow representation.
 
   A workflow is stored as a map, where each name refers to a single node, which is either a
-  `t:component/0` or `t:workflow/0`. Besides this, the in -and out ports of the workflow are
+  `t:operation/0` or `t:workflow/0`. Besides this, the in -and out ports of the workflow are
   stored. The outgoing links of the in ports of a workflow are stored along with the in ports.
   """
   @type t :: %__MODULE__{
           in: links(),
-          out: [Component.port_name()],
-          nodes: %{name() => component() | workflow()}
+          out: [Operation.port_name()],
+          nodes: %{name() => operation_node() | workflow_node()}
         }
 
   defstruct in: [], out: [], nodes: %{}
 
   @typedoc """
-  Component embedded inside a workflow.
+  Operation embedded inside a workflow.
 
-  A component in a workflow is stored along with its strategy, initialization arguments (which
-  are passed to `c:Skitter.Strategy.Component.deploy/1`) and the outgoing links of each of its out
+  An operation in a workflow is stored along with its strategy, initialization arguments (which
+  are passed to `c:Skitter.Strategy.Operation.deploy/1`) and the outgoing links of each of its out
   ports.
 
-  Workflows can override the strategy of a component, therefore, the strategy specified here may
-  not be the same as the strategy returned by `Skitter.Component.strategy/1`.
+  Workflows can override the strategy of an operation, therefore, the strategy specified here may
+  not be the same as the strategy returned by `Skitter.Operation.strategy/1`.
   """
-  @type component :: %__MODULE__.Node.Component{
-          component: Component.t(),
+  @type operation_node :: %__MODULE__.Node.Operation{
+          operation: Operation.t(),
           strategy: Strategy.t(),
           args: args(),
           links: links()
@@ -63,7 +64,7 @@ defmodule Skitter.Workflow do
 
   A workflow nested inside a workflow is stored along with the outgoing links of its out ports.
   """
-  @type workflow :: %__MODULE__.Node.Workflow{
+  @type workflow_node :: %__MODULE__.Node.Workflow{
           workflow: t(),
           links: links()
         }
@@ -74,28 +75,28 @@ defmodule Skitter.Workflow do
   Links are stored as a keyword list. Each key in this list represents an out port, while the
   value of this key is a list which references the destinations of this out port.
   """
-  @type links :: [{Component.port_name(), [destination()]}]
+  @type links :: [{Operation.port_name(), [destination()]}]
 
   @typedoc """
   Link destination.
 
-  This type stores the destination of a link. A link can point to a component or to an out port of
-  the workflow. In the first case, the name of the component and the name of the out port are
-  stored, in the second, only the name of the out port is stored.
+  This type stores the destination of a link. A link can point to a port of a node or to an out
+  port of the workflow. In the first case, the name of the node and its out port are stored, in
+  the second, only the name of the out port is stored.
   """
-  @type destination :: {name(), Component.port_name()} | Component.port_name()
+  @type destination :: {name(), Operation.port_name()} | Operation.port_name()
 
   @typedoc """
   Instance name
 
-  A name is used to refer to a component embedded inside a workflow.
+  A name is used to refer to a node embedded inside a workflow.
   """
   @type name :: atom()
 
   @typedoc """
-  Component initialization arguments
+  Operation initialization arguments
 
-  This type stores the arguments passed to the component in the workflow definition.
+  This type stores the arguments passed to the operation in the workflow definition.
   """
   @type args :: any()
 
@@ -104,9 +105,9 @@ defmodule Skitter.Workflow do
 
   defmodule Node do
     @moduledoc false
-    defmodule Component do
+    defmodule Operation do
       @moduledoc false
-      defstruct [:component, :strategy, :args, links: []]
+      defstruct [:operation, :strategy, :args, links: []]
     end
 
     defmodule Workflow do
@@ -119,28 +120,28 @@ defmodule Skitter.Workflow do
   # Utilities #
   # --------- #
 
-  alias __MODULE__.Node.Component, as: C
+  alias __MODULE__.Node.Operation, as: O
   alias __MODULE__.Node.Workflow, as: W
 
   @doc """
   Verify if the links in a workflow are valid.
 
   This function verifies if every link in the workflow has a valid source and destination. That
-  is, the link should depart from an existing workflow or component port and arrive at one. Note
+  is, the link should depart from an existing workflow or operation port and arrive at one. Note
   that this function does _not_ traverse nested workflows.
 
   ## Examples
 
-      iex> defcomponent Example, in: p, out: p do
+      iex> defoperation Example, in: p, out: p do
       ...> end
       iex> verify(%Workflow{nodes: %{
-      ...>   foo: %Node.Component{component: Example, links: [p: [bar: :p]]},
-      ...>   bar: %Node.Component{component: Example},
+      ...>   foo: %Node.Operation{operation: Example, links: [p: [bar: :p]]},
+      ...>   bar: %Node.Operation{operation: Example},
       ...> }})
       :ok
       iex> verify(%Workflow{nodes: %{
-      ...>   foo: %Node.Component{component: Example, links: [p: [baz: :p]]},
-      ...>   bar: %Node.Component{component: Example},
+      ...>   foo: %Node.Operation{operation: Example, links: [p: [baz: :p]]},
+      ...>   bar: %Node.Operation{operation: Example},
       ...> }})
       [{{:foo, :p}, {:baz, :p}}]
   """
@@ -167,19 +168,19 @@ defmodule Skitter.Workflow do
 
   ## Examples
 
-      iex> defcomponent Example, in: p, out: p do
+      iex> defoperation Example, in: p, out: p do
       ...> end
       iex> verify!(%Workflow{nodes: %{
-      ...>   foo: %Node.Component{component: Example, links: [p: [bar: :p]]},
-      ...>   bar: %Node.Component{component: Example},
+      ...>   foo: %Node.Operation{operation: Example, links: [p: [bar: :p]]},
+      ...>   bar: %Node.Operation{operation: Example},
       ...> }})
       %Workflow{nodes: %{
-        foo: %Node.Component{component: Skitter.WorkflowTest.Example, links: [p: [bar: :p]]},
-        bar: %Node.Component{component: Skitter.WorkflowTest.Example},
+        foo: %Node.Operation{operation: Skitter.WorkflowTest.Example, links: [p: [bar: :p]]},
+        bar: %Node.Operation{operation: Skitter.WorkflowTest.Example},
       }}
       iex> verify!(%Workflow{nodes: %{
-      ...>   foo: %Node.Component{component: Example, links: [p: [baz: :p]]},
-      ...>   bar: %Node.Component{component: Example},
+      ...>   foo: %Node.Operation{operation: Example, links: [p: [baz: :p]]},
+      ...>   bar: %Node.Operation{operation: Example},
       ...> }})
       ** (Skitter.DefinitionError) Invalid link: {:foo, :p} ~> {:baz, :p}
   """
@@ -204,7 +205,7 @@ defmodule Skitter.Workflow do
 
   defp get_sources(workflow) do
     Enum.flat_map(workflow.nodes, fn
-      {name, %C{component: comp}} -> Enum.map(Component.out_ports(comp), &{name, &1})
+      {name, %O{operation: comp}} -> Enum.map(Operation.out_ports(comp), &{name, &1})
       {name, %W{workflow: wf}} -> Enum.map(wf.out, &{name, &1})
     end)
     |> Enum.concat(Enum.map(workflow.in, &elem(&1, 0)))
@@ -213,7 +214,7 @@ defmodule Skitter.Workflow do
 
   defp get_destinations(workflow) do
     Enum.flat_map(workflow.nodes, fn
-      {name, %C{component: comp}} -> Enum.map(Component.in_ports(comp), &{name, &1})
+      {name, %O{operation: comp}} -> Enum.map(Operation.in_ports(comp), &{name, &1})
       {name, %W{workflow: wf}} -> Enum.map(wf.in, fn {port, _} -> {name, port} end)
     end)
     |> Enum.concat(workflow.out)
@@ -235,36 +236,36 @@ defmodule Skitter.Workflow do
   will be converted to:
   ![](assets/docs/workflow_inline_after.png)
 
-      iex> defcomponent Simple, in: p, out: p do
+      iex> defoperation Simple, in: p, out: p do
       ...> end
-      iex> defcomponent Join, in: [left, right], out: p do
+      iex> defoperation Join, in: [left, right], out: p do
       ...> end
       iex> inner = %Workflow{
       ...>   in: [foo: [node1: :p, node2: :p]],
       ...>   out: [:bar],
       ...>   nodes: %{
-      ...>     node1: %Node.Component{component: Simple, links: [p: [node3: :left]]},
-      ...>     node2: %Node.Component{component: Simple, links: [p: [node3: :right]]},
-      ...>     node3: %Node.Component{component: Join, links: [p: [:bar]]}
+      ...>     node1: %Node.Operation{operation: Simple, links: [p: [node3: :left]]},
+      ...>     node2: %Node.Operation{operation: Simple, links: [p: [node3: :right]]},
+      ...>     node3: %Node.Operation{operation: Join, links: [p: [:bar]]}
       ...> }}
       iex> parent = %Workflow{
       ...>   nodes: %{
-      ...>     node_pre: %Node.Component{component: Simple, links: [p: [nested1: :foo, nested2: :foo]]},
+      ...>     node_pre: %Node.Operation{operation: Simple, links: [p: [nested1: :foo, nested2: :foo]]},
       ...>     nested1: %Node.Workflow{workflow: inner, links: [bar: [node_post: :left]]},
       ...>     nested2: %Node.Workflow{workflow: inner, links: [bar: [node_post: :right]]},
-      ...>     node_post: %Node.Component{component: Join}
+      ...>     node_post: %Node.Operation{operation: Join}
       ...> }}
       iex> flatten(parent)
       %Workflow{
         nodes: %{
-          node_pre: %Node.Component{component: Skitter.WorkflowTest.Simple, links: [p: ["nested1#node1": :p, "nested1#node2": :p, "nested2#node1": :p, "nested2#node2": :p]]},
-          "nested1#node1": %Node.Component{component: Skitter.WorkflowTest.Simple, links: [p: ["nested1#node3": :left]]},
-          "nested1#node2": %Node.Component{component: Skitter.WorkflowTest.Simple, links: [p: ["nested1#node3": :right]]},
-          "nested1#node3": %Node.Component{component: Skitter.WorkflowTest.Join, links: [p: [node_post: :left]]},
-          "nested2#node1": %Node.Component{component: Skitter.WorkflowTest.Simple, links: [p: ["nested2#node3": :left]]},
-          "nested2#node2": %Node.Component{component: Skitter.WorkflowTest.Simple, links: [p: ["nested2#node3": :right]]},
-          "nested2#node3": %Node.Component{component: Skitter.WorkflowTest.Join, links: [p: [node_post: :right]]},
-          node_post: %Node.Component{component: Skitter.WorkflowTest.Join}
+          node_pre: %Node.Operation{operation: Skitter.WorkflowTest.Simple, links: [p: ["nested1#node1": :p, "nested1#node2": :p, "nested2#node1": :p, "nested2#node2": :p]]},
+          "nested1#node1": %Node.Operation{operation: Skitter.WorkflowTest.Simple, links: [p: ["nested1#node3": :left]]},
+          "nested1#node2": %Node.Operation{operation: Skitter.WorkflowTest.Simple, links: [p: ["nested1#node3": :right]]},
+          "nested1#node3": %Node.Operation{operation: Skitter.WorkflowTest.Join, links: [p: [node_post: :left]]},
+          "nested2#node1": %Node.Operation{operation: Skitter.WorkflowTest.Simple, links: [p: ["nested2#node3": :left]]},
+          "nested2#node2": %Node.Operation{operation: Skitter.WorkflowTest.Simple, links: [p: ["nested2#node3": :right]]},
+          "nested2#node3": %Node.Operation{operation: Skitter.WorkflowTest.Join, links: [p: [node_post: :right]]},
+          node_post: %Node.Operation{operation: Skitter.WorkflowTest.Join}
         }
       }
   """
@@ -307,7 +308,7 @@ defmodule Skitter.Workflow do
     {port, destinations}
   end
 
-  defp replace_destination(%C{}, name, port), do: [{name, port}]
+  defp replace_destination(%O{}, name, port), do: [{name, port}]
 
   defp replace_destination(%W{workflow: %__MODULE__{in: links}}, name, port) do
     Enum.map(links[port], fn {dest, port} -> {expand_name(dest, name), port} end)

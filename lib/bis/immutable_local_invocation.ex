@@ -8,15 +8,15 @@ import Skitter.DSL.Strategy, only: :macros
 
 defstrategy Skitter.BIS.ImmutableLocalInvocation, extends: Skitter.BIS.ImmutableLocal do
   @moduledoc """
-  Strategy for stateless components which modify the invocation.
+  Strategy for stateless operations which modify the invocation.
 
-  This strategy enables components to modify the invocation of received data element. It expects a
+  This strategy enables operations to modify the invocation of received data element. It expects a
   `update_invocation` callback, which accepts the invocation of the received data element as its
   first argument and  the data element as its second argument. This callback should return a
   modified invocation, which will be used as the invocation of the emitted output. The received
   data will remain unchanged.
 
-  ## Component Properties
+  ## Operation Properties
 
   * in ports: A single in port is required.
   * out ports: A single out port is required.

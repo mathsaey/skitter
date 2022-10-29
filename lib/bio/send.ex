@@ -4,14 +4,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import Skitter.DSL.Component, only: :macros
+import Skitter.DSL.Operation, only: :macros
 
-defcomponent Skitter.BIC.Send, in: _, strategy: Skitter.BIS.ImmutableLocal do
-  @componentdoc """
-  Send component.
+defoperation Skitter.BIO.Send, in: _, strategy: Skitter.BIS.ImmutableLocal do
+  @operationdoc """
+  Send operation.
 
-  This component is a sink that sends any data it receives to a given pid. The pid that should
-  receive the messages should be provided as an argument when the component is embedded inside a
+  This operation is a sink that sends any data it receives to a given pid. The pid that should
+  receive the messages should be provided as an argument when the operation is embedded inside a
   workflow.
   """
   defcb conf(pid), do: pid

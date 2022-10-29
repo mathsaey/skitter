@@ -13,14 +13,14 @@ Built in the context of my PhD at the
 
 Skitter is a reactive workflow system: it makes it possible to define data
 processing pipelines which respond to incoming data automatically by combining
-_components_ into a _workflow_.
+_operations_ into a _workflow_.
 
 A key difference between Skitter and other related technologies is the notion
-of a _distribution strategy_: components in a Skitter workflow specify a
-strategy which defines how the component is distributed over a cluster at
+of a _distribution strategy_: operations in a Skitter workflow specify a
+strategy which defines how the operation is distributed over a cluster at
 runtime.
-This enables developers to select the appropriate distribution strategy for a
-component for a given situation.
+This enables developers to select the appropriate distribution strategy for an
+operation for a given situation.
 Strategies can be implemented from scratch or built based on existing
 strategies.
 
@@ -78,8 +78,8 @@ Skitter project.
 replaced by underscores.
 The generated project will contain a `README.md` file with information about
 the generated code and instructions on how to run the Skitter application.
-Furthermore, some example code will be present in `lib/project_name.ex` to help
-you get started.
+Furthermore, some example code will be present in `lib/<project_name>.ex` to
+help you get started.
 
 ## Running a project
 

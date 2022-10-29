@@ -4,13 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import Skitter.DSL.Component, only: :macros
+import Skitter.DSL.Operation, only: :macros
 
-defcomponent Skitter.BIC.StreamSource, out: _, strategy: Skitter.BIS.StreamSource do
-  @componentdoc """
+defoperation Skitter.BIO.StreamSource, out: _, strategy: Skitter.BIS.StreamSource do
+  @operationdoc """
   Source which produces a stream of predefined data.
 
-  This component is a source which is created with a set of data (an Elixir `Enumerable`). Once
+  This operation is a source which is created with a set of data (an Elixir `Enumerable`). Once
   deployed, it will emit each element in the enumerable in order.
   """
   defcb stream(stream), do: stream

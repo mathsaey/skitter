@@ -6,19 +6,19 @@
 
 defmodule Skitter.Worker do
   @moduledoc """
-  Worker which manages state and performs computations for a component.
+  Worker which manages state and performs computations for an operation and its strategy.
 
   Workers are spawned by strategies to manage state and perform computations for a given
-  component. Any component or strategy state not stored in the deployment lives in a worker.
+  operation. Any operation or strategy state not stored in the deployment lives in a worker.
 
   Skitter workers are created by strategies with an initial state. Any messages received by the
-  worker are handled by the `c:Skitter.Strategy.Component.process/4` hook of its strategy. This
+  worker are handled by the `c:Skitter.Strategy.Operation.process/4` hook of its strategy. This
   callback receives the current worker state and may return a new, updated state to be stored by
   the worker.
 
   Since strategies can create many separate workers, each worker is created with a _tag_ which can
   be used by the strategy to provide different implementations of
-  `c:Skitter.Strategy.Component.process/4` based on the worker that received the message.
+  `c:Skitter.Strategy.Operation.process/4` based on the worker that received the message.
 
   This module defines the worker types and various functions to deal with workers.
   """

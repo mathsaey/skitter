@@ -8,16 +8,16 @@ import Skitter.DSL.Strategy, only: :macros
 
 defstrategy Skitter.BIS.ImmutableLocal do
   @moduledoc """
-  Strategy for stateless components.
+  Strategy for stateless operations.
 
-  This strategy can be used for stateless components. It expects a component to provide a `react`
-  callback. When the component receives data, a worker on the current worker node is selected.
+  This strategy can be used for stateless operations. It expects an operation to provide a `react`
+  callback. When the operation receives data, a worker on the current worker node is selected.
   The selected worker will call the react callback with the received data.
 
-  ## Component Properties
+  ## Operation Properties
 
   * in ports: A single in port is required.
-  * out ports: This strategy places no limitations on the out ports of the component.
+  * out ports: This strategy places no limitations on the out ports of the operation.
   * callbacks:
     * `react` (required): Called for each incoming data element.
     * `conf` (optional): Called at deployment time. The result will be passed as config to each

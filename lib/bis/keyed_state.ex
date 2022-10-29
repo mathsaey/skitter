@@ -8,24 +8,23 @@ import Skitter.DSL.Strategy, only: :macros
 
 defstrategy Skitter.BIS.KeyedState do
   @moduledoc """
-  Strategy for stateful components that can partition their state by key.
+  Strategy for stateful operations that can partition their state by key.
 
-  This strategy can be used for stateful components with a keyed state. It expects a component to
-  provided a `key` and a `react` callback. When the component receives data, the `key` callback
+  This strategy can be used for stateful operations with a keyed state. It expects an operation to
+  provided a `key` and a `react` callback. When the operation receives data, the `key` callback
   will be called to determine the key of the incoming data, afterwards, the value will be sent to
   a worker maintaining the state for key. This worker might live on another cluster node. Finally,
   this worker will call the `react` callback to update the state of the key.
 
-  ## Component Properties
+  ## Operation Properties
 
   * in ports: A single in port is required.
-  * out ports: This strategy places no limitations on the out ports of the component.
+  * out ports: This strategy places no limitations on the out ports of the operation.
   * callbacks:
-    * `key` (required): Called for each incoming data element. Can not access component state. The
-      invocation is passed to this callback as its second argument.
+    * `key` (required): Called for each incoming data element. Can not access operation state.
     * `react` (required): Called for each incoming data element.
     * `init` (optional): Called to create an initial state for a key.
-    * `conf` (optional): Called to create a configuration for the component.
+    * `conf` (optional): Called to create a configuration for the operation.
   """
   defhook deploy do
     config = call_if_exists(:conf, [args()]).result

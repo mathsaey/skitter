@@ -4,48 +4,48 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-defmodule Skitter.Strategy.Component do
+defmodule Skitter.Strategy.Operation do
   @moduledoc """
-  Component strategy behaviour.
+  Operation strategy behaviour.
 
-  This module defines and documents the various hooks a `Skitter.Strategy` for a component should
+  This module defines and documents the various hooks a `Skitter.Strategy` for an operation should
   implement, along with the functions it can use to access the runtime system.
   """
-  alias Skitter.{Component, Strategy, Strategy.Context, Invocation, Worker}
+  alias Skitter.{Operation, Strategy, Strategy.Context, Invocation, Worker}
 
   @doc """
-  Deploy a component over the cluster.
+  Deploy an operation over the cluster.
 
-  This hook is called by the runtime system when a component has to be distributed over the
+  This hook is called by the runtime system when an operation has to be distributed over the
   cluster. Any data returned by this hook is made available to other hooks through the
   `deployment` field in `t:Skitter.Strategy.context/0`.
 
   ## Context
 
-  When this hook is called, only the current strategy, component and arguments are available in
+  When this hook is called, only the current strategy, operation and arguments are available in
   the context.
   """
   @callback deploy(context :: Strategy.context()) :: Strategy.deployment()
 
   @doc """
-  Accept data sent to the component and send it to a worker.
+  Accept data sent to the operation node and send it to a worker.
 
-  This hook is called by the runtime system when data needs to be sent to a given component (i.e.
-  when a predecessor of the component emits data). It receives the data to be sent along with the
-  index of the port to which the data should be sent.
+  This hook is called by the runtime system when data needs to be sent to a given operation (i.e.
+  when a predecessor of the operation node emits data). It receives the data to be sent along with
+  the index of the port to which the data should be sent.
 
   The result of this hook is ignored. Instead, this hook should use `Skitter.Worker.send/3` to
   transfer the received data to a worker.
 
   ## Context
 
-  All context data (component, strategy, deployment data and the invocation) is available when
+  All context data (operation, strategy, deployment data and the invocation) is available when
   this hook is called.
   """
   @callback deliver(
               context :: Strategy.context(),
               data :: any(),
-              port :: Component.port_index()
+              port :: Operation.port_index()
             ) :: any()
 
   @doc """
@@ -57,7 +57,7 @@ defmodule Skitter.Strategy.Component do
 
   ## Context
 
-  All context data (component, strategy, deployment data and the invocation) is available when
+  All context data (operation, strategy, deployment data and the invocation) is available when
   this hook is called.
 
   When the received message was not sent by Skitter (i.e. when the worker process received a
@@ -74,10 +74,10 @@ defmodule Skitter.Strategy.Component do
   @doc """
   Emit values.
 
-  This function causes the current component to emit data. In other words, the provided data will
-  be sent to the components connected to the out ports of the current component. This function
-  accepts a keyword list of `{out_port, enum}` pairs. Each element in `enum` will be sent to the
-  in ports of the components connected to `out_port`.
+  This function causes the current operation node to emit data. In other words, the provided data
+  will be sent to the operation nodes connected to the out ports of the current operation node.
+  This function accepts a keyword list of `{out_port, enum}` pairs. Each element in `enum` will be
+  sent to the in ports of the operation nodes connected to `out_port`.
 
   The values are emitted with the invocation of the passed context, use `emit/3` if you need to
   modify the invocation of the data to emit.
@@ -85,7 +85,7 @@ defmodule Skitter.Strategy.Component do
   Note that data is emitted from the current worker. This may cause issues when infinite streams
   of data are emitted.
   """
-  @spec emit(Strategy.context(), Component.emit()) :: :ok
+  @spec emit(Strategy.context(), Operation.emit()) :: :ok
   def emit(context = %Context{invocation: inv}, emit), do: emit(context, emit, inv)
 
   @doc """
@@ -98,6 +98,6 @@ defmodule Skitter.Strategy.Component do
   will be called once for every data element to publish. The returned invocation will be used as
   the invocation for the data element.
   """
-  @spec emit(Strategy.context(), Component.emit(), Invocation.t() | (() -> Invocation.t())) :: :ok
+  @spec emit(Strategy.context(), Operation.emit(), Invocation.t() | (() -> Invocation.t())) :: :ok
   def emit(context, enum, invocation), do: Skitter.Runtime.Emit.emit(context, enum, invocation)
 end
