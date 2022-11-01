@@ -20,7 +20,7 @@ defmodule Skitter.DSL.Strategy.Helpers do
     quote do
       import Kernel, except: [send: 2]
       import unquote(__MODULE__)
-      alias Skitter.{Operation, Worker, Invocation, Remote}
+      alias Skitter.{Operation, Worker, Remote}
     end
   end
 
@@ -77,19 +77,10 @@ defmodule Skitter.DSL.Strategy.Helpers do
   end
 
   @doc """
-  Send a message to a worker with `Skitter.Worker.send/3`
-
-  The invocation is inferred from the current invocation.
+  Send a message to a worker with `Skitter.Worker.send/2`
   """
   defmacro send(worker, message) do
-    quote(do: Skitter.Worker.send(unquote(worker), unquote(message), invocation()))
-  end
-
-  @doc """
-  Send a message to a worker with `Skitter.Worker.send/3`
-  """
-  defmacro send(worker, message, invocation) do
-    quote(do: Skitter.Worker.send(unquote(worker), unquote(message), unquote(invocation)))
+    quote(do: Skitter.Worker.send(unquote(worker), unquote(message)))
   end
 
   @doc """
@@ -99,15 +90,6 @@ defmodule Skitter.DSL.Strategy.Helpers do
   """
   defmacro emit(emit) do
     quote(do: Skitter.Strategy.Operation.emit(context(), unquote(emit)))
-  end
-
-  @doc """
-  Emit data for the current context.
-
-  Uses `Skitter.Strategy.Operation.emit/3`
-  """
-  defmacro emit(emit, invocation) do
-    quote(do: Skitter.Strategy.Operation.emit(context(), unquote(emit), unquote(invocation)))
   end
 
   @doc """

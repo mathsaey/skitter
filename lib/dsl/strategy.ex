@@ -10,8 +10,8 @@ defmodule Skitter.DSL.Strategy do
 
   This module offers macros to define a strategy and hooks. To define a strategy, use
   `defstrategy/3`. Inside the strategy, `defhook/2` can be used to define hooks. Inside the body
-  of the hook, `context/0`, `operation/0`, `strategy/0`, `deployment/0` and `invocation/0` can be
-  used to read information from the current context.
+  of the hook, `context/0`, `operation/0`, `strategy/0` and `deployment/0` can be used to read
+  information from the current context.
 
   Note that it is possible to define a strategy as an elixir module which implements the
   appropriate behaviour. Using `defstrategy/3` instead offers three main advantages:
@@ -38,7 +38,7 @@ defmodule Skitter.DSL.Strategy do
   A hook is an elixir function which accepts a `t:Skitter.Strategy.context/0` as its first
   argument. This context argument is implicitly created by the `defhook/2` macro; the various
   fields of the context can be accessed through the use of `context/0`, `operation/0`,
-  `strategy/0`, `deployment/0` and `invocation/0`.
+  `strategy/0` and `deployment/0`.
 
   Besides the context argument, hooks offer one additional feature: they can be inherited by other
   strategies.
@@ -180,26 +180,13 @@ defmodule Skitter.DSL.Strategy do
   defmacro deployment, do: quote(do: context().deployment)
 
   @doc """
-  Obtain the context's invocation.
-
-  ## Examples
-
-      iex> defstrategy ReadInvocation do
-      ...>   defhook read, do: invocation()
-      ...> end
-      iex> ReadInvocation.read(%Context{invocation: :external})
-      :external
-  """
-  defmacro invocation, do: quote(do: context().invocation)
-
-  @doc """
   Define a hook.
 
   This macro defines a single hook of a strategy. While a hook may be defined as a plain elixir
   function, using this macro offers three advantages:
 
   - The hook context is handled by the macro and can be accessed with `context/0`, `operation/0`,
-  `strategy/0`, `deployment/0` and `invocation/0`.
+  `strategy/0` and `deployment/0`.
 
   - The macros defined in `Skitter.DSL.Strategy.Helpers` can be used, reducing the code needed to
   spawn workers, or call operation callbacks.
@@ -260,8 +247,7 @@ defmodule Skitter.DSL.Strategy do
             operation: 0,
             strategy: 0,
             args: 0,
-            deployment: 0,
-            invocation: 0
+            deployment: 0
           ]
 
         unquote(body)

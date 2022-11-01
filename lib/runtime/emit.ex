@@ -15,27 +15,22 @@ defmodule Skitter.Runtime.Emit do
     raise(Skitter.DefinitionError, "Attempted to emit data inside a deploy hook")
   end
 
-  def emit(ctx = %Context{_skr: {ref, idx}}, emit, inv) do
-    Telemetry.emit([:runtime, :emit], %{}, %{context: ctx, emit: emit, invocation: inv})
-
+  def emit(ctx = %Context{_skr: {ref, idx}}, emit) do
+    Telemetry.emit([:runtime, :emit], %{}, %{context: ctx, emit: emit})
     node_links = NodeStore.get(:links, ref, idx)
 
     Enum.each(emit, fn {out_port, enum} ->
-      enum(enum, Map.fetch(node_links, out_port), inv)
+      enum(enum, Map.fetch(node_links, out_port))
     end)
   end
 
-  defp enum(_, :error, _), do: :ok
-  defp enum(_, {:ok, []}, _), do: :ok
-  defp enum(lst, {:ok, dsts}, inv) when is_list(lst), do: Enum.each(lst, &value(dsts, &1, inv))
-  defp enum(enum, {:ok, dsts}, inv), do: Stream.each(enum, &value(dsts, &1, inv)) |> Stream.run()
+  defp enum(_, :error), do: :ok
+  defp enum(_, {:ok, []}), do: :ok
+  defp enum(lst, {:ok, dsts}) when is_list(lst), do: Enum.each(lst, &value(dsts, &1))
+  defp enum(enum, {:ok, dsts}), do: Stream.each(enum, &value(dsts, &1)) |> Stream.run()
 
-  defp value(dsts, val, inv_fun) when is_function(inv_fun), do: value(dsts, val, inv_fun.())
-
-  defp value(dsts, val, inv) do
+  defp value(dsts, val) do
     Enum.each(dsts, fn {ctx, prt} ->
-      ctx = %{ctx | invocation: inv}
-
       Telemetry.wrap [:hook, :deliver], %{pid: self(), context: ctx, data: val, port: prt} do
         ctx.strategy.deliver(ctx, val, prt)
       end

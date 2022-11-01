@@ -29,7 +29,7 @@ defstrategy Skitter.BIS.StreamSource do
   defhook deploy do
     remote_worker(
       fn ->
-        send(self(), :start, Invocation.meta())
+        send(self(), :start)
         call(:stream, [args()]).result
       end,
       :source
@@ -45,7 +45,7 @@ defstrategy Skitter.BIS.StreamSource do
   end
 
   defhook process({:emit, emit}, nil, :sender) do
-    emit(to_port(0, [emit]), Invocation.new())
+    emit(to_port(0, [emit]))
     nil
   end
 end

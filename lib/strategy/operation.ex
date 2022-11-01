@@ -11,7 +11,7 @@ defmodule Skitter.Strategy.Operation do
   This module defines and documents the various hooks a `Skitter.Strategy` for an operation should
   implement, along with the functions it can use to access the runtime system.
   """
-  alias Skitter.{Operation, Strategy, Strategy.Context, Invocation, Worker}
+  alias Skitter.{Operation, Strategy, Strategy.Context, Worker}
 
   @doc """
   Deploy an operation over the cluster.
@@ -39,8 +39,8 @@ defmodule Skitter.Strategy.Operation do
 
   ## Context
 
-  All context data (operation, strategy, deployment data and the invocation) is available when
-  this hook is called.
+  All context data (operation, strategy and deployment data) is available when this hook is
+  called.
   """
   @callback deliver(
               context :: Strategy.context(),
@@ -57,12 +57,8 @@ defmodule Skitter.Strategy.Operation do
 
   ## Context
 
-  All context data (operation, strategy, deployment data and the invocation) is available when
-  this hook is called.
-
-  When the received message was not sent by Skitter (i.e. when the worker process received a
-  regular message), the invocation is set to `:external`. This can be used by e.g. sources to
-  respond to external data.
+  All context data (operation, strategy and the deployment data) is available when this hook is
+  called.
   """
   @callback process(
               context :: Strategy.context(),
@@ -79,25 +75,9 @@ defmodule Skitter.Strategy.Operation do
   This function accepts a keyword list of `{out_port, enum}` pairs. Each element in `enum` will be
   sent to the in ports of the operation nodes connected to `out_port`.
 
-  The values are emitted with the invocation of the passed context, use `emit/3` if you need to
-  modify the invocation of the data to emit.
-
   Note that data is emitted from the current worker. This may cause issues when infinite streams
   of data are emitted.
   """
   @spec emit(Strategy.context(), Operation.emit()) :: :ok
-  def emit(context = %Context{invocation: inv}, emit), do: emit(context, emit, inv)
-
-  @doc """
-  Emit values with a custom invocation.
-
-  This function emits values, like `emit/2`. Unlike `emit/2`, this function allows you to specify
-  the invocation of the emitted data. An invocation or a 0-arity function which returns an
-  invocation should be passed as an invocation to this function. If an invocation is passed, it
-  will be used as the invocation for every data element to publish. If a function is passed, it
-  will be called once for every data element to publish. The returned invocation will be used as
-  the invocation for the data element.
-  """
-  @spec emit(Strategy.context(), Operation.emit(), Invocation.t() | (() -> Invocation.t())) :: :ok
-  def emit(context, enum, invocation), do: Skitter.Runtime.Emit.emit(context, enum, invocation)
+  def emit(context = %Context{}, enum), do: Skitter.Runtime.Emit.emit(context, enum)
 end

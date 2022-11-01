@@ -29,11 +29,11 @@ defmodule Skitter.Runtime.Worker do
     {:noreply, init_state({context, state, tag})}
   end
 
-  def handle_cast({:sk_msg, msg, inv}, srv), do: {:noreply, process_hook(msg, inv, srv)}
+  def handle_cast({:sk_msg, msg}, srv), do: {:noreply, process_hook(msg, srv)}
   def handle_cast(:sk_stop, srv), do: {:stop, :normal, srv}
 
   @impl true
-  def handle_info(msg, srv), do: {:noreply, process_hook(msg, :external, srv)}
+  def handle_info(msg, srv), do: {:noreply, process_hook(msg, srv)}
 
   defp init_state({context, state, tag}) when is_function(state, 0) do
     init_state({context, state.(), tag})
@@ -59,18 +59,16 @@ defmodule Skitter.Runtime.Worker do
     }
   end
 
-  defp process_hook(msg, inv, srv) do
-    ctx = %{srv.context | invocation: inv}
-
+  defp process_hook(msg, srv) do
     state =
       Telemetry.wrap [:hook, :process], %{
         pid: self(),
-        context: ctx,
+        context: srv.ctx,
         message: msg,
         state: srv.state,
         tag: srv.tag
       } do
-        srv.strategy.process(ctx, msg, srv.state, srv.tag)
+        srv.strategy.process(srv.ctx, msg, srv.state, srv.tag)
       end
 
     %{srv | state: state}

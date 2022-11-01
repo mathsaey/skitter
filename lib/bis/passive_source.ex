@@ -43,7 +43,7 @@ defstrategy Skitter.BIS.PassiveSource do
   end
 
   defhook process(msg, nil, :sender) do
-    emit(call(:process, [msg]).emit, &Invocation.new/0)
+    emit(call(:process, [msg]).emit)
     nil
   end
 end

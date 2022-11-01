@@ -17,7 +17,7 @@ defmodule Skitter.Strategy do
 
   This module defines the strategy and context types.
   """
-  alias Skitter.{Operation, Workflow, Invocation}
+  alias Skitter.{Operation, Workflow}
 
   @typedoc """
   A strategy is defined as a module.
@@ -50,8 +50,6 @@ defmodule Skitter.Strategy do
   - `args`: The arguments passed to the node in the workflow.
   - `deployment`: The current deployment data. `nil` if the deployment is not created yet (e.g. in
   `deploy`)
-  - `invocation`: The current invocation data. `nil` for hooks that do not have access to the
-  invocation.
   - `_skr`: Data stored by the runtime system. This data should not be accessed or modified.
   """
   @type context :: %__MODULE__.Context{
@@ -59,13 +57,12 @@ defmodule Skitter.Strategy do
           strategy: t(),
           args: Workflow.args(),
           deployment: deployment() | nil,
-          invocation: Invocation.t() | nil,
           _skr: any()
         }
 
   defmodule Context do
     @moduledoc false
-    @derive {Inspect, except: [:_skr, :deployment, :invocation, :args]}
-    defstruct [:operation, :strategy, :args, :deployment, :invocation, :_skr]
+    @derive {Inspect, except: [:_skr, :deployment, :args]}
+    defstruct [:operation, :strategy, :args, :deployment, :_skr]
   end
 end

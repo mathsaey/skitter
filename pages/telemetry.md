@@ -88,13 +88,10 @@ The events described in this section are not wrapped and are emitted by
   * `:from`: The `t:pid/0` of the worker sending the message.
   * `:to`: The `t:pid/0` of the worker receiving the message.
   * `:message`: The message being sent.
-  * `:invocation`: The `t:Skitter.Invocation.t/0` of the message being sent.
 * `[:skitter, :runtime, :emit]`: Emitted when a strategy emits data using
   `Skitter.Strategy.Operation.emit/3`.
   * `context`: The context of the hook emitting the data.
   * `emit`: The emitted data: `t:Skitter.Operation.emit/0`.
-  * `invocation`: The invocation to use. May be a function which returns an
-  invocation when called.
 * `[:skitter, :runtime, :deploy]`: Emitted when a workflow is deployed. The
   event is emitted after everything is ready, but before
   `Skitter.Runtime.deploy/1` returns.
