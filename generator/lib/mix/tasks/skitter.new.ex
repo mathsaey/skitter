@@ -21,6 +21,8 @@ defmodule Mix.Tasks.Skitter.New do
   * a `config/config.exs` file which provides some initial configuration for Skitter and the
     logger.
 
+  # a `.formatter.exs` file which sets up `mix format`
+
   * a `lib/MODULE.ex` file which contain an empty workflow to get started.
 
   * a `README.md` file which documents the project layout.
@@ -110,6 +112,7 @@ defmodule Mix.Tasks.Skitter.New do
     ]
 
     create_file(Path.join(path, "mix.exs"), mix_template(assigns))
+    create_file(Path.join(path, ".formatter.exs"), formatter_text())
     create_file(Path.join(path, "config/config.exs"), config_template(assigns))
     create_file(Path.join(path, module_path), module_template(assigns))
     create_file(Path.join(path, ".gitignore"), gitignore_text())
@@ -138,6 +141,16 @@ defmodule Mix.Tasks.Skitter.New do
     Mix.shell().info([:green, "* Running", :reset, " `", cmd, "` in ", dir])
     Mix.shell().cmd("cd #{dir} ; #{cmd}")
   end
+
+  embed_text(:formatter, """
+  # This file is used by `mix format`.
+  # We include the skitter project as a dependency here to prevent the formatter from adding
+  # parentheses to the macros defined by the Skitter DSLs
+  [
+    inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
+    import_deps: [:skitter]
+  ]
+  """)
 
   embed_text(:gitignore, """
   # The directory Mix will write compiled artifacts to.

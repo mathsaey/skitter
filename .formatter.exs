@@ -13,14 +13,13 @@
     warn: :*,
     error: :*,
     # Skitter DSL
-    defcomponent: :*,
+    defoperation: :*,
     defcb: 2,
     state_struct: 1,
     initial_state: 1,
     defstrategy: :*,
     defhook: 2,
     workflow: :*,
-    node: :*,
     # Skitter config
     config_from_env: :*,
     config_enabled_if_set: :*,
@@ -28,14 +27,13 @@
   ],
   export: [
     locals_without_parens: [
-      defcomponent: :*,
+      defoperation: :*,
       defcb: :*,
-      state: 1,
+      initial_state: 1,
       state_struct: 1,
       defstrategy: :*,
       defhook: 2,
-      workflow: :*,
-      node: :*
+      workflow: :*
     ]
   ]
 ]
