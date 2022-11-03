@@ -45,7 +45,8 @@ Elixir is required to write and run Skitter applications.
 To install Elixir, please refer to the
 [official documentation](https://elixir-lang.org/install.html).
 
-Skitter requires the following Erlang/OTP and Elixir versions.
+The current version of skitter requires the following Erlang/OTP and Elixir
+versions.
 
 | Elixir | OTP |
 | ------ | --- |
