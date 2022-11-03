@@ -466,7 +466,7 @@ defmodule Skitter.DSL.Operation do
 
   defp read?(body) do
     extract_not_empty?(body, fn
-      quote(do: state()) -> true
+      {:state, _, []} -> true
       {:sigil_f, _env, [{:<<>>, _, [_]}, _]} -> true
       _ -> false
     end)
