@@ -47,27 +47,18 @@ defmodule Skitter.BIO do
   end
 
   @doc """
-  `Skitter.BIO.KeyBy` node.
-
-  Inserts a `Skitter.BIO.KeyBy` `Skitter.DSL.Workflow.node/2` in the workflow. The provided `func`
-  will be passed as an argument to `Skitter.BIO.KeyBy`. Other arguments (`as:`, `with:`) should be
-  passed as the optional, third argument.
-  """
-  defmacro key_by(func, opts \\ []) do
-    opts = [args: func] ++ opts
-    quote(do: node(Skitter.BIO.KeyBy, unquote(opts)))
-  end
-
-  @doc """
   `Skitter.BIO.KeyedReduce` node.
 
-  Inserts a `Skitter.BIO.KeyedReduce` `Skitter.DSL.Workflow.node/2` in the workflow. The `func` and
-  `initial` arguments passed to this macro are passed as arguments to `Skitter.BIO.KeyedReduce`.
-  Other options (`as:`, `with:`) can be passed as a third argument.
+  Inserts a `Skitter.BIO.KeyedReduce` `Skitter.DSL.Workflow.node/2` in the workflow. The `key_fn`,
+  `red_fn` and `initial` arguments passed to this macro are passed as arguments to
+  `Skitter.BIO.KeyedReduce`. Other options (`as:`, `with:`) can be passed as a fourth argument.
   """
-  defmacro keyed_reduce(func, initial, opts \\ []) do
-    opts = [args: {func, initial}] ++ opts
-    quote(do: node(Skitter.BIO.KeyedReduce, unquote(opts)))
+  defmacro keyed_reduce(key_fn, red_fn, initial, opts \\ []) do
+    args = quote bind_quoted: [key_fn: key_fn, red_fn: red_fn, initial: initial] do
+      {key_fn, red_fn, initial}
+    end
+
+    quote(do: node(Skitter.BIO.KeyedReduce, unquote([args: args] ++ opts)))
   end
 
   @doc """

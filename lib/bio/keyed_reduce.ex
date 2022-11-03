@@ -10,23 +10,26 @@ defoperation Skitter.BIO.KeyedReduce, in: _, out: _, strategy: Skitter.BIS.Keyed
   @operationdoc """
   Keyed Reduce operation.
 
-  This operation implements a reduce operation. It accepts two arguments when embedded inside a
-  workflow: a function and an initial state. When this operation receives data, the function is
-  called with the received data as its first argument and the current state as the second
-  argument. The function should then return a new state to be used by the next data element.
-
-  The state of this componennt is grouped by key. The key that will be used is determined by a
-  previous element in the workflow, such as the `Skitter.BIO.KeyBy` operation. When no state is
-  present for the key, the initial state passed as an argument to the operation will be passed as
-  the state.
+  This operation implements a reduce operation. It accepts three arguments wrapped in a tuple when
+  embedded inside a workflow: a key function, a reduce function and an initial state. When this
+  operation receives data, the key function is called with the received data as its first
+  argument. The key function should return a key, which is used to obtain the state associated
+  with the key. Afterwards, the reduce function is called with the received data as its first
+  argument and the state associated with the key returned by the key function as its second
+  argument. The function should then return a new state, which will be associated with the key.
+  The returned state will also be emitted on the `_` out port.
   """
+  defcb init({_, _, initial_state}), do: state <~ initial_state
+  defcb conf({key_fn, red_fn, _}), do: {key_fn, red_fn}
 
-  defcb init({_, initial_state}), do: state <~ initial_state
-  defcb conf({function, _}), do: function
-  defcb key(_, inv), do: inv[:key]
+  defcb key(val) do
+    {key_fn, _} = config()
+    key_fn.(val)
+  end
 
-  defcb react(tup) do
-    state <~ config().(tup, state())
+  defcb react(val) do
+    {_, red_fn} = config()
+    state <~ red_fn.(val, state())
     state() ~> _
   end
 end
