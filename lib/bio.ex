@@ -52,9 +52,10 @@ defmodule Skitter.BIO do
   `Skitter.BIO.KeyedReduce`. Other options (`as:`, `with:`) can be passed as a fourth argument.
   """
   defmacro keyed_reduce(key_fn, red_fn, initial, opts \\ []) do
-    args = quote bind_quoted: [key_fn: key_fn, red_fn: red_fn, initial: initial] do
-      {key_fn, red_fn, initial}
-    end
+    args =
+      quote bind_quoted: [key_fn: key_fn, red_fn: red_fn, initial: initial] do
+        {key_fn, red_fn, initial}
+      end
 
     quote(do: node(Skitter.BIO.KeyedReduce, unquote([args: args] ++ opts)))
   end
