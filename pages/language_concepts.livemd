@@ -4,8 +4,7 @@
 
 ```elixir
 Mix.install([
-  # TODO: Needs to be changed
-  {:skitter, path: "~/Documents/code/skitter"},
+  {:skitter, "~> 0.6"},
   {:kino, "~> 0.7"}
 ])
 
@@ -17,24 +16,6 @@ defmodule LivebookHelpers do
     |> Kino.Image.new(:svg)
   end
 end
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-==> skitter
-Generated skitter app
-
-16:59:17.112 [info] Skitter v0.6.0-dev started in local mode
-
-16:59:17.115 [info] Reachable at `3hrjhwtv-livebook_app@silverlode`
-
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-{:module, LivebookHelpers, <<70, 79, 82, 49, 0, 0, 7, ...>>, {:render, 1}}
 ```
 
 ## Introduction
@@ -60,7 +41,7 @@ use Skitter.DSL
 <!-- livebook:{"output":true} -->
 
 ```
-Skitter.DSL
+Skitter.DSL.Strategy
 ```
 
 ## Running Example & General Overview
@@ -160,7 +141,7 @@ phrase_stream |> Stream.take(3) |> Enum.to_list()
 <!-- livebook:{"output":true} -->
 
 ```
-["Skitter Wolf Joeri", "Wolf Joeri Mathijs", "Operation Joeri Strategy"]
+["Operation Mathijs Skitter", "Operation Mathijs Operation", "Wolf Operation Mathijs"]
 ```
 
 ## Workflows
@@ -505,7 +486,7 @@ end
 <!-- livebook:{"output":true} -->
 
 ```
-{:module, Sedentary, <<70, 79, 82, 49, 0, 0, 17, ...>>, {:process, 4}}
+{:module, Sedentary, <<70, 79, 82, 49, 0, 0, 16, ...>>, {:process, 4}}
 ```
 
 Inside the `deploy` hook, a single worker is created. Additionally, the `conf` callback is called to enable the operation to set up its configuration data. In the case of the `Show` operation, this configuration will contain the frame that will be used to show the current word counts. A reference to the worker and the created configuration are returned to be stored inside the deployment data.
@@ -532,7 +513,7 @@ ref =
 <!-- livebook:{"output":true} -->
 
 ```
-#Reference<0.3373922980.691273733.107470>
+#Reference<0.735078546.892600331.163381>
 ```
 
 ```elixir
