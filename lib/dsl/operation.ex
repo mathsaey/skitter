@@ -749,10 +749,9 @@ defmodule Skitter.DSL.Operation do
       @doc false
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
       def unquote(AST.build_clause(name, [_state_var(), _config_var()] ++ args, guards)) do
-        import unquote(__MODULE__), only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2, ]
+        import unquote(__MODULE__), only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
         use unquote(__MODULE__.ControlFlowOperators)
 
-        unquote_splicing(meta_vars)
         unquote(_emit_var()) = []
 
         result = unquote(body)
