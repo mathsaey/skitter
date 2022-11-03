@@ -361,7 +361,7 @@ defmodule Skitter.DSL.Operation do
   # -----
 
   @doc false
-  def state_var, do: quote(do: var!(state, unquote(__MODULE__)))
+  def _state_var, do: quote(do: var!(state, unquote(__MODULE__)))
 
   @doc """
   Obtain the current state.
@@ -387,7 +387,7 @@ defmodule Skitter.DSL.Operation do
       iex> Operation.call(ReadExample, :read, :state, nil, []).result
       :state
   """
-  defmacro state, do: quote(do: unquote(state_var()))
+  defmacro state, do: quote(do: unquote(_state_var()))
 
   @doc """
   Read the current value of a field stored in state.
@@ -414,7 +414,7 @@ defmodule Skitter.DSL.Operation do
   """
   defmacro sigil_f({:<<>>, _, [str]}, _) do
     field = str |> String.to_existing_atom()
-    quote(do: Map.fetch!(unquote(state_var()), unquote(field)))
+    quote(do: Map.fetch!(unquote(_state_var()), unquote(field)))
   end
 
   @doc """
@@ -459,7 +459,7 @@ defmodule Skitter.DSL.Operation do
   """
   defmacro {:state, _, _} <~ value do
     quote do
-      unquote(state_var()) = unquote(value)
+      unquote(_state_var()) = unquote(value)
       nil
     end
   end
@@ -490,7 +490,7 @@ defmodule Skitter.DSL.Operation do
   # ----
 
   @doc false
-  def emit_var, do: quote(do: var!(emit, unquote(__MODULE__)))
+  def _emit_var, do: quote(do: var!(emit, unquote(__MODULE__)))
 
   @doc """
   Emit `value` to `port`
@@ -516,7 +516,7 @@ defmodule Skitter.DSL.Operation do
   """
   defmacro value ~> {port, _, _} when is_atom(port) do
     quote do
-      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), [unquote(value)])
+      unquote(_emit_var()) = Keyword.put(unquote(_emit_var()), unquote(port), [unquote(value)])
       nil
     end
   end
@@ -544,7 +544,7 @@ defmodule Skitter.DSL.Operation do
   """
   defmacro enum ~>> {port, _, _} when is_atom(port) do
     quote do
-      unquote(emit_var()) = Keyword.put(unquote(emit_var()), unquote(port), unquote(enum))
+      unquote(_emit_var()) = Keyword.put(unquote(_emit_var()), unquote(port), unquote(enum))
       nil
     end
   end
@@ -752,14 +752,14 @@ defmodule Skitter.DSL.Operation do
         import unquote(__MODULE__), only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
         use unquote(__MODULE__.ControlFlowOperators)
 
-        unquote(emit_var()) = []
+        unquote(_emit_var()) = []
 
         result = unquote(body)
 
         %Skitter.Operation.Callback.Result{
           result: result,
-          state: unquote(state_var()),
-          emit: unquote(emit_var())
+          state: unquote(_state_var()),
+          emit: unquote(_emit_var())
         }
       end
     end
@@ -767,7 +767,7 @@ defmodule Skitter.DSL.Operation do
 
   defp build_signature(name, args) do
     quote do
-      unquote(name)(unquote(state_var()), unquote(config_var()), unquote_splicing(args))
+      unquote(name)(unquote(_state_var()), unquote(config_var()), unquote_splicing(args))
     end
   end
 

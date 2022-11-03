@@ -195,9 +195,9 @@ defmodule Skitter.DSL.Operation.ControlFlowOperators do
     emit? = branches |> Enum.map(&Operation.emit?/1) |> Enum.any?()
 
     cond do
-      write? && emit? -> [Operation.state_var(), Operation.emit_var()]
-      write? -> [Operation.state_var()]
-      emit? -> [Operation.emit_var()]
+      write? && emit? -> [Operation._state_var(), Operation._emit_var()]
+      write? -> [Operation._state_var()]
+      emit? -> [Operation._emit_var()]
       true -> []
     end
   end
