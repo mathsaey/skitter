@@ -234,13 +234,7 @@ defmodule Skitter.DSL.Operation do
     names = env.module |> _info_before_compile() |> Map.keys()
     metadata = env.module |> _info_before_compile() |> Macro.escape()
 
-    state =
-      case Module.get_attribute(env.module, :_sk_initial_state) do
-        :_sk_gen_struct -> quote(do: %__MODULE__{}) |> Macro.escape()
-        any -> any
-      end
-
-    quote bind_quoted: [names: names, metadata: metadata, state: state] do
+    quote bind_quoted: [names: names, metadata: metadata] do
       @impl true
       def _sk_operation_info(:strategy), do: @_sk_strategy
       def _sk_operation_info(:in_ports), do: @_sk_in_ports
