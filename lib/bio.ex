@@ -30,8 +30,7 @@ defmodule Skitter.BIO do
   Like `map/2`, but with `Skitter.BIO.FlatMap`.
   """
   defmacro flat_map(func, opts \\ []) do
-    opts = [args: func] ++ opts
-    quote(do: node(Skitter.BIO.FlatMap, unquote(opts)))
+    quote(do: node(Skitter.BIO.FlatMap, unquote([args: func] ++ opts)))
   end
 
   @doc """
@@ -42,8 +41,7 @@ defmodule Skitter.BIO do
   `with:`) should be passed as a second, optional argument.
   """
   defmacro filter(func, opts \\ []) do
-    opts = [args: func] ++ opts
-    quote(do: node(Skitter.BIO.Filter, unquote(opts)))
+    quote(do: node(Skitter.BIO.Filter, unquote([args: func] ++ opts)))
   end
 
   @doc """
@@ -69,8 +67,7 @@ defmodule Skitter.BIO do
   be passed as the optional second argument.
   """
   defmacro print(label \\ nil, opts \\ []) do
-    opts = [args: label] ++ opts
-    quote(do: node(Skitter.BIO.Print, unquote(opts)))
+    quote(do: node(Skitter.BIO.Print, unquote([args: label] ++ opts)))
   end
 
   @doc """
@@ -81,8 +78,7 @@ defmodule Skitter.BIO do
   be passed as the optional second argument. When no argument is provided, `self()` will be used.
   """
   defmacro send_sink(pid \\ quote(do: self()), opts \\ []) do
-    opts = [args: pid] ++ opts
-    quote(do: node(Skitter.BIO.Send, unquote(opts)))
+    quote(do: node(Skitter.BIO.Send, unquote([args: pid] ++ opts)))
   end
 
   @doc """
@@ -104,8 +100,7 @@ defmodule Skitter.BIO do
   argument to `Skitter.BIO.StreamSource`. `opts` are passed as options to the workflow.
   """
   defmacro stream_source(enum, opts \\ []) do
-    opts = [args: enum] ++ opts
-    quote(do: node(Skitter.BIO.StreamSource, unquote(opts)))
+    quote(do: node(Skitter.BIO.StreamSource, unquote([args: enum] ++ opts)))
   end
 
   @doc """
