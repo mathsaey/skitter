@@ -18,6 +18,60 @@ defmodule LivebookHelpers do
 end
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+Resolving Hex dependencies...
+Dependency resolution completed:
+New:
+  kino 0.7.0
+  logger_file_backend 0.0.13
+  murmur 1.0.3
+  skitter 0.6.0
+  table 0.1.2
+  telemetry 1.1.0
+* Getting skitter (Hex package)
+* Getting kino (Hex package)
+* Getting table (Hex package)
+* Getting logger_file_backend (Hex package)
+* Getting murmur (Hex package)
+* Getting telemetry (Hex package)
+==> logger_file_backend
+Compiling 1 file (.ex)
+Generated logger_file_backend app
+==> table
+Compiling 5 files (.ex)
+Generated table app
+==> kino
+Compiling 36 files (.ex)
+Generated kino app
+===> Analyzing applications...
+===> Compiling telemetry
+==> murmur
+Compiling 1 file (.ex)
+warning: use Bitwise is deprecated. import Bitwise instead
+  lib/murmur.ex:19: Murmur
+
+Generated murmur app
+==> skitter
+Compiling 67 files (.ex)
+warning: variable "ctx" is unused (if the variable is not meant to be used, prefix it with an underscore)
+  lib/runtime/emit.ex:18: Skitter.Runtime.Emit.emit/2
+
+Generated skitter app
+
+17:43:56.632 [info] Skitter v0.6.0 started in local mode
+
+17:43:56.635 [info] Reachable at `snvkciqs-livebook_app@silverlode`
+
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, LivebookHelpers, <<70, 79, 82, 49, 0, 0, 7, ...>>, {:render, 1}}
+```
+
 ## Introduction
 
 This guide provides a primer on the various language constructs offered by Skitter and how they work together. It is recommended to open this document in Livebook, so you can see the workflow diagrams and play around with the code while going through this guide.
@@ -41,7 +95,7 @@ use Skitter.DSL
 <!-- livebook:{"output":true} -->
 
 ```
-Skitter.DSL.Strategy
+:ok
 ```
 
 ## Running Example & General Overview
@@ -141,7 +195,7 @@ phrase_stream |> Stream.take(3) |> Enum.to_list()
 <!-- livebook:{"output":true} -->
 
 ```
-["Operation Mathijs Skitter", "Operation Mathijs Operation", "Wolf Operation Mathijs"]
+["Operation Operation Wolf", "Wolf Operation Strategy", "Joeri Wolf Workflow"]
 ```
 
 ## Workflows
@@ -513,7 +567,7 @@ ref =
 <!-- livebook:{"output":true} -->
 
 ```
-#Reference<0.735078546.892600331.163381>
+#Reference<0.2711774296.1163657217.41538>
 ```
 
 ```elixir
