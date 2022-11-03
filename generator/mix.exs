@@ -20,6 +20,7 @@ defmodule SkitterNew.MixProject do
       start_permanent: Mix.env() == :prod,
       description: description(),
       package: package(),
+      docs: docs(),
       deps: deps()
     ]
   end
@@ -48,6 +49,13 @@ defmodule SkitterNew.MixProject do
   def application do
     [
       extra_applications: [:eex]
+    ]
+  end
+
+  defp docs do
+    [
+      main: "Mix.Tasks.Skitter.New",
+      api_reference: false
     ]
   end
 end
