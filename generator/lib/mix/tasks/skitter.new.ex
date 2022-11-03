@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Skitter.New do
   * a `config/config.exs` file which provides some initial configuration for Skitter and the
     logger.
 
-  # a `.formatter.exs` file which sets up `mix format`
+  * a `.formatter.exs` file which sets up `mix format`
 
   * a `lib/MODULE.ex` file which contain an empty workflow to get started.
 
