@@ -189,6 +189,34 @@ defmodule Skitter.DSL.OperationTest do
     assert Operation.call(Clauses, :g, [5]).result == :eq
   end
 
+  test "callback_info" do
+    defoperation CbInfo do
+      state_struct field: nil
+
+      defcb nothing, do: nil
+
+      defcb read, do: state()
+      defcb field_read, do: ~f{field}
+
+      defcb write, do: state <~ :foo
+      defcb field_write, do: field <~ :foo
+
+      defcb emit, do: :foo ~> port
+      defcb flat_emit, do: [:foo] ~>> port
+    end
+
+    assert Operation.callback_info(CbInfo, :nothing, 0) == %Info{}
+
+    assert Operation.callback_info(CbInfo, :read, 0) == %Info{read?: true}
+    assert Operation.callback_info(CbInfo, :field_read, 0) == %Info{read?: true}
+
+    assert Operation.callback_info(CbInfo, :write, 0) == %Info{write?: true}
+    assert Operation.callback_info(CbInfo, :field_write, 0) == %Info{write?: true}
+
+    assert Operation.callback_info(CbInfo, :emit, 0) == %Info{emit?: true}
+    assert Operation.callback_info(CbInfo, :flat_emit, 0) == %Info{emit?: true}
+  end
+
   describe "control flow rewrite" do
     test "if without updates" do
       defoperation NormalIf do
