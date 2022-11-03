@@ -17,4 +17,44 @@ defmodule Skitter.DSL.WorkflowTest do
   end
 
   doctest Skitter.DSL.Workflow
+
+  test "name generation for embedded workflows" do
+    wf =
+      workflow do
+        node(Example)
+
+        node(
+          workflow do
+            node(Example)
+          end
+        )
+      end
+
+    assert Map.has_key?(wf.nodes, :"skitter/dsl/workflow_test/example#1")
+
+    assert Map.has_key?(
+             wf.nodes[:"#nested#1"].workflow.nodes,
+             :"skitter/dsl/workflow_test/example#1"
+           )
+  end
+
+  test "implicit in and out ports for nested workflows" do
+    inner =
+      workflow in: [one, two], out: [three, four] do
+        one ~> three
+        two ~> four
+      end
+
+    outer =
+      workflow do
+        node(Example)
+        ~> node(inner)
+        ~> node(Example)
+      end
+
+    n = outer.nodes
+
+    assert n[:"skitter/dsl/workflow_test/example#1"].links == [out_port: ["#nested#1": :one]]
+    assert n[:"#nested#1"].links == [three: ["skitter/dsl/workflow_test/example#2": :in_port]]
+  end
 end
