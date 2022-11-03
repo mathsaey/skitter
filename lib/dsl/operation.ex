@@ -629,7 +629,7 @@ defmodule Skitter.DSL.Operation do
   The `<~/2`, `~>/2` and `~>>/2` operators add mutable state to Elixir, which is an immutable
   language. Internally, hidden variables are used to track the current state and values to emit.
   To make this work, the callback DSL rewrites several control flow structures offered by elixir.
-  While this approach work well, some limitations are present when the `<~/2`, `~>/2` and `~>>/2`
+  While this approach works, some limitations are present when the `<~/2`, `~>/2` and `~>>/2`
   operators are used inside control flow structures.
 
   The use of these operators is supported in the following control flow constructs:
