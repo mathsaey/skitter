@@ -330,7 +330,7 @@ defmodule Skitter.DSL.Operation do
   # ------
 
   @doc false
-  def config_var, do: quote(do: var!(config, unquote(__MODULE__)))
+  defp _config_var, do: quote(do: var!(config, unquote(__MODULE__)))
 
   @doc """
   Obtain the operation configuration.
@@ -355,7 +355,7 @@ defmodule Skitter.DSL.Operation do
       iex> Operation.call(ConfigExample, :read, :state, :config, []).result
       :config
   """
-  defmacro config, do: quote(do: unquote(config_var()))
+  defmacro config, do: quote(do: unquote(_config_var()))
 
   # State
   # -----
@@ -748,10 +748,11 @@ defmodule Skitter.DSL.Operation do
     quote do
       @doc false
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
-      def unquote(AST.build_clause(name, [state_var(), config_var()] ++ args, guards)) do
-        import unquote(__MODULE__), only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
+      def unquote(AST.build_clause(name, [_state_var(), _config_var()] ++ args, guards)) do
+        import unquote(__MODULE__), only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2, ]
         use unquote(__MODULE__.ControlFlowOperators)
 
+        unquote_splicing(meta_vars)
         unquote(_emit_var()) = []
 
         result = unquote(body)
@@ -767,7 +768,7 @@ defmodule Skitter.DSL.Operation do
 
   defp build_signature(name, args) do
     quote do
-      unquote(name)(unquote(_state_var()), unquote(config_var()), unquote_splicing(args))
+      unquote(name)(unquote(_state_var()), unquote(_config_var()), unquote_splicing(args))
     end
   end
 
