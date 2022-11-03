@@ -487,7 +487,7 @@ defmodule Skitter.DSL.Workflow do
   def _make_link({ln, ls}, dst) when is_struct(ls), do: {{ln, implicit_out_port(ls)}, dst}
   def _make_link(src, dst), do: {src, dst}
 
-  defp implicit_in_port(%W{workflow: %Workflow{in: [p | _]}}), do: p
+  defp implicit_in_port(%W{workflow: %Workflow{in: [{p, _} | _]}}), do: p
   defp implicit_in_port(%O{operation: oper}), do: oper |> Operation.in_ports() |> hd()
 
   defp implicit_out_port(%W{workflow: %Workflow{out: [p | _]}}), do: p
