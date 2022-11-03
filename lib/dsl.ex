@@ -14,7 +14,6 @@ defmodule Skitter.DSL do
   - `Skitter.DSL.Operation.defoperation/3`
   - `Skitter.DSL.Strategy.defstrategy/3`
   - `Skitter.DSL.Workflow.workflow/2`
-  - This module
   """
 
   defmacro __using__(_opts) do
@@ -22,7 +21,6 @@ defmodule Skitter.DSL do
       import Skitter.DSL.Operation, only: [defoperation: 3, defoperation: 2]
       import Skitter.DSL.Workflow, only: [workflow: 1, workflow: 2]
       import Skitter.DSL.Strategy, only: [defstrategy: 2, defstrategy: 3]
-      import unquote(__MODULE__)
     end
   end
 end
