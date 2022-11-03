@@ -63,12 +63,12 @@ defmodule Skitter.Runtime.Worker do
     state =
       Telemetry.wrap [:hook, :process], %{
         pid: self(),
-        context: srv.ctx,
+        context: srv.context,
         message: msg,
         state: srv.state,
         tag: srv.tag
       } do
-        srv.strategy.process(srv.ctx, msg, srv.state, srv.tag)
+        srv.strategy.process(srv.context, msg, srv.state, srv.tag)
       end
 
     %{srv | state: state}
