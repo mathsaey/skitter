@@ -63,7 +63,7 @@ defmodule Skitter.DSL.Strategy.Helpers do
   @doc """
   Send a message to a worker using the Elixir's `Kernel.send/2`.
 
-  `send/2` and `send/3` defined in this module call `Skitter.Worker.send/3` which will send a
+  `send/2` and `send/3` defined in this module call `Skitter.Worker.send/2` which will send a
   message to a worker, eventually causing its `c:Skitter.Strategy.Operation.process/4` hook to be
   called.
 

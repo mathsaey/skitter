@@ -34,7 +34,7 @@ defmodule Skitter.Strategy.Operation do
   when a predecessor of the operation node emits data). It receives the data to be sent along with
   the index of the port to which the data should be sent.
 
-  The result of this hook is ignored. Instead, this hook should use `Skitter.Worker.send/3` to
+  The result of this hook is ignored. Instead, this hook should use `Skitter.Worker.send/2` to
   transfer the received data to a worker.
 
   ## Context

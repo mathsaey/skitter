@@ -84,12 +84,12 @@ The events described in this section are not wrapped and are emitted by
   * `tag`: The worker `t:Skitter.Worker.tag/0`
   * `pid`: The `t:pid/0` of the worker. Uniquely identifies the worker.
 * `[:skitter, :worker, :send]`: Emitted when a message is sent using
-  `Skitter.Worker.send/3`.
+  `Skitter.Worker.send/2`.
   * `:from`: The `t:pid/0` of the worker sending the message.
   * `:to`: The `t:pid/0` of the worker receiving the message.
   * `:message`: The message being sent.
 * `[:skitter, :runtime, :emit]`: Emitted when a strategy emits data using
-  `Skitter.Strategy.Operation.emit/3`.
+  `Skitter.Strategy.Operation.emit/2`.
   * `context`: The context of the hook emitting the data.
   * `emit`: The emitted data: `t:Skitter.Operation.emit/0`.
 * `[:skitter, :runtime, :deploy]`: Emitted when a workflow is deployed. The
