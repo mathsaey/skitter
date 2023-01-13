@@ -14,5 +14,5 @@
   "mex": {:hex, :mex, "0.0.5", "027ae4cfb8b2886a67583dfabb7905b8481fe8d50c22c2137a0e378a54e0e3ec", [:mix], [], "hexpm", "52765dc6f5d0b03dba9f08424b85cfbc96f873dfc769cdb6a26ac391ad3344e3"},
   "murmur": {:hex, :murmur, "1.0.3", "ade5e9cdb86300645abf72abbe064a87bc943678df2567986d720a70c8f48214", [:mix], [], "hexpm", "02b4dda9327ac6650cc9a8d007ec5244b609397b9110c5ad8549224eef9afc60"},
   "nimble_parsec": {:hex, :nimble_parsec, "1.2.3", "244836e6e3f1200c7f30cb56733fd808744eca61fd182f731eac4af635cc6d0b", [:mix], [], "hexpm", "c8d789e39b9131acf7b99291e93dae60ab48ef14a7ee9d58c6964f59efb570b0"},
-  "telemetry": {:hex, :telemetry, "1.2.0", "a8ce551485a9a3dac8d523542de130eafd12e40bbf76cf0ecd2528f24e812a44", [:rebar3], [], "hexpm", "1427e73667b9a2002cf1f26694c422d5c905df889023903c4518921d53e3e883"},
+  "telemetry": {:hex, :telemetry, "1.2.1", "68fdfe8d8f05a8428483a97d7aab2f268aaff24b49e0f599faa091f1d4e7f61c", [:rebar3], [], "hexpm", "dad9ce9d8effc621708f99eac538ef1cbe05d6a874dd741de2e689c47feafed5"},
 }
