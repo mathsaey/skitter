@@ -48,9 +48,9 @@ defmodule Skitter.MixProject do
   defp deps do
     [
       # Dev
-      {:credo, "~> 1.7", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.29", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.2", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: :dev, optional: true, runtime: false},
+      {:ex_doc, "~> 0.29", only: :dev, optional: true, runtime: false},
+      {:dialyxir, "~> 1.2", only: :dev, optional: true, runtime: false},
 
       # Runtime
       {:logger_file_backend, "~> 0.0.13"},
