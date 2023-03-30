@@ -94,6 +94,7 @@ defmodule Skitter.MixProject do
       formatters: ["html"],
       api_reference: false,
       before_closing_body_tag: &before_closing_body_tag/1,
+      nest_modules_by_prefix: [Skitter.DSL, Skitter.BIO, Skitter.BIS],
       filter_modules:
         if System.get_env("EX_DOC_PRIVATE") do
           fn _, _ -> true end
