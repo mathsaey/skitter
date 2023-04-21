@@ -602,7 +602,6 @@ fi
 SELF=$(readlink "$0" || true)
 if [ -z "$SELF" ]; then SELF="$0"; fi
 PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
-PARENT_DIR="$(cd "$(dirname "$SELF")" && pwd -P)"
 SKITTER_REL_PATH="$(cd "$PARENT_DIR/.." && pwd -P)"
 
 # Parse global options and mode
