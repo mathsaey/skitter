@@ -117,17 +117,14 @@ defmodule Skitter.MixProject do
       ],
       groups_for_modules: [
         "Language Abstractions": [
-          Skitter.Port,
           Skitter.Operation,
           Skitter.Workflow,
           Skitter.Strategy
         ],
         "Runtime Hooks": ~r/Skitter.Strategy\..*/,
         "Runtime Constructs": [
-          Skitter.Manager,
           Skitter.Worker,
           Skitter.Deployment,
-          Skitter.Invocation,
           Skitter.Remote,
           Skitter.Runtime
         ],
