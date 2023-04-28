@@ -67,6 +67,9 @@ function deploy_usage() {
   printf '\t\t\t\t%s\n'                          "daemon, daemon_iex. Defaults to start."
   printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker runtime. Do not start a"
   printf '\t\t\t\t%s\n'                          "master. Only needed if deployment failed."
+  printf '\t%s\t\t%s\n' "-wt, --wait-time"       "Time to wait before spawning the master"
+  printf '\t\t\t\t%s\n'                          "runtime after spawning the worker runtimes."
+  printf '\t\t\t\t%s\n'                          "Defaults to 5 (seconds)."
   opt_cookie
   opt_no_log
   printf '\t%s\t%s\n'   "--working-dir PATH"     "Change to this directory on the workers"
@@ -469,7 +472,7 @@ function stop_deploy() {
   for_workers "$1" "$2" "$3" "stop" "$(color "$orange" "* stopping")"
 }
 
-# 1: workers, 2: remote_dir, 3: master opts, 4: worker opts, 5: master_mode
+# 1: workers, 2: remote_dir, 3: master opts, 4: worker opts, 5: master_mode, 6: sleep time
 function start_deploy() {
   maybe_printf '%s %s\n' "⬡⬢⬡⬢ Skitter deploy" "<%= @version %>"
   if [ -n "$3" ] ; then maybe_printf '> options: %s\n' "$(color "$purple" "$3 $4")" ; fi
@@ -480,7 +483,7 @@ function start_deploy() {
   if [ -z "$failed" ]
   then
     maybe_printf "\nWorkers initialized, starting master.\n"
-    $maybe_dry_run sleep 1
+    $maybe_dry_run sleep "$6"
     do_worker_master_local master "$5" "$3" "$connected"
   else
     maybe_printf '\n%s\n' "Failed to initialize some workers:"
@@ -506,6 +509,7 @@ function do_deploy() {
   deploy_mode="start"
   master_opts=""
   worker_opts=""
+  wait_time="5"
   remote_dir=$(pwd)
 
   while test $# -gt 0
@@ -541,6 +545,11 @@ function do_deploy() {
               argerr "deploy" "Incorrect value for optional argument '--mode'."
               ;;
             esac
+          shift
+          ;;
+        -wt|--wait-time)
+          test $# -lt 2 && argerr "deploy" "Missing value for optional argument '--wait-time'."
+          wait_time="$2"
           shift
           ;;
         --working-dir)
@@ -580,7 +589,7 @@ function do_deploy() {
     done
 
     if [ -z "$workers" ] ; then argerr "deploy" "Missing workers" ; fi
-    "$deploy_mode"_deploy "$workers" "$remote_dir" "$master_opts" "$worker_opts" "$master_mode"
+    "$deploy_mode"_deploy "$workers" "$remote_dir" "$master_opts" "$worker_opts" "$master_mode" "$wait_time"
 }
 
 # ------------ #
