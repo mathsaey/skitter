@@ -60,14 +60,14 @@ function deploy_usage() {
   printf '\t%s\t%s\n'   "-f, --worker-file PATH" "Read the list of workers to spawn from PATH"
   printf '\t\t\t\t%s\n'                          "PATH should contain a file where every line"
   printf '\t\t\t\t%s\n'                          "contains a single worker address."
-  printf '\t%s\t%s\n'   "-q, --quiet"            "Do not show status when deploying"
+  printf '\t%s\t\t%s\n'   "-q, --quiet"          "Do not show status when deploying"
   opt_deploy
   printf '\t%s\t\t%s\n' "-m, --mode MODE"        "The mode used to start the master runtime."
   printf '\t\t\t\t%s\n'                          "MODE should be one of start, start_iex,"
   printf '\t\t\t\t%s\n'                          "daemon, daemon_iex. Defaults to start."
   printf '\t%s\t\t%s\n' "-s, --stop"             "Stop every worker runtime. Do not start a"
   printf '\t\t\t\t%s\n'                          "master. Only needed if deployment failed."
-  printf '\t%s\t\t%s\n' "-wt, --wait-time"       "Time to wait before spawning the master"
+  printf '\t%s\t%s\n'   "-wt, --wait-time"       "Time to wait before spawning the master"
   printf '\t\t\t\t%s\n'                          "runtime after spawning the worker runtimes."
   printf '\t\t\t\t%s\n'                          "Defaults to 5 (seconds)."
   opt_cookie
@@ -75,8 +75,8 @@ function deploy_usage() {
   printf '\t%s\t%s\n'   "--working-dir PATH"     "Change to this directory on the workers"
   printf '\t\t\t\t%s\n'                          "before executing any command. Defaults"
   printf '\t\t\t\t%s\n'                          "to the current working directory."
-  opt_no_shutdown_with_master
   opt_shutdown_with_worker
+  opt_no_shutdown_with_master
   printf '%s\n'           "Command Arguments:"
   printf '\t%s\t\t\t%s\n' "WORKERS" "List of worker nodes to spawn. A node is"
   printf '\t\t\t\t%s\n'             "specified as [name@]hostname[:tag1,tag2]. If"
@@ -186,12 +186,13 @@ function opt_deploy() {
 
 function opt_no_log() {
   printf '\t%s\t\t%s\n' "--no-log"            "By default, Skitter runtimes will write logs"
-  printf '\t\t\t\t%s\n'                       "to log/<nodename>.log. This switch disables"
+  printf '\t\t\t\t%s\n'                       "to logs/<nodename>.log. This switch disables"
   printf '\t\t\t\t%s\n'                       "this behaviour."
 }
 
 function opt_no_shutdown_with_master() {
-  printf '\t%s\t%s\n'   "--no-shutdown-with-master" "By default, Skitter worker runtimes shut down"
+  printf '\t%s\n'       "--no-shutdown-with-master"
+  printf '\t\t\t\t%s\n'                             "By default, Skitter worker runtimes shut down"
   printf '\t\t\t\t%s\n'                             "when the master runtime they are connected to"
   printf '\t\t\t\t%s\n'                             "shuts down. This switch disables this behaviour."
 }
@@ -467,7 +468,7 @@ function for_workers() {
 
 # 1: workers, 2: remote_dir, 3: opts
 function stop_deploy() {
-  for_workers "$1" "$2" "$3" "stop" "$(color "$orange" "* stopping")"
+  for_workers "$1" "$2" "$3" "stop" "$(color "$orange" "* stopping worker") on"
 }
 
 # 1: workers, 2: remote_dir, 3: master opts, 4: worker opts, 5: master_mode, 6: sleep time
@@ -476,7 +477,7 @@ function start_deploy() {
   if [ -n "$3" ] ; then maybe_printf '> options: %s\n' "$(color "$purple" "$3 $4")" ; fi
   maybe_printf '> workers: %s\n\n' "$(color "$purple" "$1")"
 
-  for_workers "$1" "$2" "$4" "daemon" "$(color "$green" "* starting")"
+  for_workers "$1" "$2" "$4" "daemon" "$(color "$green" "* starting worker") on"
 
   if [ -z "$failed" ]
   then
