@@ -480,9 +480,9 @@ function start_deploy() {
 
   if [ -z "$failed" ]
   then
-    maybe_printf "Waiting %s second(s) for workers to finish starting.\n" "$6"
+    maybe_printf "\n$(color "$orange" "⧖ sleeping") %s second(s) while workers start.\n" "$6"
     $maybe_dry_run sleep "$6"
-    maybe_printf "\nStarting master.\n"
+    maybe_printf "$(color "$green" "✓ finished") deployment, starting master.\n"
     do_worker_master_local master "$5" "$3" "$connected"
   else
     maybe_printf '\n%s\n' "Failed to initialize some workers:"
