@@ -60,9 +60,9 @@ defmodule Mix.Tasks.Skitter.Master do
   defp maybe_deploy(str) do
     [
       deploy: fn ->
-        fn ->
-          {wf, _} = Code.eval_string(str)
-          wf
+        case Code.eval_string(str) do
+          {wf = %Skitter.Workflow{}, _} -> wf
+          {val, _} -> raise "Evaluating `#{str}` returned `#{inspect(val)}`, expected a workflow."
         end
       end
     ]

@@ -179,11 +179,9 @@ function opt_name() {
 }
 
 function opt_deploy() {
-  printf '\t%s\t%s\n'   "-d, --deploy MOD.FUNC" "Deploy the workflow returned by calling"
-  printf '\t\t\t\t%s\n'                         "MOD.FUNC() after the runtime has been"
-  printf '\t\t\t\t%s\n'                         "started. It is not possible to pass"
-  printf '\t\t\t\t%s\n'                         "arguments to func when a workflow is"
-  printf '\t\t\t\t%s\n'                         "deployed like this."
+  printf '\t%s\t%s\n'   "-d, --deploy EXPR" "Deploy the workflow returned by evaluating"
+  printf '\t\t\t\t%s\n'                     "EXPR (an elixir expression) after the"
+  printf '\t\t\t\t%s\n'                     "runtime has been started."
 }
 
 function opt_no_log() {
