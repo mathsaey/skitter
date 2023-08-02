@@ -13,9 +13,9 @@ jobs:
     strategy:
       matrix:
         otp: ['25.0']
-        elixir: ['1.14.1']
+        elixir: ['1.15.4']
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
@@ -31,9 +31,9 @@ jobs:
     strategy:
       matrix:
         otp: ['25.0']
-        elixir: ['1.14.1']
+        elixir: ['1.15.4']
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
@@ -51,9 +51,9 @@ jobs:
     strategy:
       matrix:
         otp: ['25.0']
-        elixir: ['1.14.1']
+        elixir: ['1.15.4']
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
