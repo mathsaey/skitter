@@ -136,7 +136,7 @@ defmodule Skitter.Remote do
   @doc """
   Execute `fun` on every specified remote runtime, obtain results in a list.
   """
-  @spec on_many([node()], (() -> any())) :: [{node(), any()}]
+  @spec on_many([node()], (-> any())) :: [{node(), any()}]
   def on_many(remotes, fun) do
     remotes
     |> Enum.map(&{&1, Task.Supervisor.async({Sup, &1}, fun)})
@@ -152,7 +152,7 @@ defmodule Skitter.Remote do
   @doc """
   Execute `fun` on `remote`, block until a result is available.
   """
-  @spec on(node(), (() -> any())) :: any()
+  @spec on(node(), (-> any())) :: any()
   def on(remote, fun), do: on_many([remote], fun) |> hd() |> elem(1)
 
   @doc """
@@ -168,7 +168,7 @@ defmodule Skitter.Remote do
 
   The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
   """
-  @spec on_all_workers((() -> any())) :: [{node(), any()}]
+  @spec on_all_workers((-> any())) :: [{node(), any()}]
   def on_all_workers(fun), do: on_many(Registry.workers(), fun)
 
   @doc """
@@ -177,7 +177,7 @@ defmodule Skitter.Remote do
   A list of results will be returned for each worker node. These results will be returned in a
   keyword list of `{worker, result}` pairs.
   """
-  @spec on_all_worker_cores((() -> any())) :: [{node(), [any()]}]
+  @spec on_all_worker_cores((-> any())) :: [{node(), [any()]}]
   def on_all_worker_cores(fun), do: on_all_workers(fn -> core_times(fun) end)
 
   @doc """
@@ -186,7 +186,7 @@ defmodule Skitter.Remote do
   A list of results will be returned for each worker node. These results will be returned in a
   keyword list of `{worker, result}` pairs.
   """
-  @spec n_times_on_all_workers(pos_integer(), (() -> any())) :: [{node(), [any()]}]
+  @spec n_times_on_all_workers(pos_integer(), (-> any())) :: [{node(), [any()]}]
   def n_times_on_all_workers(n, fun), do: on_all_workers(fn -> n_times(n, fun) end)
 
   @doc """
@@ -194,7 +194,7 @@ defmodule Skitter.Remote do
 
   The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
   """
-  @spec on_tagged_workers(tag(), (() -> any())) :: [{node(), any()}]
+  @spec on_tagged_workers(tag(), (-> any())) :: [{node(), any()}]
   def on_tagged_workers(tag, fun), do: on_many(Tags.workers_with(tag), fun)
 
   @doc """
@@ -202,7 +202,7 @@ defmodule Skitter.Remote do
 
   The result of each worker will be returned in a keyword list of `{worker, result}` pairs.
   """
-  @spec on_tagged_worker_cores(tag(), (() -> any())) :: [{node(), any()}]
+  @spec on_tagged_worker_cores(tag(), (-> any())) :: [{node(), any()}]
   def on_tagged_worker_cores(tag, fun), do: on_tagged_workers(tag, fn -> core_times(fun) end)
 
   @doc """
@@ -212,7 +212,7 @@ defmodule Skitter.Remote do
   done will be divided over the worker nodes in a round robin fashion. This behaviour may change
   in the future.
   """
-  @spec on_n(pos_integer(), (() -> any())) :: [[any()]]
+  @spec on_n(pos_integer(), (-> any())) :: [[any()]]
   def on_n(n, fun) do
     workers()
     |> Enum.shuffle()
@@ -224,9 +224,9 @@ defmodule Skitter.Remote do
     end)
   end
 
-  @spec n_times(pos_integer(), (() -> any())) :: [any()]
+  @spec n_times(pos_integer(), (-> any())) :: [any()]
   defp n_times(n, fun), do: Enum.map(1..n, fn _ -> fun.() end)
 
-  @spec core_times((() -> any())) :: [any()]
+  @spec core_times((-> any())) :: [any()]
   defp core_times(fun), do: n_times(System.schedulers_online(), fun)
 end
