@@ -31,7 +31,7 @@ defmodule Skitter.Runtime.Spawner do
     |> List.delete(avoid)
     |> case do
       [] ->
-        Logger.warn("Cannot avoid spawning worker on #{avoid}")
+        Logger.warning("Cannot avoid spawning worker on #{avoid}")
         spawn_random(context, state, tag)
 
       lst ->
@@ -46,7 +46,7 @@ defmodule Skitter.Runtime.Spawner do
     |> Remote.with_tag()
     |> case do
       [] ->
-        Logger.warn("No workers provide tag #{tag}")
+        Logger.warning("No workers provide tag #{tag}")
         Remote.workers()
 
       lst ->
