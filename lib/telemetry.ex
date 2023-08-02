@@ -15,7 +15,7 @@ defmodule Skitter.Telemetry do
   defmacro __using__(_) do
     quote do
       alias unquote(__MODULE__)
-      require __MODULE__
+      require unquote(__MODULE__)
     end
   end
 
