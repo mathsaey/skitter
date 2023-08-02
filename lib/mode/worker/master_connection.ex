@@ -26,7 +26,7 @@ defmodule Skitter.Mode.Worker.MasterConnection do
         :ok
 
       {:error, reason} ->
-        Logger.warn("Could not connect to `#{remote}`: #{reason}")
+        Logger.warning("Could not connect to `#{remote}`: #{reason}")
         {:error, reason}
     end
   end
