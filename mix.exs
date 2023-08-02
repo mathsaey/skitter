@@ -84,9 +84,18 @@ defmodule Skitter.MixProject do
     [exclude: IEx]
   end
 
+  defp manual_pages do
+    [
+      Introduction: ["manual/overview.md", "manual/installation.md", "manual/up_and_running.md"],
+      Concepts: ["manual/language_concepts.livemd"],
+      Deployment: ["manual/deployment.md", "manual/configuration.md"],
+      Guides: ["manual/telemetry.md"]
+    ]
+  end
+
   defp docs do
     [
-      main: "readme",
+      main: "overview",
       assets: "assets",
       formatters: ["html"],
       source_ref: "develop",
@@ -95,19 +104,8 @@ defmodule Skitter.MixProject do
       before_closing_body_tag: &before_closing_body_tag/1,
       # Manual
       extra_section: "manual",
-      extras: [
-        {:"README.md", [title: "Skitter", filename: "readme"]},
-        "manual/language_concepts.livemd",
-        "manual/deployment.md",
-        "manual/configuration.md",
-        "manual/telemetry.md"
-      ],
-      groups_for_extras: [
-        "Introduction": [],
-        "Concepts": ["manual/language_concepts.livemd"],
-        "Deployment": ["manual/deployment.md", "manual/configuration.md"],
-        "References": ["manual/telemetry.md"]
-      ],
+      extras: Enum.flat_map(manual_pages(), fn {_, pages} -> pages end),
+      groups_for_extras: manual_pages(),
       # Module documentation
       api_reference: false,
       nest_modules_by_prefix: [Skitter.DSL, Skitter.BIO, Skitter.BIS],
@@ -150,7 +148,7 @@ defmodule Skitter.MixProject do
             Skitter.Mode.
         )
           fn mod, _ -> not String.contains?(to_string(mod), private) end
-        end,
+        end
     ]
   end
 
