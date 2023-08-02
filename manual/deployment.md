@@ -59,7 +59,7 @@ module documentation for information on how to enable this if this is not the
 case. Furthermore, releases should be built in `:prod` mode. Once again, this
 is already the case when your project was created with `mix skitter.new`.
 
-### The `skitter` deploy script
+### The skitter deploy script
 
 Releases customized by `Skitter.Release.step/1` include a `skitter` script in
 the `<path_to_release>/bin/` directory. This script can be used to start a

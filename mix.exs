@@ -88,33 +88,29 @@ defmodule Skitter.MixProject do
     [
       main: "readme",
       assets: "assets",
-      authors: ["Mathijs Saey"],
-      source_ref: "develop",
-      logo: "assets/logo-light_docs.png",
       formatters: ["html"],
-      api_reference: false,
+      source_ref: "develop",
+      authors: ["Mathijs Saey"],
+      logo: "assets/logo-light_docs.png",
       before_closing_body_tag: &before_closing_body_tag/1,
-      nest_modules_by_prefix: [Skitter.DSL, Skitter.BIO, Skitter.BIS],
-      filter_modules:
-        if System.get_env("EX_DOC_PRIVATE") do
-          fn _, _ -> true end
-        else
-          private = ~w(
-            Skitter.Config
-            Skitter.Telemetry
-            Skitter.Runtime.
-            Skitter.Remote.
-            Skitter.Mode.
-        )
-          fn mod, _ -> not String.contains?(to_string(mod), private) end
-        end,
+      # Manual
+      extra_section: "manual",
       extras: [
         {:"README.md", [title: "Skitter", filename: "readme"]},
-        "pages/language_concepts.livemd",
-        "pages/deployment.md",
-        "pages/configuration.md",
-        "pages/telemetry.md"
+        "manual/language_concepts.livemd",
+        "manual/deployment.md",
+        "manual/configuration.md",
+        "manual/telemetry.md"
       ],
+      groups_for_extras: [
+        "Introduction": [],
+        "Concepts": ["manual/language_concepts.livemd"],
+        "Deployment": ["manual/deployment.md", "manual/configuration.md"],
+        "References": ["manual/telemetry.md"]
+      ],
+      # Module documentation
+      api_reference: false,
+      nest_modules_by_prefix: [Skitter.DSL, Skitter.BIO, Skitter.BIS],
       groups_for_modules: [
         "Language Abstractions": [
           Skitter.Operation,
@@ -141,7 +137,20 @@ defmodule Skitter.MixProject do
         "Runtime System (private)": ~r/Skitter.Runtime\..*/,
         "Remote Runtimes (private)": ~r/Skitter.Remote\..*/,
         "Runtime Modes (private)": ~r/Skitter.Mode\..*/
-      ]
+      ],
+      filter_modules:
+        if System.get_env("EX_DOC_PRIVATE") do
+          fn _, _ -> true end
+        else
+          private = ~w(
+            Skitter.Config
+            Skitter.Telemetry
+            Skitter.Runtime.
+            Skitter.Remote.
+            Skitter.Mode.
+        )
+          fn mod, _ -> not String.contains?(to_string(mod), private) end
+        end,
     ]
   end
 

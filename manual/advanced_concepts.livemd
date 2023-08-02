@@ -1,0 +1,42 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# Advanced Language Concepts
+
+```elixir
+Mix.install([
+  # TODO: Needs to be changed
+  {:skitter, path: "~/Documents/code/skitter"},
+  {:kino, "~> 0.7"}
+])
+
+defmodule LivebookHelpers do
+  def render(wf = %Skitter.Workflow{}) do
+    wf
+    |> Skitter.Dot.render("svg")
+    |> then(fn {:ok, image} -> image end)
+    |> Kino.Image.new(:svg)
+  end
+end
+```
+
+## Advanced Features
+
+* Nested workflows
+* Strategy Traits
+* `state_struct`
+
+```elixir
+defoperation Union, strategy: ImmutableLocal, in: [left, right], out: [union] do
+end
+
+workflow do
+  stream_source(1..100) ~> filter(fn x -> rem(x, 2) == 0 end, as: even_filter)
+  stream_source(1..100) ~> filter(fn x -> rem(x, 2) == 1 end, as: odd_filter)
+
+  even_filter.accept ~> union.left
+  odd_filter.accept ~> union.right
+
+  node(Union, as: union)
+end
+|> LivebookHelpers.render()
+```

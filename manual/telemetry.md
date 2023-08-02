@@ -2,15 +2,17 @@
 
 This page details the telemetry events emitted by Skitter.
 
-_This page is only relevant for those who wish to intercept the telemetry events
-produced by Skitter. It is not relevant if you wish to write and deploy a
-Skitter application._
+> #### Info {:.neutral}
+>
+> This page is only relevant for those who wish to intercept the telemetry
+> events produced by Skitter. It is not relevant if you wish to write and
+> deploy a Skitter application.
 
 Skitter emits various telemetry events which can be used to introspect the
 current state of the runtime system. This page details the various events
 produced by the Skitter runtime system, along with the meta-information passed
 with these events. Note that these events are only produced when `telemetry` is
-set to `true` in the Skitter application environment.
+set to `true` in the [Skitter application environment](configuration.html).
 
 ## Writing telemetry handlers
 
