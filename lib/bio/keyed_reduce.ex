@@ -16,8 +16,9 @@ defoperation Skitter.BIO.KeyedReduce, in: _, out: _, strategy: Skitter.BIS.Keyed
   argument. The key function should return a key, which is used to obtain the state associated
   with the key. Afterwards, the reduce function is called with the received data as its first
   argument and the state associated with the key returned by the key function as its second
-  argument. The function should then return a new state, which will be associated with the key.
-  The returned state will also be emitted on the `_` out port.
+  argument. This function should return a `{state, emit}` tuple. The first value of this tuple
+  will be stored as the new state of the key, while the second value of this tuple will be emitted
+  on the `_` out port.
   """
   defcb init({_, _, initial_state}), do: state <~ initial_state
   defcb conf({key_fn, red_fn, _}), do: {key_fn, red_fn}
@@ -29,7 +30,8 @@ defoperation Skitter.BIO.KeyedReduce, in: _, out: _, strategy: Skitter.BIS.Keyed
 
   defcb react(val) do
     {_, red_fn} = config()
-    state <~ red_fn.(val, state())
-    state() ~> _
+    {new_state, emit} = red_fn.(val, state())
+    state <~ new_state
+    emit ~> _
   end
 end
