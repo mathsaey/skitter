@@ -1,4 +1,4 @@
-# Copyright 2018 - 2022, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2023, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -174,21 +174,18 @@ defmodule Mix.Tasks.Skitter.New do
 
   embed_template(:config, """
   # This file is used by mix to configure your application before it is compiled.
-  # See: https://hexdocs.pm/elixir/Config.html for more information.
+  # See https://hexdocs.pm/elixir/Config.html for more information.
 
   import Config
 
   config :skitter,
-    # Set up Skitter to start the workflow defined in `lib/<%= @app_name %>`
+    # Set up Skitter to start the workflow defined in `lib/<%= @app_name %>.ex`
     # If you remove this you need to manually call `Skitter.Runtime.deploy/1` to deploy a workflow.
     # You can also pass the `--deploy` option to the skitter deploy script when using releases.
-    deploy: &<%= @module_name %>.workflow/0,
-    # Skitter reports runtime events through the use of `:telemetry`. These reports are disabled
-    # at compile-time by default. Set this to true to enable telemetry reports.
-    telemetry: false
+    deploy: &<%= @module_name %>.workflow/0
 
   # Set up the console logger. Values for level, format and metadata set here will also be used by
-  # the file logger.
+  # the file logger. See https://hexdocs.pm/logger/Logger.html.
   config :logger, :console,
     format: "[$time][$level]$metadata $message\\n",
     device: :standard_error
@@ -201,10 +198,9 @@ defmodule Mix.Tasks.Skitter.New do
   """)
 
   embed_template(:mix, """
-  # Mix is the elixir build tool.
-  #
-  # This file configures how your project is build: it instructs mix on where to find the project
-  # dependencies and on how to build a self-contained "release" of this application.
+  # This file configures how your project is build: it instructs mix (the elixir build tool) on
+  # where to find the project dependencies and on how to build a self-contained "release" of this
+  # application, which is used to deploy it over a cluster.
 
   defmodule <%= Macro.camelize(@app_name) %>.MixProject do
     use Mix.Project
@@ -222,31 +218,6 @@ defmodule Mix.Tasks.Skitter.New do
       ]
     end
 
-    # Always build releases in production mode
-    defp preferred_env, do: [release: :prod]
-
-    # Mix alias (https://hexdocs.pm/mix/Mix.html#module-aliases) for building a release.
-    # We suppress the output of `mix release` to avoid confusion, as it conflicts with the use of
-    # the skitter deploy script.
-    # You should adjust or remove this alias when building multiple releases, as each release will
-    # be written to the same destination folder, overwriting other releases.
-    defp aliases, do: [release: "release --quiet --path _release"]
-
-    # Specifies which releases to build. (https://hexdocs.pm/mix/Mix.Tasks.Release.html)
-    # A release is a self contained artefact which can be deployed over a cluster using the
-    # included skitter deploy script.
-    # You can specify multiple releases to build multiple data processing pipelines from a single
-    # project here.
-    # Skitter tweaks the release process: it configures the erlang vm and adds the skitter deploy
-    # script. Therefore, each release specified here must contain the following configuration:
-    #   [steps: [&Skitter.Release.step/1, :assemble]]
-    # Please refer to the `Skitter.Release` documentation for more information.
-    defp releases do
-      [
-        <%= @app_name %>: [steps: [&Skitter.Release.step/1, :assemble]]
-      ]
-    end
-
     # Specifies the dependencies of the application. (https://hexdocs.pm/mix/Mix.Tasks.Deps.html)
     # Skitter must be included here, but you are free to add additional dependencies as needed.
     defp deps do
@@ -254,6 +225,36 @@ defmodule Mix.Tasks.Skitter.New do
         <%= @skitter_version %>,
       ]
     end
+
+    # Specifies which releases to build.
+    #
+    # A release is a self contained artefact which can be deployed over a cluster using the
+    # included skitter deploy script (https://hexdocs.pm/mix/Mix.Tasks.Release.html).
+    #
+    # Skitter tweaks the release process: it provides configuration options for the erlang vm and
+    # adds the skitter deploy script. Both of these steps are performed by `Skitter.Release.step/1`.
+    # Therefore, each release specified here _must_ contain the following configuration:
+    #   [steps: [&Skitter.Release.step/1, :assemble]]
+    # Please refer to the `Skitter.Release` documentation for more information.
+    #
+    # You can specify multiple releases to build multiple data processing pipelines from a single
+    # project here.
+    defp releases do
+      [
+        <%= @app_name %>: [steps: [&Skitter.Release.step/1, :assemble]]
+      ]
+    end
+
+    # Mix alias (https://hexdocs.pm/mix/Mix.html#module-aliases) for building a release.
+    # We suppress the output of `mix release` to avoid confusion, as it conflicts with the use of
+    # the skitter deploy script.
+    #
+    # You should remove this alias when building multiple releases for this project, as each release
+    # will be written to the same destination folder, overwriting other releases.
+    defp aliases, do: [release: "release --quiet --path _release"]
+
+    # Always build releases in production mode
+    defp preferred_env, do: [release: :prod]
   end
   """)
 
@@ -264,8 +265,8 @@ defmodule Mix.Tasks.Skitter.New do
 
   ## Project Structure
 
-  `skitter.new` set up a basic elixir project, which includes Skitter as a dependency. The
-  following files and directories define your elixir application:
+  `skitter.new` set up a basic elixir project, which includes Skitter as a
+  dependency. The following files and directories define your elixir application:
 
   File / Directory | Purpose
   ---------------- | -------
@@ -275,27 +276,36 @@ defmodule Mix.Tasks.Skitter.New do
   `_build` | Contains compilation artefacts, can safely be deleted
   `_release` | Contains the release created when running `mix release`, can safely be deleted.
 
-  Application code should be stored in the `lib` directory. `skitter.new` defined some example
-  code in `lib/<%= @module_path %>` to help you get started.
+  Application code should be stored in the `lib` directory. `skitter.new` defined
+  some code in `<%= @module_path %>` to help you get started.
 
   ## Executing the Project
 
-  There are several ways to execute elixir code. First and foremost, you can use `iex -S mix` to
-  start an elixir REPL (called iex). When iex is started like this, it automatically loads your
-  application modules and the Skitter runtime system. The Skitter runtime system is started in
-  "local" mode: it acts as both a master and a worker runtime simultaneously.
+  There are several ways to execute elixir code. First and foremost, you can use
+  `iex -S mix` to start an elixir REPL (called iex). When iex is started like this,
+  it automatically loads your application modules and the Skitter runtime system.
+  The Skitter runtime system is started in "local" mode: it acts as both a master
+  and worker runtime simultaneously.
 
-  If you want to start a master or worker runtime on your local machine, you can use
-  `iex -S mix skitter.worker` or `iex -S mix skitter.master` to do so. This is useful to simulate
-  a cluster environment in development. Note that some extra steps are required to allow masters
-  and workers spawned like this to interact with one another, please use `mix help skitter.worker`
-  and `mix help skitter.master` for more information.
+  If you want to start a master or worker runtime on your local machine, you can
+  use `iex -S mix skitter.worker` or `iex -S mix skitter.master` to do so. This is
+  useful to simulate a cluster environment in development. Note that elixir
+  applications need to be "named" to communicate with each other. Thus, to start
+  a worker and a master node on your local machine, you would need to run
+  `iex --sname worker -S mix skitter.worker` in one shell and
+  `iex --sname master -S mix skitter.master worker@<hostname>` in the other.
+  Please refer to `mix help skitter.master` and `mix help skitter.worker` for more
+  information.
 
-  The final method to start a skitter runtime is used to deploy a complete skitter system over a
-  cluster. This method uses so-called "releases" (https://hexdocs.pm/mix/master/Mix.Tasks.Release.html).
-  To use this method, build a release by running `mix release`. By default, this release will be
-  stored inside the `_release` directory. This release can be deployed over a cluster by using the
-  `_release/bin/skitter` script. Please use `./_release/bin/skitter help` for more information.
+  The final method to start a skitter runtime is used to deploy a complete skitter
+  system over a cluster. This method uses so-called "releases"
+  (https://hexdocs.pm/mix/master/Mix.Tasks.Release.html).
+  To use this method, build a release by running `mix release`. By default, this
+  release will be stored inside the `_release` directory. This release can be
+  deployed over a cluster by using the `_release/bin/skitter deploy` script.
+
+  The complete guide to deploying a Skitter application over a cluster can be
+  found at https://hexdocs.pm/skitter/deployment.html.
   """)
 
   embed_template(:module, """
@@ -312,6 +322,10 @@ defmodule Mix.Tasks.Skitter.New do
 
     def workflow do
       workflow do
+        stream_source(~w(Hello Skitter Hello World!))
+        ~> flat_map(&String.split/1)
+        ~> keyed_reduce(fn word -> word end, fn word, ctr -> {ctr + 1, {word, ctr + 1}} end, 0)
+        ~> print()
       end
     end
   end
