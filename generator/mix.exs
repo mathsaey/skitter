@@ -1,4 +1,4 @@
-# Copyright 2018 - 2022, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2023, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -13,8 +13,8 @@ defmodule SkitterNew.MixProject do
   def project do
     [
       app: :skitter_new,
-      elixir: "~> 1.14",
-      version: "0.6.4",
+      elixir: "~> 1.15",
+      version: "0.7.0",
       source_url: @github_url,
       homepage_url: @home_url,
       start_permanent: Mix.env() == :prod,
@@ -42,7 +42,7 @@ defmodule SkitterNew.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.29", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.30", only: :dev, runtime: false},
     ]
   end
 
