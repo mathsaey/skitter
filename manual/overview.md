@@ -24,7 +24,7 @@ three main parts, which can be accessed in the top of the sidebar.
   small command line programs which are used to extend the functionality of
   this tool. We recommend browsing these pages only when needed.
 
-> #### ExDoc Tip {:.info}
+> #### ExDoc Tip {:.tip}
 >
 > When browsing module or mix task documentation, the "source code" button
 > (`</>`) can be used to jump to the source of a documented item on GitHub.
