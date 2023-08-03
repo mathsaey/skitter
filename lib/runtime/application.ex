@@ -76,23 +76,9 @@ defmodule Skitter.Runtime.Application do
   # ------------
 
   defp welcome(mode) do
-    if IEx.started?() and Config.get(:banner, true), do: banner(mode), else: logline(mode)
+    Logger.info("⬡⬢⬡⬢ Skitter v#{Application.spec(:skitter, :vsn)} started in #{mode} mode")
     if Node.alive?(), do: Logger.info("Reachable at `#{Node.self()}`")
     :ok
-  end
-
-  defp version, do: "v#{Application.spec(:skitter, :vsn)}"
-  defp logline(mode), do: Logger.info("Skitter #{version()} started in #{mode} mode")
-
-  defp banner(mode) do
-    logo =
-      if IO.ANSI.enabled?() do
-        "⬡⬢⬡⬢ #{IO.ANSI.italic()}Skitter#{IO.ANSI.reset()}"
-      else
-        "Skitter"
-      end
-
-    IO.puts("#{logo} #{version()} (#{mode})\n")
   end
 
   # Connect
