@@ -106,25 +106,11 @@ To exit `iex`, press `Ctrl + c` twice.
 
 You now have a working Skitter project. The project generator created a
 `README.md` file in your project, which tells you about the various files it
-generated. Comments are also present in the various generated files.
-
-> #### Elixir project structure {:.info}
->
-> If you are not familiar with the structure of mix projects, it may be a good
-> idea to browse the README and the generated files to see how everything fits
-> together. We provide a short summary here.
->
-> * `mix.exs`: Configures how `mix`, the elixir build tool, runs and compiles
->   your application.
-> * `config/config.exs`: Configures your application and its dependencies (e.g.
->   skitter, logger).
-> * `lib/`: contains the code of your application. Any `.ex` file present in
->   this directory will be picked up by mix, compiled and included in your
->   project.
-
-The following section of the Skitter manual introduces the concepts required to
+generated. Comments are also present in the various generated files. The
+following section of the Skitter manual introduces the concepts required to
 write Skitter applications of your own. Before we end this guide, we briefly
-discuss the various ways in which you can run a Skitter project.
+discuss the various ways in which you can run a Skitter project and the
+structure of an Elixir project.
 
 ## Running the project
 
@@ -151,105 +137,26 @@ mix run --no-halt
 {"Hello", 2}
 ```
 
-### Simulating a distributed system
+Once you have a working application, you can run it on a cluster computer.
+Skitter supports executing your application on a cluster (i.e. on several
+computers) and also enables the simulation of a distributed system on a single
+machine. Please refer to the [deployment documentation](deployment.html) for
+more information about both of these topics.
 
-When the mix project is started (using `iex -S mix` or `mix run`), Skitter
-automatically starts in its so-called _local_ mode. In this mode, Skitter
-acts as both a coordinator and a runner for your distributed stream processing
-application, which is useful for development.
+## Elixir project structure
 
-Eventually, it becomes useful to simulate a distributed environment on your
-local machine. This can done through the use of `mix skitter.worker` and
-`mix skitter.master`. The former starts a worker node, which executes
-computations to perform, while the latter starts a master node, which divides
-work among the workers.
+`mix skitter.new` generates a `README.md` file which documents the overall
+structure of the application it generated. We recommend reading this README and
+browsing the generated files to see how everything fits together. We provide a
+short summary of the most important files and directories in the project below:
 
-In order to enable an Elixir node to connect to other nodes, it needs to be
-provided with a name, this can be done through the use of the `--sname` option,
-which can be passed to the `elixir` or the `iex` command. For instance, to
-start a worker named `worker`:
-
-<!-- tabs-open -->
-### iex
-```shell
-iex --sname worker -S mix skitter.worker
-```
-### elixir
-```shell
-elixir --sname worker -S mix skitter.worker
-```
-<!-- tabs-close -->
-
-Afterwards, you can start a master node in a different terminal window. You
-need to provide the name of the worker node, suffixed with the hostname of your
-computer to enable both to work together:
-
-<!-- tabs-open -->
-### iex
-```shell
-iex --sname master -S mix skitter.master worker@<hostname>
-```
-### elixir
-```shell
-elixir --sname master -S mix skitter.master worker@<your hostname here>
-```
-<!-- tabs-close -->
-
-Once the master is connected to the worker, it will deploy its workflow.
-
-<!-- tabs-open -->
-### master
-```shell
-[20:05:21.629][info] ⬡⬢⬡⬢ Skitter v0.7.0 started in master mode
-[20:05:21.631][info] Reachable at `master@silverlode`
-[20:05:21.656][info] Connected to `worker@silverlode`, tags: []
-[20:05:21.667][info] Deploying &HelloSkitter.workflow/0
-```
-### worker
-```shell
-[20:05:04.573][info] ⬡⬢⬡⬢ Skitter v0.7.0 started in worker mode
-[20:05:04.575][info] Reachable at `worker@silverlode`
-[20:05:21.656][info] Connected to master: `master@silverlode`
-{"Skitter", 1}
-{"Hello", 1}
-{"Hello", 2}
-{"World!", 1}
-```
-<!-- tabs-close -->
-
-You can create as many worker nodes you like:
-
-<!-- tabs-open -->
-### master
-```shell
-$ elixir --sname master -S mix skitter.master worker1@silverlode worker2@silverlode
-[20:08:05.314][info] ⬡⬢⬡⬢ Skitter v0.7.0 started in master mode
-[20:08:05.316][info] Reachable at `master@silverlode`
-[20:08:05.341][info] Connected to `worker2@silverlode`, tags: []
-[20:08:05.342][info] Connected to `worker1@silverlode`, tags: []
-[20:08:05.354][info] Deploying &HelloSkitter.workflow/0
-```
-### worker1
-```shell
-$ elixir --sname worker1 -S mix skitter.worker
-[20:07:38.046][info] ⬡⬢⬡⬢ Skitter v0.7.0 started in worker mode
-[20:07:38.049][info] Reachable at `worker1@silverlode`
-[20:08:05.342][info] Connected to master: `master@silverlode`
-{"Hello", 2}
-{"Hello", 1}
-```
-### worker2
-```shell
-$ elixir --sname worker2 -S mix skitter.worker
-[20:07:50.918][info] ⬡⬢⬡⬢ Skitter v0.7.0 started in worker mode
-[20:07:50.920][info] Reachable at `worker2@silverlode`
-[20:08:05.342][info] Connected to master: `master@silverlode`
-{"World!", 1}
-{"Skitter", 1}
-```
-<!-- tabs-close -->
-
-Once you have tested your application in this semi-distributed fashion, you can
-deploy it over an actual cluster. Skitter uses releases for this purpose. To
-learn more, please refer to the
-[deployment documentation](deployment.html#iex-and-mix-during-development).
+If you are not familiar with the structure of mix projects, it may be a good
+idea to browse the README and the generated files to see how everything fits
+together. We provide a short summary here.
+* `mix.exs`: Configures how `mix`, the elixir build tool, runs and compiles
+  your application.
+* `config/config.exs`: Configures your application and its dependencies (e.g.
+  skitter, logger).
+* `lib/`: contains the code of your application. Any `.ex` file present in
+  this directory will be picked up by mix, compiled and included in your
+  project.
