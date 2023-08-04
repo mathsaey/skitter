@@ -509,7 +509,7 @@ function do_deploy() {
   deploy_mode="start"
   master_opts=""
   worker_opts=""
-  wait_time="5"
+  wait_time="10"
   remote_dir=$(pwd)
 
   while test $# -gt 0
