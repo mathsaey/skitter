@@ -259,7 +259,22 @@ On a cluster with three nodes named `isabelle-a`, `isabelle-b` and
 on the `hello_skitter` project.
 
 ```shell
-./_release/bin/skitter deploy isabelle-a isabelle-b isabelle-c
+$ ./_release/bin/skitter deploy isabelle-a isabelle-b isabelle-c
+⬡⬢⬡⬢ Skitter deploy 0.7.0
+> workers:  isabelle-a isabelle-b isabelle-c
+
+* starting worker on isabelle-a ✓
+* starting worker on isabelle-b ✓
+* starting worker on isabelle-c ✓
+
+⧖ sleeping 10 second(s) while workers start.
+✓ finished deployment, starting master.
+[20:58:29.950][info] ⬡⬢⬡⬢ Skitter v0.6.4 started in master mode
+[20:58:29.950][info] Reachable at `skitter_master@isabelle`
+[20:58:29.958][info] Connected to `skitter_worker@isabelle-a`, tags: []
+[20:58:29.959][info] Connected to `skitter_worker@isabelle-c`, tags: []
+[20:58:29.960][info] Connected to `skitter_worker@isabelle-b`, tags: []
+[20:58:29.960][info] Deploying &HelloSkitter.workflow/0
 ```
 
 When using the deploy script, the cluster is set up to ensure the worker
