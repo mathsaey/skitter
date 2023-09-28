@@ -1,7 +1,5 @@
 # Telemetry
 
-This page details the telemetry events emitted by Skitter.
-
 > #### Info {:.neutral}
 >
 > This page is only relevant for those who wish to intercept the telemetry
@@ -15,6 +13,12 @@ with these events. Note that these events are only produced when `telemetry` is
 set to `true` in the [Skitter application environment](configuration.html).
 
 ## Writing telemetry handlers
+
+> #### Telemetry handlers {:.warning}
+>
+> Skitter does not define or register any handlers for the emitted telemetry
+> events. It is up to the user of Skitter to define telemetry handlers or to
+> use an external package which does.
 
 Telemetry events emitted by Skitter include a lot of information which may be
 quite large. For instance, many events include a `t:Skitter.Strategy.context/0`

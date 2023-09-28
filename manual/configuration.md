@@ -1,111 +1,152 @@
 # Configuration
 
-This page details how the Skitter runtime can be configured.
+Skitter aims to be usable out of the box without any additional configuration.
+Running the Skitter deploy script with the appropriate options should be enough
+to deploy a stream processing application over a cluster. Nevertheless, it may
+be needed to tweak the behavior of Skitter. This page details the various
+configuration options Skitter offers to modify its behavior.
 
-Skitter is configured through its `Application` environment. Elixir enables
-developers to customize this environment at compile time through the use of the
-`config/config.exs` file. This environment can also be configured before the
-application is started by using the `config/runtime.exs` file. Both files are
-described in the `Config` documentation; additional information can be found
-in the `mix release` documentation.
+> #### Configuring Elixir applications {:.tip}
+>
+> Elixir offers several options to configure the behavior of an application.
+> This can sometimes make it difficult to figure out where configuration should
+> go. The following list provides a quick overview of the various ways in which
+> an application can be configured.
+>
+> * `config/config.exs`: compile-time configuration, created by default by
+>    `mix skitter.new`. See `Config` for more information.
+> * `config/runtime.exs`: runtime configuration. Evaluated every time before
+>    the application is started. Not created by `mix skitter.new`.
+>
+> Additionally, Skitter can be configured by passing command-line parameters to
+> `mix skitter.worker`, `mix skitter.master`, `skitter worker`,
+> `skitter master`, `skitter local` or `skitter deploy`.
 
-Concretely this means that you can use both `config/config.exs` and
-`config/release.exs` to configure the Skitter runtime system. Besides this, the
-skitter tasks, `mix skitter.worker` and `mix skitter.master` accept command
-line arguments (described in their documentation) which further configure
-Skitter. Similarly, skitter releases started through the `skitter` script also
-accept command line arguments which customize the Skitter runtime system.
+A Skitter runtime is always started in a _mode_ (i.e., worker, master or local).
+Some configuration options are only useful when Skitter is running in a certain
+mode. Skitter ignores any configuration options which are not relevant for the
+mode it is started in.
 
-## Modes
+## deploy
 
-A Skitter runtime is always started in a _mode_. This mode determines the role
-of the Skitter runtime in a cluster environment. The following modes are
-supported:
+> #### Summary {:.neutral}
+>
+> Deploy the specified workflow after starting Skitter.
+>
+> - _master_ or _local_ mode
+> - Default: `nil`
+> - `config/config.exs`: `config :skitter, deploy: <expression>`
+> - `config/runtime.exs`: `config :skitter, deploy: <expression>`
+> - `mix skitter.master  --deploy <expression>` or `mix skitter.master -d <expression>`
+> - `skitter master  --deploy <expression>` or `skitter master -d <expression>`
+> - `skitter deploy  --deploy <expression>` or `skitter deploy -d <expression>`
 
-* `:worker`: This runtime will perform computations for a master node.
-* `:master`: This runtime is responsible for coordinating the various workers
-in the cluster.
-* `:local`: This runtime acts as both a worker and a master runtime at the same
-time. This is used for developing Skitter applications.
+This configuration option is used to specify a workflow which will be deployed
+over the cluster after the Skitter runtime has started. There are two ways to
+configure this option:
 
-When no mode is specified, a `:local` runtime is started.
+- Setting the `deploy` option in `config/config.exs` or `config.runtime.exs` to
+  a 0-arity function. This function should return a workflow which will be
+  deployed by Skitter.
+  - This is the case if the project was generated using `mix skitter.new`.
+- An expression can be passed as an argument to the `--deploy` flag. This
+  expression will be evaluated using `Code.eval_string/3`. The resulting value
+  should be a workflow, which will be deployed after the Skitter runtime has
+  started.
 
-The mode a Skitter runtime is in effects the configuration options it accepts.
-For instance, a worker runtime may be configured with the name of a single
-master runtime, while a master runtime is configured with the name of various
-workers. Any configuration present in the application environment that does not
-belong to the current mode is ignored.
+## telemetry
 
-The various utilities which start a Skitter runtime automatically set the mode
-of the runtime. Therefore, you should **not** set the mode yourself. The
-following table shows how to start all types of runtimes based on how you are
-starting the Elixir system.
+> #### Summary {:.neutral}
+>
+> Enable telemetry events.
+>
+> - All modes
+> - Default: `false`
+> - Must be set at compile-time
+> - `config/config.exs`: `config :skitter, telemetry: <boolean>`
 
-Mode | Using `iex` | Using `mix` | Using releases
----- | --------- | --------- | --------------
-`:local` | `iex -S mix` | `mix run` | `skitter local`
-`:worker` | `iex -S mix skitter.worker` | `mix skitter.worker` | `skitter worker`
-`:master` | `iex -S mix skitter.master` | `mix skitter.master` | `skitter master`
+Skitter can optionally emit telemetry events through the use of the `telemetry`
+package. This option determines whether these events are emitted or not. If
+this option is set to `false` (the default), all telemetry code is purged at
+compile time. Therefore, this option can *only* be adjusted in
+`config/config.exs`. More information about telemetry can be found on the
+[telemetry page](telemetry.html).
 
-## Shared Configuration
+## workers
 
-- `:deploy` Used in `:local` and `:master` mode. This key should be set to a
-  0-arity function which should return a `t:Skitter.Workflow.t/0`.
-  This workflow will be deployed after the Skitter runtime has started.
-  - When using releases, a string can be passed to the `--deploy` flag. This
-    string will be evaluated (using `Code.eval_string/3`). The resulting value
-    should be a workflow, which will be deployed after the Skitter runtime has
-    started.
-  - When using `mix`, the `--deploy` flag can be used to pass a string to `mix
-    skitter.master`, which will be used in the same way.
+> #### Summary {:.neutral}
+>
+> A list of workers to which the master will attempt to connect.
+>
+> - _master_ mode
+> - Default: `[]`
+> - `mix skitter.master <worker name> <worker name>`
+> - `skitter master <worker name> <worker name>`
+> - `skitter master --worker-file <path>` or `skitter master -f <path>`
+> - `skitter deploy <worker name> <worker name>`
+> - `skitter deploy --worker-file <path>` or `skitter deploy -f <path>`
 
-- Skitter logs various messages to `Logger`. These cannot be disabled through
-  Skitter itself, however, the `Logger` can be configured to ignore Skitter
-  messages or to prune them at compile time. A Skitter release logs its log
-  messages to the console logger and to a file (`logger/<node_name>.log`). The
-  settings passed to this file will mirror the settings of the console logger.
-  Logging to this file may be disabled by passing the `--no-log` option to
-  `skitter deploy`, `skitter master`, `skitter worker` or `skitter local`.
+A list of workers to which the master will attempt to connect. If connecting to
+any of these workers fail, the master will shut down with an error.
 
-- `:banner`: Determines if the `⬡⬢⬡⬢ Skitter <version> (<mode>)` banner is
-  printed when the runtime is started inside `iex`, defaults to `true` for non
-  release versions.
+A path to a file may also be provided to `skitter master` or `skitter deploy`.
+This file must contain a worker address on each line. These workers will be
+added to the list of workers.
 
-- `:telemetry`: Skitter can optionally emit telemetry events through the use of
-  the `telemetry` package. This option determines whether these events are
-  emitted or not. If this option is set to `false` (the default), all telemetry
-  code is purged at compile time. Therefore, this option can not be adjusted
-  after compile time. Note that Skitter does not register any handlers for the
-  emitted telemetry data. An overview of the events emitted by Skitter can be
-  found on the [telemetry page](telemetry.html).
+## shutdown_with_workers
 
-## Master Configuration
+> #### Summary {:.neutral}
+>
+> Shut down the master when any connected worker shuts down.
+>
+> - _master_ mode
+> - Default: false
+> - `skitter master --shutdown-with-workers`
+> - `skitter deploy --shutdown-with-workers`
 
-- `:workers`: A list of workers to which the master will attempt to connect. If
-  connecting to any of these workers fail, the master will shut down with an
-  error.
-  - When using `mix skitter.master`, the worker names can be provided as
-    arguments to the mix task.
-  - When using releases, the worker names can be provided as arguments to the
-    script. The worker names may also be passed to `skitter deploy`.
+This option is useful to ensure a single crashed worker shuts down all
+connected Skitter runtimes.
 
-- `:shutdown_with_workers`: Determines if the master should shut down when _any_
-  worker it is connected to shuts down. Defaults to false.
-  - `mix skitter.worker`, `skitter master` and `skitter deploy` accept a
-    `--shutdown-with-workers` flag which enables this behaviour.
+## master
 
-## Worker Configuration
+> #### Summary {:.neutral}
+>
+> A master to connect to.
+>
+> - _worker_ mode
+> - Default: `nil`
+> - `mix skitter.worker <master>`
+> - `skitter worker <master>`
 
-- `:master`: A master to connect to. After starting, the worker will attempt to
-  connect to the master node. If the connection fails, the worker will log a
-  warning but stays alive.
+After starting, the worker will attempt to connect to the master node. If the
+connection fails, the worker will log a warning but stays alive.
 
-- `:shutdown_with_master`: Determines if the worker should shut down when the
-  master it is connected to shuts down. Defaults to true.
-  - `mix skitter.worker`, `skitter worker` and `skitter deploy` accept a
-    `--no-shutdown-with-master` flag which disables this behaviour.
 
-- `:tags`: A list of `t:Skitter.Nodes.tag/0` which will be added to the worker.
-  - `mix skitter.worker` and `skitter worker` accept a `--tag` flag which can be
-    used to add tags to a worker. `skitter deploy` uses a special notation for
-    worker names, which can be used to add tags to workers.
+## shutdown_with_workers
+
+> #### Summary {:.neutral}
+>
+> Shut down the worker if the master it is connected to shuts down.
+>
+> - _worker_ mode
+> - Default: `true`
+> - ` mix skitter.worker --no-shutdown-with-master`
+> - `skitter worker --no-shutdown-with-master`
+> - `skitter deploy --no-shutdown-with-master`
+
+## tags
+
+> #### Summary {:.neutral}
+>
+> Add the specified tags to the worker
+>
+> - _worker_ mode
+> - Default: `true`
+> - `mix skitter.worker -t <tag name 1> -t <tag name 2>`
+> - `skitter worker -t <tag name 1> -t <tag name 2>`
+> - `skitter deploy --worker-file <path>` or `skitter deploy -f <path>`
+
+A list of `t:Skitter.Remote.tag/0` which will be added to the worker.
+
+The `--worker-file` provides a special notation which can be used to add tags
+to workers.
