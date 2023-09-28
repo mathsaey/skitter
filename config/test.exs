@@ -11,5 +11,4 @@ config :ex_unit, capture_log: true
 
 config :skitter,
   mode: :test,
-  banner: false,
   shutdown_with_master: false
