@@ -18,16 +18,10 @@ three main parts, which can be accessed in the top of the sidebar.
   link to the pages in this section of the documentation. We recommend to
   browse these pages on an as-needed basis.
 
-
 * The __mix tasks__ section: the pages in this section document the mix tasks
   defined by Skitter. `Mix` is the build tool used by Elixir. Mix tasks are
   small command line programs which are used to extend the functionality of
   this tool. We recommend browsing these pages only when needed.
-
-> #### ExDoc Tip {:.tip}
->
-> When browsing module or mix task documentation, the "source code" button
-> (`</>`) can be used to jump to the source of a documented item on GitHub.
 
 The remainder of this manual is, itself, divided into several parts:
 
