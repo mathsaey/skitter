@@ -184,11 +184,12 @@ defmodule Mix.Tasks.Skitter.New do
     # You can also pass the `--deploy` option to the skitter deploy script when using releases.
     deploy: &<%= @module_name %>.workflow/0
 
-  # Set up the console logger. Values for level, format and metadata set here will also be used by
-  # the file logger. See https://hexdocs.pm/logger/Logger.html.
-  config :logger, :console,
-    format: "[$time][$level]$metadata $message\\n",
-    device: :standard_error
+  # Set up the logger. See https://hexdocs.pm/logger/Logger.html.
+  # We set up the log message format (https://hexdocs.pm/logger/Logger.Formatter.html) and log
+  # to stderr by default.
+  config :logger,
+    default_formatter: [format: "[$time][$level]$metadata $message\\n"],
+    default_handler: [config: [type: :standard_error]]
 
   # Remove all log messages with a priority lower than info at compile time if we are creating a
   # production build.

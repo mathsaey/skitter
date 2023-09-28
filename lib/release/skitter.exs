@@ -44,13 +44,11 @@ if System.get_env("SKITTER_LOG") do
   dir = File.cwd!() |> Path.join("logs")
   File.mkdir_p!(dir)
 
-  config :logger, backends: [:console, {LoggerFileBackend, :file_log}]
-
-  console_config = Application.get_env(:logger, :console, [])
-
-  config :logger, :file_log,
-    path: Path.join(dir, file),
-    level: console_config[:level] || :info,
-    format: console_config[:format] || "[$time][$level]$metadata $message\n",
-    metadata: console_config[:metadata] || []
+  configure(:logger, [
+    {:handler, :skitter_rel_file_logger, :logger_std_h,
+     %{
+       config: %{file: to_charlist(Path.join(dir, file))},
+       formatter: Logger.default_formatter()
+     }}
+  ])
 end

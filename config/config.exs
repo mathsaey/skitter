@@ -6,8 +6,8 @@
 
 import Config
 
-config :logger, :console,
-  format: "[$time][$level]$metadata $message\n",
-  device: :standard_error
+config :logger,
+  default_formatter: [format: "[$time][$level]$metadata $message\n"],
+  default_handler: [config: [type: :standard_error]]
 
 import_config "#{Mix.env()}.exs"

@@ -28,6 +28,7 @@ defmodule Skitter.Runtime.Application do
   def start(:normal, []), do: start(Runtime.mode())
 
   @impl true
+  def start_phase(:sk_log, :normal, []), do: logger(Runtime.mode())
   def start_phase(:sk_welcome, :normal, []), do: welcome(Runtime.mode())
   def start_phase(:sk_connect, :normal, []), do: connect(Runtime.mode())
   def start_phase(:sk_deploy, :normal, []), do: deploy(Runtime.mode())
@@ -71,6 +72,16 @@ defmodule Skitter.Runtime.Application do
 
   # Tests take care of setting up their own supervisors as needed
   defp start(:test), do: Supervisor.start_link([], strategy: :one_for_one, name: __MODULE__)
+
+  # Additional loggers
+  # ------------------
+
+  defp logger(mode) when mode in [:worker, :master] do
+    if Config.get(:logger), do: Logger.add_handlers(:skitter)
+    :ok
+  end
+
+  defp logger(_), do: :ok
 
   # Banner / Log
   # ------------

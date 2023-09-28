@@ -54,23 +54,28 @@ configure this option:
   should be a workflow, which will be deployed after the Skitter runtime has
   started.
 
-## telemetry
+## logs
 
 > #### Summary {:.neutral}
 >
-> Enable telemetry events.
+> Write logs to files
 >
-> - All modes
-> - Default: `false`
-> - Must be set at compile-time
-> - `config/config.exs`: `config :skitter, telemetry: <boolean>`
+> - _worker_ and _master_ mode
+> - Default: `true`
+> - Only for release builds
+> - `skitter worker --no-log`
+> - `skitter master --no-log`
+> - `skitter deploy --no-log`
 
-Skitter can optionally emit telemetry events through the use of the `telemetry`
-package. This option determines whether these events are emitted or not. If
-this option is set to `false` (the default), all telemetry code is purged at
-compile time. Therefore, this option can *only* be adjusted in
-`config/config.exs`. More information about telemetry can be found on the
-[telemetry page](telemetry.html).
+Skitter writes messages to Elixir's `Logger`. Skitter applications which were
+created using `mix skitter.new` write their log messages to standard error.
+This behavior (and other logger settings) can be modified by configuring the
+logger in `config/config.exs`.
+
+Additionally, skitter release builds are configured to write their log output
+to a file (`logs/<node_name>.log`) if they are started in master or worker mode.
+This behavior can be disabled by passing the `--no-log` option to the skitter
+script.
 
 ## workers
 
@@ -121,7 +126,6 @@ connected Skitter runtimes.
 After starting, the worker will attempt to connect to the master node. If the
 connection fails, the worker will log a warning but stays alive.
 
-
 ## shutdown_with_workers
 
 > #### Summary {:.neutral}
@@ -150,3 +154,22 @@ A list of `t:Skitter.Remote.tag/0` which will be added to the worker.
 
 The `--worker-file` provides a special notation which can be used to add tags
 to workers.
+
+## telemetry
+
+> #### Summary {:.neutral}
+>
+> Enable telemetry events.
+>
+> - All modes
+> - Default: `false`
+> - Must be set at compile-time
+> - `config/config.exs`: `config :skitter, telemetry: <boolean>`
+
+Skitter can optionally emit telemetry events through the use of the `telemetry`
+package. This option determines whether these events are emitted or not. If
+this option is set to `false` (the default), all telemetry code is purged at
+compile time. Therefore, this option can *only* be adjusted in
+`config/config.exs`. More information about telemetry can be found on the
+[telemetry page](telemetry.html).
+

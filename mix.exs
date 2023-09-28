@@ -53,7 +53,6 @@ defmodule Skitter.MixProject do
       {:dialyxir, "~> 1.4", only: :dev, optional: true, runtime: false},
 
       # Runtime
-      {:logger_file_backend, "~> 0.0.13"},
       {:telemetry, "~> 1.2"},
 
       # Used by built-in strategies
@@ -64,7 +63,7 @@ defmodule Skitter.MixProject do
   def application do
     [
       mod: {Skitter.Runtime.Application, []},
-      start_phases: [sk_welcome: [], sk_connect: [], sk_deploy: []],
+      start_phases: [sk_log: [], sk_welcome: [], sk_connect: [], sk_deploy: []],
       extra_applications: [:logger, :eex]
     ]
   end
