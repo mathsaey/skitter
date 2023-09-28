@@ -149,10 +149,6 @@ more information about both of these topics.
 structure of the application it generated. We recommend reading this README and
 browsing the generated files to see how everything fits together. We provide a
 short summary of the most important files and directories in the project below:
-
-If you are not familiar with the structure of mix projects, it may be a good
-idea to browse the README and the generated files to see how everything fits
-together. We provide a short summary here.
 * `mix.exs`: Configures how `mix`, the elixir build tool, runs and compiles
   your application.
 * `config/config.exs`: Configures your application and its dependencies (e.g.
