@@ -27,6 +27,8 @@ Some configuration options are only useful when Skitter is running in a certain
 mode. Skitter ignores any configuration options which are not relevant for the
 mode it is started in.
 
+The available configuration options are documented below.
+
 ## deploy
 
 > #### Summary {:.neutral}
