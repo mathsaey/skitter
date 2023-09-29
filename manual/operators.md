@@ -1,4 +1,4 @@
-# Custom Operators
+# Operators
 
 Many stream processing frameworks (e.g. Spark, Flink, …) use an operator-based
 programming model where applications are expressed by chaining calls to
@@ -45,6 +45,8 @@ workflow do
 end
 ```
 In Skitter, these macros are called _operators_.
+
+## Defining Custom Operators
 
 It is possible to define your own operators which can then be imported into the
 workflow DSL.

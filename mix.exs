@@ -88,7 +88,7 @@ defmodule Skitter.MixProject do
       Introduction: ["manual/overview.md", "manual/installation.md", "manual/up_and_running.md"],
       Concepts: ["manual/language_concepts.livemd"],
       Deployment: ["manual/deployment.md", "manual/configuration.md"],
-      Guides: ["manual/custom_operators.md", "manual/telemetry.md"]
+      Guides: ["manual/operators.md", "manual/telemetry.md"]
     ]
   end
 

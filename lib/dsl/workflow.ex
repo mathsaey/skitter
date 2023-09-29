@@ -208,7 +208,7 @@ defmodule Skitter.DSL.Workflow do
   ![](assets/docs/dsl_workflow_custom_operator.png)
 
   Information on how to define custom operators can be found in the
-  [Skitter manual](custom_operators.html)
+  [Skitter manual](operators.html)
 
   ## Examples
 
