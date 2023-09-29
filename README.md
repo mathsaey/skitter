@@ -50,7 +50,7 @@ versions.
 
 | Elixir | OTP |
 | ------ | --- |
-| 1.14   | 25  |
+| 1.15   | 25  |
 
 We provide a brief introduction to creating and running Skitter projects below.
 For more detailed information, we recommend browsing the
