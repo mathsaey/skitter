@@ -18,12 +18,13 @@ defmodule Mix.Tasks.Skitter.New do
   * a `mix.exs` file which declares Skitter as a dependency and which is set up to build a
     Skitter release.
 
-  * a `config/config.exs` file which provides some initial configuration for Skitter and the
-    logger.
+  * a `config/config.exs` file which provides some initial configuration for Skitter and logging.
+
+  * a `lib/MODULE.ex` file which contain an empty workflow to get started.
 
   * a `.formatter.exs` file which sets up `mix format`
 
-  * a `lib/MODULE.ex` file which contain an empty workflow to get started.
+  * a `.iex.exs` file which auto-imports Skitter when starting `iex`.
 
   * a `README.md` file which documents the project layout.
 
@@ -112,6 +113,7 @@ defmodule Mix.Tasks.Skitter.New do
     ]
 
     create_file(Path.join(path, "mix.exs"), mix_template(assigns))
+    create_file(Path.join(path, ".iex.exs"), iex_text())
     create_file(Path.join(path, ".formatter.exs"), formatter_text())
     create_file(Path.join(path, "config/config.exs"), config_template(assigns))
     create_file(Path.join(path, module_path), module_template(assigns))
@@ -141,6 +143,14 @@ defmodule Mix.Tasks.Skitter.New do
     Mix.shell().info([:green, "* Running", :reset, " `", cmd, "` in ", dir])
     Mix.shell().cmd("cd #{dir} ; #{cmd}")
   end
+
+  embed_text(:iex, """
+  # This file is read when iex is started.
+  # See https://hexdocs.pm/iex/IEx.html#module-the-iex-exs-file
+
+  # Load Skitter when starting a REPL to avoid needless typing.
+  use Skitter
+  """)
 
   embed_text(:formatter, """
   # This file is used by `mix format`.
@@ -273,6 +283,8 @@ defmodule Mix.Tasks.Skitter.New do
   ---------------- | -------
   `mix.exs` | Configures how `mix`, the elixir build tool, runs and compiles your application.
   `config/config.exs` | Configures your application and its dependencies (e.g. skitter, logger).
+  `.formatter.exs` | Sets up the code formatter shipped with mix.
+  `.iex.exs` | Sets up iex, the elixir shell, to automatically import the Skitter DSLs
   `lib/*.ex` | Files in this directory define your application and are compiled by mix.
   `_build` | Contains compilation artefacts, can safely be deleted
   `_release` | Contains the release created when running `mix release`, can safely be deleted.

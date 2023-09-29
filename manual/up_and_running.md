@@ -41,13 +41,13 @@ The tool will create a project for us:
 * creating hello_skitter/lib
 * creating hello_skitter/config
 * creating hello_skitter/mix.exs
+* creating hello_skitter/.iex.exs
 * creating hello_skitter/.formatter.exs
 * creating hello_skitter/config/config.exs
 * creating hello_skitter/lib/hello_skitter.ex
 * creating hello_skitter/.gitignore
 * creating hello_skitter/README.md
 ```
-
 
 After which it will ask if it should fetch and compile the dependencies of the
 project. Either reply `y`, or `cd` into the project directory and run `mix
