@@ -1,4 +1,4 @@
-# Copyright 2018 - 2022, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2023, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,7 +6,7 @@
 
 defmodule Skitter.BIO do
   @moduledoc """
-  Shorthands for using BIOs.
+  Shorthands for using built-in operations.
 
   This module defines various macros which can be used to use the various built-in operations in
   skitter workflows.

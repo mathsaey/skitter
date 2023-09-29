@@ -7,13 +7,21 @@
 defmodule Skitter.DSL.WorkflowTest do
   use ExUnit.Case, async: true
 
-  import Skitter.DSL.Workflow
+  import Skitter.DSL.Workflow, only: [workflow: 2, workflow: 1]
   import Skitter.DSL.Operation, only: [defoperation: 3]
 
   defoperation Example, in: in_port, out: out_port, strategy: DefaultStrategy do
   end
 
   defoperation Join, in: [left, right], out: _ do
+  end
+
+  defmodule MyCustomOperators do
+    defmacro my_operator(opts \\ []) do
+      quote do
+        node(Example, unquote(opts))
+      end
+    end
   end
 
   doctest Skitter.DSL.Workflow

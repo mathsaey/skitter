@@ -65,6 +65,8 @@ defmodule Skitter.DSL.Workflow do
       iex> wf.nodes[:node1].links
       [out_port: [node2: :in_port]]
 
+  ![](assets/docs/dsl_workflow_basic.png)
+
   To link nodes to the in or out ports of a workflow, the port name should be used:
 
       iex> wf = workflow in: foo, out: bar do
@@ -77,6 +79,8 @@ defmodule Skitter.DSL.Workflow do
       [out_port: [:bar]]
       iex> wf.in
       [foo: [node: :in_port]]
+
+  ![](assets/docs/dsl_workflow_ports.png)
 
   Previously defined workflows may be used inside a workflow definition:
 
@@ -97,6 +101,8 @@ defmodule Skitter.DSL.Workflow do
       iex> outer.nodes[:inner_left].links
       [bar: [inner_right: :foo]]
 
+  ![](assets/docs/dsl_workflow_nested.png)
+
   Instead of specifying the complete source name (e.g. `node.in_port`), the following syntactic
   sugar can be used when creating a node:
 
@@ -106,11 +112,15 @@ defmodule Skitter.DSL.Workflow do
       iex> wf.in
       [foo: [node: :in_port]]
 
+  ![](assets/docs/dsl_workflow_sugar_1.png)
+
       iex> wf = workflow out: bar do
       ...>   node(Example, as: node) ~> bar
       ...> end
       iex> wf.nodes[:node].links
       [out_port: [:bar]]
+
+  ![](assets/docs/dsl_workflow_sugar_2.png)
 
   These uses of `~>/2` can be chained:
 
@@ -126,6 +136,8 @@ defmodule Skitter.DSL.Workflow do
       [out_port: [node2: :in_port]]
       iex> wf.nodes[:node2].links
       [out_port: [:bar]]
+
+  ![](assets/docs/dsl_workflow_sugar_3.png)
 
   It is not needed to explicitly specify a name for a node if you do not need to refer to the
   node. You should not rely on the format of the generated names in this case:
@@ -143,21 +155,60 @@ defmodule Skitter.DSL.Workflow do
       iex> wf.nodes[:"skitter/dsl/workflow_test/example#2"].links
       [out_port: [:bar]]
 
-  `Skitter.BIO` defines various operations along with several macros to use these operations in a
-  workflow. These macros are automatically imported and available inside the body of `workflow`.
+  ![](assets/docs/dsl_workflow_gen_name.png)
 
-      iex> sugar = workflow out: bar do
-      ...>   tcp_source("127.0.0.1", 4555)
-      ...>   ~> node(Example)
-      ...>   ~> bar
+  Skitter defines several commonly-used operations such as `Skitter.BIO.Map` or
+  `Skitter.BIO.Filter`. These operations are all prefixed with `Skitter.BIO`.
+
+  The `Skitter.BIO` module defines several _operators_ which provide nicer syntax for using these
+  built-in operations inside a workflow. These operators are automatically imported by
+  `workflow/2`.  Thus, the following two workflow definitions are equivalent:
+
+      iex> map_fun = fn i -> i * 2 end
+      iex> without_sugar = workflow do
+      ...>   node(Skitter.BIO.StreamSource, args: [1, 2, 3])
+      ...>   ~> node(Skitter.BIO.Map, args: map_fun)
+      ...>   ~> node(Skitter.BIO.Print)
       ...> end
-      iex> zero = workflow out: bar do
-      ...>   node(Skitter.BIO.TCPSource, args: [address: "127.0.0.1", port: 4555])
-      ...>   ~> node(Example)
-      ...>   ~> bar
-      ...>  end
-      iex> zero == sugar
+      iex> with_sugar = workflow do
+      ...>   stream_source([1, 2, 3])
+      ...>   ~> map(map_fun)
+      ...>   ~> print()
+      ...> end
+      iex> with_sugar == without_sugar
       true
+
+  ![](assets/docs/dsl_workflow_bio.png)
+
+  The `as:` and `with:` options (see `node/2`) can be passed as arguments to the operators:
+
+      iex> wf = workflow do
+      ...>   stream_source([1, 2, 3], as: source)
+      ...>   map(fn i -> i * 2 end, as: map)
+      ...>
+      ...>   source._ ~> map._
+      ...> end
+      iex> wf.nodes[:source].operation
+      Skitter.BIO.StreamSource
+      iex> wf.nodes[:map].operation
+      Skitter.BIO.Map
+
+  ![](assets/docs/dsl_workflow_bio_options.png)
+
+  It is possible to define your own operators and import these into the workflow DSL. For
+  instance:
+
+      iex> wf = workflow do
+      ...>   import MyCustomOperators
+      ...>   my_operator(as: my_operator)
+      ...> end
+      iex> wf.nodes[:my_operator].operation
+      Example
+
+  ![](assets/docs/dsl_workflow_custom_operator.png)
+
+  Information on how to define custom operators can be found in the
+  [Skitter manual](custom_operators.html)
 
   ## Examples
 
@@ -191,28 +242,36 @@ defmodule Skitter.DSL.Workflow do
         }
       }
 
+  ![](assets/docs/dsl_workflow_example.png)
+
   """
   defmacro workflow(opts \\ [], do: body) do
     in_ = opts |> Keyword.get(:in, []) |> AST.names_to_atoms()
     out = opts |> Keyword.get(:out, []) |> AST.names_to_atoms()
 
     quote do
-      import Kernel, except: [node: 1]
-      import unquote(__MODULE__), only: [node: 1, node: 2, ~>: 2, workflow: 2, workflow: 1]
-
-      import Skitter.BIO, only: :macros
-
-      unquote(__MODULE__)._gen_name_state_init()
-
-      unquote(node_var()) = %{}
-      unquote(link_var()) = []
-
-      unquote(body)
-
-      unquote(__MODULE__)._gen_name_state_clean()
-
+      # Create a block to avoid imports polluting the caller environment.
       {nodes, in_} =
-        unquote(__MODULE__)._merge_links(unquote(link_var()), unquote(node_var()), unquote(in_))
+        if true do
+          # Import the workflow DSL syntax
+          import Kernel, except: [node: 1]
+          import unquote(__MODULE__), only: [node: 1, node: 2, ~>: 2, workflow: 2, workflow: 1]
+
+          # Import Skitter's primitive operators
+          import Skitter.BIO
+
+          unquote(__MODULE__)._gen_name_state_init()
+
+          unquote(node_var()) = %{}
+          unquote(link_var()) = []
+
+          unquote(body)
+
+          unquote(__MODULE__)._gen_name_state_clean()
+
+          # Returns a {nodes, in ports} tuple
+          unquote(__MODULE__)._merge_links(unquote(link_var()), unquote(node_var()), unquote(in_))
+        end
 
       %Skitter.Workflow{
         in: in_,
@@ -242,7 +301,7 @@ defmodule Skitter.DSL.Workflow do
   `t:Skitter.Workflow.operation_node/0` or `t:Skitter.Workflow.workflow_node/0`. No links will be
   added to the generated node.
 
-  Two options can be passed when creating a node: `as:` and `args:`:
+  Three options can be passed when creating a node: `as:`, `args:` and `with:`:
 
   - `as:` defines the name of the node inside the workflow. It can be used to refer to the
   node when creating links with `~>/2`. If no name is specified, the node macro will generate a
