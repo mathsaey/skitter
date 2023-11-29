@@ -132,7 +132,7 @@ for this purpose. This is done for several reasons:
 - Releases are self-contained. This makes it easier to deploy an application
   along with the Skitter runtime and its dependencies over a cluster.
 - Releases are somewhat optimized: unused modules are pruned and modules are
-  preload when the erlang vm is started.
+  preloaded when the erlang vm is started.
 - Releases include management scripts, including the skitter deploy script,
   which facilitates the distribution of a Skitter application over a cluster.
 
