@@ -30,6 +30,10 @@ defmodule Skitter.Telemetry do
       quote do
         :telemetry.execute(unquote(prefix(name)), unquote(measurements), unquote(metadata))
       end
+    else
+      quote do
+        _ = unquote(metadata)
+      end
     end
   end
 
