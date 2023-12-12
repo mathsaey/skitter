@@ -32,7 +32,9 @@ defmodule Skitter.Telemetry do
       end
     else
       quote do
+        _ = unquote(name)
         _ = unquote(metadata)
+        _ = unquote(measurements)
       end
     end
   end
@@ -47,6 +49,8 @@ defmodule Skitter.Telemetry do
       end
     else
       quote do
+        _ = unquote(name)
+        _ = unquote(metadata)
         unquote(body)
       end
     end
