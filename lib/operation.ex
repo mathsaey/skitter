@@ -112,6 +112,10 @@ defmodule Skitter.Operation do
 
   @typedoc """
   State passed to the callback when it is called.
+
+  The state represents the mutable state of an operation. It is explicitly separated from the
+  immutable `t:config/0` to enable strategies to explicitly differentiate between handling mutable
+  and immutable data.
   """
   @type state :: any()
 
