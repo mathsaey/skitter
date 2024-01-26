@@ -758,16 +758,4 @@ defmodule Skitter.DSL.Operation do
       end
     end
   end
-
-  defp build_signature(name, args) do
-    quote do
-      unquote(name)(unquote(_state_var()), unquote(_config_var()), unquote_splicing(args))
-    end
-  end
-
-  defp build_clause(signature, {:when, _, [_, guards]}) do
-    quote(do: unquote(signature) when unquote(guards))
-  end
-
-  defp build_clause(signature, _), do: quote(do: unquote(signature))
 end
