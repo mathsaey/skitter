@@ -456,43 +456,6 @@ defmodule Skitter.Operation do
   end
 
   @doc """
-  Call callback `callback_name` with an empty state, `config` and `arguments`.
-
-  This function calls `Skitter.Operation.call/5` with the state created by `initial_state/1`.
-
-  ## Examples
-
-      iex> call(OperationModule, :example, 2, [:foo])
-      %Skitter.Operation.Callback.Result{state: 42, result: 84, emit: [arg: :foo]}
-  """
-  @spec call(t(), atom(), config(), args()) :: result()
-  def call(operation, callback_name, config, args) do
-    call(operation, callback_name, initial_state(operation), config, args)
-  end
-
-  @doc """
-  Call callback `callback_name` with an empty state and config and `arguments`.
-
-  This function calls `Skitter.Operation.call/5` with the state created by `initial_state/1`.
-  `nil` is used as the value for `config`.
-  """
-  @spec call(t(), atom(), args()) :: result()
-  def call(operation, callback_name, args) do
-    call(operation, callback_name, initial_state(operation), nil, args)
-  end
-
-  @doc """
-  Call callback `callback_name` with an empty state and config and arguments.
-
-  This function calls `Skitter.Operation.call/5` with the state created by `initial_state/1`.
-  `nil` is used as the value for `config`, no arguments are passed.
-  """
-  @spec call(t(), atom()) :: result()
-  def call(operation, callback_name) do
-    call(operation, callback_name, initial_state(operation), nil, [])
-  end
-
-  @doc """
   Call `callback_name` defined by `operation` if it exists.
 
   Calls the callback with the given name with `state`, `config` and `args` if
@@ -517,37 +480,5 @@ defmodule Skitter.Operation do
         emit: []
       }
     end
-  end
-
-  @doc """
-  Call `callback_name` defined by `operation` if it exists.
-
-  Like `call_if_exists/5`, but `state` is replaced by the initial state of the operation.
-  """
-  @spec call_if_exists(t(), atom(), config(), args()) :: result()
-  def call_if_exists(operation, callback_name, config, args) do
-    call_if_exists(operation, callback_name, initial_state(operation), config, args)
-  end
-
-  @doc """
-  Call `callback_name` defined by `operation` if it exists.
-
-  Like `call_if_exists/5`, but `state` is replaced by the initial state of the operation and
-  `config` is `nil`.
-  """
-  @spec call_if_exists(t(), atom(), args()) :: result()
-  def call_if_exists(operation, callback_name, args) do
-    call_if_exists(operation, callback_name, initial_state(operation), nil, args)
-  end
-
-  @doc """
-  Call `callback_name` defined by `operation` if it exists.
-
-  Like `call_if_exists/5`, but `state` is replaced by the initial state of the operation, `config`
-  is `nil` and `args` is the empty list.
-  """
-  @spec call_if_exists(t(), atom()) :: result()
-  def call_if_exists(operation, callback_name) do
-    call_if_exists(operation, callback_name, initial_state(operation), nil, [])
   end
 end
