@@ -28,5 +28,5 @@ $ mix archive.install hex skitter_new
 ```
 
 Once the task is installed, you can run `mix help skitter.new` to see if
-everything is installed correctly. It should produce some text detailing how to
-use the task.
+everything is installed correctly. It should produce text detailing how to use
+the task.

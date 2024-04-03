@@ -7,10 +7,10 @@ can be used to create a new Skitter project. This task creates a new Elixir
 project, configures it to use Skitter and provides some initial code to help
 you get started.
 
-We can run `mix skitter.new` from any directory to create a new Skitter project.
-The generator expects a `snake_case` project name; i.e. words should be lower
-cased and spaces should be replaced by underscores. For the purposes of this
-guide, let's create a `hello_skitter` project:
+`mix skitter.new` can be used from any directory to create a new Skitter
+project.  The generator expects a `snake_case` project name; i.e. words should
+be lower cased and spaces should be replaced by underscores. Throughout this
+guide, we use the `hello_skitter` project as a running example:
 
 ```
 $ mix skitter.new hello_skitter
@@ -34,7 +34,7 @@ $ mix skitter.new hello_skitter
 > a dependency and customize their [release configuration](`mix release`) as
 > detailed in `Skitter.Release`.
 
-The tool will create a project for us:
+The tool will create the project:
 
 ```text
 * creating hello_skitter
@@ -120,8 +120,8 @@ Elixir build tool, which will load your Skitter project.
 
 > #### iex {:.info}
 >
-> The [official documentation](`IEx`) contains tons of useful information on
-> how to use `iex` and on how it can be customized.
+> The [official documentation](`IEx`) contains of useful information on how to
+> use `iex` and on how it can be customized.
 
 If you wish to run your application without starting a shell, you can use
 `mix run --no-halt`, which will start your mix project without starting `iex`.
