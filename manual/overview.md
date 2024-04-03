@@ -6,7 +6,7 @@ Unique to Skitter is its ability to control how the various operations which
 constitute a stream processing application are distributed at runtime.
 
 These pages serve as the main documentation for Skitter users. They consist of
-three main parts, which can be accessed in the top of the sidebar.
+three main parts, which can be accessed from the top of the sidebar.
 
 * The __manual__: this is the section of the docs you are currently browsing.
   It is a collection of guides which document how to get started with Skitter.
