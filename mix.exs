@@ -86,7 +86,8 @@ defmodule Skitter.MixProject do
   defp manual_pages do
     [
       Introduction: ~w(manual/overview.md manual/installation.md manual/up_and_running.md),
-      Concepts: ~w(manual/workflows.md manual/operations.md manual/strategies.md manual/language_concepts.livemd),
+      Concepts:
+        ~w(manual/workflows.md manual/operations.md manual/strategies.md manual/language_concepts.livemd),
       Deployment: ~w(manual/deployment.md manual/configuration.md),
       Guides: ~w(manual/operators.md manual/telemetry.md)
     ]

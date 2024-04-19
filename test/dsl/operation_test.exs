@@ -546,7 +546,9 @@ defmodule Skitter.DSL.OperationTest do
         end
       end
 
-      assert Operation.call(NormalTry, :test, nil, nil, [fn -> raise RuntimeError end]).result == :rescue
+      assert Operation.call(NormalTry, :test, nil, nil, [fn -> raise RuntimeError end]).result ==
+               :rescue
+
       assert Operation.call(NormalTry, :test, nil, nil, [fn -> throw(:foo) end]).result == :catch
       assert Operation.call(NormalTry, :test, nil, nil, [fn -> :ok end]).result == :else
     end

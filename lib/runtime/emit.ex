@@ -31,6 +31,7 @@ defmodule Skitter.Runtime.Emit do
   defp token(dsts, tkn = %Token{}) do
     Enum.each(dsts, fn {ctx, prt} ->
       tkn = %{tkn | port: prt}
+
       Telemetry.wrap [:hook, :deliver], %{pid: self(), context: ctx, token: tkn} do
         ctx.strategy.deliver(ctx, tkn)
       end

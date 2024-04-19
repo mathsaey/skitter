@@ -8,10 +8,10 @@ defmodule Skitter.Token do
   alias Skitter.Operation
 
   @type t :: %__MODULE__{
-    value: any(),
-    port: Operation.port_name() | nil,
-    meta: %{optional(atom()) => any()}
-  }
+          value: any(),
+          port: Operation.port_name() | nil,
+          meta: %{optional(atom()) => any()}
+        }
   @enforce_keys [:value]
   defstruct value: nil, port: nil, meta: %{}
 

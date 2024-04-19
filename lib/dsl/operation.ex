@@ -543,7 +543,7 @@ defmodule Skitter.DSL.Operation do
   defp arg_to_token_name({:=, _, [_, r]}), do: arg_to_token_name(r)
   defp arg_to_token_name(_), do: quote(do: _)
 
-  @doc"""
+  @doc """
   Obtain the port associated with an argument.
 
   If the argument is not associated with a port, `nil` is returned instead.
