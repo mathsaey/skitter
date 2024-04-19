@@ -548,7 +548,9 @@ defmodule Skitter.DSL.Operation do
 
   If the argument is not associated with a port, `nil` is returned instead.
   """
-  defmacro port(name), do: quote(do: unquote(name_to_token_name(name)).port)
+  defmacro port_of(name), do: quote(do: unquote(name_to_token_name(name)).port)
+
+  defmacro meta_of(name), do: quote(do: unquote(name_to_token_name(name)).meta)
 
   # defcallback
   # -----------
@@ -743,7 +745,7 @@ defmodule Skitter.DSL.Operation do
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
       def unquote(AST.build_clause(name, [_state_var(), _config_var()] ++ args, guards)) do
         import unquote(__MODULE__),
-          only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2, port: 1]
+          only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2, port_of: 1]
 
         use unquote(__MODULE__.ControlFlowOperators)
 
