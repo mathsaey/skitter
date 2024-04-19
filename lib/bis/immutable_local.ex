@@ -25,15 +25,15 @@ defstrategy Skitter.BIS.ImmutableLocal do
   """
   defhook deploy do
     Remote.on_all_worker_cores(fn ->
-      local_worker(fn -> call_if_exists(:conf, [args()]).result end, :worker)
+      local_worker(fn -> call_if_exists(:conf, args: [args()]).result end, :worker)
     end)
     |> Map.new()
   end
 
-  defhook deliver(msg, _), do: send(Enum.random(deployment()[Remote.self()]), msg)
+  defhook deliver(msg), do: send(Enum.random(deployment()[Remote.self()]), msg)
 
   defhook process(msg, conf, :worker) do
-    emit(call(:react, conf, [msg]).emit)
+    emit(call(:react, config: conf, args: [msg]).emit)
     conf
   end
 end

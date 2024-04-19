@@ -11,7 +11,7 @@ defmodule Skitter.Strategy.Operation do
   This module defines and documents the various hooks a `Skitter.Strategy` for an operation should
   implement, along with the functions it can use to access the runtime system.
   """
-  alias Skitter.{Operation, Strategy, Strategy.Context, Worker}
+  alias Skitter.{Operation, Strategy, Strategy.Context, Token, Worker}
 
   @doc """
   Deploy an operation over the cluster.
@@ -31,8 +31,8 @@ defmodule Skitter.Strategy.Operation do
   Accept data sent to the operation node and send it to a worker.
 
   This hook is called by the runtime system when data needs to be sent to a given operation (i.e.
-  when a predecessor of the operation node emits data). It receives the data to be sent along with
-  the index of the port to which the data should be sent.
+  when a predecessor of the operation node emits data). It receives the data to be sent wrapped in
+  a `t:Skitter.Token.t/0`, which contains the name of the port to which the data should be sent.
 
   The result of this hook is ignored. Instead, this hook should use `Skitter.Worker.send/2` to
   transfer the received data to a worker.
@@ -42,11 +42,7 @@ defmodule Skitter.Strategy.Operation do
   All context data (operation, strategy and deployment data) is available when this hook is
   called.
   """
-  @callback deliver(
-              context :: Strategy.context(),
-              data :: any(),
-              port :: Operation.port_index()
-            ) :: any()
+  @callback deliver(context :: Strategy.context(), token :: Token.t()) :: any()
 
   @doc """
   Handle a message received by a worker.

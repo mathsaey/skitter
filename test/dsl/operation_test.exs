@@ -164,19 +164,19 @@ defmodule Skitter.DSL.OperationTest do
              emit?: true
            }
 
-    assert Operation.call(Clauses, :f, [:foo]) == %Result{
+    assert Operation.call(Clauses, :f, %Clauses{}, nil, [:foo]) == %Result{
              result: nil,
              state: %Clauses{x: :foo, y: nil},
              emit: []
            }
 
-    assert Operation.call(Clauses, :f, [:bar]) == %Result{
+    assert Operation.call(Clauses, :f, %Clauses{}, nil, [:bar]) == %Result{
              result: nil,
              state: %Clauses{x: nil, y: :bar},
              emit: []
            }
 
-    assert Operation.call(Clauses, :f, [:baz]) == %Result{
+    assert Operation.call(Clauses, :f, %Clauses{}, nil, [:baz]) == %Result{
              result: nil,
              state: %Clauses{},
              emit: [z: [:baz]]
@@ -184,9 +184,9 @@ defmodule Skitter.DSL.OperationTest do
   end
 
   test "guards" do
-    assert Operation.call(Clauses, :g, [0]).result == :lt
-    assert Operation.call(Clauses, :g, [8]).result == :gt
-    assert Operation.call(Clauses, :g, [5]).result == :eq
+    assert Operation.call(Clauses, :g, nil, nil, [0]).result == :lt
+    assert Operation.call(Clauses, :g, nil, nil, [8]).result == :gt
+    assert Operation.call(Clauses, :g, nil, nil, [5]).result == :eq
   end
 
   test "callback_info" do
@@ -233,9 +233,9 @@ defmodule Skitter.DSL.OperationTest do
         end
       end
 
-      assert Operation.call(NormalIf, :test1, []).result == 10
-      assert Operation.call(NormalIf, :test2, []).result == 10
-      assert Operation.call(NormalIf, :test3, []).result == 20
+      assert Operation.call(NormalIf, :test1, nil, nil, []).result == 10
+      assert Operation.call(NormalIf, :test2, nil, nil, []).result == 10
+      assert Operation.call(NormalIf, :test3, nil, nil, []).result == 20
     end
 
     test "if with state and emit updates" do
@@ -259,12 +259,12 @@ defmodule Skitter.DSL.OperationTest do
         end
       end
 
-      assert Operation.call(StateIf, :emit, [true]).emit == [
+      assert Operation.call(StateIf, :emit, nil, nil, [true]).emit == [
                true_multi: [:bar, :baz],
                true_port: [:foo]
              ]
 
-      assert Operation.call(StateIf, :emit, [false]).emit == [
+      assert Operation.call(StateIf, :emit, nil, nil, [false]).emit == [
                false_multi: [:bar, :baz],
                false_port: [:foo]
              ]
@@ -289,7 +289,7 @@ defmodule Skitter.DSL.OperationTest do
         end
       end
 
-      assert Operation.call(NormalCase, :test, []).result == 10
+      assert Operation.call(NormalCase, :test, nil, nil, []).result == 10
     end
 
     test "case with state update" do
@@ -315,8 +315,8 @@ defmodule Skitter.DSL.OperationTest do
         end
       end
 
-      assert Operation.call(EmitCase, :test, [1]).emit == [out: [:foo]]
-      assert Operation.call(EmitCase, :test, [2]).emit == [other: [:bar, :baz]]
+      assert Operation.call(EmitCase, :test, nil, nil, [1]).emit == [out: [:foo]]
+      assert Operation.call(EmitCase, :test, nil, nil, [2]).emit == [other: [:bar, :baz]]
     end
 
     test "cond without updates" do
@@ -330,9 +330,9 @@ defmodule Skitter.DSL.OperationTest do
         end
       end
 
-      assert Operation.call(NormalCond, :test, [true, true]).result == :arg_1
-      assert Operation.call(NormalCond, :test, [false, true]).result == :arg_2
-      assert Operation.call(NormalCond, :test, [false, false]).result == :else
+      assert Operation.call(NormalCond, :test, nil, nil, [true, true]).result == :arg_1
+      assert Operation.call(NormalCond, :test, nil, nil, [false, true]).result == :arg_2
+      assert Operation.call(NormalCond, :test, nil, nil, [false, false]).result == :else
     end
 
     test "cond" do
@@ -381,7 +381,7 @@ defmodule Skitter.DSL.OperationTest do
       end
 
       send(self(), :foo)
-      assert Operation.call(NormalReceive, :test, []).result == :bar
+      assert Operation.call(NormalReceive, :test, nil, nil, []).result == :bar
     end
 
     test "receive" do
@@ -452,8 +452,8 @@ defmodule Skitter.DSL.OperationTest do
       end
 
       send(self(), :foo)
-      assert Operation.call(NormalReceiveAfter, :test, []).result == :bar
-      assert Operation.call(NormalReceiveAfter, :test, []).result == :none
+      assert Operation.call(NormalReceiveAfter, :test, nil, nil, []).result == :bar
+      assert Operation.call(NormalReceiveAfter, :test, nil, nil, []).result == :none
     end
 
     test "receive with after" do
@@ -546,9 +546,9 @@ defmodule Skitter.DSL.OperationTest do
         end
       end
 
-      assert Operation.call(NormalTry, :test, [fn -> raise RuntimeError end]).result == :rescue
-      assert Operation.call(NormalTry, :test, [fn -> throw(:foo) end]).result == :catch
-      assert Operation.call(NormalTry, :test, [fn -> :ok end]).result == :else
+      assert Operation.call(NormalTry, :test, nil, nil, [fn -> raise RuntimeError end]).result == :rescue
+      assert Operation.call(NormalTry, :test, nil, nil, [fn -> throw(:foo) end]).result == :catch
+      assert Operation.call(NormalTry, :test, nil, nil, [fn -> :ok end]).result == :else
     end
   end
 end

@@ -8,6 +8,8 @@ defmodule Skitter.Runtime.Emit do
   @moduledoc false
   alias Skitter.Runtime.NodeStore
   alias Skitter.Strategy.Context
+  alias Skitter.Token
+
   require NodeStore
   use Skitter.Telemetry
 
@@ -18,22 +20,22 @@ defmodule Skitter.Runtime.Emit do
   def emit(ctx = %Context{_skr: {ref, idx}}, emit) do
     Telemetry.emit([:runtime, :emit], %{}, %{context: ctx, emit: emit})
     node_links = NodeStore.get(:links, ref, idx)
-
-    Enum.each(emit, fn {out_port, enum} ->
-      enum(enum, Map.fetch(node_links, out_port))
-    end)
+    Enum.each(emit, fn {out_port, enum} -> enum(enum, Map.fetch(node_links, out_port)) end)
   end
 
   defp enum(_, :error), do: :ok
   defp enum(_, {:ok, []}), do: :ok
-  defp enum(lst, {:ok, dsts}) when is_list(lst), do: Enum.each(lst, &value(dsts, &1))
-  defp enum(enum, {:ok, dsts}), do: Stream.each(enum, &value(dsts, &1)) |> Stream.run()
+  defp enum(lst, {:ok, dsts}) when is_list(lst), do: Enum.each(lst, &token(dsts, &1))
+  defp enum(enum, {:ok, dsts}), do: Stream.each(enum, &token(dsts, &1)) |> Stream.run()
 
-  defp value(dsts, val) do
+  defp token(dsts, tkn = %Token{}) do
     Enum.each(dsts, fn {ctx, prt} ->
-      Telemetry.wrap [:hook, :deliver], %{pid: self(), context: ctx, data: val, port: prt} do
-        ctx.strategy.deliver(ctx, val, prt)
+      tkn = %{tkn | port: prt}
+      Telemetry.wrap [:hook, :deliver], %{pid: self(), context: ctx, token: tkn} do
+        ctx.strategy.deliver(ctx, tkn)
       end
     end)
   end
+
+  defp token(dsts, val), do: token(dsts, %Token{value: val})
 end

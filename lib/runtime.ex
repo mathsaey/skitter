@@ -8,7 +8,7 @@ defmodule Skitter.Runtime do
   @moduledoc """
   Interface to the skitter runtime system.
   """
-  alias Skitter.{Config, Remote, Workflow, Operation, Strategy}
+  alias Skitter.{Config, Remote, Workflow, Strategy}
 
   alias Skitter.Runtime.{
     Worker,
@@ -156,11 +156,7 @@ defmodule Skitter.Runtime do
     nodes
     |> Enum.map(fn {_, node} ->
       Map.new(node.links, fn {out_port, destinations} ->
-        {out_port,
-         Enum.map(destinations, fn {name, in_port} ->
-           context = lookup[name]
-           {context, Operation.in_port_to_index(context.operation, in_port)}
-         end)}
+        {out_port, Enum.map(destinations, fn {name, in_port} -> {lookup[name], in_port} end)}
       end)
     end)
     |> NodeStore.put_everywhere(:links, ref)

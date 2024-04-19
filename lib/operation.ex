@@ -28,6 +28,7 @@ defmodule Skitter.Operation do
   are called. Callbacks are implemented as elixir functions with a few properties:
 
   - Callbacks accept `t:state/0` and `t:config/0` as their first and second arguments.
+  - All other arguments provided to the callback must be wrapped in a `t:Skitter.Token.t/0`.
   - Callbacks return a `t:result/0` struct, which wraps the result of the callback call along with
   the updated state and emitted data.
 
@@ -66,7 +67,7 @@ defmodule Skitter.Operation do
   """
 
   use Skitter.Telemetry
-  alias Skitter.{Strategy, Operation.Callback.Info}
+  alias Skitter.{Token, Strategy, Operation.Callback.Info}
 
   # ----- #
   # Types #
@@ -106,9 +107,9 @@ defmodule Skitter.Operation do
   @typedoc """
   Arguments passed to a callback when it is called.
 
-  The arguments are wrapped in a list.
+  The arguments are provided as tokens wrapped in a list.
   """
-  @type args :: [any()]
+  @type args :: [Token.t()]
 
   @typedoc """
   State passed to the callback when it is called.
@@ -135,6 +136,10 @@ defmodule Skitter.Operation do
   no data is emitted on a port, the port should be omitted from the list. The data emitted by a
   callback for a port should be wrapped in an `t:Enumerable.t/0`. Each element in this enumerable
   will be sent to downstream nodes separately.
+
+  The data emitted for a port (i.e. the data inside the enumerable) may either be a "plain" Elixir
+  value or a Skitter token. The Skitter runtime will automatically wrap plain values in a Skitter
+  token when they are sent to downstream operations.
   """
   @type emit :: [{port_name(), Enumerable.t()}]
 
@@ -145,7 +150,7 @@ defmodule Skitter.Operation do
 
   - `:result`: The actual result of the callback, i.e. the final value returned in its body.
   - `:state`: The (possibly modified) state after calling the callback.
-  - `:emit`: The list of output emitted by the callback.
+  - `:emit`: The output emitted by the callback.
   """
   @type result :: %__MODULE__.Callback.Result{
           result: any(),
@@ -436,10 +441,15 @@ defmodule Skitter.Operation do
   @doc """
   Call callback `callback_name` with `state`, `config` and `arguments`.
 
+  The provided arguments are automatically wrapped in a `t:Skitter.Token.t/0` using
+  `Skitter.Token.wrap/1`.
+
   ## Examples
 
       iex> call(OperationModule, :example, 10, 2, [:foo])
-      %Skitter.Operation.Callback.Result{state: 10, result: 20, emit: [arg: :foo]}
+      %Skitter.Operation.Callback.Result{state: 10, result: 20, emit: [arg: %Token{value: :foo}]}
+      iex> call(OperationModule, :example, 10, 2, [%Token{value: :foo, meta: %{bar: :baz}}])
+      %Skitter.Operation.Callback.Result{state: 10, result: 20, emit: [arg: %Token{value: :foo, meta: %{bar: :baz}}]}
   """
   @spec call(t(), atom(), state(), config(), args()) :: result()
   def call(operation, name, state, config, args) do
@@ -451,21 +461,21 @@ defmodule Skitter.Operation do
       config: config,
       args: args
     } do
-      apply(operation, name, [state, config | args])
+      apply(operation, name, [state, config | Enum.map(args, &Token.wrap/1)])
     end
   end
 
   @doc """
   Call `callback_name` defined by `operation` if it exists.
 
-  Calls the callback with the given name with `state`, `config` and `args` if
+  Calls the callback (using `call/5`) with the given name with `state`, `config` and `args` if
   `{name, length(args)}` exists. If the callback does not exist, a  result with the
   `initial_state/1` of the operation, an empty emit list and `nil` as result is returned.
 
   ## Examples
 
       iex> call_if_exists(OperationModule, :example, 10, 2, [:foo])
-      %Skitter.Operation.Callback.Result{state: 10, result: 20, emit: [arg: :foo]}
+      %Skitter.Operation.Callback.Result{state: 10, result: 20, emit: [arg: %Token{value: :foo}]}
       iex> call_if_exists(OperationModule, :example, 10, 2, [:foo, :bar])
       %Skitter.Operation.Callback.Result{state: 42, result: nil, emit: []}
   """

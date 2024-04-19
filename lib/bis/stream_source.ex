@@ -30,7 +30,7 @@ defstrategy Skitter.BIS.StreamSource do
     remote_worker(
       fn ->
         send(self(), :start)
-        call(:stream, [args()]).result
+        call(:stream, args: [args()]).result
       end,
       :source
     )

@@ -14,6 +14,8 @@ defmodule Skitter.DSL.Operation do
   alias Skitter.DSL.AST
   alias Skitter.{Operation.Callback.Info, DefinitionError}
 
+  import AST, only: [is_usable_name: 1]
+
   # --------- #
   # Operation #
   # --------- #
@@ -21,9 +23,7 @@ defmodule Skitter.DSL.Operation do
   @doc """
   Defines the initial state of an operation.
 
-  This macro is used to define the initial state of an operation. This state is passed to every
-  called callback when no state is provided by the operation's strategy. When this macro is not
-  used, the initial state of an operation is `nil`.
+  When this macro is not used, the initial state of an operation is `nil`.
 
   Internally, this macro generates a definition of
   `c:Skitter.Operation._sk_operation_initial_state/0`.
@@ -46,20 +46,6 @@ defmodule Skitter.DSL.Operation do
 
       iex> Operation.initial_state(StateExample)
       0
-
-      iex> Operation.call(NoStateExample, :return_state, []).state
-      nil
-
-      iex> Operation.call(StateExample, :return_state, []).state
-      0
-
-      iex> Operation.call(NoStateExample, :return_state, :some_state, nil, []).state
-      :some_state
-
-      iex> Operation.call(StateExample, :return_state, :some_state, nil, []).state
-      :some_state
-
-
   """
   defmacro initial_state(initial_state) do
     quote do
@@ -182,7 +168,7 @@ defmodule Skitter.DSL.Operation do
       iex> Operation.strategy(Average)
       nil
 
-      iex> Operation.call(Average, :react, [10])
+      iex> Operation.call(Average, :react, %Average{}, nil, [10])
       %Result{result: nil, emit: [current: [10.0]], state: %Average{count: 1, total: 10}}
 
       iex> Operation.call(Average, :react, %Average{count: 1, total: 10}, nil, [10])
@@ -340,12 +326,6 @@ defmodule Skitter.DSL.Operation do
   end
   ```
 
-      iex> Operation.call(ConfigExample, :read, []).result
-      nil
-
-      iex> Operation.call(ConfigExample, :read, :config, []).result
-      :config
-
       iex> Operation.call(ConfigExample, :read, :state, :config, []).result
       :config
   """
@@ -371,12 +351,6 @@ defmodule Skitter.DSL.Operation do
     defcb read(), do: state()
   end
   ```
-
-      iex> Operation.call(ReadExample, :read, []).result
-      0
-
-      iex> Operation.call(ReadExample, :read, :state, nil, []).result
-      :state
 
       iex> Operation.call(ReadExample, :read, :state, nil, []).result
       :state
@@ -505,7 +479,7 @@ defmodule Skitter.DSL.Operation do
   end
   ```
 
-      iex> Operation.call(SingleEmitExample, :emit, [:bar]).emit
+      iex> Operation.call(SingleEmitExample, :emit, nil, nil, [:bar]).emit
       [some_other_port: [:foo], some_port: [:bar]]
   """
   defmacro value ~> {port, _, _} when is_atom(port) do
@@ -533,7 +507,7 @@ defmodule Skitter.DSL.Operation do
   end
   ```
 
-      iex> Operation.call(MultiEmitExample, :emit, [:bar]).emit
+      iex> Operation.call(MultiEmitExample, :emit, nil, nil, [:bar]).emit
       [some_other_port: [:foo, :bar], some_port: [:bar]]
   """
   defmacro enum ~>> {port, _, _} when is_atom(port) do
@@ -551,6 +525,30 @@ defmodule Skitter.DSL.Operation do
       _ -> false
     end)
   end
+
+  # Tokens
+  # ------
+
+  defp unwrap_arg_tokens(args) do
+    Enum.map(
+      args,
+      &quote(do: unquote(arg_to_token_name(&1)) = %Skitter.Token{value: unquote(&1)})
+    )
+  end
+
+  defp name_to_token_name(name), do: quote(do: var!(unquote(name), unquote(__MODULE__.Token)))
+
+  defp arg_to_token_name(name) when is_usable_name(name), do: name_to_token_name(name)
+  defp arg_to_token_name({:=, _, [l, _]}) when is_usable_name(l), do: name_to_token_name(l)
+  defp arg_to_token_name({:=, _, [_, r]}), do: arg_to_token_name(r)
+  defp arg_to_token_name(_), do: quote(do: _)
+
+  @doc"""
+  Obtain the port associated with an argument.
+
+  If the argument is not associated with a port, `nil` is returned instead.
+  """
+  defmacro port(name), do: quote(do: unquote(name_to_token_name(name)).port)
 
   # defcallback
   # -----------
@@ -737,13 +735,16 @@ defmodule Skitter.DSL.Operation do
     body = __MODULE__.ControlFlowOperators.rewrite_special_forms(body)
     info = %Info{read?: read?(body), write?: write?(body), emit?: emit?(body)} |> Macro.escape()
     {name, args, guards} = AST.decompose_clause(clause)
+    args = unwrap_arg_tokens(args)
     arity = length(args)
 
     quote do
       @doc false
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
       def unquote(AST.build_clause(name, [_state_var(), _config_var()] ++ args, guards)) do
-        import unquote(__MODULE__), only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2]
+        import unquote(__MODULE__),
+          only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2, port: 1]
+
         use unquote(__MODULE__.ControlFlowOperators)
 
         unquote(_emit_var()) = []

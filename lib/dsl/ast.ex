@@ -8,6 +8,11 @@ defmodule Skitter.DSL.AST do
   @moduledoc false
   # Private ast transformations for use in DSLs
 
+  defguard is_name(name)
+           when tuple_size(name) == 3 and is_atom(elem(name, 0)) and is_atom(elem(name, 2))
+
+  defguard is_usable_name(name) when is_name(name) and name != :_
+
   @doc """
   Convert a name AST into an atom.
   """

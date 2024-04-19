@@ -8,6 +8,8 @@ defmodule Skitter.OperationTest do
   use ExUnit.Case, async: true
 
   import Skitter.Operation
+
+  alias Skitter.Token
   alias Skitter.Operation.Callback.{Info, Result}
 
   defmodule OperationModule do

@@ -51,14 +51,14 @@ which contains the result of the wrapped code.
   * `:result` (only for the `:stop` event): the return value of the hook. This
     data will be stored inside the strategy's deployment.
 * `[:skitter, :hook, deliver]`: Emitted when the `deliver` hook of a strategy is
-  * `:context`, `:data`, `:port`: the arguments passed to
-    `c:Skitter.Strategy.Operation.deliver/3`.
+  * `:context`, `token`: the arguments passed to
+    `c:Skitter.Strategy.Operation.deliver/2`.
   * `:pid`: The `t:pid/0` of the process calling the hook. Note that this hook
     is called from within a worker of the strategy emitting the data, so this
     pid will not refer to a worker of the operation which should receive the
     data. Instead, it will refer to a worker of its predecessor.
   * `:result` (only for the `:stop` event). The result of the
-    `c:Skitter.Strategy.Operation.deliver/3` hook is not used by the runtime
+    `c:Skitter.Strategy.Operation.deliver/2` hook is not used by the runtime
     system, so you should not use this.
 * `[:skitter, :hook, process]`: Emitted when the
   `c:Skitter.Strategy.Operation.process/4` hook of a strategy is called.

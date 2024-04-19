@@ -27,7 +27,7 @@ defstrategy Skitter.BIS.KeyedState do
     * `conf` (optional): Called to create a configuration for the operation.
   """
   defhook deploy do
-    config = call_if_exists(:conf, [args()]).result
+    config = call_if_exists(:conf, args: [args()]).result
 
     aggregators =
       Remote.on_all_worker_cores(fn -> local_worker(Map.new(), :aggregator) end)
@@ -37,9 +37,9 @@ defstrategy Skitter.BIS.KeyedState do
     {config, aggregators}
   end
 
-  defhook deliver(data, _port) do
+  defhook deliver(data) do
     {config, aggregators} = deployment()
-    key = call(:key, config, [data]).result
+    key = call(:key, config: config, args: [data]).result
     idx = rem(Murmur.hash_x86_32(key), tuple_size(aggregators))
     worker = elem(aggregators, idx)
     send(worker, data)
@@ -47,9 +47,9 @@ defstrategy Skitter.BIS.KeyedState do
 
   defhook process(data, state_map, :aggregator) do
     {config, _} = deployment()
-    key = call(:key, config, [data]).result
-    state = Map.get_lazy(state_map, key, fn -> call_if_exists(:init, [args()]).state end)
-    res = call(:react, state, config, [data])
+    key = call(:key, config: config, args: [data]).result
+    state = Map.get_lazy(state_map, key, fn -> call_if_exists(:init, args: [args()]).state end)
+    res = call(:react, state: state, config: config, args: [data])
     emit(res.emit)
     Map.put(state_map, key, res.state)
   end
