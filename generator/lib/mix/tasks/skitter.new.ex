@@ -331,7 +331,7 @@ defmodule Mix.Tasks.Skitter.New do
   # runtime is started.
 
   defmodule <%= @module_name %> do
-    use Skitter.DSL
+    use Skitter
 
     def workflow do
       workflow do
