@@ -16,8 +16,8 @@ defmodule Skitter.MixProject do
     [
       app: :skitter,
       name: "Skitter",
-      elixir: "~> 1.15",
-      version: "0.6.4",
+      elixir: "~> 1.16",
+      version: "0.7.0-dev",
       source_url: @github_url,
       homepage_url: @home_url,
       start_permanent: Mix.env() == :prod,
