@@ -543,14 +543,16 @@ defmodule Skitter.DSL.Operation do
   defp arg_to_token_name({:=, _, [_, r]}), do: arg_to_token_name(r)
   defp arg_to_token_name(_), do: quote(do: _)
 
+  defmacro token_of(name), do: name_to_token_name(name)
+
   @doc """
   Obtain the port associated with an argument.
 
   If the argument is not associated with a port, `nil` is returned instead.
   """
-  defmacro port_of(name), do: quote(do: unquote(name_to_token_name(name)).port)
+  defmacro port_of(name), do: quote(do: token_of(unquote(name)).port)
 
-  defmacro meta_of(name), do: quote(do: unquote(name_to_token_name(name)).meta)
+  defmacro meta_of(name), do: quote(do: token_of(unquote(name).meta))
 
   # defcallback
   # -----------
@@ -745,7 +747,17 @@ defmodule Skitter.DSL.Operation do
       @_sk_callbacks {{unquote(name), unquote(arity)}, unquote(info)}
       def unquote(AST.build_clause(name, [_state_var(), _config_var()] ++ args, guards)) do
         import unquote(__MODULE__),
-          only: [state: 0, config: 0, sigil_f: 2, ~>: 2, ~>>: 2, <~: 2, port_of: 1]
+          only: [
+            state: 0,
+            config: 0,
+            sigil_f: 2,
+            ~>: 2,
+            ~>>: 2,
+            <~: 2,
+            token_of: 1,
+            port_of: 1,
+            meta_of: 1
+          ]
 
         use unquote(__MODULE__.ControlFlowOperators)
 
