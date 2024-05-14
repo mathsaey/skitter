@@ -197,6 +197,9 @@ defmodule Mix.Tasks.Skitter.New do
   # Set up the logger. See https://hexdocs.pm/logger/Logger.html.
   # We set up the log message format (https://hexdocs.pm/logger/Logger.Formatter.html) and log
   # to stderr by default.
+  # When building a release, Skitter also writes logs to files by default. This can be disabled
+  # by passing the `--no-log` flag to the deploy script.
+  # See https://hexdocs.pm/skitter/configuration.html#logs for more information.
   config :logger,
     default_formatter: [format: "[$time][$level]$metadata $message\\n"],
     default_handler: [config: [type: :standard_error]]
