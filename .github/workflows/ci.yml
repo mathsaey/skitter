@@ -12,8 +12,8 @@ jobs:
     name: Check type annotations with Dialyzer
     strategy:
       matrix:
-        otp: ['25.0']
-        elixir: ['1.15.4']
+        otp: ['26.0']
+        elixir: ['1.16.2']
     steps:
       - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
@@ -30,8 +30,8 @@ jobs:
     name: Run tests
     strategy:
       matrix:
-        otp: ['25.0']
-        elixir: ['1.15.4']
+        otp: ['26.0']
+        elixir: ['1.16.2']
     steps:
       - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
@@ -50,8 +50,8 @@ jobs:
     name: Check Elixir formatting
     strategy:
       matrix:
-        otp: ['25.0']
-        elixir: ['1.15.4']
+        otp: ['26.0']
+        elixir: ['1.16.2']
     steps:
       - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
