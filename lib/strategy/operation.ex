@@ -11,21 +11,21 @@ defmodule Skitter.Strategy.Operation do
   This module defines and documents the various hooks a `Skitter.Strategy` for an operation should
   implement, along with the functions it can use to access the runtime system.
   """
-  alias Skitter.{Operation, Strategy, Strategy.Context, Token, Worker}
+  alias Skitter.{Operation, Strategy, Strategy.Context, Token, Worker, Workflow}
 
   @doc """
   Deploy an operation over the cluster.
 
   This hook is called by the runtime system when an operation has to be distributed over the
-  cluster. Any data returned by this hook is made available to other hooks through the
-  `deployment` field in `t:Skitter.Strategy.context/0`.
+  cluster. It receives the arguments passed to the operation's node in the workflow definition.
+  Any data returned by this hook is made available to other hooks through the `deployment` field
+  in `t:Skitter.Strategy.context/0`.
 
   ## Context
 
-  When this hook is called, only the current strategy, operation and arguments are available in
-  the context.
+  When this hook is called, only the current strategy and operation are available in the context.
   """
-  @callback deploy(context :: Strategy.context()) :: Strategy.deployment()
+  @callback deploy(context :: Strategy.context(), Workflow.args()) :: Strategy.deployment()
 
   @doc """
   Accept data sent to the operation node and send it to a worker.

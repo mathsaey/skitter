@@ -126,12 +126,11 @@ defmodule Skitter.Runtime do
       context = %Strategy.Context{
         operation: node.operation,
         strategy: node.strategy,
-        args: node.args,
         _skr: {:deploy, ref, i}
       }
 
       Telemetry.wrap [:hook, :deploy], %{context: context} do
-        node.strategy.deploy(context)
+        node.strategy.deploy(context, node.args)
       end
     end)
     |> NodeStore.put_everywhere(:deployment, ref)
@@ -147,7 +146,6 @@ defmodule Skitter.Runtime do
          %Strategy.Context{
            operation: node.operation,
            strategy: node.strategy,
-           args: node.args,
            deployment: NodeStore.get(:deployment, ref, i),
            _skr: {ref, i}
          }}
