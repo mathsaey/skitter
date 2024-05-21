@@ -23,9 +23,9 @@ defstrategy Skitter.BIS.ImmutableLocal do
     * `conf` (optional): Called at deployment time. The result will be passed as config to each
     invocation of `react`.
   """
-  defhook deploy do
+  defhook deploy(args) do
     Remote.on_all_worker_cores(fn ->
-      local_worker(fn -> call_if_exists(:conf, args: [args()]).result end, :worker)
+      local_worker(fn -> call_if_exists(:conf, args: [args]).result end, :worker)
     end)
     |> Map.new()
   end

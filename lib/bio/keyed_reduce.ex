@@ -20,16 +20,20 @@ defoperation Skitter.BIO.KeyedReduce, in: _, out: _, strategy: Skitter.BIS.Keyed
   will be stored as the new state of the key, while the second value of this tuple will be emitted
   on the `_` out port.
   """
-  defcb init({_, _, initial_state}), do: state <~ initial_state
-  defcb conf({key_fn, red_fn, _}), do: {key_fn, red_fn}
+  defcb conf(args), do: args
+
+  defcb initial_state do
+    {_, _, initial_state} = config()
+    initial_state
+  end
 
   defcb key(val) do
-    {key_fn, _} = config()
+    {key_fn, _, _} = config()
     key_fn.(val)
   end
 
   defcb react(val) do
-    {_, red_fn} = config()
+    {_, red_fn, _} = config()
     {new_state, emit} = red_fn.(val, state())
     state <~ new_state
     emit ~> _

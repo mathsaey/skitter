@@ -23,34 +23,32 @@ defmodule Skitter.DSL.Operation do
   @doc """
   Defines the initial state of an operation.
 
-  When this macro is not used, the initial state of an operation is `nil`.
+  Skitter operations often deal with state. By convention, the initial state of an operation is
+  defined by a callback named `initial_state`:
 
-  Internally, this macro generates a definition of
-  `c:Skitter.Operation._sk_operation_initial_state/0`.
+  ```
+  defoperation LongInitialState do
+    defcb initial_state, do: 0
+  end
+  ```
+
+  Often, this callback simply returns a constant value. In this case, this macro can be used as
+  a shorthand:
+
+  ```
+  defoperation ShorterInitialState do
+    initial_state 0
+  end
+  ```
 
   ## Examples
 
-  ```
-  defoperation NoStateExample do
-    defcb return_state, do: state()
-  end
-
-  defoperation StateExample do
-    initial_state 0
-    defcb return_state, do: state()
-  end
-  ```
-
-      iex> Operation.initial_state(NoStateExample)
-      nil
-
-      iex> Operation.initial_state(StateExample)
+      iex> Operation.initial_state(ShorterInitialState)
       0
   """
   defmacro initial_state(initial_state) do
     quote do
-      @impl true
-      def _sk_operation_initial_state, do: unquote(initial_state)
+      defcb initial_state, do: unquote(initial_state)
     end
   end
 
@@ -65,7 +63,7 @@ defmodule Skitter.DSL.Operation do
   ```
   defoperation Average, in: value, out: current do
     defstruct [total: 0, count: 0]
-    state %__MODULE__{}
+    initial_state %__MODULE__{}
 
     defcb react(val) do
       state <~ %{state() | count: state().count + 1}
@@ -112,8 +110,7 @@ defmodule Skitter.DSL.Operation do
   This macro is used to define an operation module. Using this macro, an operation can be defined
   similar to a normal module. The macro will enable the use of `defcb/2` and provides
   implementations for `c:Skitter.Operation._sk_operation_info/1`,
-  `c:Skitter.Operation._sk_operation_initial_state/0`, `c:Skitter.Operation._sk_callbacks/0`
-  and `c:Skitter.Operation._sk_callback_info/2`.
+  `c:Skitter.Operation._sk_callbacks/0` and `c:Skitter.Operation._sk_callback_info/2`.
 
   ## Operation strategy and ports
 
@@ -197,10 +194,6 @@ defmodule Skitter.DSL.Operation do
         @_sk_strategy unquote(strategy)
         @_sk_in_ports unquote(in_)
         @_sk_out_ports unquote(out)
-
-        @impl true
-        def _sk_operation_initial_state, do: nil
-        defoverridable _sk_operation_initial_state: 0
 
         unquote(body)
       end

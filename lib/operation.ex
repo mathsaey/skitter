@@ -50,8 +50,6 @@ defmodule Skitter.Operation do
     def _sk_operation_info(:in_ports), do: [:input]
     def _sk_operation_info(:out_ports), do: [:output]
 
-    def _sk_operation_initial_state, do: 42
-
     def _sk_callbacks, do: MapSet.new(example: 1)
 
     def _sk_callback_info(:example, 1) do
@@ -222,14 +220,6 @@ defmodule Skitter.Operation do
   """
   @callback _sk_callback_info(name :: atom(), arity()) :: info()
 
-  @doc """
-  Returns the initial state of the operation.
-
-  This function returns an initial state for the operation. The state of an operation is operation
-  specific: Skitter places no constraints on this state.
-  """
-  @callback _sk_operation_initial_state() :: any()
-
   # --------- #
   # Utilities #
   # --------- #
@@ -255,17 +245,6 @@ defmodule Skitter.Operation do
   end
 
   def operation?(_), do: false
-
-  @doc """
-  Create the initial state for `operation`.
-
-  ## Examples
-
-      iex> initial_state(OperationModule)
-      42
-  """
-  @spec initial_state(t()) :: state()
-  def initial_state(operation), do: operation._sk_operation_initial_state()
 
   @doc """
   Obtain the default strategy of `operation`.
@@ -469,15 +448,15 @@ defmodule Skitter.Operation do
   Call `callback_name` defined by `operation` if it exists.
 
   Calls the callback (using `call/5`) with the given name with `state`, `config` and `args` if
-  `{name, length(args)}` exists. If the callback does not exist, a  result with the
-  `initial_state/1` of the operation, an empty emit list and `nil` as result is returned.
+  `{name, length(args)}` exists. If the callback does not exist, a  result with an empty emit
+  list, `nil` as result and `nil` as state is returned.
 
   ## Examples
 
       iex> call_if_exists(OperationModule, :example, 10, 2, [:foo])
       %Skitter.Operation.Callback.Result{state: 10, result: 20, emit: [arg: %Token{value: :foo}]}
       iex> call_if_exists(OperationModule, :example, 10, 2, [:foo, :bar])
-      %Skitter.Operation.Callback.Result{state: 42, result: nil, emit: []}
+      %Skitter.Operation.Callback.Result{state: nil, result: nil, emit: []}
   """
   @spec call_if_exists(t(), atom(), state(), config(), args()) :: result()
   def call_if_exists(operation, callback_name, state, config, args) do
@@ -485,10 +464,62 @@ defmodule Skitter.Operation do
       call(operation, callback_name, state, config, args)
     else
       %Callback.Result{
-        state: initial_state(operation),
         result: nil,
+        state: nil,
         emit: []
       }
+    end
+  end
+
+  @doc """
+  Obtain the initial state for `operation`.
+
+  Some operations handle stateful logic. Often, these operations have the notion of an "initial
+  state": the state the operation has before it received any data records.
+
+  By convention, this initial state is defined as a callback named `initial_state`. This function
+  calls this callback if it exists with an empty argument list and the provided configuration (or
+  `nil`, if not configuration is passed). If the `initial_state` callback is not defined, `nil` is
+  returned.
+
+  ## Examples
+
+      iex> initial_state(OperationModule)
+      nil
+
+  If `InitialStateModule` is defined as follows:
+
+  ```
+  defmodule InitialStateModule do
+    @behaviour Skitter.Operation
+    alias Skitter.Operation.Callback.{Info, Result}
+
+    def _sk_operation_info(:strategy), do: Strategy
+    def _sk_operation_info(:in_ports), do: []
+    def _sk_operation_info(:out_ports), do: []
+
+    def _sk_callbacks, do: MapSet.new(initial_state: 0)
+
+    def _sk_callback_info(:initial_state, 0) do
+      %Info{read?: false, write?: false, emit?: false}
+    end
+
+    def initial_state(_, :foo), do: %Result{result: :bar}
+    def initial_state(_, _), do: %Result{result: 42}
+  end
+  ```
+
+      iex> initial_state(InitialStateModule)
+      42
+      iex> initial_state(InitialStateModule, :foo)
+      :bar
+  """
+  @spec initial_state(t()) :: state()
+  def initial_state(operation, config \\ nil) do
+    if callback_exists?(operation, :initial_state, 0) do
+      call(operation, :initial_state, nil, config, []).result
+    else
+      nil
     end
   end
 end

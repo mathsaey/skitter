@@ -110,11 +110,11 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Create an empty state for the operation.
 
   This macro creates an initial state for an operation, by using
-  `Skitter.Operation.initial_state/1`
+  `Skitter.Operation.initial_state/2`
   """
-  defmacro initial_state do
+  defmacro initial_state(config \\ nil) do
     quote do
-      Skitter.Operation.initial_state(operation())
+      Skitter.Operation.initial_state(operation(), unquote(config))
     end
   end
 
@@ -122,14 +122,15 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Call `callback` of the current operation.
 
   Uses `Skitter.Operation.call/5`. The state, configuration and arguments can be passed through
-  opts.
+  opts. If they are not provided, `:args` defaults to the empty list while `:state` and  `:config`
+  default to `nil`.
   """
   defmacro call(callback, opts \\ []) do
     quote do
       Skitter.Operation.call(
         operation(),
         unquote(callback),
-        unquote(Keyword.get(opts, :state, quote(do: initial_state()))),
+        unquote(Keyword.get(opts, :state, nil)),
         unquote(Keyword.get(opts, :config, nil)),
         unquote(Keyword.get(opts, :args, []))
       )
@@ -139,14 +140,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
   @doc """
   Call `callback` of the current operation if it exists.
 
-  Uses `Skitter.Operation.call_if_exists/5`.
+  Uses `Skitter.Operation.call_if_exists/5`. The state, configuration and arguments can be passed
+  through opts. If they are not provided, `:args` defaults to the empty list while `:state` and
+  `:config` default to `nil`.
   """
   defmacro call_if_exists(callback, opts \\ []) do
     quote do
       Skitter.Operation.call_if_exists(
         operation(),
         unquote(callback),
-        unquote(Keyword.get(opts, :state, quote(do: initial_state()))),
+        unquote(Keyword.get(opts, :state, nil)),
         unquote(Keyword.get(opts, :config, nil)),
         unquote(Keyword.get(opts, :args, []))
       )

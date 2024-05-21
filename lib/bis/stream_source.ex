@@ -26,11 +26,11 @@ defstrategy Skitter.BIS.StreamSource do
     * `stream`: Called at deployment time. This callback should return a stream, which will be
     emitted once the operation has been deployed.
   """
-  defhook deploy do
+  defhook deploy(args) do
     remote_worker(
       fn ->
         send(self(), :start)
-        call(:stream, args: [args()]).result
+        call(:stream, args: [args]).result
       end,
       :source
     )

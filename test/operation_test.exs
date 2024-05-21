@@ -20,8 +20,6 @@ defmodule Skitter.OperationTest do
     def _sk_operation_info(:in_ports), do: [:input]
     def _sk_operation_info(:out_ports), do: [:output]
 
-    def _sk_operation_initial_state, do: 42
-
     def _sk_callbacks, do: MapSet.new(example: 1)
 
     def _sk_callback_info(:example, 1) do
@@ -32,6 +30,24 @@ defmodule Skitter.OperationTest do
       result = state * config
       %Result{state: state, emit: [arg: arg], result: result}
     end
+  end
+
+  defmodule InitialStateModule do
+    @behaviour Skitter.Operation
+    alias Skitter.Operation.Callback.{Info, Result}
+
+    def _sk_operation_info(:strategy), do: Strategy
+    def _sk_operation_info(:in_ports), do: []
+    def _sk_operation_info(:out_ports), do: []
+
+    def _sk_callbacks, do: MapSet.new(initial_state: 0)
+
+    def _sk_callback_info(:initial_state, 0) do
+      %Info{read?: false, write?: false, emit?: false}
+    end
+
+    def initial_state(_, :foo), do: %Result{result: :bar}
+    def initial_state(_, _), do: %Result{result: 42}
   end
 
   doctest Skitter.Operation

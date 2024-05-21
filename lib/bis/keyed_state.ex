@@ -23,11 +23,12 @@ defstrategy Skitter.BIS.KeyedState do
   * callbacks:
     * `key` (required): Called for each incoming data element. Can not access operation state.
     * `react` (required): Called for each incoming data element.
-    * `init` (optional): Called to create an initial state for a key.
     * `conf` (optional): Called to create a configuration for the operation.
+    * `initial_state` (optional): Called to create the initial state for a key when it occurs for
+      the first time. If it is not provided, the state defaults to `nil`.
   """
-  defhook deploy do
-    config = call_if_exists(:conf, args: [args()]).result
+  defhook deploy(args) do
+    config = call_if_exists(:conf, args: [args]).result
 
     aggregators =
       Remote.on_all_worker_cores(fn -> local_worker(Map.new(), :aggregator) end)
@@ -48,7 +49,7 @@ defstrategy Skitter.BIS.KeyedState do
   defhook process(data, state_map, :aggregator) do
     {config, _} = deployment()
     key = call(:key, config: config, args: [data]).result
-    state = Map.get_lazy(state_map, key, fn -> call_if_exists(:init, args: [args()]).state end)
+    state = Map.get_lazy(state_map, key, fn -> initial_state(config) end)
     res = call(:react, state: state, config: config, args: [data])
     emit(res.emit)
     Map.put(state_map, key, res.state)
