@@ -43,9 +43,9 @@ defmodule Skitter.DSL.Strategy.Helpers do
 
   This macro creates a remote worker, automatically passing the current context.
   """
-  defmacro remote_worker(state, tag, placement \\ nil) do
+  defmacro remote_worker(state, role, placement \\ nil) do
     quote do
-      Skitter.Worker.create_remote(context(), unquote(state), unquote(tag), unquote(placement))
+      Skitter.Worker.create_remote(context(), unquote(state), unquote(role), unquote(placement))
     end
   end
 
@@ -54,9 +54,9 @@ defmodule Skitter.DSL.Strategy.Helpers do
 
   This macro creates a local worker, automatically passing the current context.
   """
-  defmacro local_worker(state, tag) do
+  defmacro local_worker(state, role) do
     quote do
-      Skitter.Worker.create_local(context(), unquote(state), unquote(tag))
+      Skitter.Worker.create_local(context(), unquote(state), unquote(role))
     end
   end
 

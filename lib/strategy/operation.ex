@@ -48,7 +48,7 @@ defmodule Skitter.Strategy.Operation do
   Handle a message received by a worker.
 
   This hook is called by the runtime when a worker process receives a message. It is called with
-  the received message, the data of the worker that received the message and its tag. This hook
+  the received message, the data of the worker that received the message and its role. This hook
   should return the new state of the worker that received the message.
 
   ## Context
@@ -60,7 +60,7 @@ defmodule Skitter.Strategy.Operation do
               context :: Strategy.context(),
               message :: any(),
               state :: Worker.state(),
-              tag :: Worker.tag()
+              role :: Worker.role()
             ) :: Worker.state()
 
   @doc """

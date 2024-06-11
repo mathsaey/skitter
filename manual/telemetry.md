@@ -87,7 +87,7 @@ The events described in this section are not wrapped and are emitted by
   `deploy` hook of each node in the workflow is called.
   * `context`: The context the worker was deployed with.
   * `state`: The initial state of the worker.
-  * `tag`: The worker `t:Skitter.Worker.tag/0`
+  * `role`: The worker `t:Skitter.Worker.role/0`
   * `pid`: The `t:pid/0` of the worker. Uniquely identifies the worker.
 * `[:skitter, :worker, :send]`: Emitted when a message is sent using
   `Skitter.Worker.send/2`.

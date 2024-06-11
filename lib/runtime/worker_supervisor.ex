@@ -32,12 +32,12 @@ defmodule Skitter.Runtime.WorkerSupervisor do
   def init(_arg), do: DynamicSupervisor.init(strategy: :one_for_one, max_restarts: 0)
 
   @doc """
-  Start a worker with `state` and `tag` for the given `ctx`.
+  Start a worker with `state` and `role` for the given `ctx`.
 
   The appropriate supervisor will be selected based on the data captured in the context.
   """
-  @spec add_worker(Strategy.context(), Worker.state_or_state_fn(), Worker.tag()) :: Worker.ref()
-  def add_worker(ctx, state, tag) do
+  @spec add_worker(Strategy.context(), Worker.state_or_state_fn(), Worker.role()) :: Worker.ref()
+  def add_worker(ctx, state, role) do
     {ref, idx} =
       case ctx._skr do
         {:deploy, ref, idx} -> {ref, idx}
@@ -45,7 +45,7 @@ defmodule Skitter.Runtime.WorkerSupervisor do
       end
 
     pid = NodeStore.get(:local_supervisors, ref, idx)
-    {:ok, pid} = DynamicSupervisor.start_child(pid, {Skitter.Runtime.Worker, {ctx, state, tag}})
+    {:ok, pid} = DynamicSupervisor.start_child(pid, {Skitter.Runtime.Worker, {ctx, state, role}})
     pid
   end
 

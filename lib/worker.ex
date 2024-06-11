@@ -16,8 +16,8 @@ defmodule Skitter.Worker do
   callback receives the current worker state and may return a new, updated state to be stored by
   the worker.
 
-  Since strategies can create many separate workers, each worker is created with a _tag_ which can
-  be used by the strategy to provide different implementations of
+  Since strategies can create many separate workers, each worker is created with a _role_ which
+  can be used by the strategy to provide different implementations of
   `c:Skitter.Strategy.Operation.process/4` based on the worker that received the message.
 
   This module defines the worker types and various functions to deal with workers.
@@ -44,12 +44,12 @@ defmodule Skitter.Worker do
   @type state_or_state_fn :: state() | (-> state())
 
   @typedoc """
-  Worker tag.
+  Worker role.
 
-  Each worker is tagged with an atom which allows the strategy to differentiate between the various
+  Each worker is tagged with a role which allows the strategy to differentiate between the various
   workers it creates.
   """
-  @type tag :: atom()
+  @type role :: atom()
 
   @typedoc """
   Placement constraints.
@@ -83,9 +83,9 @@ defmodule Skitter.Worker do
 
   The worker will be placed on a random node, subject to the passed placement constraints.
   """
-  @spec create_remote(Strategy.context(), state_or_state_fn(), tag(), placement()) :: ref()
-  def create_remote(context, state, tag, placement \\ nil) do
-    Skitter.Runtime.Spawner.spawn_remote(context, state, tag, placement)
+  @spec create_remote(Strategy.context(), state_or_state_fn(), role(), placement()) :: ref()
+  def create_remote(context, state, role, placement \\ nil) do
+    Skitter.Runtime.Spawner.spawn_remote(context, state, role, placement)
   end
 
   @doc """
@@ -93,9 +93,9 @@ defmodule Skitter.Worker do
 
   This will raise when executed on a master node.
   """
-  @spec create_local(Strategy.context(), state_or_state_fn(), tag()) :: ref() | :error
-  def create_local(context, state, tag) do
-    Skitter.Runtime.Spawner.spawn_local(context, state, tag)
+  @spec create_local(Strategy.context(), state_or_state_fn(), role()) :: ref() | :error
+  def create_local(context, state, role) do
+    Skitter.Runtime.Spawner.spawn_local(context, state, role)
   end
 
   @doc """
