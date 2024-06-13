@@ -46,8 +46,8 @@ which contains the result of the wrapped code.
 #### Hooks
 
 * `[:skitter, :hook, :deploy]`: Emitted when the
-  `c:Skitter.Strategy.Operation.deploy/1` hook of a strategy is called.
-  * `:context`: The context passed to `c:Skitter.Strategy.Operation.deploy/1`
+  `c:Skitter.Strategy.Operation.deploy/2` hook of a strategy is called.
+  * `:context`: The context passed to `c:Skitter.Strategy.Operation.deploy/2`
   * `:result` (only for the `:stop` event): the return value of the hook. This
     data will be stored inside the strategy's deployment.
 * `[:skitter, :hook, deliver]`: Emitted when the `deliver` hook of a strategy is

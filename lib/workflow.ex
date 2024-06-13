@@ -46,7 +46,7 @@ defmodule Skitter.Workflow do
   Operation embedded inside a workflow.
 
   An operation in a workflow is stored along with its strategy, initialization arguments (which
-  are passed to `c:Skitter.Strategy.Operation.deploy/1`) and the outgoing links of each of its out
+  are passed to `c:Skitter.Strategy.Operation.deploy/2`) and the outgoing links of each of its out
   ports.
 
   Workflows can override the strategy of an operation, therefore, the strategy specified here may

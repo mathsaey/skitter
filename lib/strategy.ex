@@ -29,7 +29,7 @@ defmodule Skitter.Strategy do
 
   A strategy which is deployed over the cluster has access to an immutable set of data which is
   termed the _deployment_. A strategy can specify which data to store in its deployment inside the
-  `c:Skitter.Strategy.Operation.deploy/1` hook. Afterwards, the other strategy hooks have access
+  `c:Skitter.Strategy.Operation.deploy/2` hook. Afterwards, the other strategy hooks have access
   to the data stored within the deployment.
 
   Note that an operation strategy can only access its own deployment data.
