@@ -88,7 +88,7 @@ defmodule Skitter.Operation do
   index. Names are used in the workflow and operation DSLs, while indices are used inside
   strategies.
   """
-  @type port_name() :: atom()
+  @type port() :: atom()
 
   @typedoc """
   Input/output interface of Skitter operations.
@@ -105,9 +105,9 @@ defmodule Skitter.Operation do
   @typedoc """
   Arguments passed to a callback when it is called.
 
-  The arguments are provided as tokens wrapped in a list.
+  The arguments are provided as tokens or plain values wrapped in a list.
   """
-  @type args :: [Token.t()]
+  @type args :: [Token.t() | any()]
 
   @typedoc """
   State passed to the callback when it is called.
@@ -139,7 +139,7 @@ defmodule Skitter.Operation do
   value or a Skitter token. The Skitter runtime will automatically wrap plain values in a Skitter
   token when they are sent to downstream operations.
   """
-  @type emit :: [{port_name(), Enumerable.t()}]
+  @type emit :: [{port(), Enumerable.t()}]
 
   @typedoc """
   Values returned by a callback when it is called.
@@ -206,8 +206,8 @@ defmodule Skitter.Operation do
   - `:strategy`: The `Skitter.Strategy` of the operation. `nil` may be provided instead, in which
   case a strategy must be provided when the operation is embedded in a workflow.
   """
-  @callback _sk_operation_info(:in_ports) :: [port_name()]
-  @callback _sk_operation_info(:out_ports) :: [port_name()]
+  @callback _sk_operation_info(:in_ports) :: [port()]
+  @callback _sk_operation_info(:out_ports) :: [port()]
   @callback _sk_operation_info(:strategy) :: Strategy.t() | nil
 
   @doc """
@@ -278,7 +278,7 @@ defmodule Skitter.Operation do
       iex> in_ports(OperationModule)
       [:input]
   """
-  @spec in_ports(t()) :: [port_name()]
+  @spec in_ports(t()) :: [port()]
   def in_ports(operation), do: operation._sk_operation_info(:in_ports)
 
   @doc """
@@ -289,7 +289,7 @@ defmodule Skitter.Operation do
       iex> out_ports(OperationModule)
       [:output]
   """
-  @spec out_ports(t()) :: [port_name()]
+  @spec out_ports(t()) :: [port()]
   def out_ports(operation), do: operation._sk_operation_info(:out_ports)
 
   @doc """
@@ -302,7 +302,7 @@ defmodule Skitter.Operation do
       iex> in_port_to_index(OperationModule, :other)
       nil
   """
-  @spec in_port_to_index(t(), port_name()) :: port_index() | nil
+  @spec in_port_to_index(t(), port()) :: port_index() | nil
   def in_port_to_index(operation, port) do
     operation |> in_ports() |> Enum.find_index(&(&1 == port))
   end
@@ -317,7 +317,7 @@ defmodule Skitter.Operation do
       iex> out_port_to_index(OperationModule, :other)
       nil
   """
-  @spec out_port_to_index(t(), port_name()) :: port_index() | nil
+  @spec out_port_to_index(t(), port()) :: port_index() | nil
   def out_port_to_index(operation, port) do
     operation |> out_ports() |> Enum.find_index(&(&1 == port))
   end
@@ -332,7 +332,7 @@ defmodule Skitter.Operation do
       iex> index_to_in_port(OperationModule, 1)
       nil
   """
-  @spec index_to_in_port(t(), port_index()) :: port_name() | nil
+  @spec index_to_in_port(t(), port_index()) :: port() | nil
   def index_to_in_port(operation, idx), do: operation |> in_ports() |> Enum.at(idx)
 
   @doc """
@@ -345,7 +345,7 @@ defmodule Skitter.Operation do
       iex> index_to_out_port(OperationModule, 1)
       nil
   """
-  @spec index_to_out_port(t(), port_index()) :: port_name() | nil
+  @spec index_to_out_port(t(), port_index()) :: port() | nil
   def index_to_out_port(operation, idx), do: operation |> out_ports() |> Enum.at(idx)
 
   @doc """
