@@ -179,7 +179,7 @@ defmodule Skitter.Operation do
 
     defmodule Result do
       @moduledoc false
-      defstruct [:state, :emit, :result]
+      defstruct [:state, :result, emit: []]
     end
 
     defmodule Info do
