@@ -6,25 +6,49 @@
 
 defmodule Skitter do
   @moduledoc """
-  Skitter entry point.
+  Skitter framework DSLs and runtime interaction.
 
-  This module serves a single point which can be used to access the features a  typical user is
-  expected to use. Concretly, this module offers access to both the Skitter runtime system and to
-  the DSLs defined by Skitter. The runtime system can be accessed through `deploy/1` and `stop/1`,
-  which are shorthands for `Skitter.Runtime.deploy/1` and `Skitter.Runtime.stop/1`, respectively.
-  The DSLs can be access by adding `use Skitter` to the top of a file or module, which serves as a
-  shorthand for adding `use Skitter.DSL`.
+  This module serves as an entry point to access both the DSLs implemented by Skitter and to
+  interact with the Skitter runtime system. The former is done by adding `use Skitter` to an
+  Elixir file or module, while the latter is done by calling the functions defined in this module.
 
-  For additional information, please refer to the documentation of `Skitter.Runtime` and
-  `Skitter.DSL`.
+  ### Domain-specific languages
+
+  Adding `use Skitter.DSL` to an Elixir file or module imports the following macros:
+  - `Skitter.DSL.Operation.defoperation/3`
+  - `Skitter.DSL.Strategy.defstrategy/3`
+  - `Skitter.DSL.Workflow.workflow/2`
+
+  Which can be used to define operations, strategies and workflows.
+
+  ### Runtime interaction
+
+  The Skitter runtime system is responsible for deploying workflows over a cluster and for
+  interacting with running workflows. The `Skitter.Runtime` module offers an API to interact with
+  the runtime system and the information it tracks. This module offers a shorthand to access the
+  most commonly used functions of this API.
   """
 
   defmacro __using__(_opts) do
     quote do
-      use Skitter.DSL
+      import Skitter.DSL.Operation, only: [defoperation: 3, defoperation: 2]
+      import Skitter.DSL.Workflow, only: [workflow: 1, workflow: 2]
+      import Skitter.DSL.Strategy, only: [defstrategy: 2, defstrategy: 3]
     end
   end
 
-  defdelegate deploy(workflow), to: Skitter.Runtime
-  defdelegate stop(ref), to: Skitter.Runtime
+  @doc """
+  Deploy a workflow over the cluster.
+
+  Starts a Skitter application (i.e. a `t:Skitter.Workflow.t/0`) by deploying it over the cluster.
+  The workflow is flattened (using `Skitter.Workflow.flatten/1`) before it is deployed. After
+  deployment, this function returns a `t:Skitter.Runtime.ref/0`, which can be used by the
+  functions in `Skitter.Runtime`, or to stop the workflow.
+  """
+  def deploy(workflow), do: Skitter.Runtime.deploy(workflow)
+
+  @doc """
+  Stop a deployed workflow with reference `ref`.
+  """
+  def stop(ref), do: Skitter.Runtime.stop(ref)
 end
