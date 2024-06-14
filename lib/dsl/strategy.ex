@@ -230,7 +230,6 @@ defmodule Skitter.DSL.Strategy do
   """
   defmacro defhook(clause, do: body) do
     {name, args, guards} = AST.decompose_clause(clause)
-    body = Macro.prewalk(body, &maybe_modify_call(Macro.decompose_call(&1), &1, __CALLER__))
 
     body =
       quote do
@@ -249,16 +248,6 @@ defmodule Skitter.DSL.Strategy do
 
     gen_hook(name, args, guards, quote(do: __MODULE__), body)
   end
-
-  # Pass the context when a parent hook is called
-  defp maybe_modify_call({module, func, args}, node, env) do
-    mod = Macro.expand(module, env)
-    strategy_dsl_module? = is_atom(mod) and :erlang.function_exported(mod, :_sk_hooks, 0)
-    hook_call? = strategy_dsl_module? and {func, length(args)} in mod._sk_hooks()
-    if hook_call?, do: gen_hook_call(module, func, args), else: node
-  end
-
-  defp maybe_modify_call(_, node, _), do: node
 
   # Generate a hook implementation, store the module that defined the hook
   defp gen_hook(name, args, guards, module, body) do
