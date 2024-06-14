@@ -1,4 +1,4 @@
-# Copyright 2018 - 2022, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2024, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -16,6 +16,6 @@ defmodule Skitter.StrategyError do
 
   @impl true
   def message(%__MODULE__{message: msg, context: cont}) do
-    "Raised by #{inspect(cont.strategy)} handling #{inspect(cont.operation)}:\n\t#{msg}"
+    "Raised by #{inspect(cont.strategy)} handling #{inspect(cont.operation)}:\n   #{msg}"
   end
 end
