@@ -1,4 +1,4 @@
-# Copyright 2018 - 2022, Mathijs Saey, Vrije Universiteit Brussel
+# Copyright 2018 - 2024, Mathijs Saey, Vrije Universiteit Brussel
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -8,10 +8,9 @@ defmodule Skitter.DSL.Workflow do
   @moduledoc """
   Workflow definition DSL.
 
-  This module offers a macro to define workflow. To define a workflow, use `workflow/2`. Inside
-  the body of the workflow, `node/2` and `~>/2` can be used. Unlike
-  `Skitter.DSL.Operation.defoperation/3` and `Skitter.DSL.Strategy.defstrategy/3`, the
-  `workflow/2` macro does not generate a module, instead, it generates a `t:Skitter.Workflow.t/0`.
+  This module offers macros for the definition of workflows. Workflow are defined through the use
+  of `workflow/2`. The other macros defined in this module are meant to be used inside the body
+  of `workflow/2`. We recommend reading the documentation of `workflow/2` first.
   """
 
   alias Skitter.{DSL.AST, Operation, Workflow}
@@ -26,6 +25,8 @@ defmodule Skitter.DSL.Workflow do
   This macro generates a `t:Skitter.Workflow.t/0`. Inside the body of this macro, `node/2` and
   `~>/2` can be used to define nodes and links between nodes, respectively. The generated workflow
   is verified after its definition through the use of `Skitter.Workflow.verify/1`.
+
+  Internally, this macro generates the data structure defined in `t:Skitter.Workflow.t/0`.
 
   ## Workflow ports
 

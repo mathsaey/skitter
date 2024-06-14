@@ -12,8 +12,9 @@ defmodule Skitter.Strategy do
   runtime. It is defined as a collection of _hooks_: functions which each define an aspect of the
   distributed behaviour of an operation.
 
-  A strategy is defined as an elixir module which implements the `Skitter.Strategy.Operation`
-  behaviour. It is recommended to define a strategy using `Skitter.DSL.Strategy.defstrategy/3`.
+  An operation strategy is defined as an elixir module which implements the
+  `Skitter.Strategy.Operation` behaviour. It is recommended to define a strategy using
+  `Skitter.DSL.Strategy.defstrategy/3`.
 
   This module defines the strategy and context types.
   """

@@ -8,10 +8,10 @@ defmodule Skitter.Workflow do
   @moduledoc """
   Workflow type definition and utilities.
 
-  A reactive workflow defines a data processing pipeline. It is defined as a set of nodes
-  connected through various links. A node contains a data processing operation and its
-  distribution strategy. A workflow stores these nodes and links between them, along with
-  additional meta-information about the workflow.
+  A workflow defines a data processing pipeline. It is defined as a set of nodes connected through
+  various links. A node contains a data processing operation and its distribution strategy. A
+  workflow stores these nodes and links between them, along with additional meta-information about
+  the workflow.
 
   In order to enable the reuse of workflows, workflows may define in -and out ports. When this is
   done, these workflows may be embedded inside another workflow. Note that a workflow is always

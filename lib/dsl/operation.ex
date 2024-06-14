@@ -8,8 +8,10 @@ defmodule Skitter.DSL.Operation do
   @moduledoc """
   Callback and Operation definition DSL.
 
-  This module offers macros to define operation modules and callbacks. Please refer to the
-  documentation of `defoperation/3`.
+  This module offers macros to define operation modules and callbacks. An operation is defined
+  through the use of the `defoperation/3` macro. The other macros defined in this module are meant
+  to be used inside the body of this macro. We recommend reading the documentation for
+  `defoperation/3` first.
   """
   alias Skitter.DSL.AST
   alias Skitter.{Operation.Callback.Info, DefinitionError}
@@ -27,7 +29,7 @@ defmodule Skitter.DSL.Operation do
   defined by a callback named `initial_state`:
 
   ```
-  defoperation LongInitialState do
+  defoperation InitialState do
     defcb initial_state, do: 0
   end
   ```
@@ -36,16 +38,20 @@ defmodule Skitter.DSL.Operation do
   a shorthand:
 
   ```
-  defoperation ShorterInitialState do
+  defoperation InitialState do
     initial_state 0
   end
   ```
 
+  The second example generates the code shown in the first example.
+
+
   ## Examples
 
-      iex> Operation.initial_state(ShorterInitialState)
+      iex> Operation.initial_state(InitialState)
       0
   """
+  @doc group: :state, inside: :defoperation
   defmacro initial_state(initial_state) do
     quote do
       defcb initial_state, do: unquote(initial_state)
@@ -97,6 +103,7 @@ defmodule Skitter.DSL.Operation do
       %Average{total: 0, count: 0}
 
   """
+  @doc group: :state, inside: :defoperation
   defmacro state_struct(fields) do
     quote do
       defstruct unquote(fields)
@@ -105,12 +112,12 @@ defmodule Skitter.DSL.Operation do
   end
 
   @doc """
-  Define an operation module.
+  Define an operation.
 
-  This macro is used to define an operation module. Using this macro, an operation can be defined
-  similar to a normal module. The macro will enable the use of `defcb/2` and provides
-  implementations for `c:Skitter.Operation._sk_operation_info/1`,
-  `c:Skitter.Operation._sk_callbacks/0` and `c:Skitter.Operation._sk_callback_info/2`.
+  This macro is used to define an operation. Internally, it generates an Elixir module which
+  implements the interface described in `Skitter.Operation`. Inside the body of this macro,
+  `initial_state/1` and `state_struct/1` may be used to define the initial state of the operation,
+  while `defcb/2` may be used to define the various callbacks of the operation.
 
   ## Operation strategy and ports
 
@@ -175,7 +182,7 @@ defmodule Skitter.DSL.Operation do
 
   When writing documentation for an operation, `@operationdoc` can be used instead of the usual
   `@moduledoc`. When this is done, this macro will automatically add additional information about
-  the operation to the generated documentation.
+  the operation (such at the ports of the operation) to the generated documentation.
   """
   defmacro defoperation(name, opts \\ [], do: body) do
     in_ = opts |> Keyword.get(:in, []) |> AST.names_to_atoms()
@@ -232,6 +239,8 @@ defmodule Skitter.DSL.Operation do
     end
   end
 
+  @doc false
+  # Add operation information to moduledoc metadata.
   defmacro generate_moduledoc(env) do
     mod = env.module
     in_ports = Module.get_attribute(mod, :_sk_in_ports) |> Enum.join(", ") |> wrap_value()
@@ -306,7 +315,7 @@ defmodule Skitter.DSL.Operation do
   defp _config_var, do: quote(do: var!(config, unquote(__MODULE__)))
 
   @doc """
-  Obtain the operation configuration.
+  Obtain the operation configuration inside a callback.
 
   This macro reads the current value of the configuration passed to the operation callback when
   it was called. It should only be used inside the body of `defcb/2`.
@@ -331,7 +340,7 @@ defmodule Skitter.DSL.Operation do
   def _state_var, do: quote(do: var!(state, unquote(__MODULE__)))
 
   @doc """
-  Obtain the current state.
+  Obtain the current state inside a callback.
 
   This macro reads the current value of the state passed to the operation callback when it was
   called. It should only be used inside the body of `defcb/2`.
@@ -348,10 +357,11 @@ defmodule Skitter.DSL.Operation do
       iex> Operation.call(ReadExample, :read, :state, nil, []).result
       :state
   """
+  @doc group: :state, inside: :defcb
   defmacro state, do: quote(do: unquote(_state_var()))
 
   @doc """
-  Read the current value of a field stored in state.
+  Read the current value of a field stored in state inside a callback.
 
   This macro expects that the current operation state is a struct (i.e. it expects an operation
   that uses `state_struct/1`), and reads the current value of `field` from the struct.
@@ -373,13 +383,14 @@ defmodule Skitter.DSL.Operation do
       iex> Operation.call(FieldReadExample, :read, %FieldReadExample{field: :foo}, nil, []).result
       :foo
   """
+  @doc group: :state, inside: :defcb
   defmacro sigil_f({:<<>>, _, [str]}, _) do
     field = str |> String.to_existing_atom()
     quote(do: Map.fetch!(unquote(_state_var()), unquote(field)))
   end
 
   @doc """
-  Updates the current state.
+  Updates the current state inside a callback.
 
   This macro should only be used inside the body of `defcb/2`. It updates the current value of the
   operation state to the provided value.
@@ -418,6 +429,7 @@ defmodule Skitter.DSL.Operation do
       iex> Operation.call(WrongFieldWriteExample, :write, %WrongFieldWriteExample{field: :foo}, nil, [])
       ** (KeyError) key :doesnotexist not found in: %Skitter.DSL.OperationTest.WrongFieldWriteExample{field: :foo}
   """
+  @doc group: :state, inside: :defcb
   defmacro {:state, _, _} <~ value do
     quote do
       unquote(_state_var()) = unquote(value)
@@ -454,7 +466,7 @@ defmodule Skitter.DSL.Operation do
   def _emit_var, do: quote(do: var!(emit, unquote(__MODULE__)))
 
   @doc """
-  Emit `value` to `port`
+  Emit `value` to `port` inside a callback.
 
   This macro is used to specify `value` should be emitted on `port`. This means that `value`
   will be sent to any operations downstream of the current operation. This macro should only be
@@ -475,6 +487,7 @@ defmodule Skitter.DSL.Operation do
       iex> Operation.call(SingleEmitExample, :emit, nil, nil, [:bar]).emit
       [some_other_port: [:foo], some_port: [:bar]]
   """
+  @doc group: :emit, inside: :defcb
   defmacro value ~> {port, _, _} when is_atom(port) do
     quote do
       unquote(_emit_var()) = Keyword.put(unquote(_emit_var()), unquote(port), [unquote(value)])
@@ -483,7 +496,7 @@ defmodule Skitter.DSL.Operation do
   end
 
   @doc """
-  Emit several values to `port`
+  Emit several values to `port` inside a callback.
 
   This macro works like `~>/2`, but emits several output values to the port instead of a single
   value. Each value in the provided `t:Enumerable.t/0` will be sent to downstream operations
@@ -503,6 +516,7 @@ defmodule Skitter.DSL.Operation do
       iex> Operation.call(MultiEmitExample, :emit, nil, nil, [:bar]).emit
       [some_other_port: [:foo, :bar], some_port: [:bar]]
   """
+  @doc group: :emit, inside: :defcb
   defmacro enum ~>> {port, _, _} when is_atom(port) do
     quote do
       unquote(_emit_var()) = Keyword.put(unquote(_emit_var()), unquote(port), unquote(enum))
@@ -536,16 +550,87 @@ defmodule Skitter.DSL.Operation do
   defp arg_to_token_name({:=, _, [_, r]}), do: arg_to_token_name(r)
   defp arg_to_token_name(_), do: quote(do: _)
 
-  defmacro token_of(name), do: name_to_token_name(name)
+  @doc """
+  Obtain the port associated with an argument inside a callback.
+
+  If the argument is not associated with a port, `nil` is returned instead. Usually, the Skitter
+  runtime system guarantees the appropriate port is associated with an argument, however, a
+  strategy may prevent port information from being propagated. See `Skitter.Token` for additional
+  information.
+
+  ## Examples
+
+      iex> defoperation PortExample, in: value do
+      ...>   defcb get_port(_value), do: port_of(_value)
+      ...> end
+      iex> Skitter.Operation.call(PortExample, :get_port, nil, nil, [%Skitter.Token{value: 5, port: :value}]).result
+      :value
+      iex> Skitter.Operation.call(PortExample, :get_port, nil, nil, [5]).result
+      nil
+  """
+  @doc group: :token, inside: :defcb
+  defmacro port_of(name), do: quote(do: unquote(name_to_token_name(name)).port)
 
   @doc """
-  Obtain the port associated with an argument.
+  Obtain the meta-information associated with an argument inside a callback.
 
-  If the argument is not associated with a port, `nil` is returned instead.
+  ## Examples
+
+      iex> defoperation ReadMetaExample, in: value do
+      ...>   defcb get(_value), do: meta_of(_value)
+      ...> end
+      iex> Skitter.Operation.call(ReadMetaExample, :get, nil, nil, [%Skitter.Token{value: 5, meta: %{foo: :bar}}]).result
+      %{foo: :bar}
+      iex> Skitter.Operation.call(ReadMetaExample, :get, nil, nil, [5]).result
+      %{}
   """
-  defmacro port_of(name), do: quote(do: token_of(unquote(name)).port)
+  @doc group: :token, inside: :defcb
+  defmacro meta_of(name), do: quote(do: unquote(name_to_token_name(name)).meta)
 
-  defmacro meta_of(name), do: quote(do: token_of(unquote(name).meta))
+  @doc """
+  Create a new token with the meta-information associated with an argument inside a callback.
+
+  ## Examples
+
+      iex> defoperation InheritMetaExample, in: value do
+      ...>   defcb inherit(_value), do: inherit_meta("hello", _value)
+      ...> end
+      iex> Skitter.Operation.call(InheritMetaExample, :inherit, nil, nil, [%Skitter.Token{value: 5, meta: %{foo: :bar}}]).result
+      %Skitter.Token{value: "hello", meta: %{foo: :bar}}
+      iex> Skitter.Operation.call(InheritMetaExample, :inherit, nil, nil, [5]).result
+      %Skitter.Token{value: "hello", meta: %{}}
+  """
+  @doc group: :token, inside: :defcb
+  defmacro inherit_meta(value, name) do
+    quote(do: Skitter.Token.with_meta(unquote(value), meta_of(unquote(name))))
+  end
+
+  @doc """
+  Create a token with meta-information of an argument and new meta-information inside a callback.
+
+  The provided meta-information overrides any previously existing meta-information.
+
+  ## Examples
+
+      iex> defoperation ExtendMetaExample, in: value do
+      ...>   defcb extend(_value), do: extend_meta("hello", _value, a: 1, b: 2)
+      ...> end
+      iex> Skitter.Operation.call(ExtendMetaExample, :extend, nil, nil, [%Skitter.Token{value: 5, meta: %{foo: :bar}}]).result
+      %Skitter.Token{value: "hello", meta: %{a: 1, b: 2, foo: :bar}}
+      iex> Skitter.Operation.call(ExtendMetaExample, :extend, nil, nil, [%Skitter.Token{value: 5, meta: %{a: -1}}]).result
+      %Skitter.Token{value: "hello", meta: %{a: 1, b: 2}}
+      iex> Skitter.Operation.call(ExtendMetaExample, :extend, nil, nil, [5]).result
+      %Skitter.Token{value: "hello", meta: %{a: 1, b: 2}}
+  """
+  @doc group: :token, inside: :defcb
+  defmacro extend_meta(value, name, meta) do
+    quote do
+      Skitter.Token.with_meta(
+        unquote(value),
+        Map.merge(meta_of(unquote(name)), Map.new(unquote(meta)))
+      )
+    end
+  end
 
   # defcallback
   # -----------
@@ -555,18 +640,19 @@ defmodule Skitter.DSL.Operation do
 
   This macro is used to define a callback function. Using this macro, a callback can be defined
   similar to a regular procedure. Inside the body of the procedure, `~>/2`, `~>>/2` `<~/2` and
-  `sigil_f/2` can be used to access the state and to emit output. The macro ensures:
+  `sigil_f/2` can be used to access the state and to emit output. `meta_of/1` and `port_of/1` can
+  be used to obtain meta-information about an argument passed to the callback, while
+  `inherit_meta/2` and `extend_meta/3` can be used to generate a `Skitter.Token` based to emit
+  based on this meta-information.
 
-  - The function returns a `t:Skitter.Operation.result/0` with the correct state (as updated by
-  `<~/2`), emit (as updated by `~>/2` and `~>>/2`) and result (which contains the value of the
-  last expression in `body`).
+  Internally, this macro generates a regular elixir function which implements a Skitter callback,
+  as defined in `Skitter.Operation`. The macro ensures the generated function returns a
+  `t:Skitter.Operation.result/0` with the correct state (as updated by `<~/2`), emit (as updated
+  by `~>/2` and `~>>/2`) and result (which contains the value of the last expression in `body`).
+  It also ensures the appropriate meta-information about the callback is added to the operation.
 
-  - `c:Skitter.Operation._sk_callback_info/2` and `c:Skitter.Callback._sk_callbacks/0` of the
-  operation module contains the required information about the defined callback.
-
-  Note that, under the hood, `defcb/2` generates a regular elixir function. Therefore, pattern
-  matching may still be used in the argument list of the callback. Attributes such as `@doc` may
-  also be used as usual.
+  Since `defcb/2` generates a regular Elixir function, pattern matching may still be used in the
+  argument list of the callback. Attributes such as `@doc` may also be used as usual.
 
   ## Examples
 
@@ -728,6 +814,7 @@ defmodule Skitter.DSL.Operation do
   In short, updates are preserved during the normal flow of an operation (i.e. when no values are
   raised or thrown), updates inside `after` are ignored.
   """
+  @doc inside: :defoperation
   defmacro defcb(clause, do: body) do
     body = __MODULE__.ControlFlowOperators.rewrite_special_forms(body)
     info = %Info{read?: read?(body), write?: write?(body), emit?: emit?(body)} |> Macro.escape()
@@ -747,9 +834,10 @@ defmodule Skitter.DSL.Operation do
             ~>: 2,
             ~>>: 2,
             <~: 2,
-            token_of: 1,
             port_of: 1,
-            meta_of: 1
+            meta_of: 1,
+            inherit_meta: 2,
+            extend_meta: 3
           ]
 
         use unquote(__MODULE__.ControlFlowOperators)

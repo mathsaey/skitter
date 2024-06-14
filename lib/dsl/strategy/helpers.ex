@@ -8,12 +8,13 @@ defmodule Skitter.DSL.Strategy.Helpers do
   @moduledoc """
   Macros to be used in strategy hooks.
 
-  This module defines various macro "primitives" to be used in `Skitter.DSL.Strategy.defhook/2`.
-  The contents of this module are automatically available inside `defhook`.
+  This module defines various macro "primitives" which can be used to define strategies. These
+  macros are only available inside `Skitter.DSL.Strategy.defhook/2`, where they are automatically
+  imported.
 
-  The macros defined in this module do not offer new functionality. Instead, they provide
-  syntactic sugar over calling existing functions with arguments based on the context passed to
-  the strategy hook.
+  Internally, these macros call functions defined in various other modules. The information stored
+  in the `t:Skitter.Strategy.context/0` passed to the hook is used to pass the appropriate
+  information to these functions.
   """
 
   defmacro __using__(_) do
@@ -29,6 +30,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
 
   The error is automatically annotated with the current context, which is used to retrieve the
   current operation and strategy.
+
+
+  ## Examples
+
+      iex> defstrategy Example do
+      ...>   defhook example, do: error("An error message")
+      ...> end
+      iex> Example.example(%Context{strategy: Example, operation: Foo})
+      ** (Skitter.StrategyError) Raised by Skitter.DSL.Strategy.HelpersTest.Example handling Foo:
+         An error message
   """
   defmacro error(message) do
     quote do
@@ -111,6 +122,17 @@ defmodule Skitter.DSL.Strategy.Helpers do
 
   This macro creates an initial state for an operation, by using
   `Skitter.Operation.initial_state/2`
+
+  ## Examples
+
+      iex> defoperation ExampleOperation do
+      ...>   initial_state :initial_state
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook example(), do: initial_state()
+      ...> end
+      iex> ExampleStrategy.example(%Context{operation: ExampleOperation})
+      :initial_state
   """
   defmacro initial_state(config \\ nil) do
     quote do
@@ -124,6 +146,29 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Uses `Skitter.Operation.call/5`. The state, configuration and arguments can be passed through
   opts. If they are not provided, `:args` defaults to the empty list while `:state` and  `:config`
   default to `nil`.
+
+  ## Examples
+
+      iex> defoperation ExampleOperation do
+      ...>   defcb example(arg), do: {arg, state(), config()}
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook empty_example(), do: call(:example).result
+      ...>   defhook arg_example(), do: call(:example, args: [:foo]).result
+      ...>   defhook state_example(), do: call(:example, args: [nil], state: :foo).result
+      ...>   defhook config_example(), do: call(:example, args: [nil], config: :foo).result
+      ...>   defhook all_example(), do: call(:example, args: [:foo], state: :foo, config: :foo).result
+      ...> end
+      iex> ExampleStrategy.arg_example(%Context{operation: ExampleOperation})
+      {:foo, nil, nil}
+      iex> ExampleStrategy.state_example(%Context{operation: ExampleOperation})
+      {nil, :foo, nil}
+      iex> ExampleStrategy.config_example(%Context{operation: ExampleOperation})
+      {nil, nil, :foo}
+      iex> ExampleStrategy.all_example(%Context{operation: ExampleOperation})
+      {:foo, :foo, :foo}
+      iex> ExampleStrategy.empty_example(%Context{operation: ExampleOperation})
+      ** (UndefinedFunctionError) function Skitter.DSL.Strategy.HelpersTest.ExampleOperation.example/2 is undefined or private
   """
   defmacro call(callback, opts \\ []) do
     quote do
@@ -141,8 +186,26 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Call `callback` of the current operation if it exists.
 
   Uses `Skitter.Operation.call_if_exists/5`. The state, configuration and arguments can be passed
-  through opts. If they are not provided, `:args` defaults to the empty list while `:state` and
-  `:config` default to `nil`.
+  through opts (as in `call/3`). If they are not provided, `:args` defaults to the empty list
+  while `:state` and `:config` default to `nil`.
+
+  ## Examples
+
+      iex> defoperation ExampleOperation, out: port do
+      ...>   defcb exists do
+      ...>     state <~ :exists
+      ...>     :exists ~> port
+      ...>     :exists
+      ...>   end
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook exists_example(), do: call_if_exists(:exists)
+      ...>   defhook does_not_exist_example(), do: call_if_exists(:does_not_exist)
+      ...> end
+      iex> ExampleStrategy.exists_example(%Context{operation: ExampleOperation})
+      %Result{result: :exists, state: :exists, emit: [port: [:exists]]}
+      iex> ExampleStrategy.does_not_exist_example(%Context{operation: ExampleOperation})
+      %Result{result: nil, state: nil, emit: []}
   """
   defmacro call_if_exists(callback, opts \\ []) do
     quote do
@@ -160,6 +223,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Get the name of the in port with the given `index`.
 
   Calls `Skitter.Operation.index_to_in_port/2`.
+
+  ## Examples
+
+      iex> defoperation ExampleOperation, in: [foo, bar] do
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook example(), do: index_to_in_port(1)
+      ...> end
+      iex> ExampleStrategy.example(%Context{operation: ExampleOperation})
+      :bar
   """
   defmacro index_to_in_port(index) do
     quote do
@@ -171,6 +244,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Get the name of the out port with the given `index`.
 
   Calls `Skitter.Operation.index_to_out_port/2`.
+
+  ## Examples
+
+      iex> defoperation ExampleOperation, out: [foo, bar] do
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook example(), do: index_to_out_port(0)
+      ...> end
+      iex> ExampleStrategy.example(%Context{operation: ExampleOperation})
+      :foo
   """
   defmacro index_to_out_port(index) do
     quote do
@@ -182,6 +265,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Get the index of the given in `port`.
 
   Calls `Skitter.Operation.in_port_to_index/2`.
+
+  ## Examples
+
+      iex> defoperation ExampleOperation, in: [foo, bar] do
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook example(), do: in_port_to_index(:bar)
+      ...> end
+      iex> ExampleStrategy.example(%Context{operation: ExampleOperation})
+      1
   """
   defmacro in_port_to_index(port) do
     quote do
@@ -193,6 +286,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Get the index of the given out `port`.
 
   Calls `Skitter.Operation.out_port_to_index/2`.
+
+  ## Examples
+
+      iex> defoperation ExampleOperation, out: [foo, bar] do
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook example(), do: out_port_to_index(:foo)
+      ...> end
+      iex> ExampleStrategy.example(%Context{operation: ExampleOperation})
+      0
   """
   defmacro out_port_to_index(port) do
     quote do
@@ -204,6 +307,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Programmatically create output for the out port with `index`.
 
   The data must be wrapped in a list.
+
+  ## Examples
+
+      iex> defoperation ExampleOperation, out: [foo, bar] do
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook example(), do: to_port(0, [1, 2, 3])
+      ...> end
+      iex> ExampleStrategy.example(%Context{operation: ExampleOperation})
+      [foo: [1, 2, 3]]
   """
   defmacro to_port(index, list) do
     quote do
@@ -215,6 +328,16 @@ defmodule Skitter.DSL.Strategy.Helpers do
   Programmatically create output for all out ports.
 
   The data must be wrapped in a list.
+
+  ## Examples
+
+      iex> defoperation ExampleOperation, out: [foo, bar] do
+      ...> end
+      iex> defstrategy ExampleStrategy do
+      ...>   defhook example(), do: to_all_ports([1, 2, 3])
+      ...> end
+      iex> ExampleStrategy.example(%Context{operation: ExampleOperation})
+      [foo: [1, 2, 3], bar: [1, 2, 3]]
   """
   defmacro to_all_ports(list) do
     quote do

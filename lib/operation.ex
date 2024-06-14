@@ -82,11 +82,9 @@ defmodule Skitter.Operation do
   Input/output interface of Skitter operations.
 
   The ports of an operation determine its external interface. A port can be referred to by its
-  name, which is stored as an atom.
-
-  `in_port_to_index/2` and `out_port_to_index/2` can be used to convert a port name to a port
-  index. Names are used in the workflow and operation DSLs, while indices are used inside
-  strategies.
+  name, which is stored as an atom. Inside strategies, it may be useful to use the index of a port
+  to remain agnostic to its name. `in_port_to_index/2` and `out_port_to_index/2` can be used to
+  convert a port to its index.
   """
   @type port_name() :: atom()
 
@@ -94,11 +92,9 @@ defmodule Skitter.Operation do
   Input/output interface of Skitter operations.
 
   The ports of an operation determine its external interface. A port can be referred to by its
-  index in the in or out ports list of an operation.
-
-  `in_port_to_index/2` and `out_port_to_index/2` can be used to convert a port name to a port
-  index. Names are used in the workflow and operation DSLs, while indices are used inside
-  strategies.
+  name, which is stored as an atom. Inside strategies, it may be useful to use the index of a port
+  to remain agnostic to its name. `in_port_to_index/2` and `out_port_to_index/2` can be used to
+  convert a port to its index.
   """
   @type port_index() :: non_neg_integer()
 

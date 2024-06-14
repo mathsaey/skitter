@@ -89,10 +89,12 @@ defmodule Skitter.Runtime do
   end
 
   @doc """
-  Deploy a workflow.
+  Deploy a workflow over the cluster.
 
-  Starts a Skitter application (i.e. a workflow) by deploying it over the cluster. Returns a
-  reference to the deployed workflow.
+  Starts a Skitter application (i.e. a `t:Skitter.Workflow.t/0`) by deploying it over the cluster.
+  The workflow is flattened (using `Skitter.Workflow.flatten/1`) before it is deployed. After
+  deployment, this function returns a `t:ref/0`, which can be used by various functions in this
+  module.
   """
   @spec deploy(Workflow.t()) :: ref()
   def deploy(workflow) do

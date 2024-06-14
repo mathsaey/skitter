@@ -13,7 +13,7 @@ defmodule Skitter.DSL.OperationTest do
   alias Skitter.Operation
   alias Skitter.Operation.Callback.{Info, Result}
 
-  defoperation ShorterInitialState do
+  defoperation InitialState do
     initial_state 0
   end
 

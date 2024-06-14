@@ -8,19 +8,11 @@ defmodule Skitter.DSL.Strategy do
   @moduledoc """
   Strategy and Hook definition DSL.
 
-  This module offers macros to define a strategy and hooks. To define a strategy, use
-  `defstrategy/3`. Inside the strategy, `defhook/2` can be used to define hooks. Inside the body
-  of the hook, `context/0`, `operation/0`, `strategy/0` and `deployment/0` can be used to read
-  information from the current context.
-
-  Note that it is possible to define a strategy as an elixir module which implements the
-  appropriate behaviour. Using `defstrategy/3` instead offers three main advantages:
-
-  - The `t:Skitter.Strategy.context/0` of a hook is passed as an implicit argument, which can be
-  accessed using the aforementioned macros.
-  - The helpers defined in `Skitter.DSL.Strategy.Helpers` can be used.
-  - A trait-like mechanism is introduced, which can be used to create new strategies based on
-  existing ones.
+  This module offers macros to define a strategy and its hooks. A strategy is defined through the
+  use of the `defstrategy/3` macro. Inside the body of `defstrategy/3`, `defhook/2` can be used
+  to define a hook. The other macros in this module can be used inside the body of `defhook/2` to
+  obtain information from the current `t:Skitter.Strategy.context/0`. We recommend reading the
+  documentation of `defstrategy/3` to get started.
   """
   alias Skitter.DSL.AST
 
@@ -31,21 +23,15 @@ defmodule Skitter.DSL.Strategy do
   @doc """
   Define a strategy.
 
-  This macro is used to define a strategy module. Through the use of this macro, a strategy module
-  can be defined from scratch or based on one or more existing strategies. This macro enables the
-  use of `defhook/2`, which is used to define a strategy _hook_.
-
-  A hook is an elixir function which accepts a `t:Skitter.Strategy.context/0` as its first
-  argument. This context argument is implicitly created by the `defhook/2` macro; the various
-  fields of the context can be accessed through the use of `context/0`, `operation/0`,
-  `strategy/0` and `deployment/0`.
-
-  Besides the context argument, hooks offer one additional feature: they can be inherited by other
-  strategies.
+  This macro is used to define a strategy. A `Skitter.Strategy` is defined as a regular Elixir
+  module which defines several _hooks_. As such, any code that is valid inside an Elixir module
+  (such as function definitions or module attributes) is valid inside `defstrategy/3`.
+  Additionally, the `defhook/2` macro may be used to define a Skitter _hook_. Hooks are special
+  Elixir functions which accept a `t:Skitter.Strategy.context/0` argument.
 
   ## Extending Strategies
 
-  A strategy can be created based on an existing strategy. This is done by _extending_ some
+  Strategies can be created based on existing strategies. This is done by _extending_ some
   strategy. When a strategy extends another strategy, it will inherit all the hooks defined by the
   strategy it extends:
 
@@ -84,9 +70,6 @@ defmodule Skitter.DSL.Strategy do
       :parent1
       iex> Child.another(%Context{})
       :parent2
-
-  Note that some caveats apply when hooks call other hooks. These are described in the
-  documentation of `defhook/2`.
   """
   defmacro defstrategy(name, opts \\ [], do: body) do
     parents = opts |> Keyword.get(:extends, []) |> parse_parents()
@@ -177,36 +160,49 @@ defmodule Skitter.DSL.Strategy do
   @doc """
   Define a hook.
 
-  This macro defines a single hook of a strategy. While a hook may be defined as a plain elixir
-  function, using this macro offers three advantages:
+  This macro defines a strategy hook. Hooks are functions called by the Skitter runtime system in
+  response to predefined events (described in `Skitter.Strategy.Operation`), or by other hooks.
+  Internally, hooks are plain Elixir functions which accept a `t:Skitter.Strategy.context/0` as
+  their first argument. This macro generates a plain Elixir function which accepts such a context.
 
-  - The hook context is handled by the macro and can be accessed with `context/0`, `operation/0`,
-  `strategy/0` and `deployment/0`.
+  Said otherwise, the following two definitions are equivalent:
 
-  - The macros defined in `Skitter.DSL.Strategy.Helpers` can be used, reducing the code needed to
-  spawn workers, or call operation callbacks.
+  ```
+  def my_hook(context, arg1, arg2), do: ...
+  ```
 
-  - Other strategies can inherit this hook, making it easier to create new strategies. This is
-  shown in the documentation of `defstrategy/3`.
+  ```
+  defhook my_hook(arg1, arg2), do: ...
+  ```
+
+  Using the `defhook/2` macro, however, ensures hooks can be inherited (as described in
+  `defstrategy/3`), and offers access to the macros defined in `Skitter.DSL.Strategy.Helpers`,
+  which provide the building blocks required to build a strategy. The `context/0`, `operation/0`,
+  `strategy/0` and `deployment/0` macros can be used to obtain the information stored in the
+  context the hook was called with.
 
   ## Calling hooks
 
-  Hooks defined inside other strategies may be called like a normal elixir function inside the
-  body of a hook. When this occurs, `defhook/2` automatically passes the context argument to the
-  hook that is called.
+  Since hooks are plain Elixir functions, they may be called like any other function. However, a
+  `t:Skitter.Strategy.context/0` must be provided:
+
+      iex> defstrategy Strategy do
+      ...>   defhook hook, do: "hello"
+      ...> end
+      iex> Strategy.hook(%Context{})
+      "hello"
+
+  When a hook calls another hook (defined in another strategy or in the same strategy), it _must_
+  use the `context/0` macro to pass the current context.
 
       iex> defstrategy S1 do
       ...>   defhook example, do: "world!"
       ...> end
       iex> defstrategy S2 do
-      ...>   defhook example, do: "Hello, " <> S1.example()
+      ...>   defhook example, do: "Hello, " <> S1.example(context())
       ...> end
       iex> S2.example(%Context{})
       "Hello, world!"
-
-  The same cannot be done when a local hook (i.e. a hook defined in the current module) is called.
-  Therefore, a local hook should be called with a context argument. `context/0` can be used for
-  this:
 
       iex> defstrategy Local do
       ...>   defhook left, do: "Hello, "
@@ -216,17 +212,26 @@ defmodule Skitter.DSL.Strategy do
       iex> Local.example(%Context{})
       "Hello, world!"
 
-  A hook of a child strategy can also be called dynamically in a similar way:
+  Since the context contains the current strategy, it is possible to dynamically call the current
+  strategy. However, the syntax for this is rather unwieldy:
 
-      iex> defstrategy Abstract do
-      ...>   defhook example, do: "Child says: " <> strategy().say(context())
+      iex> defstrategy AbstractAnimal do
+      ...>   defhook example, do: "Animal says: " <> strategy().say(context())
       ...> end
-      iex> defstrategy Child, extends: Abstract do
-      ...>   defhook say, do: "Hello!"
+      iex> defstrategy Dog, extends: AbstractAnimal do
+      ...>   defhook say, do: "woof!"
       ...> end
-      iex> Child.example(%Context{strategy: Child})
-      "Child says: Hello!"
+      iex> Dog.example(%Context{strategy: Dog})
+      "Animal says: woof!"
+      iex> defstrategy Cat, extends: AbstractAnimal do
+      ...>   defhook say, do: "meow!"
+      ...> end
+      iex> Cat.example(%Context{strategy: Cat})
+      "Animal says: meow!"
 
+  Note that we have to explicitly pass the strategy as a part of the context in the examples
+  above. In a real application, the Skitter Runtime calls hooks, ensuring the appropriate context
+  is passed.
   """
   defmacro defhook(clause, do: body) do
     {name, args, guards} = AST.decompose_clause(clause)
