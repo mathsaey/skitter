@@ -36,7 +36,7 @@ defmodule Skitter.Workflow do
   """
   @type t :: %__MODULE__{
           in: links(),
-          out: [Operation.port()],
+          out: [Operation.port_name()],
           nodes: %{name() => operation_node() | workflow_node()}
         }
 
@@ -75,7 +75,7 @@ defmodule Skitter.Workflow do
   Links are stored as a keyword list. Each key in this list represents an out port, while the
   value of this key is a list which references the destinations of this out port.
   """
-  @type links :: [{Operation.port(), [destination()]}]
+  @type links :: [{Operation.port_name(), [destination()]}]
 
   @typedoc """
   Link destination.
@@ -84,7 +84,7 @@ defmodule Skitter.Workflow do
   port of the workflow. In the first case, the name of the node and its out port are stored, in
   the second, only the name of the out port is stored.
   """
-  @type destination :: {name(), Operation.port()} | Operation.port()
+  @type destination :: {name(), Operation.port_name()} | Operation.port_name()
 
   @typedoc """
   Instance name
