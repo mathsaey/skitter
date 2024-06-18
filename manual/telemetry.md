@@ -20,6 +20,17 @@ set to `true` in the [Skitter application environment](configuration.html).
 > events. It is up to the user of Skitter to define telemetry handlers or to
 > use an external package which does.
 
+Please refer to the [telemetry docs](`e:telemetry:readme.html`) for information
+on how to write telemetry handlers. In a nutshell, Skitter emits several
+telemetry _events_, which can be _attached_ to _handlers_, written by the user,
+which will receive the event and process it in some way.
+
+When a telemetry event occurs, registered handlers for the event type are
+called in the (Elixir) process where the event occurred. Therefore, registered
+handlers may be called on any process on any remote cluster node. It is up to
+the user to gather the data in a central location (e.g. on the master node),
+before it is processed.
+
 Telemetry events emitted by Skitter include a lot of information which may be
 quite large. For instance, many events include a `t:Skitter.Strategy.context/0`
 struct, which contains a reference to the deployment data, which may be quite
@@ -27,9 +38,17 @@ large. Developers who write event handlers which forward events to other
 processes should keep this in mind and only forward the meta information they
 require. This is especially relevant when data may be sent across the network.
 
-## Telemetry Events
+### Associating events with application information
 
-### Wrapped Events
+It is often needed to associate a telemetry event with a deployed workflow, or
+with a node in a workflow. However, the telemetry events emitted by Skitter do
+not contain this information. Instead, they contain a
+`t:Skitter.Strategy.context/0`. The functions in `Skitter.Runtime` may be used
+to obtain the workflow or workflow node associated with such a context.
+
+## Telemetry events
+
+### Wrapped events
 
 The events described in this section are wrapped in a call to
 `:telemetry.span/3`. This means that a `:start`, `:stop`, and `:exception`
@@ -68,14 +87,14 @@ which contains the result of the wrapped code.
   * `:result` (only for the `:stop` event): the return value of the hook. This
     data will be used as the new state of the worker which called the hook.
 
-#### Operation Callbacks
+#### Operation callbacks
 
 * `[:skitter, :operation, :call]`: Emitted when an operation callback is called.
   * `:pid`: The `t:pid/0` of the worker calling the callback.
   * `:operation`, `:name`, `:state`, `:config`, `:args`: The arguments passed
     `Skitter.Operation.call/5`.
 
-### Unwrapped Events
+### Unwrapped events
 
 The events described in this section are not wrapped and are emitted by
 `:telemetry.execute/3`.

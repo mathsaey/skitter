@@ -6,7 +6,11 @@
 
 defmodule Skitter.Runtime do
   @moduledoc """
-  Interface to the skitter runtime system.
+  Skitter runtime system API.
+
+  This modules defines various functions which can be used to query the Skitter runtime system.
+  Many of these functions are only useful to obtain additional information based on data returned
+  by [telemetry events](telemetry.md).
   """
   alias Skitter.{Config, Remote, Workflow, Strategy}
 

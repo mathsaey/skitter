@@ -26,8 +26,12 @@ defmodule Skitter.Release do
   This will cause Skitter to customize the configuration of your release to include the required
   configuration files and scripts.
 
-  Please refer to the [deployment page](deployment.html#releases) for more information about Skitter
-  releases and how to use them.
+  > #### `mix skitter.new` {:.info}
+  >
+  > Releases are already configured if `mix skitter.new` was used to create the Skitter project.
+
+  Please refer to the [deployment page](deployment.html#releases) for more information about
+  Skitter releases and how to use them.
   """
 
   @doc """
@@ -39,8 +43,7 @@ defmodule Skitter.Release do
   - Modify the release to only include unix executables.
   - Add Skitter-specific `env.sh.eex` and `vm.args` files.
   - Add the `skitter` deploy script used to manage Skitter runtime systems.
-  - Adds a `skitter.exs` script which is used to configure the Skitter runtime based on
-    environment variables before it starts.
+  - Adds a `skitter.exs` script which is used to configure the Skitter runtime before it starts.
 
   This function should be added to the `steps` configuration of your release __before__ the
   `:assemble` step. It is best to include it after any other steps, as this enables the function

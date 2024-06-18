@@ -3,7 +3,7 @@ defmodule Skitter.Remote do
   Facilities to interact with remote Skitter runtimes.
 
   This module offers facilities to query Skitter about the available remote Skitter runtimes and
-  their properites. It also defines various functions which can be used to spawn Skitter workers
+  their properties. It also defines various functions which can be used to spawn Skitter workers
   on remote Skitter nodes.
   """
   alias __MODULE__.{Beacon, Handler, Registry, Tags}
