@@ -85,9 +85,8 @@ defmodule Skitter.MixProject do
 
   defp manual_pages do
     [
-      Introduction: ~w(manual/overview.md manual/installation.md manual/up_and_running.md),
-      Concepts:
-        ~w(manual/workflows.md manual/operations.md manual/strategies.md manual/language_concepts.livemd),
+      "Getting Started": ~w(manual/overview.md manual/installation.md manual/up_and_running.md),
+      Concepts: ~w(manual/workflows.md manual/operations.md manual/strategies.md),
       Deployment: ~w(manual/deployment.md manual/configuration.md),
       Guides: ~w(manual/operators.md manual/telemetry.md)
     ]
@@ -101,28 +100,28 @@ defmodule Skitter.MixProject do
       source_ref: "develop",
       authors: ["Mathijs Saey"],
       logo: "assets/logo-light_docs.png",
-      before_closing_body_tag: &before_closing_body_tag/1,
       # Manual
       extra_section: "manual",
       extras: Enum.flat_map(manual_pages(), fn {_, pages} -> pages end),
       groups_for_extras: manual_pages(),
       # Module documentation
       api_reference: false,
-      nest_modules_by_prefix: [Skitter.DSL, Skitter.BIO, Skitter.BIS],
+      # nest_modules_by_prefix: [Skitter.DSL, Skitter.BIO, Skitter.BIS],
       groups_for_modules: [
+        "Domain-specific Languages": ~r/Skitter\.DSL\..*/,
         "Language Abstractions": [
           Skitter.Operation,
           Skitter.Workflow,
-          Skitter.Strategy
+          Skitter.Strategy,
+          Skitter.Token
         ],
-        "Runtime Hooks": ~r/Skitter.Strategy\..*/,
-        "Runtime Constructs": [
+        "Strategy Behaviours": ~r/Skitter\.Strategy\..*/,
+        "Runtime Interaction": [
           Skitter.Worker,
           Skitter.Deployment,
           Skitter.Remote,
           Skitter.Runtime
         ],
-        dsl: ~r/Skitter.DSL*/,
         "Built-in Operations": ~r/Skitter.BIO.*/,
         "Built-in Strategies": ~r/Skitter.BIS.*/,
         utilities: [
@@ -135,6 +134,12 @@ defmodule Skitter.MixProject do
         "Runtime System (private)": ~r/Skitter.Runtime\..*/,
         "Remote Runtimes (private)": ~r/Skitter.Remote\..*/,
         "Runtime Modes (private)": ~r/Skitter.Mode\..*/
+      ],
+      groups_for_docs: [
+        "Managing State (defoperation)": &(&1[:group] == :state and &1[:inside] == :defoperation),
+        "Managing State (defcb)": &(&1[:group] == :state and &1[:inside] == :defcb),
+        "Publishing Data": &(&1[:group] == :emit),
+        "Meta-Information": &(&1[:group] == :token)
       ],
       filter_modules:
         if System.get_env("EX_DOC_PRIVATE") do
@@ -150,29 +155,5 @@ defmodule Skitter.MixProject do
           fn mod, _ -> not String.contains?(to_string(mod), private) end
         end
     ]
-  end
-
-  def before_closing_body_tag(:html) do
-    """
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@8.13.3/dist/mermaid.min.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        mermaid.initialize({ startOnLoad: false });
-        let id = 0;
-        for (const codeEl of document.querySelectorAll("pre code.mermaid")) {
-          const preEl = codeEl.parentElement;
-          const graphDefinition = codeEl.textContent;
-          const graphEl = document.createElement("div");
-          const graphId = "mermaid-graph-" + id++;
-          mermaid.render(graphId, graphDefinition, function (svgSource, bindListeners) {
-            graphEl.innerHTML = svgSource;
-            bindListeners && bindListeners(graphEl);
-            preEl.insertAdjacentElement("afterend", graphEl);
-            preEl.remove();
-          });
-        }
-      });
-    </script>
-    """
   end
 end

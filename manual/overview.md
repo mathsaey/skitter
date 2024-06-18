@@ -11,7 +11,7 @@ three main parts, which can be accessed from the top of the sidebar.
 * The __manual__: this is the section of the docs you are currently browsing.
   It is a collection of guides which document how to get started with Skitter.
   We recommend first-time users to read through most pages in this manual to
-  get up and running with Skitter.
+  get familiar with Skitter.
 
 * The __modules__ section: the pages in this section contain the detailed
   documentation of the API offered by Skitter. Various pages in the manual will
@@ -21,17 +21,17 @@ three main parts, which can be accessed from the top of the sidebar.
 * The __mix tasks__ section: the pages in this section document the mix tasks
   defined by Skitter. `Mix` is the build tool used by Elixir. Mix tasks are
   small command line programs which are used to extend the functionality of
-  this tool. We recommend browsing these pages only when needed.
+  mix. We recommend browsing these pages only when needed.
 
 The remainder of this manual is, itself, divided into several parts:
 
-* The __introduction__ pages include this page and the installation
-  instructions. They are intended to get you up and running.
+* The __getting started__ pages include this page and the installation
+  instructions. They are intended to help you install Skitter, create your
+  first Skitter application and execute it.
 
-* The __concepts__ pages provide an introduction to the various constructs
-  which are used to define a Skitter application. These pages are the core part
-  of this manual: understanding these concepts is key to reading and writing
-  distributed stream processing applications in Skitter.
+* The __concepts__ pages explain the various language constructs introduced by
+  Skitter and how they are used to define a distributed stream processing
+  application. These pages form the main part of this manual.
 
 * The __deployment__ pages document how Skitter applications are deployed over
   a cluster and how they are configured. These pages can be skipped until you

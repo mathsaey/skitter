@@ -9,9 +9,11 @@ you get started.
 
 `mix skitter.new` can be used from any directory to create a new Skitter
 project.  The generator expects a `snake_case` project name; i.e. words should
-be lower cased and spaces should be replaced by underscores. Throughout this
-guide, we use the `hello_skitter` project as a running example:
+be lower cased and spaces should be replaced by underscores. For the purposes
+of this guide, we will create a project called `hello_skitter` and use it as a
+running example.
 
+The project can be created with the following command:
 ```
 $ mix skitter.new hello_skitter
 ```
@@ -84,13 +86,13 @@ and execute the project in the elixir shell:
 $ iex -S mix
 ```
 
-This will start `iex`, the elixir shell and start the current mix project (i.e.
-`hello_skitter`). The generator generated an example "word count" application
-and configured Skitter to automatically deploy the application when started.
-Therefore, starting the project will produce the following output:
+This will start `iex`, the elixir shell, and start the current mix project
+(i.e.  `hello_skitter`). The generator generated an example "word count"
+application and configured Skitter to automatically deploy the application when
+started.  Therefore, starting the project will produce the following output:
 
 ```text
-Erlang/OTP 25 [erts-13.2.2.1] [source] [64-bit] [smp:16:16] [ds:16:16:10] [async-threads:1] [jit:ns] [dtrace]
+Erlang/OTP 26 [erts-14.2.2] [source] [64-bit] [smp:16:16] [ds:16:16:10] [async-threads:1] [jit:ns] [dtrace]
 
 [19:29:31.329][info] ⬡⬢⬡⬢ Skitter v0.7.0 started in local mode
 [19:29:31.343][info] Deploying &HelloSkitter.workflow/0
@@ -98,7 +100,7 @@ Erlang/OTP 25 [erts-13.2.2.1] [source] [64-bit] [smp:16:16] [ds:16:16:10] [async
 {"Skitter", 1}
 {"Hello", 2}
 {"World!", 1}
-Interactive Elixir (1.15.0) - press Ctrl+C to exit (type h() ENTER for help)
+Interactive Elixir (1.16.2) - press Ctrl+C to exit (type h() ENTER for help)
 iex(1)>
 ```
 
@@ -128,8 +130,8 @@ If you wish to run your application without starting a shell, you can use
 As before, `Ctrl + c` can be used to exit your application.
 
 ```text
-mix run --no-halt
-[19:53:22.826][info] ⬡⬢⬡⬢ Skitter v0.6.4 started in local mode
+$ mix run --no-halt
+[19:53:22.826][info] ⬡⬢⬡⬢ Skitter v0.7.0 started in local mode
 [19:53:22.841][info] Deploying &HelloSkitter.workflow/0
 {"World!", 1}
 {"Skitter", 1}

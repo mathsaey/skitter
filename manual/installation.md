@@ -5,12 +5,11 @@
 Skitter is developed as a DSL in [Elixir](https://elixir-lang.org). Therefore,
 Elixir is required to write and run Skitter applications. In turn, Elixir is
 built upon Erlang/OTP. Therefore, an Erlang/OTP installation is also required.
-Skitter requires Elixir version 1.15 or later running on Erlang/OTP version 25
+Skitter requires Elixir version 1.16 or later running on Erlang/OTP version 26
 or later.
 
 The [official Elixir documentation](https://elixir-lang.org/install.html)
 provides instructions on how to install Elixir (and Erlang/OTP).
-
 
 ## Skitter
 
@@ -26,6 +25,9 @@ installation, which can be done as follows:
 ```
 $ mix archive.install hex skitter_new
 ```
+
+This fetches the `skitter_new` project from hex, Elixir's package repository,
+and adds it to your local `mix` installation.
 
 Once the task is installed, you can run `mix help skitter.new` to see if
 everything is installed correctly. It should produce text detailing how to use

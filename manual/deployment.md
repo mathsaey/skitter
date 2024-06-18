@@ -269,7 +269,7 @@ $ ./_release/bin/skitter deploy isabelle-a isabelle-b isabelle-c
 
 ⧖ sleeping 10 second(s) while workers start.
 ✓ finished deployment, starting master.
-[20:58:29.950][info] ⬡⬢⬡⬢ Skitter v0.6.4 started in master mode
+[20:58:29.950][info] ⬡⬢⬡⬢ Skitter v0.7.0 started in master mode
 [20:58:29.950][info] Reachable at `skitter_master@isabelle`
 [20:58:29.958][info] Connected to `skitter_worker@isabelle-a`, tags: []
 [20:58:29.959][info] Connected to `skitter_worker@isabelle-c`, tags: []

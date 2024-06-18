@@ -47,7 +47,7 @@ This configuration option is used to specify a workflow which will be deployed
 over the cluster after the Skitter runtime has started. There are two ways to
 configure this option:
 
-- Setting the `deploy` option in `config/config.exs` or `config.runtime.exs` to
+- Setting the `deploy` option in `config/config.exs` or `config/runtime.exs` to
   a 0-arity function. This function should return a workflow which will be
   deployed by Skitter.
   - This is the case if the project was generated using `mix skitter.new`.
