@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" version="1.1" xmlns:xl="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" viewBox="-13637.349 -8239.367 597.8073 105.97825" width="597.8073" height="105.97825">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="Wordcount_Application" stroke-dasharray="none" fill-opacity="1" stroke="none" stroke-opacity="1" fill="none">
+    <title>Wordcount Application</title>
+    <rect fill="white" x="-13637.349" y="-8239.367" width="597.8073" height="105.97825"/>
+    <g id="Wordcount_Application_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_8">
+        <path d="M -13483.916 -8179.889 L -13446.473 -8179.889 C -13442.055 -8179.889 -13438.473 -8176.307 -13438.473 -8171.889 L -13438.473 -8151.889 C -13438.473 -8147.47 -13442.055 -8143.889 -13446.473 -8143.889 L -13483.916 -8143.889 C -13488.334 -8143.889 -13491.916 -8147.47 -13491.916 -8151.889 L -13491.916 -8171.889 C -13491.916 -8176.307 -13488.334 -8179.889 -13483.916 -8179.889 Z" fill="white"/>
+        <path d="M -13483.916 -8179.889 L -13446.473 -8179.889 C -13442.055 -8179.889 -13438.473 -8176.307 -13438.473 -8171.889 L -13438.473 -8151.889 C -13438.473 -8147.47 -13442.055 -8143.889 -13446.473 -8143.889 L -13483.916 -8143.889 C -13488.334 -8143.889 -13491.916 -8147.47 -13491.916 -8151.889 L -13491.916 -8171.889 C -13491.916 -8176.307 -13488.334 -8179.889 -13483.916 -8179.889 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(-13486.916 -8170.085)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="8.757411" y="13">split</tspan>
+        </text>
+      </g>
+      <g id="Graphic_9">
+        <path d="M -13315.168 -8179.889 L -13277.726 -8179.889 C -13273.307 -8179.889 -13269.726 -8176.307 -13269.726 -8171.889 L -13269.726 -8151.889 C -13269.726 -8147.47 -13273.307 -8143.889 -13277.726 -8143.889 L -13315.168 -8143.889 C -13319.587 -8143.889 -13323.168 -8147.47 -13323.168 -8151.889 L -13323.168 -8171.889 C -13323.168 -8176.307 -13319.587 -8179.889 -13315.168 -8179.889 Z" fill="white"/>
+        <path d="M -13315.168 -8179.889 L -13277.726 -8179.889 C -13273.307 -8179.889 -13269.726 -8176.307 -13269.726 -8171.889 L -13269.726 -8151.889 C -13269.726 -8147.47 -13273.307 -8143.889 -13277.726 -8143.889 L -13315.168 -8143.889 C -13319.587 -8143.889 -13323.168 -8147.47 -13323.168 -8151.889 L -13323.168 -8171.889 C -13323.168 -8176.307 -13319.587 -8179.889 -13315.168 -8179.889 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(-13318.168 -8170.085)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="3.9554108" y="13">count</tspan>
+        </text>
+      </g>
+      <g id="Line_12">
+        <line x1="-13438.473" y1="-8161.889" x2="-13333.068" y2="-8161.889" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_25">
+        <rect x="-13573.266" y="-8179.889" width=".125" height="36" fill="white"/>
+      </g>
+      <g id="Line_26">
+        <line x1="-13573.14" y1="-8161.889" x2="-13501.816" y2="-8161.889" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_27">
+        <rect x="-13103.484" y="-8179.889" width=".125" height="36" fill="white"/>
+      </g>
+      <g id="Line_28">
+        <line x1="-13269.726" y1="-8161.889" x2="-13113.384" y2="-8161.889" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_29">
+        <text transform="translate(-13532.425 -8172.014) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">“hello world”</tspan>
+        </text>
+      </g>
+      <g id="Graphic_30">
+        <text transform="translate(-13565.956 -8170.732) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">“hello users”</tspan>
+        </text>
+      </g>
+      <g id="Graphic_31">
+        <text transform="translate(-13403.821 -8171.673) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">“hello”</tspan>
+        </text>
+      </g>
+      <g id="Graphic_32">
+        <text transform="translate(-13360.751 -8171.635) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">“hello”</tspan>
+        </text>
+      </g>
+      <g id="Graphic_33">
+        <text transform="translate(-13426.756 -8171.673) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">“users”</tspan>
+        </text>
+      </g>
+      <g id="Graphic_34">
+        <text transform="translate(-13381.38 -8171.673) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">“world”</tspan>
+        </text>
+      </g>
+      <g id="Graphic_75">
+        <text transform="translate(-13228.464 -8173.364) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">(“hello”, 2)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_74">
+        <text transform="translate(-13172.818 -8173.364) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">(“hello”, 1)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_73">
+        <text transform="translate(-13258.006 -8173.364) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">(“users”, 1)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_72">
+        <text transform="translate(-13201.996 -8173.364) rotate(-40)" fill="black">
+          <tspan font-family="Menlo" font-size="10" fill="black" x="0" y="9">(“world”, 1)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_76">
+        <path d="M -13618.849 -8179.889 L -13581.406 -8179.889 C -13576.988 -8179.889 -13573.406 -8176.307 -13573.406 -8171.889 L -13573.406 -8151.889 C -13573.406 -8147.47 -13576.988 -8143.889 -13581.406 -8143.889 L -13618.849 -8143.889 C -13623.267 -8143.889 -13626.849 -8147.47 -13626.849 -8151.889 L -13626.849 -8171.889 C -13626.849 -8176.307 -13623.267 -8179.889 -13618.849 -8179.889 Z" fill="white"/>
+        <path d="M -13618.849 -8179.889 L -13581.406 -8179.889 C -13576.988 -8179.889 -13573.406 -8176.307 -13573.406 -8171.889 L -13573.406 -8151.889 C -13573.406 -8147.47 -13576.988 -8143.889 -13581.406 -8143.889 L -13618.849 -8143.889 C -13623.267 -8143.889 -13626.849 -8147.47 -13626.849 -8151.889 L -13626.849 -8171.889 C -13626.849 -8176.307 -13623.267 -8179.889 -13618.849 -8179.889 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(-13621.849 -8170.085)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x=".58841075" y="13">source</tspan>
+        </text>
+      </g>
+      <g id="Graphic_77">
+        <path d="M -13095.484 -8179.889 L -13058.042 -8179.889 C -13053.623 -8179.889 -13050.042 -8176.307 -13050.042 -8171.889 L -13050.042 -8151.889 C -13050.042 -8147.47 -13053.623 -8143.889 -13058.042 -8143.889 L -13095.484 -8143.889 C -13099.903 -8143.889 -13103.484 -8147.47 -13103.484 -8151.889 L -13103.484 -8171.889 C -13103.484 -8176.307 -13099.903 -8179.889 -13095.484 -8179.889 Z" fill="white"/>
+        <path d="M -13095.484 -8179.889 L -13058.042 -8179.889 C -13053.623 -8179.889 -13050.042 -8176.307 -13050.042 -8171.889 L -13050.042 -8151.889 C -13050.042 -8147.47 -13053.623 -8143.889 -13058.042 -8143.889 L -13095.484 -8143.889 C -13099.903 -8143.889 -13103.484 -8147.47 -13103.484 -8151.889 L -13103.484 -8171.889 C -13103.484 -8176.307 -13099.903 -8179.889 -13095.484 -8179.889 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(-13098.484 -8170.085)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="7.588411" y="13">print</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="661.5 771.5 780.6665 197.00001" width="780.6665" height="197.00001">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="Canvas_1" stroke-opacity="1" fill="none" stroke-dasharray="none" stroke="none" fill-opacity="1">
+    <title>Canvas 1</title>
+    <rect fill="white" x="661.5" y="771.5" width="780.6665" height="197.00001"/>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_50">
+        <path d="M 694 792 L 814.4665 792 C 821.0939 792 826.4665 797.3726 826.4665 804 L 826.4665 845 C 826.4665 851.6274 821.0939 857 814.4665 857 L 694 857 C 687.3726 857 682 851.6274 682 845 L 682 804 C 682 797.3726 687.3726 792 694 792 Z" fill="white"/>
+        <path d="M 694 792 L 814.4665 792 C 821.0939 792 826.4665 797.3726 826.4665 804 L 826.4665 845 C 826.4665 851.6274 821.0939 857 814.4665 857 L 694 857 C 687.3726 857 682 851.6274 682 845 L 682 804 C 682 797.3726 687.3726 792 694 792 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(687 815.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="4.2572306" y="15" xml:space="preserve">Source Operation</tspan>
+        </text>
+      </g>
+      <g id="Graphic_51">
+        <path d="M 694 883 L 814.4665 883 C 821.0939 883 826.4665 888.3726 826.4665 895 L 826.4665 936 C 826.4665 942.6274 821.0939 948 814.4665 948 L 694 948 C 687.3726 948 682 942.6274 682 936 L 682 895 C 682 888.3726 687.3726 883 694 883 Z" fill="white"/>
+        <path d="M 694 883 L 814.4665 883 C 821.0939 883 826.4665 888.3726 826.4665 895 L 826.4665 936 C 826.4665 942.6274 821.0939 948 814.4665 948 L 694 948 C 687.3726 948 682 942.6274 682 936 L 682 895 C 682 888.3726 687.3726 883 694 883 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(687 906.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="4.2572306" y="15" xml:space="preserve">Source Operation</tspan>
+        </text>
+      </g>
+      <g id="Graphic_52">
+        <path d="M 892.4 883 L 1012.8665 883 C 1019.4939 883 1024.8665 888.3726 1024.8665 895 L 1024.8665 936 C 1024.8665 942.6274 1019.4939 948 1012.8665 948 L 892.4 948 C 885.7726 948 880.4 942.6274 880.4 936 L 880.4 895 C 880.4 888.3726 885.7726 883 892.4 883 Z" fill="white"/>
+        <path d="M 892.4 883 L 1012.8665 883 C 1019.4939 883 1024.8665 888.3726 1024.8665 895 L 1024.8665 936 C 1024.8665 942.6274 1019.4939 948 1012.8665 948 L 892.4 948 C 885.7726 948 880.4 942.6274 880.4 936 L 880.4 895 C 880.4 888.3726 885.7726 883 892.4 883 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(885.4 906.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="31.81723" y="15" xml:space="preserve">Operation</tspan>
+        </text>
+      </g>
+      <g id="Graphic_53">
+        <path d="M 1090.8 883 L 1211.2665 883 C 1217.8939 883 1223.2665 888.3726 1223.2665 895 L 1223.2665 936 C 1223.2665 942.6274 1217.8939 948 1211.2665 948 L 1090.8 948 C 1084.1726 948 1078.8 942.6274 1078.8 936 L 1078.8 895 C 1078.8 888.3726 1084.1726 883 1090.8 883 Z" fill="white"/>
+        <path d="M 1090.8 883 L 1211.2665 883 C 1217.8939 883 1223.2665 888.3726 1223.2665 895 L 1223.2665 936 C 1223.2665 942.6274 1217.8939 948 1211.2665 948 L 1090.8 948 C 1084.1726 948 1078.8 942.6274 1078.8 936 L 1078.8 895 C 1078.8 888.3726 1084.1726 883 1090.8 883 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(1083.8 906.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="31.81723" y="15" xml:space="preserve">Operation</tspan>
+        </text>
+      </g>
+      <g id="Graphic_54">
+        <path d="M 1289.2 883 L 1409.6665 883 C 1416.2939 883 1421.6665 888.3726 1421.6665 895 L 1421.6665 936 C 1421.6665 942.6274 1416.2939 948 1409.6665 948 L 1289.2 948 C 1282.5726 948 1277.2 942.6274 1277.2 936 L 1277.2 895 C 1277.2 888.3726 1282.5726 883 1289.2 883 Z" fill="white"/>
+        <path d="M 1289.2 883 L 1409.6665 883 C 1416.2939 883 1421.6665 888.3726 1421.6665 895 L 1421.6665 936 C 1421.6665 942.6274 1416.2939 948 1409.6665 948 L 1289.2 948 C 1282.5726 948 1277.2 942.6274 1277.2 936 L 1277.2 895 C 1277.2 888.3726 1282.5726 883 1289.2 883 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(1282.2 906.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="14.03323" y="15" xml:space="preserve">Sink Operation</tspan>
+        </text>
+      </g>
+      <g id="Line_55">
+        <line x1="826.4665" y1="915.5" x2="870.5" y2="915.5" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_56">
+        <line x1="1024.8665" y1="915.5" x2="1068.9" y2="915.5" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_57">
+        <line x1="1223.2665" y1="915.5" x2="1267.3" y2="915.5" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_59">
+        <line x1="826.41205" y1="846.1503" x2="873.0321" y2="887.2985" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_60">
+        <path d="M 826.4665 824.5 L 1151.0332 824.5 L 1151.0332 873.1" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="650.7 502 482.2665 147.0031" width="482.2665" height="147.0031">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="Canvas_1" stroke-opacity="1" fill="none" stroke-dasharray="none" stroke="none" fill-opacity="1">
+    <title>Canvas 1</title>
+    <rect fill="white" x="650.7" y="502" width="482.2665" height="147.0031"/>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_48">
+        <path d="M 683.2 563.5031 L 803.6665 563.5031 C 810.2939 563.5031 815.6665 568.8757 815.6665 575.5031 L 815.6665 616.5031 C 815.6665 623.1305 810.2939 628.5031 803.6665 628.5031 L 683.2 628.5031 C 676.5726 628.5031 671.2 623.1305 671.2 616.5031 L 671.2 575.5031 C 671.2 568.8757 676.5726 563.5031 683.2 563.5031 Z" fill="white"/>
+        <path d="M 683.2 563.5031 L 803.6665 563.5031 C 810.2939 563.5031 815.6665 568.8757 815.6665 575.5031 L 815.6665 616.5031 C 815.6665 623.1305 810.2939 628.5031 803.6665 628.5031 L 683.2 628.5031 C 676.5726 628.5031 671.2 623.1305 671.2 616.5031 L 671.2 575.5031 C 671.2 568.8757 676.5726 563.5031 683.2 563.5031 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(676.2 586.7791)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="4.2572306" y="15" xml:space="preserve">Source Operation</tspan>
+        </text>
+      </g>
+      <g id="Graphic_43"/>
+      <g id="Graphic_42"/>
+      <g id="Line_41">
+        <line x1="815.612" y1="574.35276" x2="958.1544" y2="574.35276" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_40">
+        <line x1="815.612" y1="617.65344" x2="958.1544" y2="617.65344" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_34">
+        <text transform="translate(904.6969 575.9561) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_33">
+        <text transform="translate(845.002 574.45455) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_32">
+        <text transform="translate(845.002 528.984) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_49">
+        <path d="M 980 563.5031 L 1100.4665 563.5031 C 1107.0939 563.5031 1112.4665 568.8757 1112.4665 575.5031 L 1112.4665 616.5031 C 1112.4665 623.1305 1107.0939 628.5031 1100.4665 628.5031 L 980 628.5031 C 973.3726 628.5031 968 623.1305 968 616.5031 L 968 575.5031 C 968 568.8757 973.3726 563.5031 980 563.5031 Z" fill="white"/>
+        <path d="M 980 563.5031 L 1100.4665 563.5031 C 1107.0939 563.5031 1112.4665 568.8757 1112.4665 575.5031 L 1112.4665 616.5031 C 1112.4665 623.1305 1107.0939 628.5031 1100.4665 628.5031 L 980 628.5031 C 973.3726 628.5031 968 623.1305 968 616.5031 L 968 575.5031 C 968 568.8757 973.3726 563.5031 980 563.5031 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(973 586.7791)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="14.03323" y="15" xml:space="preserve">Sink Operation</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

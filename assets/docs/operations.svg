@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="471.8 250.9969 610.86645 147.0031" width="610.86645" height="147.0031">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="Canvas_1" stroke-opacity="1" fill="none" stroke-dasharray="none" stroke="none" fill-opacity="1">
+    <title>Canvas 1</title>
+    <rect fill="white" x="471.8" y="250.9969" width="610.86645" height="147.0031"/>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_2">
+        <path d="M 717 312.5 L 837.4665 312.5 C 844.0939 312.5 849.4665 317.8726 849.4665 324.5 L 849.4665 365.5 C 849.4665 372.1274 844.0939 377.5 837.4665 377.5 L 717 377.5 C 710.3726 377.5 705 372.1274 705 365.5 L 705 324.5 C 705 317.8726 710.3726 312.5 717 312.5 Z" fill="white"/>
+        <path d="M 717 312.5 L 837.4665 312.5 C 844.0939 312.5 849.4665 317.8726 849.4665 324.5 L 849.4665 365.5 C 849.4665 372.1274 844.0939 377.5 837.4665 377.5 L 717 377.5 C 710.3726 377.5 705 372.1274 705 365.5 L 705 324.5 C 705 317.8726 710.3726 312.5 717 312.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(710 335.776)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="31.81723" y="15" xml:space="preserve">Operation</tspan>
+        </text>
+      </g>
+      <g id="Line_4">
+        <line x1="548.6" y1="322.9691" x2="695.15445" y2="323.32558" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_6">
+        <line x1="548.6" y1="366.6924" x2="695.1544" y2="366.653" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_7"/>
+      <g id="Graphic_9"/>
+      <g id="Graphic_17"/>
+      <g id="Graphic_16"/>
+      <g id="Line_18">
+        <line x1="849.412" y1="323.34966" x2="995.9665" y2="323.15173" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_19">
+        <line x1="849.412" y1="366.65034" x2="995.9665" y2="366.84827" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_22">
+        <text transform="translate(649.202 324.953) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_25">
+        <text transform="translate(603.602 324.953) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_26">
+        <text transform="translate(557.762 324.953) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_27">
+        <text transform="translate(638.482 280.984) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_28">
+        <text transform="translate(591.88925 277.9809) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_30">
+        <text transform="translate(925.3948 326.45456) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_29">
+        <text transform="translate(878.802 323.45145) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+      <g id="Graphic_31">
+        <text transform="translate(878.802 277.9809) rotate(36)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="6536993e-19" y="10" xml:space="preserve">data record</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>
