@@ -49,7 +49,7 @@ defmodule Skitter.MixProject do
     [
       # Dev
       {:credo, "~> 1.7", only: :dev, optional: true, runtime: false},
-      {:ex_doc, "~> 0.32", only: :dev, optional: true, runtime: false},
+      {:ex_doc, "~> 0.34", only: :dev, optional: true, runtime: false},
       {:dialyxir, "~> 1.4", only: :dev, optional: true, runtime: false},
 
       # Runtime
