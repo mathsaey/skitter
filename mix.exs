@@ -100,10 +100,10 @@ defmodule Skitter.MixProject do
   defp docs do
     [
       main: "overview",
-      assets: "assets",
       formatters: ["html"],
       source_ref: "develop",
       authors: ["Mathijs Saey"],
+      assets: %{"assets" => "assets"},
       logo: "assets/logo-light_docs.png",
       # Manual
       extra_section: "manual",
