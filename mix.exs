@@ -56,7 +56,7 @@ defmodule Skitter.MixProject do
       {:telemetry, "~> 1.2"},
 
       # Used by built-in strategies
-      {:murmur, "~> 1.0"}
+      {:murmur, "~> 2.0"}
     ]
   end
 
