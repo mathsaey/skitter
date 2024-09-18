@@ -53,10 +53,10 @@ defmodule Skitter.MixProject do
       {:dialyxir, "~> 1.4", only: :dev, optional: true, runtime: false},
 
       # Runtime
-      {:telemetry, "~> 1.2"},
+      {:telemetry, "~> 1.3"},
 
       # Used by built-in strategies
-      {:murmur, "~> 1.0"}
+      {:murmur, "~> 2.0"}
     ]
   end
 
