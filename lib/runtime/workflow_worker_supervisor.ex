@@ -35,7 +35,7 @@ defmodule Skitter.Runtime.WorkflowWorkerSupervisor do
   the `Skitter.Runtime.NodeStore` with the `:skitter_supervisors` key.
 
   The pid of the spawned `Skitter.Runtime.NodeWorkerSupervisor` will be stored in the
-  `Skitter.Runtime.ConstantStore` with the `:skitter_node_worker_superivor` key.
+  `Skitter.Runtime.ConstantStore` with the `:skitter_node_worker_supervisor` key.
   """
   def spawn_local_workflow(ref, nodes) do
     {:ok, pid} =
