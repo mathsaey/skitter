@@ -34,18 +34,26 @@ defmodule Skitter.Runtime.Worker do
   alias Skitter.Runtime.NodeStore
   require Skitter.Runtime.NodeStore
 
-  defstruct [:operation, :strategy, :context, :idx, :ref, :state, :tag]
+  defstruct [:operation, :strategy, :context, :idx, :ref, :state, :role]
+
+  # TODO:
+  # - initialiseer staat (send mag)
+  # - hou lijst bij met messages
+  # - Buffer messages tot deploy_complete
+  # - update context met deployment
+  # - process messages in omgekeerde folgorde (FIFO), update staat
+  # - done
 
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
   def deploy_complete(pid), do: GenServer.cast(pid, :sk_deploy_complete)
 
   @impl true
-  def init({context = %{_skr: {:deploy, _, _}}, state, tag}) do
-    {:ok, {:uninitialized, context, state, tag}}
+  def init({context = %{_skr: {:deploy, _, _}}, state, role}) do
+    {:ok, {:uninitialized, context, state, role}}
   end
 
-  def init({context, state, tag}) do
-    {:ok, init_state({context, state, tag})}
+  def init({context, state, role}) do
+    {:ok, init_state({context, state, role})}
   end
 
   @impl true
@@ -66,22 +74,22 @@ defmodule Skitter.Runtime.Worker do
   @impl true
   def handle_info(msg, srv), do: {:noreply, process_hook(msg, srv)}
 
-  defp activate_worker({:uninitialized, context, state, tag}) do
+  defp activate_worker({:uninitialized, context, state, role}) do
     context = update_in(context._skr, fn {:deploy, ref, idx} -> {ref, idx} end)
-    init_state({context, state, tag})
+    init_state({context, state, role})
   end
 
-  defp init_state({context, state, tag}) when is_function(state, 0) do
-    init_state({context, state.(), tag})
+  defp init_state({context, state, role}) when is_function(state, 0) do
+    init_state({context, state.(), role})
   end
 
-  defp init_state({context, state, tag}) do
+  defp init_state({context, state, role}) do
     {ref, idx} = context._skr
 
     Telemetry.emit(
       [:worker, :init],
       %{},
-      %{pid: self(), context: context, state: state, tag: tag}
+      %{pid: self(), context: context, state: state, role: role}
     )
 
     %__MODULE__{
@@ -91,7 +99,7 @@ defmodule Skitter.Runtime.Worker do
       state: state,
       idx: idx,
       ref: ref,
-      tag: tag
+      role: role
     }
   end
 
@@ -102,9 +110,9 @@ defmodule Skitter.Runtime.Worker do
         context: srv.context,
         message: msg,
         state: srv.state,
-        tag: srv.tag
+        role: srv.role
       } do
-        srv.strategy.process(srv.context, msg, srv.state, srv.tag)
+        srv.strategy.process(srv.context, msg, srv.state, srv.role)
       end
 
     %{srv | state: state}

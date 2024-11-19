@@ -81,7 +81,7 @@ which contains the result of the wrapped code.
     system, so you should not use this.
 * `[:skitter, :hook, process]`: Emitted when the
   `c:Skitter.Strategy.Operation.process/4` hook of a strategy is called.
-  * `:context`, `:message`, `:state`, `:tag`: the arguments passed to
+  * `:context`, `:message`, `:state`, `:role`: the arguments passed to
     `c:Skitter.Strategy.Operation.process/4`.
   * `:pid`: The `t:pid/0` of the worker calling the hook.
   * `:result` (only for the `:stop` event): the return value of the hook. This
