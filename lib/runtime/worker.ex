@@ -23,12 +23,16 @@ defmodule Skitter.Runtime.Worker do
   the `t:Skitter.Strategy.Context/0` to `{:deploy, _, _}`. Thus, when a worker is spawned, it
   checks the value of this field to see if it can finish initialisation.
 
-  When a strategy spawns several workers that communicate with each other, it is possible that
-  workers do receive a message before they receive the `:_sk_deploy_complete` message. In this
-  case, the worker is initialized on the spot and any future `:_sk_deploy_complete` messages are
-  ignored.
+  Once deployment is completed, the `:_sk_deploy_complete` message is sent to all workers spawned
+  by a strategy. This message indicates the worker may begin processing received messages. It is
+  possible that workers receive messages before this point. This occurs when messages are sent
+  inside the deploy hook. Intra-strategy messages may also be received by a worker before it
+  receives the `:_sk_deploy_complete` hook. To ensure this does not cause issues, workers buffer
+  all messages received before the initial `:_sk_deploy_complete`. When `:_sk_deploy_complete` is
+  received, all these messages are processed in the order of arrival.
   """
   use GenServer, restart: :transient
+  require Logger
 
   use Skitter.Telemetry
   alias Skitter.Runtime.NodeStore
@@ -36,36 +40,33 @@ defmodule Skitter.Runtime.Worker do
 
   defstruct [:operation, :strategy, :context, :idx, :ref, :state, :role]
 
-  # TODO:
-  # - initialiseer staat (send mag)
-  # - hou lijst bij met messages
-  # - Buffer messages tot deploy_complete
-  # - update context met deployment
-  # - process messages in omgekeerde folgorde (FIFO), update staat
-  # - done
-
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
   def deploy_complete(pid), do: GenServer.cast(pid, :sk_deploy_complete)
 
   @impl true
-  def init({context = %{_skr: {:deploy, _, _}}, state, role}) do
-    {:ok, {:uninitialized, context, state, role}}
+  def init({context = %{_skr: {:deploy, ref, idx}}, state, role}) do
+    context = %{context | _skr: {ref, idx}}
+    {:ok, {:uninitialized, [], srv_state(context, state, role, ref, idx)}}
   end
 
   def init({context, state, role}) do
-    {:ok, init_state({context, state, role})}
+    {ref, idx} = context._skr
+    {:ok, srv_state(context, state, role, ref, idx)}
   end
 
   @impl true
-  def handle_cast(:sk_deploy_complete, state = {:uninitialized, _, _, _}) do
-    {:noreply, activate_worker(state)}
+  def handle_cast(:sk_deploy_complete, {:uninitialized, msgs, srv}) do
+    srv = put_in(srv.context.deployment, NodeStore.get(:deployment, srv.ref, srv.idx))
+    {:noreply, msgs |> Enum.reverse() |> Enum.reduce(srv, &process_hook/2)}
   end
 
-  def handle_cast(:sk_deploy_complete, srv), do: {:noreply, srv}
+  def handle_cast(:sk_deploy_complete, srv) do
+    Logger.error("Initialized worker received :_sk_deploy_complete message")
+    {:noreply, srv}
+  end
 
-  def handle_cast({:sk_msg, msg}, state = {:uninitialized, _, _, _}) do
-    srv = activate_worker(state)
-    {:noreply, process_hook(msg, srv)}
+  def handle_cast({:sk_msg, msg}, {:uninitialized, msgs, srv}) do
+    {:noreply, {:uninitialized, [msg | msgs], srv}}
   end
 
   def handle_cast({:sk_msg, msg}, srv), do: {:noreply, process_hook(msg, srv)}
@@ -74,18 +75,11 @@ defmodule Skitter.Runtime.Worker do
   @impl true
   def handle_info(msg, srv), do: {:noreply, process_hook(msg, srv)}
 
-  defp activate_worker({:uninitialized, context, state, role}) do
-    context = update_in(context._skr, fn {:deploy, ref, idx} -> {ref, idx} end)
-    init_state({context, state, role})
+  defp srv_state(context, state, role, ref, idx) when is_function(state, 0) do
+    srv_state(context, state.(), role, ref, idx)
   end
 
-  defp init_state({context, state, role}) when is_function(state, 0) do
-    init_state({context, state.(), role})
-  end
-
-  defp init_state({context, state, role}) do
-    {ref, idx} = context._skr
-
+  defp srv_state(context, state, role, ref, idx) do
     Telemetry.emit(
       [:worker, :init],
       %{},
@@ -95,10 +89,10 @@ defmodule Skitter.Runtime.Worker do
     %__MODULE__{
       operation: context.operation,
       strategy: context.strategy,
-      context: %{context | deployment: NodeStore.get(:deployment, ref, idx)},
+      context: context,
       state: state,
-      idx: idx,
       ref: ref,
+      idx: idx,
       role: role
     }
   end

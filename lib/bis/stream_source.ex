@@ -27,14 +27,7 @@ defstrategy Skitter.BIS.StreamSource do
     emitted once the operation has been deployed.
   """
   defhook deploy(args) do
-    remote_worker(
-      fn ->
-        send(self(), :start)
-        call(:stream, args: [args]).result
-      end,
-      :source
-    )
-
+    call(:stream, args: [args]).result |> remote_worker(:source) |> send(:start)
     Remote.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 

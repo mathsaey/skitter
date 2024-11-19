@@ -39,7 +39,7 @@ defmodule Skitter.Worker do
   Worker state or a function which returns a worker state.
 
   Functions which create workers may be created with an initial state, or with a function which
-  returns an initial state.
+  returns an initial state. The function is executed inside the worker when it is first created.
   """
   @type state_or_state_fn :: state() | (-> state())
 
