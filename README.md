@@ -37,6 +37,8 @@ from the current version.
 Information on using this earlier version of Skitter can be found
 [here](https://soft.vub.ac.be/~mathsaey/skitter/docs/v0.1.1/).
 
+- [Skitter: A Distributed Stream Processing Framework with Pluggable Distribution Strategies](https://doi.org/10.22152/programming-journal.org/2025/10/4) (The Art, Science, and Engineering of Programming, February 2025)
+
 # Getting started
 
 We refer developers interested in creating and running Skitter projects to the
