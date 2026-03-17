@@ -37,7 +37,7 @@ defstrategy Skitter.BIS.PassiveSource do
     Remote.on_all_workers(fn -> local_worker(nil, :sender) end) |> Enum.map(&elem(&1, 1))
   end
 
-  defhook process(msg, nil, :source) do
+  defhook process(msg, _, :source) do
     send(Enum.random(deployment()), msg)
     nil
   end
