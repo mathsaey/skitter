@@ -34,6 +34,8 @@ defmodule Skitter do
       import Skitter.DSL.Operation, only: [defoperation: 3, defoperation: 2]
       import Skitter.DSL.Workflow, only: [workflow: 1, workflow: 2]
       import Skitter.DSL.Strategy, only: [defstrategy: 2, defstrategy: 3]
+
+      Skitter
     end
   end
 
