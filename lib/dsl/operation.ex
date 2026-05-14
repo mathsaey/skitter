@@ -606,6 +606,28 @@ defmodule Skitter.DSL.Operation do
   end
 
   @doc """
+  Create a token with meta-information inside a callback.
+
+  This macro is a shorthand for `Skitter.Token.with_meta/2`.
+
+  ## Examples
+
+      iex> defoperation WithMetaExample, in: value do
+      ...>   defcb add(value), do: with_meta(value, a: 1, b: 2)
+      ...> end
+      iex> Skitter.Operation.call(WithMetaExample, :add, nil, nil, [%Skitter.Token{value: 5, meta: %{foo: :bar}}]).result
+      %Skitter.Token{value: 5, meta: %{a: 1, b: 2}}
+      iex> Skitter.Operation.call(WithMetaExample, :add, nil, nil, [5]).result
+      %Skitter.Token{value: 5, meta: %{a: 1, b: 2}}
+  """
+  @doc group: :token, inside: :defcb
+  defmacro with_meta(value, meta) do
+    quote do
+      Skitter.Token.with_meta(unquote(value), Map.new(unquote(meta)))
+    end
+  end
+
+  @doc """
   Create a token with meta-information of an argument and new meta-information inside a callback.
 
   The provided meta-information overrides any previously existing meta-information.
@@ -836,6 +858,7 @@ defmodule Skitter.DSL.Operation do
             <~: 2,
             port_of: 1,
             meta_of: 1,
+            with_meta: 2,
             inherit_meta: 2,
             extend_meta: 3
           ]
