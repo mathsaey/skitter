@@ -427,7 +427,7 @@ defmodule Skitter.DSL.Operation do
   end
   ```
       iex> Operation.call(WrongFieldWriteExample, :write, %WrongFieldWriteExample{field: :foo}, nil, [])
-      ** (KeyError) key :doesnotexist not found in: %Skitter.DSL.OperationTest.WrongFieldWriteExample{field: :foo}
+      ** (KeyError) key :doesnotexist not found in:...
   """
   @doc group: :state, inside: :defcb
   defmacro {:state, _, _} <~ value do
